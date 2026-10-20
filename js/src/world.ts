@@ -1,4 +1,5 @@
 import { withCopies } from './arrays';
+import { type Listener, stepWith } from './events';
 import * as Low from './generated/tumble';
 import type { Vec3 } from './math';
 
@@ -87,57 +88,9 @@ export const World = {
     destroy(world: World): void {
         Low.World.destroy(world);
     },
-    /** one step answering nothing: the phases below in order */
-    step(world: World, deltaTime: number): void {
-        Low.World.step(world, deltaTime);
-    },
-
-    // the step's phases, for answering its events between them: stepBegin, then findPairs and narrowphase while woken
-    // is above zero, then solve and stepEnd
-
-    stepBegin(world: World, deltaTime: number): void {
-        Low.World.stepBegin(world, deltaTime);
-    },
-    /** fills the pairs; reject some with Answers.rejectPair before the narrowphase */
-    findPairs(world: World): void {
-        Low.World.findPairs(world);
-    },
-    /** fills the contacts added and persisted; answer them with Answers after the last narrowphase */
-    narrowphase(world: World): void {
-        Low.World.narrowphase(world);
-    },
-    /** the bodies the last narrowphase woke, whose pairs are not found yet: run findPairs and narrowphase again */
-    woken(world: World): number {
-        return Low.World.woken(world);
-    },
-    solve(world: World): void {
-        Low.World.solve(world);
-    },
-    stepEnd(world: World): void {
-        Low.World.stepEnd(world);
-    },
-
-    // what a step found: counts, read one by one with PairEvent, ContactEvent and ContactRemovedEvent
-
-    pairs(world: World): number {
-        return Low.Events.pairs(world);
-    },
-    contactsAdded(world: World): number {
-        return Low.Events.contactsAdded(world);
-    },
-    contactsPersisted(world: World): number {
-        return Low.Events.contactsPersisted(world);
-    },
-    /** this step's removals, and those of the bodies removed since the step before */
-    contactsRemoved(world: World): number {
-        return Low.Events.contactsRemoved(world);
-    },
-    /** the bodies the step moved */
-    moved(world: World): number {
-        return Low.Events.moved(world);
-    },
-    movedBody(world: World, index: number): number {
-        return Low.Events.movedBody(world, index);
+    /** one step of deltaTime seconds; the listener hears its events and answers them as it runs */
+    step(world: World, listener: Listener | undefined, deltaTime: number): void {
+        stepWith(world, listener, deltaTime);
     },
 
     /** the surfaces material ids name, replacing the table */

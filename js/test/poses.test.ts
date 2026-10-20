@@ -31,8 +31,8 @@ describe('poses', () => {
         expect(Array.from(views.quaternions.subarray(fallingSlot * 4, fallingSlot * 4 + 4))).toEqual([0, 0, 0, 1]);
 
         // two steps between reads, as a fixed timestep loop makes: only the falling body changed, and its pose is the latest
-        World.step(world, 1 / 60);
-        World.step(world, 1 / 60);
+        World.step(world, undefined, 1 / 60);
+        World.step(world, undefined, 1 / 60);
         views = Poses.read(poses);
         expect(Array.from(views.changed)).toEqual([fallingSlot]);
         const y: [number] = [0];

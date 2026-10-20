@@ -1,12 +1,11 @@
 import { describe, expect, test } from 'vitest';
 import {
-    Answers,
     Box,
-    ContactEvent,
-    ContactRemovedEvent,
+    type ContactEvent,
+    type ContactRemovedEvent,
     init,
+    type Listener,
     MotionType,
-    PairEvent,
     RigidBody,
     Sphere,
     type Vec3,
@@ -47,7 +46,7 @@ describe('world settings', () => {
 });
 
 describe('the step', () => {
-    test('phases with answers: a rejected pair passes through, an overridden contact does not bounce', async () => {
+    test('a listener answers: a rejected pair passes through, a contact with no restitution does not bounce', async () => {
         const scene = await makeScene();
         const { world } = scene;
         const ball = Sphere.create({ radius: 0.5 });
@@ -56,7 +55,6 @@ describe('the step', () => {
             objectLayer: scene.moving,
             motionType: MotionType.DYNAMIC,
             position: [2, 0.5, 0],
-            userData: 7,
         });
         const bouncer = RigidBody.create(world, {
             shape: ball,
@@ -65,42 +63,59 @@ describe('the step', () => {
             position: [0, 3, 0],
             restitution: 1,
         });
-        const pair = PairEvent.create();
         let rejected = 0;
-        for (let i = 0; i < 120; i++) {
-            World.stepBegin(world, 1 / 60);
-            do {
-                World.findPairs(world);
-                for (let p = 0; p < World.pairs(world); p++) {
-                    PairEvent.read(pair, world, p);
-                    if (pair.userDataA === 7 || pair.userDataB === 7) rejected += Answers.rejectPair(world, p) ? 1 : 0;
-                }
-                World.narrowphase(world);
-            } while (World.woken(world) > 0);
-            const contacts = World.contactsAdded(world) + World.contactsPersisted(world);
-            const event = ContactEvent.create();
-            for (let c = 0; c < contacts; c++) {
-                const added = c < World.contactsAdded(world);
-                if (added) ContactEvent.readAdded(event, world, c);
-                else ContactEvent.readPersisted(event, world, c - World.contactsAdded(world));
-                event.settings.combinedRestitution = 0;
-                Answers.overrideContact(world, c, event.settings);
-            }
-            World.solve(world);
-            World.stepEnd(world);
-        }
+        const listener: Listener = {
+            onBodyPairValidate(bodyA, bodyB) {
+                const collide = bodyA !== ghost && bodyB !== ghost;
+                if (!collide) rejected++;
+                return collide;
+            },
+            onContactAdded(_contact, settings) {
+                settings.combinedRestitution = 0;
+            },
+            onContactPersisted(_contact, settings) {
+                settings.combinedRestitution = 0;
+            },
+        };
+        for (let i = 0; i < 120; i++) World.step(world, listener, 1 / 60);
         const position: Vec3 = [0, 0, 0];
         RigidBody.getPosition(position, world, ghost);
         expect(rejected).toBeGreaterThan(0);
         expect(position[1]).toBeLessThan(-1);
-        // restitution 1 would bounce it back up; the overrides kept it down
+        // restitution 1 would bounce it back up; the listener kept it down
         RigidBody.getPosition(position, world, bouncer);
         expect(position[1]).toBeCloseTo(0.48, 1);
         releaseScene(scene);
         Sphere.destroy(ball);
     });
 
-    test('contact events read whole, removals after a body goes, moved bodies', async () => {
+    test('a contact the listener keeps rejecting is never solved', async () => {
+        const scene = await makeScene();
+        const { world } = scene;
+        const crate = Box.create({ halfExtents: [0.5, 0.5, 0.5] });
+        const body = RigidBody.create(world, {
+            shape: crate,
+            objectLayer: scene.moving,
+            motionType: MotionType.DYNAMIC,
+            position: [0, 2, 0],
+        });
+        let validated = 0;
+        const listener: Listener = {
+            onContactValidate(contact) {
+                validated++;
+                return contact.bodyA !== body && contact.bodyB !== body;
+            },
+        };
+        for (let i = 0; i < 90; i++) World.step(world, listener, 1 / 60);
+        const position: Vec3 = [0, 0, 0];
+        RigidBody.getPosition(position, world, body);
+        expect(validated).toBeGreaterThan(1);
+        expect(position[1]).toBeLessThan(-1);
+        releaseScene(scene);
+        Box.destroy(crate);
+    });
+
+    test("contact events come whole, and a removed body's contacts are removed", async () => {
         const scene = await makeScene();
         const { world } = scene;
         const crate = Box.create({ halfExtents: [0.5, 0.5, 0.5] });
@@ -111,30 +126,34 @@ describe('the step', () => {
             position: [0, 0.5, 0],
             userData: 2 ** 40 + 5,
         });
-        World.step(world, 1 / 60);
-        expect(World.contactsAdded(world)).toBe(1);
-        const event = ContactEvent.create();
-        expect(ContactEvent.readAdded(event, world, 0)).toBe(true);
+        const added: ContactEvent[] = [];
+        const removed: ContactRemovedEvent[] = [];
+        const listener: Listener = {
+            onContactAdded(contact) {
+                added.push(structuredClone(contact));
+            },
+            onContactRemoved(event) {
+                removed.push({ ...event });
+            },
+        };
+        World.step(world, listener, 1 / 60);
+        expect(added.length).toBe(1);
+        const event = added[0]!;
         expect(event.bodyA === body || event.bodyB === body).toBe(true);
         expect(event.bodyA === body ? event.userDataA : event.userDataB).toBe(2 ** 40 + 5);
         expect(event.points).toBe(4);
         expect(Math.abs(event.normal[1])).toBeCloseTo(1, 5);
         for (let i = 0; i < 4; i++) expect(Math.abs(event.pointsA[i]![1])).toBeLessThan(0.05);
-        expect(ContactEvent.readAdded(event, world, 1)).toBe(false);
-        expect(World.moved(world)).toBe(1);
-        expect(World.movedBody(world, 0)).toBe(body);
 
         RigidBody.remove(world, body);
-        World.step(world, 1 / 60);
-        expect(World.contactsRemoved(world)).toBe(1);
-        const removed = ContactRemovedEvent.create();
-        expect(ContactRemovedEvent.read(removed, world, 0)).toBe(true);
-        expect(removed.bodyA === body || removed.bodyB === body).toBe(true);
+        World.step(world, listener, 1 / 60);
+        expect(removed.length).toBe(1);
+        expect(removed[0]!.bodyA === body || removed[0]!.bodyB === body).toBe(true);
         releaseScene(scene);
         Box.destroy(crate);
     });
 
-    test('materials stand in for the body on their side', async () => {
+    test('a hook sees the combined material, the material standing in for the body on its side', async () => {
         const scene = await makeScene();
         const { world } = scene;
         World.setMaterials(world, [{ friction: 0.81, restitution: 0 }]);
@@ -146,19 +165,49 @@ describe('the step', () => {
             motionType: MotionType.STATIC,
             position: [20, 5, 0],
         });
-        RigidBody.create(world, {
+        const body = RigidBody.create(world, {
             shape: crate,
             objectLayer: scene.moving,
             motionType: MotionType.DYNAMIC,
             position: [20, 6, 0],
             friction: 0.25,
         });
-        World.step(world, 1 / 60);
-        const event = ContactEvent.create();
-        ContactEvent.readAdded(event, world, 0);
-        expect(event.settings.combinedFriction).toBeCloseTo(0.45, 6);
+        let friction = 0;
+        const listener: Listener = {
+            onContactAdded(_contact, settings) {
+                friction = settings.combinedFriction;
+            },
+        };
+        for (let i = 0; i < 60; i++) World.step(world, listener, 1 / 60);
+        expect(friction).toBeCloseTo(0.45, 6);
+        const position: Vec3 = [0, 0, 0];
+        RigidBody.getPosition(position, world, body);
+        expect(position[1]).toBeCloseTo(6, 1);
         releaseScene(scene);
         Box.destroy(ground);
         Box.destroy(crate);
+    });
+
+    test('a hook that throws: the step finishes, then throws it', async () => {
+        const scene = await makeScene();
+        const { world } = scene;
+        const ball = Sphere.create({ radius: 0.5 });
+        RigidBody.create(world, {
+            shape: ball,
+            objectLayer: scene.moving,
+            motionType: MotionType.DYNAMIC,
+            position: [0, 0.5, 0],
+        });
+        const listener: Listener = {
+            onBodyPairValidate() {
+                throw new Error('from the hook');
+            },
+        };
+        expect(() => World.step(world, listener, 1 / 60)).toThrow('from the hook');
+        // the world is between steps again, and steps on
+        World.step(world, undefined, 1 / 60);
+        World.step(world, {}, 1 / 60);
+        releaseScene(scene);
+        Sphere.destroy(ball);
     });
 });

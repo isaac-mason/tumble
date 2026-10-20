@@ -27,7 +27,7 @@ describe('a world from js', () => {
             motionType: MotionType.DYNAMIC,
             position: [3, 6, 0],
         });
-        for (let i = 0; i < 120; i++) World.step(world, 1 / 60);
+        for (let i = 0; i < 120; i++) World.step(world, undefined, 1 / 60);
 
         const position: Vec3 = [0, 0, 0];
         expect(RigidBody.getPosition(position, world, box)).toBe(true);

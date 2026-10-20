@@ -28,7 +28,7 @@ export {
     type SwingTwistConstraintSettings,
     SwingType,
 } from './constraints';
-export { Answers, ContactEvent, ContactRemovedEvent, type ContactSettings, PairEvent } from './events';
+export type { ContactEvent, ContactRemovedEvent, ContactSettings, Listener } from './events';
 export { type InitOptions, init } from './init';
 export type { Box3, Mat4, Quat, Vec2, Vec3 } from './math';
 export { Poses, type PoseViews } from './poses';

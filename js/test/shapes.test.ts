@@ -4,7 +4,6 @@ import {
     type Box3,
     Capsule,
     Compound,
-    ContactEvent,
     ConvexHull,
     ConvexHullBuildError,
     ConvexHullBuildResult,
@@ -12,6 +11,7 @@ import {
     Cylinder,
     Empty,
     init,
+    type Listener,
     type MassProperties,
     MotionType,
     OffsetCenterOfMass,
@@ -158,14 +158,12 @@ describe('triangle meshes', () => {
             position: [-3, 4, 3],
         });
         let material = -2;
-        const event = ContactEvent.create();
-        for (let i = 0; i < 60; i++) {
-            World.step(world, 1 / 60);
-            if (World.contactsAdded(world) > 0) {
-                ContactEvent.readAdded(event, world, 0);
-                material = event.bodyA === body ? event.materialB : event.materialA;
-            }
-        }
+        const listener: Listener = {
+            onContactAdded(contact) {
+                material = contact.bodyA === body ? contact.materialB : contact.materialA;
+            },
+        };
+        for (let i = 0; i < 60; i++) World.step(world, listener, 1 / 60);
         const position: Vec3 = [0, 0, 0];
         RigidBody.getPosition(position, world, body);
         expect(position[1]).toBeCloseTo(3.48, 1);

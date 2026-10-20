@@ -23,5 +23,5 @@ export function releaseScene(scene: Scene): void {
 }
 
 export function steps(world: World, count: number): void {
-    for (let i = 0; i < count; i++) World.step(world, 1 / 60);
+    for (let i = 0; i < count; i++) World.step(world, undefined, 1 / 60);
 }

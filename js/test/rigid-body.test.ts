@@ -73,7 +73,7 @@ describe('rigid bodies', () => {
             position: [0, 3, 0],
         });
         RigidBody.moveKinematic(world, body, [2, 3, 0], [0, 0, 0, 1], 1 / 60);
-        World.step(world, 1 / 60);
+        World.step(world, undefined, 1 / 60);
         const position: Vec3 = [0, 0, 0];
         RigidBody.getPosition(position, world, body);
         expect(position[0]).toBeCloseTo(2, 4);
