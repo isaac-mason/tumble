@@ -39,7 +39,7 @@ describe('world settings', () => {
         });
         steps(scene.world, 60);
         const position: Vec3 = [0, 0, 0];
-        RigidBody.getPosition(scene.world, position, body);
+        RigidBody.getPosition(position, scene.world, body);
         expect(position[1]).toBe(3);
         releaseScene(scene);
         Sphere.destroy(ball);
@@ -72,7 +72,7 @@ describe('the step', () => {
             do {
                 World.findPairs(world);
                 for (let p = 0; p < World.pairs(world); p++) {
-                    PairEvent.read(world, pair, p);
+                    PairEvent.read(pair, world, p);
                     if (pair.userDataA === 7 || pair.userDataB === 7) rejected += Answers.rejectPair(world, p) ? 1 : 0;
                 }
                 World.narrowphase(world);
@@ -81,8 +81,8 @@ describe('the step', () => {
             const event = ContactEvent.create();
             for (let c = 0; c < contacts; c++) {
                 const added = c < World.contactsAdded(world);
-                if (added) ContactEvent.readAdded(world, event, c);
-                else ContactEvent.readPersisted(world, event, c - World.contactsAdded(world));
+                if (added) ContactEvent.readAdded(event, world, c);
+                else ContactEvent.readPersisted(event, world, c - World.contactsAdded(world));
                 event.settings.combinedRestitution = 0;
                 Answers.overrideContact(world, c, event.settings);
             }
@@ -90,11 +90,11 @@ describe('the step', () => {
             World.stepEnd(world);
         }
         const position: Vec3 = [0, 0, 0];
-        RigidBody.getPosition(world, position, ghost);
+        RigidBody.getPosition(position, world, ghost);
         expect(rejected).toBeGreaterThan(0);
         expect(position[1]).toBeLessThan(-1);
         // restitution 1 would bounce it back up; the overrides kept it down
-        RigidBody.getPosition(world, position, bouncer);
+        RigidBody.getPosition(position, world, bouncer);
         expect(position[1]).toBeCloseTo(0.48, 1);
         releaseScene(scene);
         Sphere.destroy(ball);
@@ -114,13 +114,13 @@ describe('the step', () => {
         World.step(world, 1 / 60);
         expect(World.contactsAdded(world)).toBe(1);
         const event = ContactEvent.create();
-        expect(ContactEvent.readAdded(world, event, 0)).toBe(true);
+        expect(ContactEvent.readAdded(event, world, 0)).toBe(true);
         expect(event.bodyA === body || event.bodyB === body).toBe(true);
         expect(event.bodyA === body ? event.userDataA : event.userDataB).toBe(2 ** 40 + 5);
         expect(event.points).toBe(4);
         expect(Math.abs(event.normal[1])).toBeCloseTo(1, 5);
         for (let i = 0; i < 4; i++) expect(Math.abs(event.pointsA[i]![1])).toBeLessThan(0.05);
-        expect(ContactEvent.readAdded(world, event, 1)).toBe(false);
+        expect(ContactEvent.readAdded(event, world, 1)).toBe(false);
         expect(World.moved(world)).toBe(1);
         expect(World.movedBody(world, 0)).toBe(body);
 
@@ -128,7 +128,7 @@ describe('the step', () => {
         World.step(world, 1 / 60);
         expect(World.contactsRemoved(world)).toBe(1);
         const removed = ContactRemovedEvent.create();
-        expect(ContactRemovedEvent.read(world, removed, 0)).toBe(true);
+        expect(ContactRemovedEvent.read(removed, world, 0)).toBe(true);
         expect(removed.bodyA === body || removed.bodyB === body).toBe(true);
         releaseScene(scene);
         Box.destroy(crate);
@@ -155,7 +155,7 @@ describe('the step', () => {
         });
         World.step(world, 1 / 60);
         const event = ContactEvent.create();
-        ContactEvent.readAdded(world, event, 0);
+        ContactEvent.readAdded(event, world, 0);
         expect(event.settings.combinedFriction).toBeCloseTo(0.45, 6);
         releaseScene(scene);
         Box.destroy(ground);

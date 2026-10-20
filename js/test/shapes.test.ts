@@ -88,7 +88,7 @@ describe('primitives', () => {
         // the floor's top is y = 0, the plane at y = 10 is the one it lands on
         steps(world, 120);
         const position: Vec3 = [0, 0, 0];
-        RigidBody.getPosition(world, position, body);
+        RigidBody.getPosition(position, world, body);
         expect(position[1]).toBeCloseTo(10.5, 1);
 
         const empty = Empty.create();
@@ -162,12 +162,12 @@ describe('triangle meshes', () => {
         for (let i = 0; i < 60; i++) {
             World.step(world, 1 / 60);
             if (World.contactsAdded(world) > 0) {
-                ContactEvent.readAdded(world, event, 0);
+                ContactEvent.readAdded(event, world, 0);
                 material = event.bodyA === body ? event.materialB : event.materialA;
             }
         }
         const position: Vec3 = [0, 0, 0];
-        RigidBody.getPosition(world, position, body);
+        RigidBody.getPosition(position, world, body);
         expect(position[1]).toBeCloseTo(3.48, 1);
         expect(material).toBe(8);
         releaseScene(scene);

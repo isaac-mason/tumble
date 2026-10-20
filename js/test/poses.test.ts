@@ -37,7 +37,7 @@ describe('poses', () => {
         expect(Array.from(views.changed)).toEqual([fallingSlot]);
         const y: [number] = [0];
         const position: [number, number, number] = [0, 0, 0];
-        RigidBody.getPosition(world, position, falling);
+        RigidBody.getPosition(position, world, falling);
         y[0] = views.positions[fallingSlot * 3 + 1]!;
         expect(y[0]).toBe(Math.fround(position[1]));
 

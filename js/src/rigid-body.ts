@@ -115,36 +115,36 @@ export const RigidBody = {
         return Low.RigidBody.exists(world, body);
     },
 
-    // readers: the world, then out, then the body; false (out as it was) when the id names no body
+    // readers: out, then the world, then the body; false (out as it was) when the id names no body
 
     /** the shape's origin, world space */
-    getPosition(world: World, out: Vec3, body: BodyId): boolean {
+    getPosition(out: Vec3, world: World, body: BodyId): boolean {
         return copied(out, vec3, Low.RigidBody.getPosition(vec3, world, body));
     },
-    getQuaternion(world: World, out: Quat, body: BodyId): boolean {
+    getQuaternion(out: Quat, world: World, body: BodyId): boolean {
         return copied(out, quat, Low.RigidBody.getQuaternion(quat, world, body));
     },
-    getTransform(world: World, outPosition: Vec3, outQuaternion: Quat, body: BodyId): boolean {
+    getTransform(outPosition: Vec3, outQuaternion: Quat, world: World, body: BodyId): boolean {
         if (!Low.RigidBody.getTransform(vec3, quat, world, body)) return false;
         copied(outPosition, vec3, true);
         copied(outQuaternion, quat, true);
         return true;
     },
-    getCenterOfMassPosition(world: World, out: Vec3, body: BodyId): boolean {
+    getCenterOfMassPosition(out: Vec3, world: World, body: BodyId): boolean {
         return copied(out, vec3, Low.RigidBody.getCenterOfMassPosition(vec3, world, body));
     },
-    getLinearVelocity(world: World, out: Vec3, body: BodyId): boolean {
+    getLinearVelocity(out: Vec3, world: World, body: BodyId): boolean {
         return copied(out, vec3, Low.RigidBody.getLinearVelocity(vec3, world, body));
     },
-    getAngularVelocity(world: World, out: Vec3, body: BodyId): boolean {
+    getAngularVelocity(out: Vec3, world: World, body: BodyId): boolean {
         return copied(out, vec3, Low.RigidBody.getAngularVelocity(vec3, world, body));
     },
     /** the velocity of a world point carried with the body */
-    getVelocityAtPoint(world: World, out: Vec3, body: BodyId, point: Vec3): boolean {
+    getVelocityAtPoint(out: Vec3, world: World, body: BodyId, point: Vec3): boolean {
         return copied(out, vec3, Low.RigidBody.getVelocityAtPoint(vec3, world, body, point));
     },
     /** world space bounds */
-    getBounds(world: World, out: Box3, body: BodyId): boolean {
+    getBounds(out: Box3, world: World, body: BodyId): boolean {
         if (!Low.RigidBody.getAabb(box3, world, body)) return false;
         copied(out.min, box3.min, true);
         copied(out.max, box3.max, true);

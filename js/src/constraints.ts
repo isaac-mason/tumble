@@ -142,7 +142,7 @@ export const PointConstraint = {
         return Low.PointConstraint.remove(world, constraint);
     },
     /** the impulse it applied in the last step, N s: for breaking it by force */
-    getTotalLambda(world: World, out: Vec3, constraint: ConstraintId): boolean {
+    getTotalLambda(out: Vec3, world: World, constraint: ConstraintId): boolean {
         return copied(out, vec3, Low.PointConstraint.getTotalLambda(vec3, world, constraint));
     },
 };
@@ -324,13 +324,13 @@ export const SliderConstraint = {
     setTargetPosition(world: World, constraint: ConstraintId, position: number): boolean {
         return Low.SliderConstraint.setTargetPosition(world, constraint, position);
     },
-    getTotalLambdaPosition(world: World, out: Vec2, constraint: ConstraintId): boolean {
+    getTotalLambdaPosition(out: Vec2, world: World, constraint: ConstraintId): boolean {
         return copied(out, vec2, Low.SliderConstraint.getTotalLambdaPosition(vec2, world, constraint));
     },
     getTotalLambdaPositionLimits(world: World, constraint: ConstraintId): number {
         return Low.SliderConstraint.getTotalLambdaPositionLimits(world, constraint);
     },
-    getTotalLambdaRotation(world: World, out: Vec3, constraint: ConstraintId): boolean {
+    getTotalLambdaRotation(out: Vec3, world: World, constraint: ConstraintId): boolean {
         return copied(out, vec3, Low.SliderConstraint.getTotalLambdaRotation(vec3, world, constraint));
     },
     getTotalLambdaMotor(world: World, constraint: ConstraintId): number {
@@ -361,10 +361,10 @@ export const FixedConstraint = {
     remove(world: World, constraint: ConstraintId): boolean {
         return Low.FixedConstraint.remove(world, constraint);
     },
-    getTotalLambdaPosition(world: World, out: Vec3, constraint: ConstraintId): boolean {
+    getTotalLambdaPosition(out: Vec3, world: World, constraint: ConstraintId): boolean {
         return copied(out, vec3, Low.FixedConstraint.getTotalLambdaPosition(vec3, world, constraint));
     },
-    getTotalLambdaRotation(world: World, out: Vec3, constraint: ConstraintId): boolean {
+    getTotalLambdaRotation(out: Vec3, world: World, constraint: ConstraintId): boolean {
         return copied(out, vec3, Low.FixedConstraint.getTotalLambdaRotation(vec3, world, constraint));
     },
 };
@@ -406,7 +406,7 @@ export const ConeConstraint = {
     getCosHalfConeAngle(world: World, constraint: ConstraintId): number {
         return Low.ConeConstraint.getCosHalfConeAngle(world, constraint);
     },
-    getTotalLambdaPosition(world: World, out: Vec3, constraint: ConstraintId): boolean {
+    getTotalLambdaPosition(out: Vec3, world: World, constraint: ConstraintId): boolean {
         return copied(out, vec3, Low.ConeConstraint.getTotalLambdaPosition(vec3, world, constraint));
     },
     getTotalLambdaRotation(world: World, constraint: ConstraintId): number {
@@ -494,10 +494,10 @@ export const SwingTwistConstraint = {
         return Low.SwingTwistConstraint.setTargetOrientationBs(world, constraint, orientation);
     },
     /** the turn between the bodies, in constraint space */
-    getRotationInConstraintSpace(world: World, out: Quat, constraint: ConstraintId): boolean {
+    getRotationInConstraintSpace(out: Quat, world: World, constraint: ConstraintId): boolean {
         return copied(out, quat, Low.SwingTwistConstraint.getRotationInConstraintSpace(quat, world, constraint));
     },
-    getTotalLambdaPosition(world: World, out: Vec3, constraint: ConstraintId): boolean {
+    getTotalLambdaPosition(out: Vec3, world: World, constraint: ConstraintId): boolean {
         return copied(out, vec3, Low.SwingTwistConstraint.getTotalLambdaPosition(vec3, world, constraint));
     },
     getTotalLambdaTwist(world: World, constraint: ConstraintId): number {
@@ -509,7 +509,7 @@ export const SwingTwistConstraint = {
     getTotalLambdaSwingZ(world: World, constraint: ConstraintId): number {
         return Low.SwingTwistConstraint.getTotalLambdaSwingZ(world, constraint);
     },
-    getTotalLambdaMotor(world: World, out: Vec3, constraint: ConstraintId): boolean {
+    getTotalLambdaMotor(out: Vec3, world: World, constraint: ConstraintId): boolean {
         return copied(out, vec3, Low.SwingTwistConstraint.getTotalLambdaMotor(vec3, world, constraint));
     },
 };

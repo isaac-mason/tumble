@@ -63,7 +63,7 @@ function dynamic(scene: Scene, shape: Shape, position: Vec3): number {
 const position: Vec3 = [0, 0, 0];
 
 function positionOf(scene: Scene, body: number): Vec3 {
-    RigidBody.getPosition(scene.world, position, body);
+    RigidBody.getPosition(position, scene.world, body);
     return position;
 }
 
