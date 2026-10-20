@@ -91,14 +91,14 @@ struct SixDOFConstraint {
 };
 
 struct SixDOFConstraintSettings {
-    Float3 position1 = {0.0f, 0.0f, 0.0f};
-    Float3 position2 = {0.0f, 0.0f, 0.0f};
+    Float3 point_a = {0.0f, 0.0f, 0.0f};
+    Float3 point_b = {0.0f, 0.0f, 0.0f};
     /** x and y axes of constraint space on body 1 (normalized on create) */
-    Float3 axis_x1 = {1.0f, 0.0f, 0.0f};
-    Float3 axis_y1 = {0.0f, 1.0f, 0.0f};
+    Float3 axis_x_a = {1.0f, 0.0f, 0.0f};
+    Float3 axis_y_a = {0.0f, 1.0f, 0.0f};
     /** x and y axes of constraint space on body 2 (normalized on create) */
-    Float3 axis_x2 = {1.0f, 0.0f, 0.0f};
-    Float3 axis_y2 = {0.0f, 1.0f, 0.0f};
+    Float3 axis_x_b = {1.0f, 0.0f, 0.0f};
+    Float3 axis_y_b = {0.0f, 1.0f, 0.0f};
     constraints::ConstraintSpace space = constraints::SPACE_WORLD;
     swing_twist_constraint_part::SwingType swing_type = swing_twist_constraint_part::CONE;
     /** per axis limits; every axis free by default */

@@ -232,10 +232,10 @@ ConstraintId create(world::World &world, RigidBody *body_a, RigidBody *body_b,
     constraint.swing_twist_constraint_part.swing_type = settings.swing_type;
 
     // constraint to body rotations from the normalized axes
-    const Vec3f axis_x1 = vec3f::normalize(vec3f::load(settings.axis_x1));
-    const Vec3f axis_y1 = vec3f::normalize(vec3f::load(settings.axis_y1));
-    const Vec3f axis_x2 = vec3f::normalize(vec3f::load(settings.axis_x2));
-    const Vec3f axis_y2 = vec3f::normalize(vec3f::load(settings.axis_y2));
+    const Vec3f axis_x1 = vec3f::normalize(vec3f::load(settings.axis_x_a));
+    const Vec3f axis_y1 = vec3f::normalize(vec3f::load(settings.axis_y_a));
+    const Vec3f axis_x2 = vec3f::normalize(vec3f::load(settings.axis_x_b));
+    const Vec3f axis_y2 = vec3f::normalize(vec3f::load(settings.axis_y_b));
     constraint.constraint_to_body1 = constraint_to_body(axis_x1, axis_y1);
     constraint.constraint_to_body2 = constraint_to_body(axis_x2, axis_y2);
 
@@ -243,15 +243,15 @@ ConstraintId create(world::World &world, RigidBody *body_a, RigidBody *body_b,
         const Quatf inv_quat_a = quatf::conjugate(quatf::load(body_a->quaternion));
         const Quatf inv_quat_b = quatf::conjugate(quatf::load(body_b->quaternion));
 
-        constraint.local_space_position1 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.position1), vec3f::load(body_a->center_of_mass_position)), inv_quat_a);
+        constraint.local_space_position1 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point_a), vec3f::load(body_a->center_of_mass_position)), inv_quat_a);
 
-        constraint.local_space_position2 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.position2), vec3f::load(body_b->center_of_mass_position)), inv_quat_b);
+        constraint.local_space_position2 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point_b), vec3f::load(body_b->center_of_mass_position)), inv_quat_b);
 
         constraint.constraint_to_body1 = quatf::multiply(inv_quat_a, constraint.constraint_to_body1);
         constraint.constraint_to_body2 = quatf::multiply(inv_quat_b, constraint.constraint_to_body2);
     } else {
-        constraint.local_space_position1 = vec3f::load(settings.position1);
-        constraint.local_space_position2 = vec3f::load(settings.position2);
+        constraint.local_space_position1 = vec3f::load(settings.point_a);
+        constraint.local_space_position2 = vec3f::load(settings.point_b);
     }
 
     for (uint32_t i = 0; i < NUM; i++) {

@@ -36,17 +36,17 @@ struct FixedConstraint {
 
 struct FixedConstraintSettings {
     /** pivot point on body 1, ignored when auto_detect_point */
-    Float3 point1 = {0.0f, 0.0f, 0.0f};
+    Float3 point_a = {0.0f, 0.0f, 0.0f};
     /** reference axis x for body 1 (for orientation) */
-    Float3 axis_x1 = {1.0f, 0.0f, 0.0f};
+    Float3 axis_x_a = {1.0f, 0.0f, 0.0f};
     /** reference axis y for body 1 (for orientation) */
-    Float3 axis_y1 = {0.0f, 1.0f, 0.0f};
+    Float3 axis_y_a = {0.0f, 1.0f, 0.0f};
     /** pivot point on body 2, ignored when auto_detect_point */
-    Float3 point2 = {0.0f, 0.0f, 0.0f};
+    Float3 point_b = {0.0f, 0.0f, 0.0f};
     /** reference axis x for body 2 (for orientation) */
-    Float3 axis_x2 = {1.0f, 0.0f, 0.0f};
+    Float3 axis_x_b = {1.0f, 0.0f, 0.0f};
     /** reference axis y for body 2 (for orientation) */
-    Float3 axis_y2 = {0.0f, 1.0f, 0.0f};
+    Float3 axis_y_b = {0.0f, 1.0f, 0.0f};
     constraints::ConstraintSpace space = constraints::SPACE_WORLD;
     /** world space only: place the attachment point between the bodies' centers of mass, weighted towards the lighter body */
     bool auto_detect_point = false;

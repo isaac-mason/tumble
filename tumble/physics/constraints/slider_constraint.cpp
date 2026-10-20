@@ -203,7 +203,8 @@ SliderConstraint *get(world::World &world, ConstraintId id) {
     return reinterpret_cast<SliderConstraint *>(constraints::get(world.constraints, id));
 }
 
-float get_current_position(const SliderConstraint &constraint, const bodies::Bodies &bodies) {
+float get_current_position(const world::World &world, const SliderConstraint &constraint) {
+    const bodies::Bodies &bodies = world.bodies;
     // the cached value when a body is gone
     if (!is_body_live(bodies, constraint.base.body_index_a) || !is_body_live(bodies, constraint.base.body_index_b)) {
         return constraint.d;

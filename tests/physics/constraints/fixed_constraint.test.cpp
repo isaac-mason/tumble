@@ -31,7 +31,7 @@ void test_fixed_constraint_create_world_space(TestCtx &ctx) {
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 1.0f, 0.0f}, stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.7f));
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {2.0f, 1.0f, 0.0f}, stored_axis_angle(vec3f::make(1.0f, 1.0f, 0.0f), -1.1f));
     const constraint_id::ConstraintId id =
-        fixed_constraint::create(*scene.world, a, b, {.point1 = {1.0f, 1.0f, 0.0f}, .point2 = {1.0f, 1.0f, 0.0f}});
+        fixed_constraint::create(*scene.world, a, b, {.point_a = {1.0f, 1.0f, 0.0f}, .point_b = {1.0f, 1.0f, 0.0f}});
     FixedConstraint *constraint = fixed_constraint::get(*scene.world, id);
     CHECK(ctx, constraint != nullptr && constraint_id::type(id) == constraint_id::FIXED);
 
@@ -59,7 +59,7 @@ void test_fixed_constraint_create_local_space(TestCtx &ctx) {
     const Float3 y2 = {-3.0f, 0.0f, 0.0f};
     const constraint_id::ConstraintId id = fixed_constraint::create(
         *scene.world, a, b,
-        {.point1 = {1.0f, 0.0f, 0.0f}, .point2 = {-1.0f, 0.0f, 0.0f}, .axis_x2 = x2, .axis_y2 = y2, .space = constraints::SPACE_LOCAL});
+        {.point_a = {1.0f, 0.0f, 0.0f}, .point_b = {-1.0f, 0.0f, 0.0f}, .axis_x_b = x2, .axis_y_b = y2, .space = constraints::SPACE_LOCAL});
     const FixedConstraint *constraint = fixed_constraint::get(*scene.world, id);
     CHECK(ctx, vec3f::exact_equals(constraint->local_space_position1, vec3f::make(1.0f, 0.0f, 0.0f)));
     CHECK(ctx, vec3f::exact_equals(constraint->local_space_position2, vec3f::make(-1.0f, 0.0f, 0.0f)));
@@ -84,7 +84,7 @@ void test_fixed_constraint_auto_detect_point(TestCtx &ctx) {
 
     // equal masses: the midpoint
     const constraint_id::ConstraintId id =
-        fixed_constraint::create(*scene.world, a, b, {.point1 = {9.0f, 9.0f, 9.0f}, .auto_detect_point = true});
+        fixed_constraint::create(*scene.world, a, b, {.point_a = {9.0f, 9.0f, 9.0f}, .auto_detect_point = true});
     const FixedConstraint *constraint = fixed_constraint::get(*scene.world, id);
     CHECK(ctx, vec3f::distance(constraint->local_space_position1, vec3f::make(1.0f, 0.0f, 0.0f)) < 1e-5f);
     CHECK(ctx, vec3f::distance(constraint->local_space_position2, vec3f::make(-1.0f, 0.0f, 0.0f)) < 1e-5f);
@@ -129,7 +129,7 @@ void test_fixed_constraint_holds_pose(TestCtx &ctx) {
     RigidBody *body = add_body(scene, motion_type::MOTION_DYNAMIC, {1.5f, 5.0f, 0.0f}, rest_rotation);
     const Float3 rest_position = body->center_of_mass_position;
     const constraint_id::ConstraintId id =
-        fixed_constraint::create(*scene.world, wall, body, {.point1 = {0.5f, 5.0f, 0.0f}, .point2 = {0.5f, 5.0f, 0.0f}});
+        fixed_constraint::create(*scene.world, wall, body, {.point_a = {0.5f, 5.0f, 0.0f}, .point_b = {0.5f, 5.0f, 0.0f}});
     scene.ids.push(id);
     body->motion_properties.linear_velocity = {0.0f, 3.0f, 1.0f};
     body->motion_properties.angular_velocity = {1.0f, 2.0f, 0.5f};

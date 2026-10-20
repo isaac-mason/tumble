@@ -19,8 +19,8 @@ static const float DT = 1.0f / 60.0f;
 /** settings with the translation axes fixed and the rotation axes free */
 static SixDOFConstraintSettings translation_fixed_settings(const Float3 &pivot) {
     SixDOFConstraintSettings settings;
-    settings.position1 = pivot;
-    settings.position2 = pivot;
+    settings.point_a = pivot;
+    settings.point_b = pivot;
     for (uint32_t i = 0; i < 3; i++) {
         settings.limit_min[i] = __FLT_MAX__;
         settings.limit_max[i] = -__FLT_MAX__;
@@ -53,8 +53,8 @@ void test_six_dof_constraint_create(TestCtx &ctx) {
     // everything free by default; motor springs at 2 hz, critically damped, on every axis
     const constraint_id::ConstraintId id = six_dof_constraint::create(
         *scene.world, a, b,
-        {.position1 = {1.0f, 0.0f, 0.0f}, .position2 = {1.0f, 0.0f, 0.0f}, .axis_x1 = {0.0f, 2.0f, 0.0f},
-         .axis_y1 = {0.0f, 0.0f, 3.0f}, .axis_x2 = {0.0f, 2.0f, 0.0f}, .axis_y2 = {0.0f, 0.0f, 3.0f}});
+        {.point_a = {1.0f, 0.0f, 0.0f}, .point_b = {1.0f, 0.0f, 0.0f}, .axis_x_a = {0.0f, 2.0f, 0.0f},
+         .axis_y_a = {0.0f, 0.0f, 3.0f}, .axis_x_b = {0.0f, 2.0f, 0.0f}, .axis_y_b = {0.0f, 0.0f, 3.0f}});
     const SixDOFConstraint *constraint = six_dof_constraint::get(*scene.world, id);
     CHECK(ctx, constraint != nullptr && constraint_id::type(id) == constraint_id::SIX_DOF);
     CHECK(ctx, a->constraint_ids.length == 1 && b->constraint_ids.length == 1);
@@ -193,7 +193,7 @@ void test_six_dof_constraint_all_locked_is_a_fixed_constraint(TestCtx &ctx) {
     RigidBody *base2 = add_body(scene, motion_type::MOTION_STATIC, {5.0f, 10.0f, 0.0f});
     RigidBody *ball2 = add_body(scene, motion_type::MOTION_DYNAMIC, {6.0f, 9.5f, 0.0f}, tilt);
     const constraint_id::ConstraintId fixed_id = fixed_constraint::create(
-        *scene.world, base, ball, {.point1 = {0.5f, 10.0f, 0.0f}, .point2 = {0.5f, 10.0f, 0.0f}});
+        *scene.world, base, ball, {.point_a = {0.5f, 10.0f, 0.0f}, .point_b = {0.5f, 10.0f, 0.0f}});
     scene.ids.push(fixed_id);
     SixDOFConstraintSettings settings = translation_fixed_settings({5.5f, 10.0f, 0.0f});
     for (uint32_t i = 3; i < 6; i++) {

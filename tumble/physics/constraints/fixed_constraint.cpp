@@ -68,10 +68,10 @@ ConstraintId create(world::World &world, RigidBody *body_a, RigidBody *body_b,
     constraint.base.body_index_b = body_b->index;
 
     // normalize axes
-    const Vec3f axis_x1 = vec3f::normalize(vec3f::load(settings.axis_x1));
-    const Vec3f axis_y1 = vec3f::normalize(vec3f::load(settings.axis_y1));
-    const Vec3f axis_x2 = vec3f::normalize(vec3f::load(settings.axis_x2));
-    const Vec3f axis_y2 = vec3f::normalize(vec3f::load(settings.axis_y2));
+    const Vec3f axis_x1 = vec3f::normalize(vec3f::load(settings.axis_x_a));
+    const Vec3f axis_y1 = vec3f::normalize(vec3f::load(settings.axis_y_a));
+    const Vec3f axis_x2 = vec3f::normalize(vec3f::load(settings.axis_x_b));
+    const Vec3f axis_y2 = vec3f::normalize(vec3f::load(settings.axis_y_b));
 
     // initial orientation from the reference axes
     const Quatf r0 = rotation_euler_constraint_part::get_inv_initial_orientation_xy(axis_x1, axis_y1, axis_x2, axis_y2);
@@ -105,17 +105,17 @@ ConstraintId create(world::World &world, RigidBody *body_a, RigidBody *body_b,
             constraint.local_space_position1 = vec3f::transform_quat(vec3f::subtract(anchor, center_of_mass_a), inv_quat_a);
             constraint.local_space_position2 = vec3f::transform_quat(vec3f::subtract(anchor, center_of_mass_b), inv_quat_b);
         } else {
-            constraint.local_space_position1 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point1), vec3f::load(body_a->center_of_mass_position)), inv_quat_a);
+            constraint.local_space_position1 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point_a), vec3f::load(body_a->center_of_mass_position)), inv_quat_a);
 
-            constraint.local_space_position2 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point2), vec3f::load(body_b->center_of_mass_position)), inv_quat_b);
+            constraint.local_space_position2 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point_b), vec3f::load(body_b->center_of_mass_position)), inv_quat_b);
         }
 
         // the axes were given in world space, so c1 becomes q10^-1 c1 and c2 becomes q20^-1 c2:
         // r0^-1 = (q20^-1 c2) (q10^-1 c1)^-1 = q20^-1 (c2 c1^-1) q10
         constraint.inv_initial_orientation = quatf::multiply(quatf::multiply(inv_quat_b, r0), quatf::load(body_a->quaternion));
     } else {
-        constraint.local_space_position1 = vec3f::load(settings.point1);
-        constraint.local_space_position2 = vec3f::load(settings.point2);
+        constraint.local_space_position1 = vec3f::load(settings.point_a);
+        constraint.local_space_position2 = vec3f::load(settings.point_b);
         constraint.inv_initial_orientation = r0;
     }
 

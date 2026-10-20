@@ -45,12 +45,12 @@ void test_swing_twist_constraint_create(TestCtx &ctx) {
     // world space: twist down, plane along x; the constraint frames taken to each body's space
     const constraint_id::ConstraintId id =
         swing_twist_constraint::create(*scene.world, a, b,
-                                       {.position1 = {0.0f, -1.0f, 0.0f},
-                                        .position2 = {0.0f, -1.0f, 0.0f},
-                                        .twist_axis1 = {0.0f, -2.0f, 0.0f},
-                                        .plane_axis1 = {3.0f, 0.0f, 0.0f},
-                                        .twist_axis2 = {0.0f, -2.0f, 0.0f},
-                                        .plane_axis2 = {3.0f, 0.0f, 0.0f},
+                                       {.point_a = {0.0f, -1.0f, 0.0f},
+                                        .point_b = {0.0f, -1.0f, 0.0f},
+                                        .twist_axis_a = {0.0f, -2.0f, 0.0f},
+                                        .plane_axis_a = {3.0f, 0.0f, 0.0f},
+                                        .twist_axis_b = {0.0f, -2.0f, 0.0f},
+                                        .plane_axis_b = {3.0f, 0.0f, 0.0f},
                                         .normal_half_cone_angle = 0.5f,
                                         .plane_half_cone_angle = 0.25f,
                                         .twist_min_angle = -0.1f,
@@ -89,7 +89,7 @@ void test_swing_twist_constraint_create(TestCtx &ctx) {
 
     // local space positions are as given
     const constraint_id::ConstraintId local_id = swing_twist_constraint::create(
-        *scene.world, a, b, {.position1 = {0.5f, 0.0f, 0.0f}, .space = constraints::SPACE_LOCAL});
+        *scene.world, a, b, {.point_a = {0.5f, 0.0f, 0.0f}, .space = constraints::SPACE_LOCAL});
     const SwingTwistConstraint *local = swing_twist_constraint::get(*scene.world, local_id);
     CHECK(ctx, vec3f::exact_equals(local->local_space_position1, vec3f::make(0.5f, 0.0f, 0.0f)));
     CHECK(ctx, same_rotation(local->constraint_to_body1, quatf::make(0.0f, 0.0f, 0.0f, 1.0f)));
@@ -209,12 +209,12 @@ void test_swing_twist_constraint_pendulum(TestCtx &ctx) {
     const Float3 pivot_point = {0.0f, 10.0f, 0.0f};
     const float half_cone = 20.0f * scalar::DEGREES_TO_RADIANS;
     const constraint_id::ConstraintId id = swing_twist_constraint::create(*scene.world, pivot, ball,
-                                                                          {.position1 = pivot_point,
-                                                                           .position2 = pivot_point,
-                                                                           .twist_axis1 = {0.0f, -1.0f, 0.0f},
-                                                                           .plane_axis1 = {1.0f, 0.0f, 0.0f},
-                                                                           .twist_axis2 = {0.0f, -1.0f, 0.0f},
-                                                                           .plane_axis2 = {1.0f, 0.0f, 0.0f},
+                                                                          {.point_a = pivot_point,
+                                                                           .point_b = pivot_point,
+                                                                           .twist_axis_a = {0.0f, -1.0f, 0.0f},
+                                                                           .plane_axis_a = {1.0f, 0.0f, 0.0f},
+                                                                           .twist_axis_b = {0.0f, -1.0f, 0.0f},
+                                                                           .plane_axis_b = {1.0f, 0.0f, 0.0f},
                                                                            .normal_half_cone_angle = half_cone,
                                                                            .plane_half_cone_angle = half_cone,
                                                                            .twist_min_angle = -0.1f,

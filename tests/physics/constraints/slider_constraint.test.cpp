@@ -54,9 +54,9 @@ void test_slider_constraint_create(TestCtx &ctx) {
     CHECK(ctx, vec3f::distance(world_point(b, constraint->local_space_position_b), vec3f::make(1.0f, 0.0f, 0.0f)) < 1e-5f);
     // no limits by default; at rest the slide is 0
     CHECK(ctx, !constraint->has_limits);
-    CHECK(ctx, scalar::abs(slider_constraint::get_current_position(*constraint, scene.world->bodies)) < 1e-5f);
+    CHECK(ctx, scalar::abs(slider_constraint::get_current_position(*scene.world, *constraint)) < 1e-5f);
     b->center_of_mass_position.x += 0.25f;
-    CHECK_NEAR(ctx, slider_constraint::get_current_position(*constraint, scene.world->bodies), 0.25f, 1e-5f);
+    CHECK_NEAR(ctx, slider_constraint::get_current_position(*scene.world, *constraint), 0.25f, 1e-5f);
     // the rest orientation is the current one: q2 * inv_initial_orientation * q1^-1 is the identity
     const Quatf inv_a = quatf::conjugate(quatf::load(a->quaternion));
     const Quatf diff = quatf::multiply(quatf::multiply(quatf::load(b->quaternion), constraint->inv_initial_orientation), inv_a);
@@ -135,7 +135,7 @@ void test_slider_constraint_holds_axis(TestCtx &ctx) {
     CHECK(ctx, scalar::abs(ball->motion_properties.linear_velocity.z) < 1e-3f);
     // the slide is free: one meter in the second at 1 m/s
     CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.x, 1.0f, 1e-3f);
-    CHECK_NEAR(ctx, slider_constraint::get_current_position(*constraint, scene.world->bodies), 1.0f, 2e-2f);
+    CHECK_NEAR(ctx, slider_constraint::get_current_position(*scene.world, *constraint), 1.0f, 2e-2f);
     // the static base carries the weight: the perpendicular impulse is mg dt
     Vec2f lambda;
     slider_constraint::get_total_lambda_position(lambda, *constraint);
@@ -152,11 +152,11 @@ void test_slider_constraint_limits(TestCtx &ctx) {
     float farthest = 0.0f;
     for (int i = 0; i < 60; i++) {
         step_constraint_scene(scene, DT, vec3f::load(GRAVITY));
-        farthest = scalar::max(farthest, slider_constraint::get_current_position(*constraint, scene.world->bodies));
+        farthest = scalar::max(farthest, slider_constraint::get_current_position(*scene.world, *constraint));
     }
     // it stops at the upper limit, overshooting by at most one step's travel
     CHECK(ctx, farthest < 0.5f + 3.0f * DT);
-    CHECK_NEAR(ctx, slider_constraint::get_current_position(*constraint, scene.world->bodies), 0.5f, 1e-2f);
+    CHECK_NEAR(ctx, slider_constraint::get_current_position(*scene.world, *constraint), 0.5f, 1e-2f);
     CHECK(ctx, scalar::abs(ball->motion_properties.linear_velocity.x) < 1e-2f);
     CHECK(ctx, slider_constraint::get_total_lambda_position_limits(*constraint) <= 0.0f);
 
@@ -164,10 +164,10 @@ void test_slider_constraint_limits(TestCtx &ctx) {
     float nearest = 0.0f;
     for (int i = 0; i < 60; i++) {
         step_constraint_scene(scene, DT, vec3f::load(GRAVITY));
-        nearest = scalar::min(nearest, slider_constraint::get_current_position(*constraint, scene.world->bodies));
+        nearest = scalar::min(nearest, slider_constraint::get_current_position(*scene.world, *constraint));
     }
     CHECK(ctx, nearest > -0.5f - 3.0f * DT);
-    CHECK_NEAR(ctx, slider_constraint::get_current_position(*constraint, scene.world->bodies), -0.5f, 1e-2f);
+    CHECK_NEAR(ctx, slider_constraint::get_current_position(*scene.world, *constraint), -0.5f, 1e-2f);
     CHECK(ctx, slider_constraint::get_total_lambda_position_limits(*constraint) >= 0.0f);
     release_constraint_scene(scene);
 }
@@ -181,14 +181,14 @@ void test_slider_constraint_position_motor(TestCtx &ctx) {
 
     // the default 2 hz critically damped spring settles on the target, under gravity across the rail
     for (int i = 0; i < 180; i++) step_constraint_scene(scene, DT, vec3f::load(GRAVITY));
-    CHECK_NEAR(ctx, slider_constraint::get_current_position(*constraint, scene.world->bodies), 0.3f, 1e-3f);
+    CHECK_NEAR(ctx, slider_constraint::get_current_position(*scene.world, *constraint), 0.3f, 1e-3f);
     CHECK(ctx, scalar::abs(ball->motion_properties.linear_velocity.x) < 1e-2f);
     CHECK_NEAR(ctx, ball->center_of_mass_position.x, 1.3f, 1e-3f);
 
     // and follows a new target the other way
     slider_constraint::set_target_position(*constraint, -0.4f);
     for (int i = 0; i < 180; i++) step_constraint_scene(scene, DT, vec3f::load(GRAVITY));
-    CHECK_NEAR(ctx, slider_constraint::get_current_position(*constraint, scene.world->bodies), -0.4f, 1e-3f);
+    CHECK_NEAR(ctx, slider_constraint::get_current_position(*scene.world, *constraint), -0.4f, 1e-3f);
     release_constraint_scene(scene);
 }
 

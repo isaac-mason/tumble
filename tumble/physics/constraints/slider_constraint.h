@@ -121,7 +121,7 @@ bool remove(world::World &world, constraint_id::ConstraintId id);
 SliderConstraint *get(world::World &world, constraint_id::ConstraintId id);
 
 /** the distance along the slider axis from the rest position, from the bodies' current transforms */
-float get_current_position(const SliderConstraint &constraint, const bodies::Bodies &bodies);
+float get_current_position(const world::World &world, const SliderConstraint &constraint);
 /** position limits, min <= 0 and max >= 0 */
 void set_limits(SliderConstraint &constraint, float min, float max);
 void set_motor_state(SliderConstraint &constraint, motor_settings::MotorState state);
