@@ -237,5 +237,33 @@ WASM_EXPORT bool tumble_six_dof_constraint_set_max_friction(world::World * world
 WASM_EXPORT bool tumble_six_dof_constraint_make_free_axis(world::World * world, uint32_t constraint, uint32_t axis) { return adapters::six_dof_constraint::make_free_axis(world, constraint, axis); }
 WASM_EXPORT bool tumble_six_dof_constraint_make_fixed_axis(world::World * world, uint32_t constraint, uint32_t axis) { return adapters::six_dof_constraint::make_fixed_axis(world, constraint, axis); }
 WASM_EXPORT bool tumble_six_dof_constraint_set_limited_axis(world::World * world, uint32_t constraint, uint32_t axis, float min, float max) { return adapters::six_dof_constraint::set_limited_axis(world, constraint, axis, min, max); }
+WASM_EXPORT filter::Filter * tumble_filter_create(world::World * world) { return adapters::filter::create(world); }
+WASM_EXPORT void tumble_filter_destroy(filter::Filter * filter) { adapters::filter::destroy(filter); }
+WASM_EXPORT void tumble_filter_enable_all_layers(filter::Filter * filter, world::World * world) { adapters::filter::enable_all_layers(filter, world); }
+WASM_EXPORT void tumble_filter_disable_all_layers(filter::Filter * filter, world::World * world) { adapters::filter::disable_all_layers(filter, world); }
+WASM_EXPORT bool tumble_filter_enable_object_layer(filter::Filter * filter, world::World * world, uint32_t objectLayer) { return adapters::filter::enable_object_layer(filter, world, objectLayer); }
+WASM_EXPORT bool tumble_filter_disable_object_layer(filter::Filter * filter, world::World * world, uint32_t objectLayer) { return adapters::filter::disable_object_layer(filter, world, objectLayer); }
+WASM_EXPORT bool tumble_filter_enable_broadphase_layer(filter::Filter * filter, world::World * world, uint32_t broadphaseLayer) { return adapters::filter::enable_broadphase_layer(filter, world, broadphaseLayer); }
+WASM_EXPORT bool tumble_filter_disable_broadphase_layer(filter::Filter * filter, world::World * world, uint32_t broadphaseLayer) { return adapters::filter::disable_broadphase_layer(filter, world, broadphaseLayer); }
+WASM_EXPORT bool tumble_filter_is_object_layer_enabled(const filter::Filter * filter, uint32_t objectLayer) { return adapters::filter::is_object_layer_enabled(filter, objectLayer); }
+WASM_EXPORT bool tumble_filter_is_broadphase_layer_enabled(const filter::Filter * filter, uint32_t broadphaseLayer) { return adapters::filter::is_broadphase_layer_enabled(filter, broadphaseLayer); }
+WASM_EXPORT bool tumble_filter_set_from_body(filter::Filter * filter, world::World * world, uint32_t body) { return adapters::filter::set_from_body(filter, world, body); }
+WASM_EXPORT uint32_t tumble_filter_get_collision_groups(const filter::Filter * filter) { return adapters::filter::get_collision_groups(filter); }
+WASM_EXPORT uint32_t tumble_filter_get_collision_mask(const filter::Filter * filter) { return adapters::filter::get_collision_mask(filter); }
+WASM_EXPORT bool tumble_filter_copy(filter::Filter * out, const filter::Filter * source) { return adapters::filter::copy(out, source); }
+WASM_EXPORT float tumble_query_initial_early_out_fraction() { return adapters::query::initial_early_out_fraction(); }
+WASM_EXPORT float tumble_query_unbounded_early_out() { return adapters::query::unbounded_early_out(); }
+WASM_EXPORT void tumble_query_default_cast_ray_settings(cast_ray::CastRaySettings * out) { adapters::query::default_cast_ray_settings(*out); }
+WASM_EXPORT uint32_t tumble_query_cast_ray(world::World * world, uint32_t kind, float earlyOutFraction, const cast_ray::CastRaySettings * settings, const Float3 * origin, const Float3 * direction, float length, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { return adapters::query::cast_ray(world, kind, earlyOutFraction, *settings, *origin, *direction, length, filter, collisionGroups, collisionMask); }
+WASM_EXPORT bool tumble_query_read_cast_ray_hit(cast_ray::CastRayHit * out, uint32_t index) { return adapters::query::read_cast_ray_hit(*out, index); }
+WASM_EXPORT void tumble_query_default_cast_shape_settings(adapters::CastShapeSettings * out) { adapters::query::default_cast_shape_settings(*out); }
+WASM_EXPORT uint32_t tumble_query_cast_shape(world::World * world, uint32_t kind, float earlyOutFraction, const adapters::CastShapeSettings * settings, const shapes::Shape * shape, const Float3 * position, const Float4 * quaternion, const Float3 * scale, const Float3 * displacement, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { return adapters::query::cast_shape(world, kind, earlyOutFraction, *settings, shape, *position, *quaternion, *scale, *displacement, filter, collisionGroups, collisionMask); }
+WASM_EXPORT bool tumble_query_read_cast_shape_hit(adapters::CastShapeHit * out, uint32_t index) { return adapters::query::read_cast_shape_hit(*out, index); }
+WASM_EXPORT void tumble_query_default_collide_shape_settings(adapters::CollideShapeSettings * out) { adapters::query::default_collide_shape_settings(*out); }
+WASM_EXPORT uint32_t tumble_query_collide_shape(world::World * world, uint32_t kind, float earlyOutFraction, const adapters::CollideShapeSettings * settings, const shapes::Shape * shape, const Float3 * position, const Float4 * quaternion, const Float3 * scale, bool internalEdgeRemoval, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { return adapters::query::collide_shape(world, kind, earlyOutFraction, *settings, shape, *position, *quaternion, *scale, internalEdgeRemoval, filter, collisionGroups, collisionMask); }
+WASM_EXPORT bool tumble_query_read_collide_shape_hit(adapters::CollideShapeHit * out, uint32_t index) { return adapters::query::read_collide_shape_hit(*out, index); }
+WASM_EXPORT void tumble_query_default_collide_point_settings(collide_point::CollidePointSettings * out) { adapters::query::default_collide_point_settings(*out); }
+WASM_EXPORT uint32_t tumble_query_collide_point(world::World * world, uint32_t kind, const collide_point::CollidePointSettings * settings, const Float3 * point, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { return adapters::query::collide_point(world, kind, *settings, *point, filter, collisionGroups, collisionMask); }
+WASM_EXPORT bool tumble_query_read_collide_point_hit(collide_point::CollidePointHit * out, uint32_t index) { return adapters::query::read_collide_point_hit(*out, index); }
 
 #endif

@@ -15,7 +15,9 @@
 #include "tumble/physics/constraints/six_dof_constraint.h"
 #include "tumble/physics/constraints/slider_constraint.h"
 #include "tumble/physics/constraints/swing_twist_constraint.h"
+#include "tumble/physics/filter.h"
 #include "tumble/physics/manifold/manifold.h"
+#include "tumble/physics/query.h"
 #include "tumble/physics/shapes/box.h"
 #include "tumble/physics/shapes/capsule.h"
 #include "tumble/physics/shapes/compound.h"
@@ -584,5 +586,120 @@ bool make_fixed_axis(tumble::world::World *world, tumble::constraint_id::Constra
 bool set_limited_axis(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t axis, float min, float max);
 
 }  // namespace six_dof_constraint
+
+// a query filter's layers, against a world's; its group and mask cross with each query
+namespace filter {
+
+/** every layer of the world's enabled; null when the allocator fails */
+tumble::filter::Filter *create(tumble::world::World *world);
+void destroy(tumble::filter::Filter *filter);
+void enable_all_layers(tumble::filter::Filter *filter, tumble::world::World *world);
+void disable_all_layers(tumble::filter::Filter *filter, tumble::world::World *world);
+// false for a layer the world does not have
+bool enable_object_layer(tumble::filter::Filter *filter, tumble::world::World *world, uint32_t object_layer);
+bool disable_object_layer(tumble::filter::Filter *filter, tumble::world::World *world, uint32_t object_layer);
+bool enable_broadphase_layer(tumble::filter::Filter *filter, tumble::world::World *world, uint32_t broadphase_layer);
+bool disable_broadphase_layer(tumble::filter::Filter *filter, tumble::world::World *world, uint32_t broadphase_layer);
+bool is_object_layer_enabled(const tumble::filter::Filter *filter, uint32_t object_layer);
+bool is_broadphase_layer_enabled(const tumble::filter::Filter *filter, uint32_t broadphase_layer);
+/** the layers the body's object layer collides with, and its group and mask, read back with the getters; false (error set) for a bad id */
+bool set_from_body(tumble::filter::Filter *filter, tumble::world::World *world, tumble::body_id::BodyId body);
+uint32_t get_collision_groups(const tumble::filter::Filter *filter);
+uint32_t get_collision_mask(const tumble::filter::Filter *filter);
+/** false (error set) when the allocator fails */
+bool copy(tumble::filter::Filter *out, const tumble::filter::Filter *source);
+
+}  // namespace filter
+
+/** cast_shape::CastShapeHit as js reads it: no faces */
+struct CastShapeHit {
+    uint32_t status;
+    float fraction;
+    tumble::Float3 point_a;
+    tumble::Float3 point_b;
+    float penetration_depth;
+    tumble::Float3 penetration_axis;
+    tumble::Float3 normal;
+    uint32_t sub_shape_id_a;
+    uint32_t sub_shape_id_b;
+    int32_t material_id_a;
+    int32_t material_id_b;
+    tumble::body_id::BodyId body_id_b;
+};
+
+/** cast_shape::CastShapeSettings as js gives it: no faces to collect */
+struct CastShapeSettings {
+    bool collide_with_backfaces_triangles;
+    bool collide_with_backfaces_convex;
+    float collision_tolerance;
+    float penetration_tolerance;
+    bool return_deepest_point;
+    bool use_shrunken_shape_and_convex_radius;
+    bool collide_only_with_active_edges;
+    tumble::Float3 active_edge_movement_direction;
+};
+
+/** collide_shape::CollideShapeHit as js reads it: no faces */
+struct CollideShapeHit {
+    tumble::Float3 point_a;
+    tumble::Float3 point_b;
+    tumble::Float3 penetration_axis;
+    float penetration;
+    uint32_t sub_shape_id_a;
+    uint32_t sub_shape_id_b;
+    int32_t material_id_a;
+    int32_t material_id_b;
+    tumble::body_id::BodyId body_id_b;
+};
+
+/** collide_shape::CollideShapeSettings as js gives it: no faces to collect */
+struct CollideShapeSettings {
+    float max_separation_distance;
+    float collision_tolerance;
+    float penetration_tolerance;
+    bool collide_with_backfaces;
+    bool collide_only_with_active_edges;
+    tumble::Float3 active_edge_movement_direction;
+    float internal_edge_removal_vertex_tolerance_sq;
+};
+
+// each query into the adapters' own collector of its type, of `kind` (a collector::CollectorKind but CUSTOM) and
+// starting at early_out_fraction, under the filter with the group and mask given (written into it): how many hits it
+// holds, read by index (false past the count) until the next query of the type; 0 for a CUSTOM kind
+namespace query {
+
+/** a cast collector's early-out fraction before any hit */
+float initial_early_out_fraction();
+/** a collide collector's before any hit: no bound on the penetration */
+float unbounded_early_out();
+
+void default_cast_ray_settings(tumble::cast_ray::CastRaySettings &out);
+uint32_t cast_ray(tumble::world::World *world, uint32_t kind, float early_out_fraction, const tumble::cast_ray::CastRaySettings &settings,
+                  const tumble::Float3 &origin, const tumble::Float3 &direction, float length, tumble::filter::Filter *filter,
+                  uint32_t collision_groups, uint32_t collision_mask);
+bool read_cast_ray_hit(tumble::cast_ray::CastRayHit &out, uint32_t index);
+
+void default_cast_shape_settings(CastShapeSettings &out);
+uint32_t cast_shape(tumble::world::World *world, uint32_t kind, float early_out_fraction, const CastShapeSettings &settings,
+                    const tumble::shapes::Shape *shape, const tumble::Float3 &position, const tumble::Float4 &quaternion,
+                    const tumble::Float3 &scale, const tumble::Float3 &displacement, tumble::filter::Filter *filter,
+                    uint32_t collision_groups, uint32_t collision_mask);
+bool read_cast_shape_hit(CastShapeHit &out, uint32_t index);
+
+void default_collide_shape_settings(CollideShapeSettings &out);
+/** with internal_edge_removal, through the internal edge removing wrapper, flushed per body */
+uint32_t collide_shape(tumble::world::World *world, uint32_t kind, float early_out_fraction, const CollideShapeSettings &settings,
+                       const tumble::shapes::Shape *shape, const tumble::Float3 &position, const tumble::Float4 &quaternion,
+                       const tumble::Float3 &scale, bool internal_edge_removal, tumble::filter::Filter *filter,
+                       uint32_t collision_groups, uint32_t collision_mask);
+bool read_collide_shape_hit(CollideShapeHit &out, uint32_t index);
+
+void default_collide_point_settings(tumble::collide_point::CollidePointSettings &out);
+uint32_t collide_point(tumble::world::World *world, uint32_t kind, const tumble::collide_point::CollidePointSettings &settings,
+                       const tumble::Float3 &point, tumble::filter::Filter *filter, uint32_t collision_groups,
+                       uint32_t collision_mask);
+bool read_collide_point_hit(tumble::collide_point::CollidePointHit &out, uint32_t index);
+
+}  // namespace query
 
 }  // namespace adapters

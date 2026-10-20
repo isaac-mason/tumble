@@ -1315,4 +1315,259 @@ bool set_limited_axis(tumble::world::World *world, ConstraintId id, uint32_t axi
 
 }  // namespace six_dof_constraint
 
+namespace filter {
+
+/** whether the tables hold every layer: a fill that could not grow leaves them short, with the error set */
+static bool whole(const tumble::filter::Filter &filter, const layers::Layers &layers) {
+    return filter.enabled_object_layers.length == layers.object_layers && filter.enabled_broadphase_layers.length == layers.broadphase_layers;
+}
+
+tumble::filter::Filter *create(tumble::world::World *world) {
+    tumble::filter::Filter *filter = util::create<tumble::filter::Filter>();
+    if (filter == nullptr) return nullptr;
+    *filter = tumble::filter::create(world->settings.layers);
+    if (!whole(*filter, world->settings.layers)) {
+        destroy(filter);
+        return nullptr;
+    }
+    return filter;
+}
+
+void destroy(tumble::filter::Filter *filter) {
+    tumble::filter::release(*filter);
+    util::destroy(filter);
+}
+
+void enable_all_layers(tumble::filter::Filter *filter, tumble::world::World *world) {
+    tumble::filter::enable_all_layers(*filter, world->settings.layers);
+}
+
+void disable_all_layers(tumble::filter::Filter *filter, tumble::world::World *world) {
+    tumble::filter::disable_all_layers(*filter, world->settings.layers);
+}
+
+/** the filter's tables are the world's size, and the layer is one of them */
+static bool fits(const tumble::filter::Filter *filter, const tumble::world::World *world, uint32_t layer, uint32_t layers) {
+    return whole(*filter, world->settings.layers) && layer < layers;
+}
+
+bool enable_object_layer(tumble::filter::Filter *filter, tumble::world::World *world, uint32_t object_layer) {
+    if (!fits(filter, world, object_layer, world->settings.layers.object_layers)) return false;
+    tumble::filter::enable_object_layer(*filter, world->settings.layers, object_layer);
+    return true;
+}
+
+bool disable_object_layer(tumble::filter::Filter *filter, tumble::world::World *world, uint32_t object_layer) {
+    if (!fits(filter, world, object_layer, world->settings.layers.object_layers)) return false;
+    tumble::filter::disable_object_layer(*filter, world->settings.layers, object_layer);
+    return true;
+}
+
+bool enable_broadphase_layer(tumble::filter::Filter *filter, tumble::world::World *world, uint32_t broadphase_layer) {
+    if (!fits(filter, world, broadphase_layer, world->settings.layers.broadphase_layers)) return false;
+    tumble::filter::enable_broadphase_layer(*filter, world->settings.layers, broadphase_layer);
+    return true;
+}
+
+bool disable_broadphase_layer(tumble::filter::Filter *filter, tumble::world::World *world, uint32_t broadphase_layer) {
+    if (!fits(filter, world, broadphase_layer, world->settings.layers.broadphase_layers)) return false;
+    tumble::filter::disable_broadphase_layer(*filter, world->settings.layers, broadphase_layer);
+    return true;
+}
+
+bool is_object_layer_enabled(const tumble::filter::Filter *filter, uint32_t object_layer) {
+    return tumble::filter::filter_object_layer(*filter, object_layer);
+}
+
+bool is_broadphase_layer_enabled(const tumble::filter::Filter *filter, uint32_t broadphase_layer) {
+    return tumble::filter::filter_broadphase_layer(*filter, broadphase_layer);
+}
+
+bool set_from_body(tumble::filter::Filter *filter, tumble::world::World *world, body_id::BodyId body) {
+    const tumble::rigid_body::RigidBody *found = rigid_body::resolve(world, body);
+    if (found == nullptr || !whole(*filter, world->settings.layers)) return false;
+    tumble::filter::set_from_body(*filter, world->settings.layers, found);
+    return true;
+}
+
+uint32_t get_collision_groups(const tumble::filter::Filter *filter) { return filter->collision_groups; }
+uint32_t get_collision_mask(const tumble::filter::Filter *filter) { return filter->collision_mask; }
+
+bool copy(tumble::filter::Filter *out, const tumble::filter::Filter *source) {
+    tumble::filter::copy(*out, *source);
+    return out->enabled_object_layers.length == source->enabled_object_layers.length &&
+           out->enabled_broadphase_layers.length == source->enabled_broadphase_layers.length;
+}
+
+}  // namespace filter
+
+namespace query {
+
+// one collector per query type, reused: its hits grow to the most a query has held. zeroed, not made by
+// create_collector, as nothing runs static constructors here; each query sets its kind and resets it
+static cast_ray::CastRayCollector ray_collector = {};
+static cast_shape::CastShapeCollector cast_shape_collector = {};
+static collide_shape::CollideShapeCollector collide_shape_collector = {};
+static collide_point::CollidePointCollector collide_point_collector = {};
+
+/** ALL, ANY or CLOSEST: a CUSTOM collector's function pointers are not js's to give */
+static bool built_in(uint32_t kind) { return kind <= collector::COLLECT_CLOSEST; }
+
+/** the filter with the query's group and mask */
+static const tumble::filter::Filter &with_groups(tumble::filter::Filter *filter, uint32_t collision_groups, uint32_t collision_mask) {
+    filter->collision_groups = collision_groups;
+    filter->collision_mask = collision_mask;
+    return *filter;
+}
+
+static Transformf transform_of(const Float3 &position, const Float4 &quaternion, const Float3 &scale) { return {position, quaternion, scale}; }
+
+float initial_early_out_fraction() { return collector::INITIAL_EARLY_OUT_FRACTION; }
+float unbounded_early_out() { return collector::UNBOUNDED; }
+
+void default_cast_ray_settings(cast_ray::CastRaySettings &out) { out = cast_ray::default_settings(); }
+
+uint32_t cast_ray(tumble::world::World *world, uint32_t kind, float early_out_fraction, const cast_ray::CastRaySettings &settings,
+                  const Float3 &origin, const Float3 &direction, float length, tumble::filter::Filter *filter, uint32_t collision_groups,
+                  uint32_t collision_mask) {
+    if (!built_in(kind)) return 0;
+    ray_collector.kind = (collector::CollectorKind)kind;
+    cast_ray::reset(ray_collector);
+    ray_collector.early_out_fraction = early_out_fraction;
+    const cast_ray::Rayf ray = {vec3f::load(origin), vec3f::load(direction), length};
+    tumble::query::cast_ray(*world, ray_collector, settings, ray, with_groups(filter, collision_groups, collision_mask));
+    return ray_collector.hits.length;
+}
+
+bool read_cast_ray_hit(cast_ray::CastRayHit &out, uint32_t index) {
+    if (index >= ray_collector.hits.length) return false;
+    out = ray_collector.hits[index];
+    return true;
+}
+
+void default_cast_shape_settings(CastShapeSettings &out) {
+    const cast_shape::CastShapeSettings d = cast_shape::default_settings();
+    out = {d.collide_with_backfaces_triangles,
+           d.collide_with_backfaces_convex,
+           d.collision_tolerance,
+           d.penetration_tolerance,
+           d.return_deepest_point,
+           d.use_shrunken_shape_and_convex_radius,
+           d.collide_only_with_active_edges,
+           {0.0f, 0.0f, 0.0f}};
+    vec3f::store(out.active_edge_movement_direction, d.active_edge_movement_direction);
+}
+
+uint32_t cast_shape(tumble::world::World *world, uint32_t kind, float early_out_fraction, const CastShapeSettings &s,
+                    const shapes::Shape *shape, const Float3 &position, const Float4 &quaternion, const Float3 &scale,
+                    const Float3 &displacement, tumble::filter::Filter *filter, uint32_t collision_groups, uint32_t collision_mask) {
+    if (!built_in(kind)) return 0;
+    cast_shape::CastShapeSettings settings = cast_shape::default_settings();
+    settings.collide_with_backfaces_triangles = s.collide_with_backfaces_triangles;
+    settings.collide_with_backfaces_convex = s.collide_with_backfaces_convex;
+    settings.collect_faces = false;
+    settings.collision_tolerance = s.collision_tolerance;
+    settings.penetration_tolerance = s.penetration_tolerance;
+    settings.return_deepest_point = s.return_deepest_point;
+    settings.use_shrunken_shape_and_convex_radius = s.use_shrunken_shape_and_convex_radius;
+    settings.collide_only_with_active_edges = s.collide_only_with_active_edges;
+    settings.active_edge_movement_direction = vec3f::load(s.active_edge_movement_direction);
+    cast_shape_collector.kind = (collector::CollectorKind)kind;
+    cast_shape::reset(cast_shape_collector);
+    cast_shape_collector.early_out_fraction = early_out_fraction;
+    tumble::query::cast_shape(*world, cast_shape_collector, settings, shape, transform_of(position, quaternion, scale), vec3f::load(displacement),
+                              with_groups(filter, collision_groups, collision_mask));
+    return cast_shape_collector.hits.length;
+}
+
+bool read_cast_shape_hit(CastShapeHit &out, uint32_t index) {
+    if (index >= cast_shape_collector.hits.length) return false;
+    const cast_shape::CastShapeHit &hit = cast_shape_collector.hits[index];
+    out.status = hit.status;
+    out.fraction = hit.fraction;
+    vec3f::store(out.point_a, hit.point_a);
+    vec3f::store(out.point_b, hit.point_b);
+    out.penetration_depth = hit.penetration_depth;
+    vec3f::store(out.penetration_axis, hit.penetration_axis);
+    vec3f::store(out.normal, hit.normal);
+    out.sub_shape_id_a = hit.sub_shape_id_a;
+    out.sub_shape_id_b = hit.sub_shape_id_b;
+    out.material_id_a = hit.material_id_a;
+    out.material_id_b = hit.material_id_b;
+    out.body_id_b = hit.body_id_b;
+    return true;
+}
+
+void default_collide_shape_settings(CollideShapeSettings &out) {
+    const collide_shape::CollideShapeSettings d = collide_shape::default_settings();
+    out = {d.max_separation_distance,
+           d.collision_tolerance,
+           d.penetration_tolerance,
+           d.collide_with_backfaces,
+           d.collide_only_with_active_edges,
+           {0.0f, 0.0f, 0.0f},
+           d.internal_edge_removal_vertex_tolerance_sq};
+    vec3f::store(out.active_edge_movement_direction, d.active_edge_movement_direction);
+}
+
+uint32_t collide_shape(tumble::world::World *world, uint32_t kind, float early_out_fraction, const CollideShapeSettings &s,
+                       const shapes::Shape *shape, const Float3 &position, const Float4 &quaternion, const Float3 &scale,
+                       bool internal_edge_removal, tumble::filter::Filter *filter, uint32_t collision_groups, uint32_t collision_mask) {
+    if (!built_in(kind)) return 0;
+    collide_shape::CollideShapeSettings settings = collide_shape::default_settings();
+    settings.max_separation_distance = s.max_separation_distance;
+    settings.collision_tolerance = s.collision_tolerance;
+    settings.penetration_tolerance = s.penetration_tolerance;
+    settings.collide_with_backfaces = s.collide_with_backfaces;
+    settings.collide_only_with_active_edges = s.collide_only_with_active_edges;
+    settings.active_edge_movement_direction = vec3f::load(s.active_edge_movement_direction);
+    settings.collect_faces = false;
+    settings.internal_edge_removal_vertex_tolerance_sq = s.internal_edge_removal_vertex_tolerance_sq;
+    collide_shape_collector.kind = (collector::CollectorKind)kind;
+    collide_shape::reset(collide_shape_collector);
+    collide_shape_collector.early_out_fraction = early_out_fraction;
+    const Transformf transform = transform_of(position, quaternion, scale);
+    const tumble::filter::Filter &query_filter = with_groups(filter, collision_groups, collision_mask);
+    if (internal_edge_removal) {
+        tumble::query::collide_shape_with_internal_edge_removal(*world, collide_shape_collector, settings, shape, transform, query_filter);
+    } else {
+        tumble::query::collide_shape(*world, collide_shape_collector, settings, shape, transform, query_filter);
+    }
+    return collide_shape_collector.hits.length;
+}
+
+bool read_collide_shape_hit(CollideShapeHit &out, uint32_t index) {
+    if (index >= collide_shape_collector.hits.length) return false;
+    const collide_shape::CollideShapeHit &hit = collide_shape_collector.hits[index];
+    vec3f::store(out.point_a, hit.point_a);
+    vec3f::store(out.point_b, hit.point_b);
+    vec3f::store(out.penetration_axis, hit.penetration_axis);
+    out.penetration = hit.penetration;
+    out.sub_shape_id_a = hit.sub_shape_id_a;
+    out.sub_shape_id_b = hit.sub_shape_id_b;
+    out.material_id_a = hit.material_id_a;
+    out.material_id_b = hit.material_id_b;
+    out.body_id_b = hit.body_id_b;
+    return true;
+}
+
+void default_collide_point_settings(collide_point::CollidePointSettings &out) { out = collide_point::default_settings(); }
+
+uint32_t collide_point(tumble::world::World *world, uint32_t kind, const collide_point::CollidePointSettings &settings, const Float3 &point,
+                       tumble::filter::Filter *filter, uint32_t collision_groups, uint32_t collision_mask) {
+    if (!built_in(kind)) return 0;
+    collide_point_collector.kind = (collector::CollectorKind)kind;
+    collide_point::reset(collide_point_collector);
+    tumble::query::collide_point(*world, collide_point_collector, settings, vec3f::load(point), with_groups(filter, collision_groups, collision_mask));
+    return collide_point_collector.hits.length;
+}
+
+bool read_collide_point_hit(collide_point::CollidePointHit &out, uint32_t index) {
+    if (index >= collide_point_collector.hits.length) return false;
+    out = collide_point_collector.hits[index];
+    return true;
+}
+
+}  // namespace query
+
 }  // namespace adapters

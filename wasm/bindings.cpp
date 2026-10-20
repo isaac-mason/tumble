@@ -678,4 +678,113 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::six_dof_constraint::make_free_axis), names("world", "constraint", "axis"));
     bind::fn(b, BIND(adapters::six_dof_constraint::make_fixed_axis), names("world", "constraint", "axis"));
     bind::fn(b, BIND(adapters::six_dof_constraint::set_limited_axis), names("world", "constraint", "axis", "min", "max"));
+
+    RECORD(filter::Filter);
+    bind::fn(b, BIND(adapters::filter::create), names("world"), GROWS);
+    bind::fn(b, BIND(adapters::filter::destroy), names("filter"));
+    bind::fn(b, BIND(adapters::filter::enable_all_layers), names("filter", "world"));
+    bind::fn(b, BIND(adapters::filter::disable_all_layers), names("filter", "world"));
+    bind::fn(b, BIND(adapters::filter::enable_object_layer), names("filter", "world", "objectLayer"));
+    bind::fn(b, BIND(adapters::filter::disable_object_layer), names("filter", "world", "objectLayer"));
+    bind::fn(b, BIND(adapters::filter::enable_broadphase_layer), names("filter", "world", "broadphaseLayer"));
+    bind::fn(b, BIND(adapters::filter::disable_broadphase_layer), names("filter", "world", "broadphaseLayer"));
+    bind::fn(b, BIND(adapters::filter::is_object_layer_enabled), names("filter", "objectLayer"));
+    bind::fn(b, BIND(adapters::filter::is_broadphase_layer_enabled), names("filter", "broadphaseLayer"));
+    bind::fn(b, BIND(adapters::filter::set_from_body), names("filter", "world", "body"));
+    bind::fn(b, BIND(adapters::filter::get_collision_groups), names("filter"));
+    bind::fn(b, BIND(adapters::filter::get_collision_mask), names("filter"));
+    bind::fn(b, BIND(adapters::filter::copy), names("out", "source"), GROWS);
+
+    bind::enumeration<uint32_t>(b, "CollectorKind")
+        .value("ALL", collector::COLLECT_ALL)
+        .value("ANY", collector::COLLECT_ANY)
+        .value("CLOSEST", collector::COLLECT_CLOSEST);
+    bind::enumeration<uint32_t>(b, "CastRayStatus")
+        .value("NOT_COLLIDING", cast_ray::NOT_COLLIDING)
+        .value("COLLIDING", cast_ray::COLLIDING);
+    bind::enumeration<uint32_t>(b, "CastShapeStatus")
+        .value("NOT_COLLIDING", cast_shape::NOT_COLLIDING)
+        .value("COLLIDING", cast_shape::COLLIDING);
+
+    VALUE_AS(cast_ray::CastRaySettings, "CastRaySettings")
+        .field(FIELD(cast_ray::CastRaySettings, collide_with_backfaces_triangles))
+        .field(FIELD(cast_ray::CastRaySettings, collide_with_backfaces_convex))
+        .field(FIELD(cast_ray::CastRaySettings, treat_convex_as_solid));
+    VALUE_AS(cast_ray::CastRayHit, "CastRayHit")
+        .field(FIELD(cast_ray::CastRayHit, status))
+        .field(FIELD(cast_ray::CastRayHit, fraction))
+        .field(FIELD(cast_ray::CastRayHit, sub_shape_id))
+        .field(FIELD(cast_ray::CastRayHit, body_id_b))
+        .field(FIELD(cast_ray::CastRayHit, material_id));
+    bind::fn(b, BIND(adapters::query::initial_early_out_fraction), names());
+    bind::fn(b, BIND(adapters::query::unbounded_early_out), names());
+    bind::fn(b, BIND(adapters::query::default_cast_ray_settings), names("out"));
+    bind::fn(b, BIND(adapters::query::cast_ray),
+             names("world", "kind", "earlyOutFraction", "settings", "origin", "direction", "length", "filter", "collisionGroups", "collisionMask"),
+             GROWS);
+    bind::fn(b, BIND(adapters::query::read_cast_ray_hit), names("out", "index"));
+
+    VALUE_AS(adapters::CastShapeSettings, "CastShapeSettings")
+        .field(FIELD(adapters::CastShapeSettings, collide_with_backfaces_triangles))
+        .field(FIELD(adapters::CastShapeSettings, collide_with_backfaces_convex))
+        .field(FIELD(adapters::CastShapeSettings, collision_tolerance))
+        .field(FIELD(adapters::CastShapeSettings, penetration_tolerance))
+        .field(FIELD(adapters::CastShapeSettings, return_deepest_point))
+        .field(FIELD(adapters::CastShapeSettings, use_shrunken_shape_and_convex_radius))
+        .field(FIELD(adapters::CastShapeSettings, collide_only_with_active_edges))
+        .field(FIELD(adapters::CastShapeSettings, active_edge_movement_direction));
+    VALUE_AS(adapters::CastShapeHit, "CastShapeHit")
+        .field(FIELD(adapters::CastShapeHit, status))
+        .field(FIELD(adapters::CastShapeHit, fraction))
+        .field(FIELD(adapters::CastShapeHit, point_a))
+        .field(FIELD(adapters::CastShapeHit, point_b))
+        .field(FIELD(adapters::CastShapeHit, penetration_depth))
+        .field(FIELD(adapters::CastShapeHit, penetration_axis))
+        .field(FIELD(adapters::CastShapeHit, normal))
+        .field(FIELD(adapters::CastShapeHit, sub_shape_id_a))
+        .field(FIELD(adapters::CastShapeHit, sub_shape_id_b))
+        .field(FIELD(adapters::CastShapeHit, material_id_a))
+        .field(FIELD(adapters::CastShapeHit, material_id_b))
+        .field(FIELD(adapters::CastShapeHit, body_id_b));
+    bind::fn(b, BIND(adapters::query::default_cast_shape_settings), names("out"));
+    bind::fn(b, BIND(adapters::query::cast_shape),
+             names("world", "kind", "earlyOutFraction", "settings", "shape", "position", "quaternion", "scale", "displacement", "filter",
+                   "collisionGroups", "collisionMask"),
+             GROWS);
+    bind::fn(b, BIND(adapters::query::read_cast_shape_hit), names("out", "index"));
+
+    VALUE_AS(adapters::CollideShapeSettings, "CollideShapeSettings")
+        .field(FIELD(adapters::CollideShapeSettings, max_separation_distance))
+        .field(FIELD(adapters::CollideShapeSettings, collision_tolerance))
+        .field(FIELD(adapters::CollideShapeSettings, penetration_tolerance))
+        .field(FIELD(adapters::CollideShapeSettings, collide_with_backfaces))
+        .field(FIELD(adapters::CollideShapeSettings, collide_only_with_active_edges))
+        .field(FIELD(adapters::CollideShapeSettings, active_edge_movement_direction))
+        .field(FIELD(adapters::CollideShapeSettings, internal_edge_removal_vertex_tolerance_sq));
+    VALUE_AS(adapters::CollideShapeHit, "CollideShapeHit")
+        .field(FIELD(adapters::CollideShapeHit, point_a))
+        .field(FIELD(adapters::CollideShapeHit, point_b))
+        .field(FIELD(adapters::CollideShapeHit, penetration_axis))
+        .field(FIELD(adapters::CollideShapeHit, penetration))
+        .field(FIELD(adapters::CollideShapeHit, sub_shape_id_a))
+        .field(FIELD(adapters::CollideShapeHit, sub_shape_id_b))
+        .field(FIELD(adapters::CollideShapeHit, material_id_a))
+        .field(FIELD(adapters::CollideShapeHit, material_id_b))
+        .field(FIELD(adapters::CollideShapeHit, body_id_b));
+    bind::fn(b, BIND(adapters::query::default_collide_shape_settings), names("out"));
+    bind::fn(b, BIND(adapters::query::collide_shape),
+             names("world", "kind", "earlyOutFraction", "settings", "shape", "position", "quaternion", "scale", "internalEdgeRemoval", "filter",
+                   "collisionGroups", "collisionMask"),
+             GROWS);
+    bind::fn(b, BIND(adapters::query::read_collide_shape_hit), names("out", "index"));
+
+    VALUE_AS(collide_point::CollidePointSettings, "CollidePointSettings").field(FIELD(collide_point::CollidePointSettings, collision_tolerance));
+    VALUE_AS(collide_point::CollidePointHit, "CollidePointHit")
+        .field(FIELD(collide_point::CollidePointHit, sub_shape_id_b))
+        .field(FIELD(collide_point::CollidePointHit, body_id_b))
+        .field(FIELD(collide_point::CollidePointHit, material_id));
+    bind::fn(b, BIND(adapters::query::default_collide_point_settings), names("out"));
+    bind::fn(b, BIND(adapters::query::collide_point), names("world", "kind", "settings", "point", "filter", "collisionGroups", "collisionMask"),
+             GROWS);
+    bind::fn(b, BIND(adapters::query::read_collide_point_hit), names("out", "index"));
 }

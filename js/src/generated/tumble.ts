@@ -7,7 +7,7 @@
 import type { Instance } from '../module';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x53a6bbd8;
+export const SCHEMA_HASH = 0x26d8b215;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 368;
 
@@ -207,6 +207,25 @@ export const SixDOFAxis = {
     ROTATION_Z: 5,
 } as const;
 export type SixDOFAxis = (typeof SixDOFAxis)[keyof typeof SixDOFAxis];
+
+export const CollectorKind = {
+    ALL: 0,
+    ANY: 1,
+    CLOSEST: 2,
+} as const;
+export type CollectorKind = (typeof CollectorKind)[keyof typeof CollectorKind];
+
+export const CastRayStatus = {
+    NOT_COLLIDING: 0,
+    COLLIDING: 1,
+} as const;
+export type CastRayStatus = (typeof CastRayStatus)[keyof typeof CastRayStatus];
+
+export const CastShapeStatus = {
+    NOT_COLLIDING: 0,
+    COLLIDING: 1,
+} as const;
+export type CastShapeStatus = (typeof CastShapeStatus)[keyof typeof CastShapeStatus];
 
 export type Vec3 = [x: number, y: number, z: number];
 export const Vec3 = {
@@ -3864,6 +3883,546 @@ export const SixDOFConstraintSettings = {
     },
 };
 
+export type CastRaySettings = {
+    collideWithBackfacesTriangles: boolean;
+    collideWithBackfacesConvex: boolean;
+    treatConvexAsSolid: boolean;
+};
+export const CastRaySettings = {
+    size: 3,
+    create(): CastRaySettings {
+        return { collideWithBackfacesTriangles: false, collideWithBackfacesConvex: false, treatConvexAsSolid: false };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: CastRaySettings, address: number): CastRaySettings {
+        const mem = wasm.mem;
+        out.collideWithBackfacesTriangles = mem.u8[address + 0]! !== 0;
+        out.collideWithBackfacesConvex = mem.u8[address + 1]! !== 0;
+        out.treatConvexAsSolid = mem.u8[address + 2]! !== 0;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: CastRaySettings): void {
+        const mem = wasm.mem;
+        mem.u8[address + 0] = value.collideWithBackfacesTriangles ? 1 : 0;
+        mem.u8[address + 1] = value.collideWithBackfacesConvex ? 1 : 0;
+        mem.u8[address + 2] = value.treatConvexAsSolid ? 1 : 0;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: CastRaySettings): void {
+        view.setUint8(offset + 0, value.collideWithBackfacesTriangles ? 1 : 0);
+        view.setUint8(offset + 1, value.collideWithBackfacesConvex ? 1 : 0);
+        view.setUint8(offset + 2, value.treatConvexAsSolid ? 1 : 0);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: CastRaySettings, view: DataView, offset: number): CastRaySettings {
+        out.collideWithBackfacesTriangles = view.getUint8(offset + 0) !== 0;
+        out.collideWithBackfacesConvex = view.getUint8(offset + 1) !== 0;
+        out.treatConvexAsSolid = view.getUint8(offset + 2) !== 0;
+        return out;
+    },
+};
+
+export type CastRayHit = { status: number; fraction: number; subShapeId: number; bodyIdB: number; materialId: number };
+export const CastRayHit = {
+    size: 20,
+    create(): CastRayHit {
+        return { status: 0, fraction: 0, subShapeId: 0, bodyIdB: 0, materialId: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: CastRayHit, address: number): CastRayHit {
+        const mem = wasm.mem;
+        out.status = mem.u32[(address + 0) >> 2]!;
+        out.fraction = mem.f32[(address + 4) >> 2]!;
+        out.subShapeId = mem.u32[(address + 8) >> 2]!;
+        out.bodyIdB = mem.u32[(address + 12) >> 2]!;
+        out.materialId = mem.i32[(address + 16) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: CastRayHit): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.status;
+        mem.f32[(address + 4) >> 2] = value.fraction;
+        mem.u32[(address + 8) >> 2] = value.subShapeId;
+        mem.u32[(address + 12) >> 2] = value.bodyIdB;
+        mem.i32[(address + 16) >> 2] = value.materialId;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: CastRayHit): void {
+        view.setUint32(offset + 0, value.status, true);
+        view.setFloat32(offset + 4, value.fraction, true);
+        view.setUint32(offset + 8, value.subShapeId, true);
+        view.setUint32(offset + 12, value.bodyIdB, true);
+        view.setInt32(offset + 16, value.materialId, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: CastRayHit, view: DataView, offset: number): CastRayHit {
+        out.status = view.getUint32(offset + 0, true);
+        out.fraction = view.getFloat32(offset + 4, true);
+        out.subShapeId = view.getUint32(offset + 8, true);
+        out.bodyIdB = view.getUint32(offset + 12, true);
+        out.materialId = view.getInt32(offset + 16, true);
+        return out;
+    },
+};
+
+export type CastShapeSettings = {
+    collideWithBackfacesTriangles: boolean;
+    collideWithBackfacesConvex: boolean;
+    collisionTolerance: number;
+    penetrationTolerance: number;
+    returnDeepestPoint: boolean;
+    useShrunkenShapeAndConvexRadius: boolean;
+    collideOnlyWithActiveEdges: boolean;
+    activeEdgeMovementDirection: Vec3;
+};
+export const CastShapeSettings = {
+    size: 28,
+    create(): CastShapeSettings {
+        return {
+            collideWithBackfacesTriangles: false,
+            collideWithBackfacesConvex: false,
+            collisionTolerance: 0,
+            penetrationTolerance: 0,
+            returnDeepestPoint: false,
+            useShrunkenShapeAndConvexRadius: false,
+            collideOnlyWithActiveEdges: false,
+            activeEdgeMovementDirection: Vec3.create(),
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: CastShapeSettings, address: number): CastShapeSettings {
+        const mem = wasm.mem;
+        out.collideWithBackfacesTriangles = mem.u8[address + 0]! !== 0;
+        out.collideWithBackfacesConvex = mem.u8[address + 1]! !== 0;
+        out.collisionTolerance = mem.f32[(address + 4) >> 2]!;
+        out.penetrationTolerance = mem.f32[(address + 8) >> 2]!;
+        out.returnDeepestPoint = mem.u8[address + 12]! !== 0;
+        out.useShrunkenShapeAndConvexRadius = mem.u8[address + 13]! !== 0;
+        out.collideOnlyWithActiveEdges = mem.u8[address + 14]! !== 0;
+        out.activeEdgeMovementDirection[0] = mem.f32[(address + 16) >> 2]!;
+        out.activeEdgeMovementDirection[1] = mem.f32[(address + 20) >> 2]!;
+        out.activeEdgeMovementDirection[2] = mem.f32[(address + 24) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: CastShapeSettings): void {
+        const mem = wasm.mem;
+        mem.u8[address + 0] = value.collideWithBackfacesTriangles ? 1 : 0;
+        mem.u8[address + 1] = value.collideWithBackfacesConvex ? 1 : 0;
+        mem.f32[(address + 4) >> 2] = value.collisionTolerance;
+        mem.f32[(address + 8) >> 2] = value.penetrationTolerance;
+        mem.u8[address + 12] = value.returnDeepestPoint ? 1 : 0;
+        mem.u8[address + 13] = value.useShrunkenShapeAndConvexRadius ? 1 : 0;
+        mem.u8[address + 14] = value.collideOnlyWithActiveEdges ? 1 : 0;
+        mem.f32[(address + 16) >> 2] = value.activeEdgeMovementDirection[0];
+        mem.f32[(address + 20) >> 2] = value.activeEdgeMovementDirection[1];
+        mem.f32[(address + 24) >> 2] = value.activeEdgeMovementDirection[2];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: CastShapeSettings): void {
+        view.setUint8(offset + 0, value.collideWithBackfacesTriangles ? 1 : 0);
+        view.setUint8(offset + 1, value.collideWithBackfacesConvex ? 1 : 0);
+        view.setFloat32(offset + 4, value.collisionTolerance, true);
+        view.setFloat32(offset + 8, value.penetrationTolerance, true);
+        view.setUint8(offset + 12, value.returnDeepestPoint ? 1 : 0);
+        view.setUint8(offset + 13, value.useShrunkenShapeAndConvexRadius ? 1 : 0);
+        view.setUint8(offset + 14, value.collideOnlyWithActiveEdges ? 1 : 0);
+        view.setFloat32(offset + 16, value.activeEdgeMovementDirection[0], true);
+        view.setFloat32(offset + 20, value.activeEdgeMovementDirection[1], true);
+        view.setFloat32(offset + 24, value.activeEdgeMovementDirection[2], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: CastShapeSettings, view: DataView, offset: number): CastShapeSettings {
+        out.collideWithBackfacesTriangles = view.getUint8(offset + 0) !== 0;
+        out.collideWithBackfacesConvex = view.getUint8(offset + 1) !== 0;
+        out.collisionTolerance = view.getFloat32(offset + 4, true);
+        out.penetrationTolerance = view.getFloat32(offset + 8, true);
+        out.returnDeepestPoint = view.getUint8(offset + 12) !== 0;
+        out.useShrunkenShapeAndConvexRadius = view.getUint8(offset + 13) !== 0;
+        out.collideOnlyWithActiveEdges = view.getUint8(offset + 14) !== 0;
+        out.activeEdgeMovementDirection[0] = view.getFloat32(offset + 16, true);
+        out.activeEdgeMovementDirection[1] = view.getFloat32(offset + 20, true);
+        out.activeEdgeMovementDirection[2] = view.getFloat32(offset + 24, true);
+        return out;
+    },
+};
+
+export type CastShapeHit = {
+    status: number;
+    fraction: number;
+    pointA: Vec3;
+    pointB: Vec3;
+    penetrationDepth: number;
+    penetrationAxis: Vec3;
+    normal: Vec3;
+    subShapeIdA: number;
+    subShapeIdB: number;
+    materialIdA: number;
+    materialIdB: number;
+    bodyIdB: number;
+};
+export const CastShapeHit = {
+    size: 80,
+    create(): CastShapeHit {
+        return {
+            status: 0,
+            fraction: 0,
+            pointA: Vec3.create(),
+            pointB: Vec3.create(),
+            penetrationDepth: 0,
+            penetrationAxis: Vec3.create(),
+            normal: Vec3.create(),
+            subShapeIdA: 0,
+            subShapeIdB: 0,
+            materialIdA: 0,
+            materialIdB: 0,
+            bodyIdB: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: CastShapeHit, address: number): CastShapeHit {
+        const mem = wasm.mem;
+        out.status = mem.u32[(address + 0) >> 2]!;
+        out.fraction = mem.f32[(address + 4) >> 2]!;
+        out.pointA[0] = mem.f32[(address + 8) >> 2]!;
+        out.pointA[1] = mem.f32[(address + 12) >> 2]!;
+        out.pointA[2] = mem.f32[(address + 16) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 20) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 24) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 28) >> 2]!;
+        out.penetrationDepth = mem.f32[(address + 32) >> 2]!;
+        out.penetrationAxis[0] = mem.f32[(address + 36) >> 2]!;
+        out.penetrationAxis[1] = mem.f32[(address + 40) >> 2]!;
+        out.penetrationAxis[2] = mem.f32[(address + 44) >> 2]!;
+        out.normal[0] = mem.f32[(address + 48) >> 2]!;
+        out.normal[1] = mem.f32[(address + 52) >> 2]!;
+        out.normal[2] = mem.f32[(address + 56) >> 2]!;
+        out.subShapeIdA = mem.u32[(address + 60) >> 2]!;
+        out.subShapeIdB = mem.u32[(address + 64) >> 2]!;
+        out.materialIdA = mem.i32[(address + 68) >> 2]!;
+        out.materialIdB = mem.i32[(address + 72) >> 2]!;
+        out.bodyIdB = mem.u32[(address + 76) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: CastShapeHit): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.status;
+        mem.f32[(address + 4) >> 2] = value.fraction;
+        mem.f32[(address + 8) >> 2] = value.pointA[0];
+        mem.f32[(address + 12) >> 2] = value.pointA[1];
+        mem.f32[(address + 16) >> 2] = value.pointA[2];
+        mem.f32[(address + 20) >> 2] = value.pointB[0];
+        mem.f32[(address + 24) >> 2] = value.pointB[1];
+        mem.f32[(address + 28) >> 2] = value.pointB[2];
+        mem.f32[(address + 32) >> 2] = value.penetrationDepth;
+        mem.f32[(address + 36) >> 2] = value.penetrationAxis[0];
+        mem.f32[(address + 40) >> 2] = value.penetrationAxis[1];
+        mem.f32[(address + 44) >> 2] = value.penetrationAxis[2];
+        mem.f32[(address + 48) >> 2] = value.normal[0];
+        mem.f32[(address + 52) >> 2] = value.normal[1];
+        mem.f32[(address + 56) >> 2] = value.normal[2];
+        mem.u32[(address + 60) >> 2] = value.subShapeIdA;
+        mem.u32[(address + 64) >> 2] = value.subShapeIdB;
+        mem.i32[(address + 68) >> 2] = value.materialIdA;
+        mem.i32[(address + 72) >> 2] = value.materialIdB;
+        mem.u32[(address + 76) >> 2] = value.bodyIdB;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: CastShapeHit): void {
+        view.setUint32(offset + 0, value.status, true);
+        view.setFloat32(offset + 4, value.fraction, true);
+        view.setFloat32(offset + 8, value.pointA[0], true);
+        view.setFloat32(offset + 12, value.pointA[1], true);
+        view.setFloat32(offset + 16, value.pointA[2], true);
+        view.setFloat32(offset + 20, value.pointB[0], true);
+        view.setFloat32(offset + 24, value.pointB[1], true);
+        view.setFloat32(offset + 28, value.pointB[2], true);
+        view.setFloat32(offset + 32, value.penetrationDepth, true);
+        view.setFloat32(offset + 36, value.penetrationAxis[0], true);
+        view.setFloat32(offset + 40, value.penetrationAxis[1], true);
+        view.setFloat32(offset + 44, value.penetrationAxis[2], true);
+        view.setFloat32(offset + 48, value.normal[0], true);
+        view.setFloat32(offset + 52, value.normal[1], true);
+        view.setFloat32(offset + 56, value.normal[2], true);
+        view.setUint32(offset + 60, value.subShapeIdA, true);
+        view.setUint32(offset + 64, value.subShapeIdB, true);
+        view.setInt32(offset + 68, value.materialIdA, true);
+        view.setInt32(offset + 72, value.materialIdB, true);
+        view.setUint32(offset + 76, value.bodyIdB, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: CastShapeHit, view: DataView, offset: number): CastShapeHit {
+        out.status = view.getUint32(offset + 0, true);
+        out.fraction = view.getFloat32(offset + 4, true);
+        out.pointA[0] = view.getFloat32(offset + 8, true);
+        out.pointA[1] = view.getFloat32(offset + 12, true);
+        out.pointA[2] = view.getFloat32(offset + 16, true);
+        out.pointB[0] = view.getFloat32(offset + 20, true);
+        out.pointB[1] = view.getFloat32(offset + 24, true);
+        out.pointB[2] = view.getFloat32(offset + 28, true);
+        out.penetrationDepth = view.getFloat32(offset + 32, true);
+        out.penetrationAxis[0] = view.getFloat32(offset + 36, true);
+        out.penetrationAxis[1] = view.getFloat32(offset + 40, true);
+        out.penetrationAxis[2] = view.getFloat32(offset + 44, true);
+        out.normal[0] = view.getFloat32(offset + 48, true);
+        out.normal[1] = view.getFloat32(offset + 52, true);
+        out.normal[2] = view.getFloat32(offset + 56, true);
+        out.subShapeIdA = view.getUint32(offset + 60, true);
+        out.subShapeIdB = view.getUint32(offset + 64, true);
+        out.materialIdA = view.getInt32(offset + 68, true);
+        out.materialIdB = view.getInt32(offset + 72, true);
+        out.bodyIdB = view.getUint32(offset + 76, true);
+        return out;
+    },
+};
+
+export type CollideShapeSettings = {
+    maxSeparationDistance: number;
+    collisionTolerance: number;
+    penetrationTolerance: number;
+    collideWithBackfaces: boolean;
+    collideOnlyWithActiveEdges: boolean;
+    activeEdgeMovementDirection: Vec3;
+    internalEdgeRemovalVertexToleranceSq: number;
+};
+export const CollideShapeSettings = {
+    size: 32,
+    create(): CollideShapeSettings {
+        return {
+            maxSeparationDistance: 0,
+            collisionTolerance: 0,
+            penetrationTolerance: 0,
+            collideWithBackfaces: false,
+            collideOnlyWithActiveEdges: false,
+            activeEdgeMovementDirection: Vec3.create(),
+            internalEdgeRemovalVertexToleranceSq: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: CollideShapeSettings, address: number): CollideShapeSettings {
+        const mem = wasm.mem;
+        out.maxSeparationDistance = mem.f32[(address + 0) >> 2]!;
+        out.collisionTolerance = mem.f32[(address + 4) >> 2]!;
+        out.penetrationTolerance = mem.f32[(address + 8) >> 2]!;
+        out.collideWithBackfaces = mem.u8[address + 12]! !== 0;
+        out.collideOnlyWithActiveEdges = mem.u8[address + 13]! !== 0;
+        out.activeEdgeMovementDirection[0] = mem.f32[(address + 16) >> 2]!;
+        out.activeEdgeMovementDirection[1] = mem.f32[(address + 20) >> 2]!;
+        out.activeEdgeMovementDirection[2] = mem.f32[(address + 24) >> 2]!;
+        out.internalEdgeRemovalVertexToleranceSq = mem.f32[(address + 28) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: CollideShapeSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.maxSeparationDistance;
+        mem.f32[(address + 4) >> 2] = value.collisionTolerance;
+        mem.f32[(address + 8) >> 2] = value.penetrationTolerance;
+        mem.u8[address + 12] = value.collideWithBackfaces ? 1 : 0;
+        mem.u8[address + 13] = value.collideOnlyWithActiveEdges ? 1 : 0;
+        mem.f32[(address + 16) >> 2] = value.activeEdgeMovementDirection[0];
+        mem.f32[(address + 20) >> 2] = value.activeEdgeMovementDirection[1];
+        mem.f32[(address + 24) >> 2] = value.activeEdgeMovementDirection[2];
+        mem.f32[(address + 28) >> 2] = value.internalEdgeRemovalVertexToleranceSq;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: CollideShapeSettings): void {
+        view.setFloat32(offset + 0, value.maxSeparationDistance, true);
+        view.setFloat32(offset + 4, value.collisionTolerance, true);
+        view.setFloat32(offset + 8, value.penetrationTolerance, true);
+        view.setUint8(offset + 12, value.collideWithBackfaces ? 1 : 0);
+        view.setUint8(offset + 13, value.collideOnlyWithActiveEdges ? 1 : 0);
+        view.setFloat32(offset + 16, value.activeEdgeMovementDirection[0], true);
+        view.setFloat32(offset + 20, value.activeEdgeMovementDirection[1], true);
+        view.setFloat32(offset + 24, value.activeEdgeMovementDirection[2], true);
+        view.setFloat32(offset + 28, value.internalEdgeRemovalVertexToleranceSq, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: CollideShapeSettings, view: DataView, offset: number): CollideShapeSettings {
+        out.maxSeparationDistance = view.getFloat32(offset + 0, true);
+        out.collisionTolerance = view.getFloat32(offset + 4, true);
+        out.penetrationTolerance = view.getFloat32(offset + 8, true);
+        out.collideWithBackfaces = view.getUint8(offset + 12) !== 0;
+        out.collideOnlyWithActiveEdges = view.getUint8(offset + 13) !== 0;
+        out.activeEdgeMovementDirection[0] = view.getFloat32(offset + 16, true);
+        out.activeEdgeMovementDirection[1] = view.getFloat32(offset + 20, true);
+        out.activeEdgeMovementDirection[2] = view.getFloat32(offset + 24, true);
+        out.internalEdgeRemovalVertexToleranceSq = view.getFloat32(offset + 28, true);
+        return out;
+    },
+};
+
+export type CollideShapeHit = {
+    pointA: Vec3;
+    pointB: Vec3;
+    penetrationAxis: Vec3;
+    penetration: number;
+    subShapeIdA: number;
+    subShapeIdB: number;
+    materialIdA: number;
+    materialIdB: number;
+    bodyIdB: number;
+};
+export const CollideShapeHit = {
+    size: 60,
+    create(): CollideShapeHit {
+        return {
+            pointA: Vec3.create(),
+            pointB: Vec3.create(),
+            penetrationAxis: Vec3.create(),
+            penetration: 0,
+            subShapeIdA: 0,
+            subShapeIdB: 0,
+            materialIdA: 0,
+            materialIdB: 0,
+            bodyIdB: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: CollideShapeHit, address: number): CollideShapeHit {
+        const mem = wasm.mem;
+        out.pointA[0] = mem.f32[(address + 0) >> 2]!;
+        out.pointA[1] = mem.f32[(address + 4) >> 2]!;
+        out.pointA[2] = mem.f32[(address + 8) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 12) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 16) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 20) >> 2]!;
+        out.penetrationAxis[0] = mem.f32[(address + 24) >> 2]!;
+        out.penetrationAxis[1] = mem.f32[(address + 28) >> 2]!;
+        out.penetrationAxis[2] = mem.f32[(address + 32) >> 2]!;
+        out.penetration = mem.f32[(address + 36) >> 2]!;
+        out.subShapeIdA = mem.u32[(address + 40) >> 2]!;
+        out.subShapeIdB = mem.u32[(address + 44) >> 2]!;
+        out.materialIdA = mem.i32[(address + 48) >> 2]!;
+        out.materialIdB = mem.i32[(address + 52) >> 2]!;
+        out.bodyIdB = mem.u32[(address + 56) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: CollideShapeHit): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.pointA[0];
+        mem.f32[(address + 4) >> 2] = value.pointA[1];
+        mem.f32[(address + 8) >> 2] = value.pointA[2];
+        mem.f32[(address + 12) >> 2] = value.pointB[0];
+        mem.f32[(address + 16) >> 2] = value.pointB[1];
+        mem.f32[(address + 20) >> 2] = value.pointB[2];
+        mem.f32[(address + 24) >> 2] = value.penetrationAxis[0];
+        mem.f32[(address + 28) >> 2] = value.penetrationAxis[1];
+        mem.f32[(address + 32) >> 2] = value.penetrationAxis[2];
+        mem.f32[(address + 36) >> 2] = value.penetration;
+        mem.u32[(address + 40) >> 2] = value.subShapeIdA;
+        mem.u32[(address + 44) >> 2] = value.subShapeIdB;
+        mem.i32[(address + 48) >> 2] = value.materialIdA;
+        mem.i32[(address + 52) >> 2] = value.materialIdB;
+        mem.u32[(address + 56) >> 2] = value.bodyIdB;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: CollideShapeHit): void {
+        view.setFloat32(offset + 0, value.pointA[0], true);
+        view.setFloat32(offset + 4, value.pointA[1], true);
+        view.setFloat32(offset + 8, value.pointA[2], true);
+        view.setFloat32(offset + 12, value.pointB[0], true);
+        view.setFloat32(offset + 16, value.pointB[1], true);
+        view.setFloat32(offset + 20, value.pointB[2], true);
+        view.setFloat32(offset + 24, value.penetrationAxis[0], true);
+        view.setFloat32(offset + 28, value.penetrationAxis[1], true);
+        view.setFloat32(offset + 32, value.penetrationAxis[2], true);
+        view.setFloat32(offset + 36, value.penetration, true);
+        view.setUint32(offset + 40, value.subShapeIdA, true);
+        view.setUint32(offset + 44, value.subShapeIdB, true);
+        view.setInt32(offset + 48, value.materialIdA, true);
+        view.setInt32(offset + 52, value.materialIdB, true);
+        view.setUint32(offset + 56, value.bodyIdB, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: CollideShapeHit, view: DataView, offset: number): CollideShapeHit {
+        out.pointA[0] = view.getFloat32(offset + 0, true);
+        out.pointA[1] = view.getFloat32(offset + 4, true);
+        out.pointA[2] = view.getFloat32(offset + 8, true);
+        out.pointB[0] = view.getFloat32(offset + 12, true);
+        out.pointB[1] = view.getFloat32(offset + 16, true);
+        out.pointB[2] = view.getFloat32(offset + 20, true);
+        out.penetrationAxis[0] = view.getFloat32(offset + 24, true);
+        out.penetrationAxis[1] = view.getFloat32(offset + 28, true);
+        out.penetrationAxis[2] = view.getFloat32(offset + 32, true);
+        out.penetration = view.getFloat32(offset + 36, true);
+        out.subShapeIdA = view.getUint32(offset + 40, true);
+        out.subShapeIdB = view.getUint32(offset + 44, true);
+        out.materialIdA = view.getInt32(offset + 48, true);
+        out.materialIdB = view.getInt32(offset + 52, true);
+        out.bodyIdB = view.getUint32(offset + 56, true);
+        return out;
+    },
+};
+
+export type CollidePointSettings = { collisionTolerance: number };
+export const CollidePointSettings = {
+    size: 4,
+    create(): CollidePointSettings {
+        return { collisionTolerance: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: CollidePointSettings, address: number): CollidePointSettings {
+        const mem = wasm.mem;
+        out.collisionTolerance = mem.f32[(address + 0) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: CollidePointSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.collisionTolerance;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: CollidePointSettings): void {
+        view.setFloat32(offset + 0, value.collisionTolerance, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: CollidePointSettings, view: DataView, offset: number): CollidePointSettings {
+        out.collisionTolerance = view.getFloat32(offset + 0, true);
+        return out;
+    },
+};
+
+export type CollidePointHit = { subShapeIdB: number; bodyIdB: number; materialId: number };
+export const CollidePointHit = {
+    size: 12,
+    create(): CollidePointHit {
+        return { subShapeIdB: 0, bodyIdB: 0, materialId: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: CollidePointHit, address: number): CollidePointHit {
+        const mem = wasm.mem;
+        out.subShapeIdB = mem.u32[(address + 0) >> 2]!;
+        out.bodyIdB = mem.u32[(address + 4) >> 2]!;
+        out.materialId = mem.i32[(address + 8) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: CollidePointHit): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.subShapeIdB;
+        mem.u32[(address + 4) >> 2] = value.bodyIdB;
+        mem.i32[(address + 8) >> 2] = value.materialId;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: CollidePointHit): void {
+        view.setUint32(offset + 0, value.subShapeIdB, true);
+        view.setUint32(offset + 4, value.bodyIdB, true);
+        view.setInt32(offset + 8, value.materialId, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: CollidePointHit, view: DataView, offset: number): CollidePointHit {
+        out.subShapeIdB = view.getUint32(offset + 0, true);
+        out.bodyIdB = view.getUint32(offset + 4, true);
+        out.materialId = view.getInt32(offset + 8, true);
+        return out;
+    },
+};
+
 export type WorldSettings = Handle<'WorldSettings'>;
 /** WorldSettings's fields as a plain object, for WorldSettings.writeTo / readFrom over another realm's buffer. */
 export type WorldSettingsValue = {
@@ -4238,6 +4797,79 @@ export const TriangleMeshData = {
 
     release(data: TriangleMeshData): void {
         wasm.exports.tumble_triangle_mesh_data_release(data);
+    },
+};
+
+export type Filter = Handle<'Filter'>;
+export const Filter = {
+    create(world: World): Filter {
+        const r = wasm.exports.tumble_filter_create(world);
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as Filter;
+    },
+
+    destroy(filter: Filter): void {
+        wasm.exports.tumble_filter_destroy(filter);
+    },
+
+    enableAllLayers(filter: Filter, world: World): void {
+        wasm.exports.tumble_filter_enable_all_layers(filter, world);
+    },
+
+    disableAllLayers(filter: Filter, world: World): void {
+        wasm.exports.tumble_filter_disable_all_layers(filter, world);
+    },
+
+    enableObjectLayer(filter: Filter, world: World, objectLayer: number): boolean {
+        const r = wasm.exports.tumble_filter_enable_object_layer(filter, world, objectLayer);
+        return r !== 0;
+    },
+
+    disableObjectLayer(filter: Filter, world: World, objectLayer: number): boolean {
+        const r = wasm.exports.tumble_filter_disable_object_layer(filter, world, objectLayer);
+        return r !== 0;
+    },
+
+    enableBroadphaseLayer(filter: Filter, world: World, broadphaseLayer: number): boolean {
+        const r = wasm.exports.tumble_filter_enable_broadphase_layer(filter, world, broadphaseLayer);
+        return r !== 0;
+    },
+
+    disableBroadphaseLayer(filter: Filter, world: World, broadphaseLayer: number): boolean {
+        const r = wasm.exports.tumble_filter_disable_broadphase_layer(filter, world, broadphaseLayer);
+        return r !== 0;
+    },
+
+    isObjectLayerEnabled(filter: Filter, objectLayer: number): boolean {
+        const r = wasm.exports.tumble_filter_is_object_layer_enabled(filter, objectLayer);
+        return r !== 0;
+    },
+
+    isBroadphaseLayerEnabled(filter: Filter, broadphaseLayer: number): boolean {
+        const r = wasm.exports.tumble_filter_is_broadphase_layer_enabled(filter, broadphaseLayer);
+        return r !== 0;
+    },
+
+    setFromBody(filter: Filter, world: World, body: number): boolean {
+        const r = wasm.exports.tumble_filter_set_from_body(filter, world, body);
+        return r !== 0;
+    },
+
+    getCollisionGroups(filter: Filter): number {
+        const r = wasm.exports.tumble_filter_get_collision_groups(filter);
+        return r >>> 0;
+    },
+
+    getCollisionMask(filter: Filter): number {
+        const r = wasm.exports.tumble_filter_get_collision_mask(filter);
+        return r >>> 0;
+    },
+
+    copy(out: Filter, source: Filter): boolean {
+        const r = wasm.exports.tumble_filter_copy(out, source);
+        wasm.grew();
+        return r !== 0;
     },
 };
 
@@ -5478,6 +6110,206 @@ export const SixDofConstraint = {
     },
 };
 
+export const Query = {
+    initialEarlyOutFraction(): number {
+        const r = wasm.exports.tumble_query_initial_early_out_fraction();
+        return r;
+    },
+
+    unboundedEarlyOut(): number {
+        const r = wasm.exports.tumble_query_unbounded_early_out();
+        return r;
+    },
+
+    defaultCastRaySettings(out: CastRaySettings): CastRaySettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_query_default_cast_ray_settings(scratch + 0);
+        CastRaySettings.read(out, scratch + 0);
+        return out;
+    },
+
+    castRay(
+        world: World,
+        kind: number,
+        earlyOutFraction: number,
+        settings: CastRaySettings,
+        origin: Vec3,
+        direction: Vec3,
+        length: number,
+        filter: Filter,
+        collisionGroups: number,
+        collisionMask: number,
+    ): number {
+        const scratch = wasm.scratch;
+        CastRaySettings.write(scratch + 0, settings);
+        Vec3.write(scratch + 16, origin);
+        Vec3.write(scratch + 32, direction);
+        const r = wasm.exports.tumble_query_cast_ray(
+            world,
+            kind,
+            earlyOutFraction,
+            scratch + 0,
+            scratch + 16,
+            scratch + 32,
+            length,
+            filter,
+            collisionGroups,
+            collisionMask,
+        );
+        wasm.grew();
+        return r >>> 0;
+    },
+
+    readCastRayHit(out: CastRayHit, index: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_query_read_cast_ray_hit(scratch + 0, index);
+        CastRayHit.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    defaultCastShapeSettings(out: CastShapeSettings): CastShapeSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_query_default_cast_shape_settings(scratch + 0);
+        CastShapeSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    castShape(
+        world: World,
+        kind: number,
+        earlyOutFraction: number,
+        settings: CastShapeSettings,
+        shape: Shape,
+        position: Vec3,
+        quaternion: Quat,
+        scale: Vec3,
+        displacement: Vec3,
+        filter: Filter,
+        collisionGroups: number,
+        collisionMask: number,
+    ): number {
+        const scratch = wasm.scratch;
+        CastShapeSettings.write(scratch + 0, settings);
+        Vec3.write(scratch + 32, position);
+        Quat.write(scratch + 48, quaternion);
+        Vec3.write(scratch + 64, scale);
+        Vec3.write(scratch + 80, displacement);
+        const r = wasm.exports.tumble_query_cast_shape(
+            world,
+            kind,
+            earlyOutFraction,
+            scratch + 0,
+            shape,
+            scratch + 32,
+            scratch + 48,
+            scratch + 64,
+            scratch + 80,
+            filter,
+            collisionGroups,
+            collisionMask,
+        );
+        wasm.grew();
+        return r >>> 0;
+    },
+
+    readCastShapeHit(out: CastShapeHit, index: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_query_read_cast_shape_hit(scratch + 0, index);
+        CastShapeHit.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    defaultCollideShapeSettings(out: CollideShapeSettings): CollideShapeSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_query_default_collide_shape_settings(scratch + 0);
+        CollideShapeSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    collideShape(
+        world: World,
+        kind: number,
+        earlyOutFraction: number,
+        settings: CollideShapeSettings,
+        shape: Shape,
+        position: Vec3,
+        quaternion: Quat,
+        scale: Vec3,
+        internalEdgeRemoval: boolean,
+        filter: Filter,
+        collisionGroups: number,
+        collisionMask: number,
+    ): number {
+        const scratch = wasm.scratch;
+        CollideShapeSettings.write(scratch + 0, settings);
+        Vec3.write(scratch + 32, position);
+        Quat.write(scratch + 48, quaternion);
+        Vec3.write(scratch + 64, scale);
+        const r = wasm.exports.tumble_query_collide_shape(
+            world,
+            kind,
+            earlyOutFraction,
+            scratch + 0,
+            shape,
+            scratch + 32,
+            scratch + 48,
+            scratch + 64,
+            internalEdgeRemoval ? 1 : 0,
+            filter,
+            collisionGroups,
+            collisionMask,
+        );
+        wasm.grew();
+        return r >>> 0;
+    },
+
+    readCollideShapeHit(out: CollideShapeHit, index: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_query_read_collide_shape_hit(scratch + 0, index);
+        CollideShapeHit.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    defaultCollidePointSettings(out: CollidePointSettings): CollidePointSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_query_default_collide_point_settings(scratch + 0);
+        CollidePointSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    collidePoint(
+        world: World,
+        kind: number,
+        settings: CollidePointSettings,
+        point: Vec3,
+        filter: Filter,
+        collisionGroups: number,
+        collisionMask: number,
+    ): number {
+        const scratch = wasm.scratch;
+        CollidePointSettings.write(scratch + 0, settings);
+        Vec3.write(scratch + 16, point);
+        const r = wasm.exports.tumble_query_collide_point(
+            world,
+            kind,
+            scratch + 0,
+            scratch + 16,
+            filter,
+            collisionGroups,
+            collisionMask,
+        );
+        wasm.grew();
+        return r >>> 0;
+    },
+
+    readCollidePointHit(out: CollidePointHit, index: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_query_read_collide_point_hit(scratch + 0, index);
+        CollidePointHit.read(out, scratch + 0);
+        return r !== 0;
+    },
+};
+
 /** the extern "C" surface, every function taking and returning numbers; the namespaces above call these. */
 export type WasmExports = {
     __heap_base: WebAssembly.Global;
@@ -5725,4 +6557,77 @@ export type WasmExports = {
     tumble_six_dof_constraint_make_free_axis(world: number, constraint: number, axis: number): number;
     tumble_six_dof_constraint_make_fixed_axis(world: number, constraint: number, axis: number): number;
     tumble_six_dof_constraint_set_limited_axis(world: number, constraint: number, axis: number, min: number, max: number): number;
+    tumble_filter_create(world: number): number;
+    tumble_filter_destroy(filter: number): void;
+    tumble_filter_enable_all_layers(filter: number, world: number): void;
+    tumble_filter_disable_all_layers(filter: number, world: number): void;
+    tumble_filter_enable_object_layer(filter: number, world: number, objectLayer: number): number;
+    tumble_filter_disable_object_layer(filter: number, world: number, objectLayer: number): number;
+    tumble_filter_enable_broadphase_layer(filter: number, world: number, broadphaseLayer: number): number;
+    tumble_filter_disable_broadphase_layer(filter: number, world: number, broadphaseLayer: number): number;
+    tumble_filter_is_object_layer_enabled(filter: number, objectLayer: number): number;
+    tumble_filter_is_broadphase_layer_enabled(filter: number, broadphaseLayer: number): number;
+    tumble_filter_set_from_body(filter: number, world: number, body: number): number;
+    tumble_filter_get_collision_groups(filter: number): number;
+    tumble_filter_get_collision_mask(filter: number): number;
+    tumble_filter_copy(out: number, source: number): number;
+    tumble_query_initial_early_out_fraction(): number;
+    tumble_query_unbounded_early_out(): number;
+    tumble_query_default_cast_ray_settings(out: number): void;
+    tumble_query_cast_ray(
+        world: number,
+        kind: number,
+        earlyOutFraction: number,
+        settings: number,
+        origin: number,
+        direction: number,
+        length: number,
+        filter: number,
+        collisionGroups: number,
+        collisionMask: number,
+    ): number;
+    tumble_query_read_cast_ray_hit(out: number, index: number): number;
+    tumble_query_default_cast_shape_settings(out: number): void;
+    tumble_query_cast_shape(
+        world: number,
+        kind: number,
+        earlyOutFraction: number,
+        settings: number,
+        shape: number,
+        position: number,
+        quaternion: number,
+        scale: number,
+        displacement: number,
+        filter: number,
+        collisionGroups: number,
+        collisionMask: number,
+    ): number;
+    tumble_query_read_cast_shape_hit(out: number, index: number): number;
+    tumble_query_default_collide_shape_settings(out: number): void;
+    tumble_query_collide_shape(
+        world: number,
+        kind: number,
+        earlyOutFraction: number,
+        settings: number,
+        shape: number,
+        position: number,
+        quaternion: number,
+        scale: number,
+        internalEdgeRemoval: number,
+        filter: number,
+        collisionGroups: number,
+        collisionMask: number,
+    ): number;
+    tumble_query_read_collide_shape_hit(out: number, index: number): number;
+    tumble_query_default_collide_point_settings(out: number): void;
+    tumble_query_collide_point(
+        world: number,
+        kind: number,
+        settings: number,
+        point: number,
+        filter: number,
+        collisionGroups: number,
+        collisionMask: number,
+    ): number;
+    tumble_query_read_collide_point_hit(out: number, index: number): number;
 };
