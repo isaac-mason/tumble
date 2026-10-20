@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { type Box3, Box, Dof, MotionType, RigidBody, Sphere, type Vec3, World } from '../src';
+import { Box, type Box3, Dof, MotionType, RigidBody, Sphere, type Vec3, World } from '../src';
 import { makeScene, releaseScene, steps } from './helpers';
 
 describe('rigid bodies', () => {

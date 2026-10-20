@@ -145,7 +145,9 @@ export const World = {
         const values: number[] = [];
         for (const material of materials) values.push(material.friction, material.restitution);
         Low.errorClear();
-        const ok = withFloats(values, (address) => Low.World.setMaterials(world, address as Low.Pointer<'f32'>, materials.length));
+        const ok = withFloats(values, (address) =>
+            Low.World.setMaterials(world, address as Low.Pointer<'f32'>, materials.length),
+        );
         if (!ok) Low.getWasm().check();
     },
 };
