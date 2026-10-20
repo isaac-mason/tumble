@@ -256,7 +256,7 @@ void test_convex_hull_interior_points(TestCtx &ctx) {
     drop(h);
 }
 
-/* convex radius reduction (crashcat's convex-hull.test.ts) */
+/* convex radius reduction */
 
 void test_convex_hull_radius_thickness(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));
@@ -508,7 +508,7 @@ void test_convex_hull_shrunk_points(TestCtx &ctx) {
     drop(h);
 }
 
-/* support adjacency (crashcat's convex-hull-adjacency.test.ts) */
+/* support adjacency */
 
 static uint32_t neighbor_count(const convex_hull::ConvexHullData &data, uint32_t p) {
     return data.point_neighbors_start[p + 1] - data.point_neighbors_start[p];
@@ -668,7 +668,7 @@ void test_convex_hull_as_box_mass_and_radius(TestCtx &ctx) {
     drop(h);
     box::destroy(b);
 
-    // crashcat's inner radius test: a 2x2x2 box hull
+    // the inner radius of a 2x2x2 box hull
     h = make({.positions = CUBE_POINTS, .num_positions = 8});
     CHECK_NEAR(ctx, convex_hull::get_inner_radius(h), 1.0f, 1e-6f);
     drop(h);
@@ -723,7 +723,7 @@ void test_convex_hull_as_box_surface_normal(TestCtx &ctx) {
         CHECK(ctx, near3(hull_io.normal, box_io.normal, 1e-6f));
     }
 
-    // crashcat's surface normal tests: always a unit axis normal, even at the centre
+    // always a unit axis normal, even at the centre
     const Float3 queries[] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 0}};
     for (const Float3 &query : queries) {
         const Vec3f normal = shapes::get_shape_surface_normal(h, vec3f::load(query), sub_shape::EMPTY_SUB_SHAPE_ID);
@@ -809,7 +809,7 @@ void test_convex_hull_as_box_support(TestCtx &ctx) {
     box::destroy(b);
 }
 
-/* supporting face (crashcat's supporting-face.test.ts and convex-hull-supporting-face.test.ts) */
+/* supporting face */
 
 void test_convex_hull_supporting_face_cases(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));
@@ -924,7 +924,7 @@ void test_convex_hull_supporting_face_uniform_fast_path(TestCtx &ctx) {
     for (Shape *h : hulls) drop(h);
 }
 
-/* support (crashcat's support.test.ts and support-hill-climb.test.ts) */
+/* support */
 
 void test_convex_hull_support_include(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));
@@ -1142,7 +1142,7 @@ void test_convex_hull_collide_sphere(TestCtx &ctx) {
     CHECK(ctx, hit.face_a.num_vertices == 4);
     for (uint32_t i = 0; i < 4; i++) CHECK_NEAR(ctx, vec3f::y(hit.face_a.vertices[i]), 1.0f, 1e-6f);
 
-    // crashcat's hull vs sphere: radius 1.51 at 2.5 just reaches the x = 1 face, 0.01 deep
+    // hull vs sphere: radius 1.51 at 2.5 just reaches the x = 1 face, 0.01 deep
     sphere::destroy(s);
     s = sphere::create({.radius = 1.51f});
     Shape *sharp = hull(CUBE_POINTS, 8, 0.0f);
@@ -1205,7 +1205,7 @@ void test_convex_hull_collide_box_and_hull(TestCtx &ctx) {
     CHECK_NEAR(ctx, vec3f::y(collector.hits[0].point_a), 1.0f, 1e-4f);
     CHECK_NEAR(ctx, vec3f::y(collector.hits[0].point_b), 0.95f, 1e-4f);
 
-    // crashcat's hull vs hull: two 2-cubes 1.5 apart overlap by 0.5
+    // hull vs hull: two 2-cubes 1.5 apart overlap by 0.5
     Shape *other = hull(CUBE_POINTS, 8, 0.0f);
     collide_shape::reset(collector);
     collide(collector, collide_shape::default_settings(), h, pose({0, 0, 0}), other, pose({1.5f, 0, 0}));

@@ -43,7 +43,7 @@ static void check_parallel_axis(TestCtx &ctx, const mass_properties::MassPropert
     }
 }
 
-/* creation (crashcat's offset centre of mass tests) */
+/* creation */
 
 void test_offset_center_of_mass_create(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));
@@ -143,7 +143,7 @@ void test_offset_center_of_mass_pass_through(TestCtx &ctx) {
     CHECK(ctx, point_collector.hits.length == 1);
     collide_point::release(point_collector);
 
-    // the leaf and the sub shape's transform are the inner shape's (crashcat answered with the wrapper itself)
+    // the leaf and the sub shape's transform are the inner shape's, not the wrapper's
     Shape *b = box::create({.half_extents = {1, 1, 1}});
     const CompoundShapeChild children[] = {{{0, 0, 0}, IDENTITY, s}, {{3, 0, 0}, IDENTITY, b}};
     Shape *c = compound::create({.children = children, .num_children = 2});
@@ -202,7 +202,7 @@ void test_offset_center_of_mass_sphere_vs_box(TestCtx &ctx) {
     collide(collector, o, pose({0, 0, 0}), b, pose({0, -2.5f, 0}));
     CHECK(ctx, collector.hits.length == 0);
 
-    // against a sphere just touching (crashcat's tests): 0.1 deep, both orders
+    // against a sphere just touching: 0.1 deep, both orders
     collide_shape::reset(collector);
     collide(collector, o, pose({0, 0, 0}), s, pose({0, 1.9f, 0}));
     CHECK(ctx, collector.hits.length == 1);

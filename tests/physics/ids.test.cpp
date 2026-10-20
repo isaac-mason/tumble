@@ -7,7 +7,7 @@
 #include "test_math.h"
 
 void test_body_id(TestCtx &ctx) {
-    // jolt's layout: index in bits 0-22, sequence in 23-30, bit 31 never set
+    // index in bits 0-22, sequence in 23-30, bit 31 never set
     const body_id::BodyId id = body_id::ser(0x345678u, 0xabu);
     CHECK(ctx, body_id::index(id) == 0x345678u);
     CHECK(ctx, body_id::sequence(id) == 0xabu);
@@ -78,7 +78,7 @@ void test_sub_shape(TestCtx &ctx) {
     SubShapeIdBuilder level2;
     push_index(level2, level1, 777, 1000);
     CHECK(ctx, level2.current_bit == 13);
-    // the untouched high bits stay set, as crashcat's empty fill
+    // the untouched high bits stay set, as an empty fill leaves them
     CHECK(ctx, (level2.value >> 13) == (EMPTY_SUB_SHAPE_ID >> 13));
     // popping walks back in order, and the remainder after the last level is empty again
     PopResult popped;

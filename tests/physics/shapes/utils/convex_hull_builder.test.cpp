@@ -361,7 +361,7 @@ void test_convex_hull_builder_sphere_with_interior_points(TestCtx &ctx) {
     hull::ConvexHullBuilder builder = hull::create(positions, 1000);
     CHECK(ctx, hull::initialize(builder, NO_LIMIT, TOLERANCE) == hull::SUCCESS);
 
-    // the two ends of the sphere have 10 points that have the same position; jolt expects 82
+    // the two ends of the sphere have 10 points that have the same position, so 82 remain
     const int32_t num_vertices = hull::get_num_vertices_used(builder);
     CHECK(ctx, num_vertices >= 80 && num_vertices <= 85);
 

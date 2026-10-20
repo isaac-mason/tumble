@@ -1,9 +1,5 @@
 #pragma once
 
-// the world tests' scene: crashcat's createTestWorld (a moving and a not moving layer), the world level body calls the
-// facade will make (create into the broadphase, remove with its constraints and pairs, teleport), and the step as js
-// drives it, the five phases in order.
-
 #include "tumble/instance.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/vec3f.h"
@@ -21,6 +17,7 @@
 
 constexpr float WORLD_TEST_DELTA_TIME = 1.0f / 60.0f;
 
+/** a moving and a not moving layer */
 struct WorldScene {
     world::World *world;
     uint32_t moving;
@@ -91,7 +88,7 @@ inline void set_body_transform(world::World &world, rigid_body::RigidBody *body,
     if (broadphase::update_body(world.broadphase, body)) pairs::mark_moved(world.pairs, *body);
 }
 
-/** one step as js makes it, answering nothing: find_pairs and the narrowphase again while the narrowphase woke bodies */
+/** one step answering nothing: find_pairs and the narrowphase again while the narrowphase woke bodies */
 inline void step_world(world::World &world, float delta_time = WORLD_TEST_DELTA_TIME) {
     update::step_begin(world, delta_time);
     do {

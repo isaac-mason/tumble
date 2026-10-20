@@ -47,7 +47,7 @@ static void place(support::Support &s, const Float3 &position) {
     s.transform = translation(vec3f::load(position));
 }
 
-/** the narrowphase's two steps as convex.ts runs them: gjk on the cores, epa on the whole shapes when the cores overlap. */
+/** the narrowphase's two steps: gjk on the cores, epa on the whole shapes when the cores overlap. */
 struct TwoStep {
     penetration::PenetrationDepthStatus gjk_status;
     bool epa_ran;
@@ -134,7 +134,7 @@ void test_penetration_spheres_overlapping(TestCtx &ctx) {
     const TwoStep concentric = run_two_step(depth, core_a, core_b, whole_a, whole_b, {1, 0, 0});
     CHECK(ctx, concentric.gjk_status == penetration::INDETERMINATE && concentric.epa_ran);
     CHECK(ctx, depth.status == penetration::COLLIDING);
-    // epa's polytope is inscribed in the round minkowski sum, so it can only fall short: crashcat reports 1.4454 here
+    // epa's polytope is inscribed in the round minkowski sum, so it can only fall short: 1.4454 here
     CHECK(ctx, depth_of(depth) <= radius_a + radius_b + 1e-5f && depth_of(depth) > 1.4f);
 
     // apart by more than the radii: not colliding, the output cleared
@@ -208,7 +208,7 @@ void test_penetration_epa_coplanar_box_faces(TestCtx &ctx) {
     place(core_b, centre_b);
     place(whole_b, centre_b);
 
-    // the simplex crashcat's gjk ends on, as decimal literals: epa converges on the top face
+    // the simplex gjk ends on, as decimal literals: epa converges on the top face
     simplex::Simplex literal;
     literal.size = 4;
     const float p[12] = {0.95f, 0.95f, -0.95f, -0.95f, -0.95f, 0.95f, -0.95f, 0.95f, 0.95f, 0.95f, 0.95f, 0.95f};
@@ -224,7 +224,7 @@ void test_penetration_epa_coplanar_box_faces(TestCtx &ctx) {
 
     // the same simplex as f32 computes it (two q.y are 0.75 + 1 ulp): the fourth new face is a sliver whose
     // normal faces the origin, so epa stops on the hull defect and reports its last good face, tilted.
-    // the expected values are crashcat's algorithm run in emulated f32 on this input
+    // the expected values are the algorithm run in emulated f32 on this input
     simplex::Simplex computed;
     computed.size = 0;
     penetration::penetration_depth_step_gjk(depth, computed, core_a, core_b, core_a.convex_radius, core_b.convex_radius, vec3f::load(centre_b),

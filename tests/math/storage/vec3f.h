@@ -48,7 +48,7 @@ inline float squared_distance(const Float3 &a, const Float3 &b) {
 }
 inline float distance(const Float3 &a, const Float3 &b) { return scalar::sqrt(squared_distance(a, b)); }
 
-/** the zero vector stays zero, as the js does. */
+/** the zero vector stays zero */
 inline Float3 &normalize(Float3 &out, const Float3 &a) {
     float len = squared_length(a);
     if (len > 0.0f) len = 1.0f / scalar::sqrt(len);
@@ -74,7 +74,7 @@ inline Float3 &lerp(Float3 &out, const Float3 &a, const Float3 &b, float t) {
     return store(out, v4f::mul_add(v4f::sub(v4f::load3(&b.x), va), v4f::splat(t), va));
 }
 
-/** a as a point through m, with the perspective divide; a zero (or nan) w divides by one, as the js `w || 1`. */
+/** a as a point through m, with the perspective divide; a zero or nan w divides by one */
 inline Float3 &transform_mat4(Float3 &out, const Float3 &a, const Float4x4 &m) {
     v128_t r = v4f::mul(v4f::load4(&m.m[0]), v4f::splat(a.x));
     r = v4f::mul_add(v4f::load4(&m.m[4]), v4f::splat(a.y), r);

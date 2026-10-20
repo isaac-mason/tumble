@@ -196,7 +196,7 @@ void test_islands_iteration_counts(TestCtx &ctx) {
     scene.contact.settings.solver.velocity_iterations = 10;
     scene.contact.settings.solver.position_iterations = 5;
 
-    // crashcat's case: a default body touching one asking for 20 / 15, and a body alone asking for 8 / 3
+    // a default body touching one asking for 20 / 15, and a body alone asking for 8 / 3
     RigidBody *body_default = add_sphere(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *body_custom = add_sphere(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
     body_custom->motion_properties.num_velocity_steps_override = 20;

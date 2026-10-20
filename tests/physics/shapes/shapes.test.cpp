@@ -5,7 +5,7 @@
 #include "test.h"
 #include "test_math.h"
 
-/* the scale a rotated child sees (jolt's TransformScale) */
+/* the scale a rotated child sees */
 
 void test_shapes_transform_scale(TestCtx &ctx) {
     // uniform scale and the identity rotation pass through

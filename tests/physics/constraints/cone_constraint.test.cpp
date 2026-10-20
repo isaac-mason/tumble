@@ -45,7 +45,7 @@ void test_cone_constraint_create(TestCtx &ctx) {
         scene.constraints, scene.bodies, a, b, {.twist_axis_a = {0.0f, 0.0f, 1.0f}, .space = constraints::SPACE_LOCAL});
     const ConeConstraint *local = cone_constraint::get(scene.constraints, local_id);
     CHECK(ctx, vec3f::exact_equals(local->local_space_twist_axis1, vec3f::make(0.0f, 0.0f, 1.0f)));
-    // jolt's perpendicular of +z is (0, 1, 0) in body a, which a's quarter turn takes to world -x
+    // the perpendicular of +z is (0, 1, 0) in body a, which a's quarter turn takes to world -x
     CHECK(ctx, vec3f::distance(local->world_space_rotation_axis, vec3f::make(-1.0f, 0.0f, 0.0f)) < 1e-5f);
     // the default cone allows no swing
     CHECK(ctx, local->cos_half_cone_angle == 1.0f);

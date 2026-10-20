@@ -1,7 +1,5 @@
 #pragma once
 
-// a bare body for the constraint part tests: no shape and no world, only what a part reads
-
 #include "tumble/physics/body/motion_properties.h"
 #include "tumble/physics/body/rigid_body.h"
 

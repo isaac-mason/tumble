@@ -19,7 +19,7 @@ static RigidBody make_body(uint32_t allowed_degrees_of_freedom) {
 }
 
 void test_rigid_body_step_position_on_locked_axes(TestCtx &ctx) {
-    // crashcat's dof test: the mask applies to the step, a locked axis stays where it is (not zero)
+    // the dof mask applies to the step, a locked axis stays where it is (not zero)
     RigidBody body = make_body(dof::DOF_ALL & ~dof::TRANSLATION_X);
     Float3 &com = body.center_of_mass_position;
     com = {5.0f, 10.0f, -3.0f};

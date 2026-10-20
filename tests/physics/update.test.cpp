@@ -51,7 +51,7 @@ shapes::Shape *make_mesh(const float *positions, uint32_t num_positions, const u
     return triangle_mesh::create({.data = triangle_mesh_builder::build(settings)});
 }
 
-/** the step with js rejecting every pair between find_pairs and the narrowphase */
+/** the step with the caller rejecting every pair between find_pairs and the narrowphase */
 void step_rejecting_pairs(world::World &world) {
     update::step_begin(world, WORLD_TEST_DELTA_TIME);
     update::find_pairs(world);
@@ -61,7 +61,7 @@ void step_rejecting_pairs(world::World &world) {
     update::step_end(world);
 }
 
-/** the step with js answering every contact with `answer` between the narrowphase and the solve */
+/** the step with the caller answering every contact with `answer` between the narrowphase and the solve */
 void step_answering_contacts(world::World &world, void (*answer)(events::ContactOverride &out, const events::ContactEvent &event)) {
     update::step_begin(world, WORLD_TEST_DELTA_TIME);
     update::find_pairs(world);
@@ -78,7 +78,6 @@ void step_answering_contacts(world::World &world, void (*answer)(events::Contact
 
 }  // namespace
 
-// crashcat step-finish.test.ts
 
 void test_update_position_and_aabb_follow_center_of_mass(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
@@ -112,7 +111,6 @@ void test_update_forces_consumed_by_step_and_zero_step(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// crashcat islands.test.ts and islands-ccd-bookkeeping.test.ts
 
 void test_update_islands_group_contacts_and_exclude_static(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
@@ -190,7 +188,6 @@ void test_update_island_index_cleared_on_sleep_and_reassigned_on_wake(TestCtx &c
     release_world_scene(scene);
 }
 
-// crashcat body/sleep.test.ts
 
 void test_update_sleeping_body_woken_by_collision(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
@@ -363,7 +360,6 @@ void test_update_body_at_rest_sleeps_and_impulse_wakes(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// crashcat contact-pair-nesting.test.ts, the sleep lifecycle
 
 void test_update_contacts_removed_once_on_sleep_and_added_on_wake(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
@@ -404,7 +400,6 @@ void test_update_contacts_removed_once_on_sleep_and_added_on_wake(TestCtx &ctx) 
     release_world_scene(scene);
 }
 
-// crashcat manifold/narrowphase-manifold.test.ts
 
 namespace {
 
@@ -521,7 +516,7 @@ void test_update_box_on_tessellated_mesh_prunes_to_quad(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// the answers js writes between the phases
+// the answers the caller writes between the phases
 
 namespace {
 
@@ -620,7 +615,7 @@ void test_update_contact_override_reject_falls_through_floor(TestCtx &ctx) {
     RigidBody *box_body = add_unit_box(scene, {0.0f, 0.5f, 0.0f});
     RigidBody *control = add_unit_box(scene, {5.0f, 0.5f, 0.0f});
 
-    // the boxes rest on the floor until js rejects the first one's contacts
+    // the boxes rest on the floor until the caller rejects the first one's contacts
     step_world(*scene.world);
     CHECK_NEAR(ctx, box_body->position.y, 0.5f, 0.01f);
 
@@ -689,7 +684,7 @@ void test_update_stack_of_ten_stands(TestCtx &ctx) {
     // a stack of ten unit boxes, built after k bodies came and went so the ids (and with them the solve order) differ:
     // every one stands, each box on the one below, sunk at most the slop per contact, none sliding off. an exactly
     // aligned stack takes a sideways kick from the first step's sequential impulses and in some orders creeps by up to
-    // tens of cm over 15 s, never sleeping. jolt does the same on these layouts: its ids and so its solve order are
+    // tens of cm over 15 s, never sleeping, as a solver of this kind does on these layouts: the ids and so the solve order are
     // these, it tracks this solver to 1e-5 for the first 30 to 300 steps, and its layout 6 never sleeps either
     for (uint32_t k = 0; k < 8; k++) {
         WorldScene scene = make_world_scene(ctx);
@@ -731,7 +726,7 @@ WorldScene build_pile(TestCtx &ctx) {
 
 }  // namespace
 
-// crashcat contact-constraints.test.ts: warm start across a change of step length
+// warm start across a change of step length
 
 void test_update_landed_box_not_launched_by_a_longer_step(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
@@ -760,7 +755,7 @@ void test_update_landed_box_not_launched_by_a_longer_step(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// crashcat contact-constraints.test.ts: friction lever arms
+// friction lever arms
 
 void test_update_speculative_friction_acts_at_each_bodys_point(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx, [](world_settings::WorldSettings &settings) { settings.gravity_enabled = false; });
@@ -783,7 +778,7 @@ void test_update_speculative_friction_acts_at_each_bodys_point(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// crashcat sleep.test.ts: waking
+// waking
 
 namespace {
 
@@ -834,7 +829,7 @@ void test_update_body_hitting_sleeping_stack_wakes_it_whole(TestCtx &ctx) {
     }
     CHECK(ctx, stack[0]->sleeping && stack[1]->sleeping && stack[2]->sleeping && stack[3]->sleeping);
 
-    // a quiet step: the narrowphase wakes nothing, so js makes one round
+    // a quiet step: the narrowphase wakes nothing, so the caller makes one round
     CHECK(ctx, step_world_counting_rounds(ctx, *scene.world) == 1);
     CHECK(ctx, scene.world->events.woken == 0);
 
@@ -851,7 +846,7 @@ void test_update_body_hitting_sleeping_stack_wakes_it_whole(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// crashcat distance-constraint.test.ts: sleeping
+// sleeping
 
 void test_update_weight_hanging_from_static_anchor_stays_asleep(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
@@ -962,7 +957,6 @@ void test_update_moved_lists_exactly_the_bodies_that_moved(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// crashcat broadphase-persistent-pairs.test.ts, the stepping parts
 
 namespace {
 

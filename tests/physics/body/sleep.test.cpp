@@ -7,7 +7,7 @@
 
 using rigid_body::RigidBody;
 
-// crashcat's default sleep settings: time_before_sleep 0.5 s, point velocity threshold 0.03 m/s,
+// the default sleep settings: time_before_sleep 0.5 s, point velocity threshold 0.03 m/s,
 // so a test point may wander max_movement = 0.03 * 0.5 m before the timer restarts
 static constexpr float TIME_BEFORE_SLEEP = 0.5f;
 static constexpr float MAX_MOVEMENT = 0.03f * TIME_BEFORE_SLEEP;

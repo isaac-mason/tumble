@@ -45,7 +45,6 @@ static void collide_point_at(collide_point::CollidePointCollector &collector, co
     shapes::def_of(shape).collide_point(collector, collide_point::default_settings(), vec3f::load(point), shape, NO_SUB_SHAPE, transform);
 }
 
-/* crashcat's static compound tests */
 
 void test_static_compound_creation(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));

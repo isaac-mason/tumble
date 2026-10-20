@@ -1,8 +1,4 @@
-// runs the test build's wasm: each test in an instance and memory of its own, so no test sees what
-// another allocated or grew; prints every recorded failure, exits non-zero if any. the probes (`probe_*` exports) are swept here against
-// node's Math as the reference for the transcendentals.
-//
-// usage: node run.mjs <tumble-test.wasm>
+// usage: node run.mjs <tumble-test.wasm>   (each test runs in an instance and memory of its own)
 import { readFileSync } from 'node:fs';
 
 const path = process.argv[2];

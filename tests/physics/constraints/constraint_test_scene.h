@@ -1,8 +1,5 @@
 #pragma once
 
-// the constraint tests' world without a world: bodies, layers and constraints, and a step that runs the
-// solver phases by hand (gravity, setup, warm start, velocity iterations, integration, position iterations).
-
 #include "tumble/instance.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/vec3f.h"
@@ -14,6 +11,7 @@
 #include "test.h"
 #include "test_math.h"
 
+/** a world without a world: bodies, layers and constraints, and a step that runs the solver phases by hand */
 struct ConstraintScene {
     bodies::Bodies bodies;
     layers::Layers layers;

@@ -51,7 +51,7 @@ static bool point_inside(const Shape *shape, const Transformf &transform, const 
     return inside;
 }
 
-/* creation, bounds, centre of mass (crashcat's transformed tests) */
+/* creation, bounds, centre of mass */
 
 void test_transformed_create_and_aabb(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));
@@ -178,7 +178,7 @@ void test_transformed_surface_normal(TestCtx &ctx) {
     box::destroy(b123);
 }
 
-/* supporting face (crashcat's supporting-face tests, with the values pinned) */
+/* supporting face, the values pinned */
 
 void test_transformed_supporting_face(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));
@@ -265,7 +265,7 @@ void test_transformed_supporting_face_with_scaled(TestCtx &ctx) {
     for (uint32_t i = 0; i < face.num_vertices; i++) CHECK_NEAR(ctx, vec3f::x(face.vertices[i]), 3.0f, 1e-5f);
 
     // scaled over transformed: the scale applies to the box's position too, as it does to every query, so the box
-    // sits at 10 with half extent 2 and its -x face is at 8 (crashcat's test expected 3, the position left unscaled)
+    // sits at 10 with half extent 2 and its -x face is at 8
     Shape *moved = transformed::create({.shape = b, .position = {5, 0, 0}, .quaternion = IDENTITY});
     Shape *scaled_moved = scaled::create({.shape = moved, .scale = {2, 2, 2}});
     shapes::get_shape_supporting_face(face, scaled_moved, 0, vec3f::make(1, 0, 0), mat4f::load(identity), vec3f::make(1, 1, 1));
@@ -447,7 +447,7 @@ void test_transformed_cast(TestCtx &ctx) {
     sphere::destroy(s);
 }
 
-/* a rotated child under a non-uniform scale (jolt's TransformScale) */
+/* a rotated child under a non-uniform scale */
 
 void test_transformed_scaled_compound_rotated_child(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));
@@ -532,7 +532,7 @@ void test_transformed_dispatch_rows(TestCtx &ctx) {
     CHECK(ctx, shapes::collide_fn(shapes::SHAPE_SPHERE, shapes::SHAPE_TRANSFORMED) == transformed::collide_shape_vs_transformed);
     CHECK(ctx, shapes::cast_fn(shapes::SHAPE_TRANSFORMED, shapes::SHAPE_TRIANGLE_MESH) == transformed::cast_transformed_vs_shape);
     CHECK(ctx, shapes::cast_fn(shapes::SHAPE_PLANE, shapes::SHAPE_TRANSFORMED) == transformed::cast_shape_vs_transformed);
-    // against itself the second write of the pair wins, b peeled first, as crashcat's loop leaves it
+    // against itself the second write of the pair wins, b peeled first
     CHECK(ctx, shapes::collide_fn(shapes::SHAPE_TRANSFORMED, shapes::SHAPE_TRANSFORMED) == transformed::collide_shape_vs_transformed);
     // over the compound's rows, under the static compound's, under a later wrapper's
     CHECK(ctx, shapes::collide_fn(shapes::SHAPE_COMPOUND, shapes::SHAPE_TRANSFORMED) == transformed::collide_shape_vs_transformed);

@@ -528,7 +528,7 @@ void test_convex_cast_ray_starting_inside(TestCtx &ctx) {
     ray(collector, settings, vec3f::make(0.5f, 0.5f, 0), vec3f::make(0, 1, 0), 10.0f, b, pose({0, 0, 0}));
     CHECK(ctx, collector.hits.length == 0);
 
-    // hollow with back faces: the exit, found by the inverted ray as jolt's second pass (sphere surface at
+    // hollow with back faces: the exit, found by the inverted ray as a second pass (sphere surface at
     // x = 6, from 5.25 over a length of 10: 0.075; the box top at y = 1 from 0.5: 0.05)
     settings.collide_with_backfaces_convex = true;
     ray(collector, settings, vec3f::make(5.25f, 0, 0), vec3f::make(1, 0, 0), 10.0f, s, pose({5, 0, 0}));

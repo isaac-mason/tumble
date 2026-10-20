@@ -94,7 +94,7 @@ void test_distance_constraint_reused_slot_starts_fresh(TestCtx &ctx) {
 }
 
 void test_distance_constraint_pendulum(TestCtx &ctx) {
-    // crashcat's empty shape test: a shapeless static anchor and a ball five below it, 30 steps of gravity
+    // a shapeless static anchor and a ball five below it, 30 steps of gravity
     ConstraintScene scene = make_constraint_scene(ctx);
     RigidBody *anchor = add_body(scene, motion_type::MOTION_STATIC, {0.0f, 10.0f, 0.0f});
     RigidBody *bob = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 5.0f, 0.0f});

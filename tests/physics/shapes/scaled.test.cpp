@@ -41,7 +41,7 @@ static bool point_inside(const Shape *shape, const Transformf &transform, const 
     return inside;
 }
 
-/* creation, bounds, centre of mass, volume (crashcat's scaled tests) */
+/* creation, bounds, centre of mass, volume */
 
 void test_scaled_create_and_aabb(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));
@@ -74,13 +74,13 @@ void test_scaled_offset_inner_shape(TestCtx &ctx) {
     Shape *s = box::create({.half_extents = {1, 1, 1}});
     Shape *moved = transformed::create({.shape = s, .position = {1, 1, 1}, .quaternion = IDENTITY});
 
-    // the centre of mass scales with the inner shape's (crashcat read its own, zero, centre of mass)
+    // the centre of mass scales with the inner shape's
     Shape *ss = scaled::create({.shape = moved, .scale = {2, 3, 4}});
     CHECK(ctx, near3(ss->center_of_mass, 2, 3, 4, 1e-6f));
     CHECK(ctx, near3(ss->aabb.min, 0, 0, 0, 1e-6f));
     CHECK(ctx, near3(ss->aabb.max, 4, 6, 8, 1e-6f));
 
-    // a mirroring scale mirrors the bounds: x over [0, 2] goes to [-4, 0] (crashcat kept [0, 4])
+    // a mirroring scale mirrors the bounds: x over [0, 2] goes to [-4, 0]
     Shape *mirrored = scaled::create({.shape = moved, .scale = {-2, 1, 1}});
     CHECK(ctx, near3(mirrored->aabb.min, -4, 0, 0, 1e-6f));
     CHECK(ctx, near3(mirrored->aabb.max, 0, 2, 2, 1e-6f));

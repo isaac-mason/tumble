@@ -56,7 +56,7 @@ static shapes::Shape *hull(convex_hull::ConvexHullData **out_data, const float *
 }
 
 void test_collide_shape_vs_shape_default_settings(TestCtx &ctx) {
-    // back faces off by default, as jolt
+    // back faces off by default
     const CollideShapeSettings settings = collide_shape::default_settings();
     CHECK(ctx, !settings.collide_with_backfaces);
     CHECK(ctx, settings.collide_only_with_active_edges && !settings.collect_faces);

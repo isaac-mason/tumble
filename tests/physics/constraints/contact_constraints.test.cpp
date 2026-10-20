@@ -469,7 +469,7 @@ void test_contact_constraints_override_conveyor(TestCtx &ctx) {
     RigidBody *belt = add_ground(scene);
     RigidBody *ball = add_ball(scene);
 
-    // frictionless as built, so the parts are off; js turns friction on and moves the belt's surface at 2 m/s along +x.
+    // frictionless as built, so the parts are off; the caller turns friction on and moves the belt's surface at 2 m/s along +x.
     // the relative surface velocity is body 2's surface relative to body 1's, so the belt (a) moving gives -2
     begin_contact_step(scene);
     ball->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
@@ -501,7 +501,7 @@ void test_contact_constraints_override_restitution_and_mass_scale(TestCtx &ctx) 
     RigidBody *ground = add_ground(scene);
     RigidBody *ball = add_ball(scene);
 
-    // built with no restitution; js asks for 0.5 and the normal bias is rebuilt to bounce
+    // built with no restitution; the caller asks for 0.5 and the normal bias is rebuilt to bounce
     begin_contact_step(scene);
     ball->motion_properties.linear_velocity = {0.0f, -5.0f, 0.0f};
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
@@ -524,7 +524,7 @@ void test_contact_constraints_override_restitution_and_mass_scale(TestCtx &ctx) 
     solve_contact_velocities(scene, 10);
     CHECK_NEAR(ctx, scene.contact_constraints.pool[0].contact_points[0].normal_constraint.total_lambda, 2.0f * ball_mass(ball), 0.05f);
 
-    // an inverse mass scale of 0 on the only dynamic body leaves no constraint (jolt's test)
+    // an inverse mass scale of 0 on the only dynamic body leaves no constraint
     begin_contact_step(scene);
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
     settings = default_override();
@@ -550,7 +550,7 @@ void test_contact_constraints_override_reject_drops_and_zeroes_the_cache(TestCtx
     solve_contact_velocities(scene, 10);
     end_contact_step(scene);
 
-    // persisted with last step's impulse, plus a second contact; js rejects the first
+    // persisted with last step's impulse, plus a second contact; the caller rejects the first
     begin_contact_step(scene);
     ball->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
     other->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};

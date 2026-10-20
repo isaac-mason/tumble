@@ -31,7 +31,7 @@ static Shape *make_compound(const CompoundShapeChild *children, uint32_t count) 
     return compound::create({.children = children, .num_children = count});
 }
 
-/* creation, bounds, centre of mass (crashcat's compound tests) */
+/* creation, bounds, centre of mass */
 
 void test_compound_aabb(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));
@@ -347,7 +347,7 @@ void test_compound_dispatch_wiring(TestCtx &ctx) {
         CHECK(ctx, shapes::cast_fn(shapes::SHAPE_COMPOUND, t) == compound::cast_compound_vs_shape);
         CHECK(ctx, shapes::cast_fn(t, shapes::SHAPE_COMPOUND) == compound::cast_shape_vs_compound);
     }
-    // compound vs compound walks b first, as crashcat's registration leaves it
+    // compound vs compound walks b first
     CHECK(ctx, shapes::collide_fn(shapes::SHAPE_COMPOUND, shapes::SHAPE_COMPOUND) == compound::collide_shape_vs_compound);
     CHECK(ctx, shapes::cast_fn(shapes::SHAPE_COMPOUND, shapes::SHAPE_COMPOUND) == compound::cast_shape_vs_compound);
     CHECK(ctx, shapes::collide_fn(shapes::SHAPE_COMPOUND, shapes::SHAPE_EMPTY) == nullptr);
@@ -735,7 +735,7 @@ void test_compound_scaled_supporting_face(TestCtx &ctx) {
     box::destroy(b);
 }
 
-/* a rotated child under a non-uniform scale (jolt's TransformScale) */
+/* a rotated child under a non-uniform scale */
 
 static bool point_hits(const Shape *shape, const Float3 &point, const Float3 &scale) {
     collide_point::CollidePointCollector points = collide_point::create_collector(collector::COLLECT_ALL);

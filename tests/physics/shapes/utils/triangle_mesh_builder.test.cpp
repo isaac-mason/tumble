@@ -19,7 +19,7 @@ static uint32_t heap_bytes_in_use() {
     return stats.bytes_in_use;
 }
 
-/** crashcat's test settings: sah, two triangles per leaf */
+/** sah, two triangles per leaf */
 template <uint32_t NUM_FLOATS, uint32_t NUM_INDICES>
 static TriangleMeshData *build_mesh(const float (&positions)[NUM_FLOATS], const uint32_t (&indices)[NUM_INDICES],
                                     float degenerate_tolerance = 1e-6f, float cos_threshold = ACTIVE_EDGE_COS_THRESHOLD_ANGLE) {
@@ -399,7 +399,7 @@ void test_triangle_mesh_builder_active_edges(TestCtx &ctx) {
 }
 
 /**
- * crashcat's active edges per jolt: triangle 0 = (0, 1, 2) lies in z = 0 with normal +z, triangle
+ * the active edges by fold angle: triangle 0 = (0, 1, 2) lies in z = 0 with normal +z, triangle
  * 1 = (1, 0, 3) shares the edge from (0, 0, 0) to (1, 0, 0) as its AB edge too. the fold is the
  * angle between the two normals: folding triangle 1 below the plane makes a convex ridge, folding
  * it above makes a concave valley.
@@ -421,7 +421,7 @@ static void check_shared_edge(TestCtx &ctx, TriangleMeshData *data, bool active)
     triangle_mesh_data::destroy(data);
 }
 
-void test_triangle_mesh_builder_active_edges_per_jolt(TestCtx &ctx) {
+void test_triangle_mesh_builder_active_edges_by_fold_angle(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));
 
     // the shared edge of a flat quad is inactive

@@ -26,7 +26,7 @@ RigidBody *add_static_box(WorldScene &scene, const Float3 &half_extents, const F
 
 RigidBody *add_floor(WorldScene &scene) { return add_static_box(scene, {50.0f, 0.5f, 50.0f}, {0.0f, -0.5f, 0.0f}); }
 
-/** a capsule character (half height 0.5, radius 0.3) at its centre, as crashcat's tests make it */
+/** a capsule character (half height 0.5, radius 0.3) at its centre */
 kcc::KCC *make_capsule_character(const Float3 &position, kcc::BackFaceMode back_face_mode = kcc::BACK_FACE_COLLIDE) {
     kcc::KCCSettings settings;
     settings.shape = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
@@ -50,7 +50,7 @@ kcc::UpdateSettings no_stairs_no_stick() {
     return settings;
 }
 
-/** crashcat's test loop: gravity into the velocity, the character, then the world */
+/** gravity into the velocity, the character, then the world */
 void step_falling(world::World &world, kcc::KCC &character, const kcc::UpdateSettings &settings, const filter::Filter &filter,
                   const kcc::CharacterListener *listener = nullptr) {
     character.linear_velocity = vec3f::scale_and_add(character.linear_velocity, vec3f::load(GRAVITY), DT);
@@ -59,7 +59,7 @@ void step_falling(world::World &world, kcc::KCC &character, const kcc::UpdateSet
 }
 
 /**
- * jolt's character sample loop: on ground the velocity starts from the ground's, otherwise from the vertical part
+ * a character game loop: on ground the velocity starts from the ground's, otherwise from the vertical part
  * of the last; then gravity and the horizontal input
  */
 void step_walking(world::World &world, kcc::KCC &character, const Float3 &input, const kcc::UpdateSettings &settings,
@@ -126,7 +126,7 @@ uint32_t contacts_with(const kcc::KCC &character, body_id::BodyId id) {
 
 }  // namespace
 
-// crashcat kcc.test.ts: KCC steep slope escape (jolt PR #1887, TestInitiallyIntersecting2)
+// a steep slope escape, starting intersecting
 void test_kcc_escapes_upward_from_steep_slopes(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     world::World &world = *scene.world;
@@ -157,7 +157,7 @@ void test_kcc_escapes_upward_from_steep_slopes(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// crashcat kcc.test.ts: KCC conflicting contacts
+// conflicting contacts
 void test_kcc_wedged_between_two_bodies_keeps_both_contacts(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     world::World &world = *scene.world;
@@ -188,7 +188,7 @@ void test_kcc_wedged_between_two_bodies_keeps_both_contacts(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// crashcat kcc.test.ts: KCC listener contact identity
+// listener contact identity
 void test_kcc_recycled_body_slot_is_a_new_contact(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     world::World &world = *scene.world;
@@ -227,7 +227,7 @@ void test_kcc_recycled_body_slot_is_a_new_contact(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// crashcat kcc.test.ts: KCC contact removed for destroyed body
+// a contact removed for a destroyed body
 void test_kcc_destroying_the_ground_reports_its_removal(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     world::World &world = *scene.world;
@@ -288,7 +288,7 @@ uint32_t contacts_with_down_facing_quad(TestCtx &ctx, kcc::BackFaceMode back_fac
 
 }  // namespace
 
-// crashcat kcc.test.ts: KCC back face mode
+// back face mode
 void test_kcc_back_face_collide_finds_the_back_face(TestCtx &ctx) { CHECK(ctx, contacts_with_down_facing_quad(ctx, kcc::BACK_FACE_COLLIDE) > 0); }
 
 void test_kcc_back_face_ignore_does_not(TestCtx &ctx) { CHECK(ctx, contacts_with_down_facing_quad(ctx, kcc::BACK_FACE_IGNORE) == 0); }
@@ -729,7 +729,7 @@ kcc::KCC *make_sphere_character(const Float3 &position, float radius, uint32_t m
 
 }  // namespace
 
-// crashcat kcc.test.ts: KCC sweep padding correction
+// sweep padding correction
 void test_kcc_sweep_onto_a_floor_stops_one_padding_from_its_face(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     world::World &world = *scene.world;
@@ -766,7 +766,7 @@ void test_kcc_padding_correction_casts_at_its_own_tolerance(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// crashcat kcc.test.ts: KCC hit reduction. two triangles at y = 0 and one at y = 0.05, all under the sphere and all
+// hit reduction: two triangles at y = 0 and one at y = 0.05, all under the sphere and all
 // facing up. with room for two hits the full collide finds three, and reduction (same body, same normal, different
 // triangles) keeps the deepest
 void test_kcc_hit_reduction_keeps_the_deepest_contact_on_one_body(TestCtx &ctx) {
@@ -796,7 +796,7 @@ void test_kcc_hit_reduction_keeps_the_deepest_contact_on_one_body(TestCtx &ctx) 
     release_world_scene(scene);
 }
 
-// crashcat kcc.test.ts: four coplanar triangles with room for three: the fourth hit runs one full reduction pass,
+// four coplanar triangles with room for three: the fourth hit runs one full reduction pass,
 // which merges all three stored contacts into one before the fourth is added
 void test_kcc_hit_reduction_makes_a_full_pass(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
@@ -817,7 +817,7 @@ void test_kcc_hit_reduction_makes_a_full_pass(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// crashcat kcc.test.ts: two triangles of one mesh fill both slots, then a box deeper under the sphere is reached:
+// two triangles of one mesh fill both slots, then a box deeper under the sphere is reached:
 // reduction frees a slot by merging the two triangle contacts, so the query must not stop at max hits before it
 // gets there
 void test_kcc_max_hits_does_not_stop_the_query_while_reduction_can_free_a_slot(TestCtx &ctx) {

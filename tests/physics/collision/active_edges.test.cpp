@@ -6,7 +6,7 @@
 #include "test.h"
 #include "test_math.h"
 
-/** the default triangle mesh threshold in crashcat, cos(5 degrees). */
+/** the default triangle mesh threshold, cos(5 degrees) */
 static constexpr float MESH_COS_THRESHOLD = 0.996195f;
 
 /** the unit normal of (b - a) x (c - a), divided through by its length; zero for a degenerate triangle */
@@ -43,7 +43,7 @@ void test_active_edges_is_edge_active(TestCtx &ctx) {
 
 /**
  * the active-edge masks of two triangles sharing one edge, bit k for the edge from corner k to
- * corner k + 1 (ab, bc, ca), as crashcat's mesh data stores them. the triangle that walks the shared
+ * corner k + 1 (ab, bc, ca), as the mesh data stores them. the triangle that walks the shared
  * edge forward is the left one (its interior is on the left, looking along the edge from above).
  */
 static void pair_active_edges(uint32_t out[2], const Float3 *vertices, const uint32_t tri0[3], const uint32_t tri1[3], float cos_threshold) {
@@ -105,7 +105,7 @@ void test_active_edges_quad(TestCtx &ctx) {
 }
 
 void test_active_edges_fix_normal(TestCtx &ctx) {
-    // crashcat's fixNormal cases: a right triangle in the xz plane, facing +y
+    // fix_normal: a right triangle in the xz plane, facing +y
     const Float3 v0 = {0, 0, 0}, v1 = {1, 0, 0}, v2 = {0, 0, 1};
     const Float3 triangle_normal = {0, 1, 0};
     const Float3 still = {0, 0, 0};

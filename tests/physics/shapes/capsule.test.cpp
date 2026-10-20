@@ -43,7 +43,7 @@ void test_capsule_create(TestCtx &ctx) {
     capsule::destroy(d);
 }
 
-/** jolt's capsule inertia: a solid cylinder plus two hemispheres, each 2/5 m r^2 about its own centre, moved out by h + 3r/8. */
+/** a solid cylinder plus two hemispheres, each 2/5 m r^2 about its own centre, moved out by h + 3r/8. */
 static void expected_inertia(float h, float r, float density, float &i_xx_zz, float &i_yy) {
     const float cylinder_mass = scalar::PI * 2.0f * h * r * r * density;
     const float hemisphere_mass = 2.0f / 3.0f * scalar::PI * r * r * r * density;
@@ -172,7 +172,7 @@ void test_capsule_supporting_face(TestCtx &ctx) {
     CHECK_NEAR(ctx, vec3f::y(io.face.vertices[1]), 18.0f, 1e-5f);
     CHECK_NEAR(ctx, vec3f::z(io.face.vertices[1]), 29.0f, 1e-5f);
 
-    // a mirrored scale is the same line: the capsule is symmetric, and jolt sizes it by |scale|
+    // a mirrored scale is the same line: the capsule is symmetric, and sized by |scale|
     io.scale = vec3f::make(-2.0f, -2.0f, -2.0f);
     capsule::get_supporting_face(io, vec3f::make(0.0f, 0.0f, 1.0f), c, sub_shape::EMPTY_SUB_SHAPE_ID);
     CHECK(ctx, io.face.num_vertices == 2);

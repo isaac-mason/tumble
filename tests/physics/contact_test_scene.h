@@ -1,8 +1,5 @@
 #pragma once
 
-// the contact constraint and island tests' world without a world: bodies, pairs, contacts and contact
-// constraints, with manifolds written by hand and the solver phases run by hand.
-
 #include "tumble/instance.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/math/vec3f.h"
@@ -30,6 +27,7 @@
 #include "test.h"
 #include "tumble/math/vec3f.h"
 
+/** a world without a world: bodies, pairs, contacts and contact constraints, manifolds written and phases run by hand */
 struct ContactScene {
     bodies::Bodies bodies;
     layers::Layers layers;

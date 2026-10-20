@@ -129,7 +129,7 @@ void test_plane_supporting_face(TestCtx &ctx) {
     plane::destroy(p);
 }
 
-/* ray (crashcat's ray vs plane tests) */
+/* ray */
 
 void test_plane_cast_ray(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));
@@ -232,7 +232,7 @@ void test_plane_collide_point(TestCtx &ctx) {
     plane::destroy(stone);
 }
 
-/* collide (crashcat's plane vs sphere and box tests, and the pose cases) */
+/* collide */
 
 void test_plane_collide_sphere_and_box(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));
@@ -338,7 +338,7 @@ void test_plane_collide_faces(TestCtx &ctx) {
     box::destroy(b);
 }
 
-/* cast (the pose cases from crashcat a1193ad, and the cast vs plane tests) */
+/* cast */
 
 void test_plane_cast_sphere_at_a_pose(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));

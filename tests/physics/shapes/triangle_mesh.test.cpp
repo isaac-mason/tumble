@@ -304,7 +304,7 @@ void test_triangle_mesh_dispatch_wiring(TestCtx &ctx) {
 static const cast_ray::CastRaySettings RAY_FRONT = {false, false, true};
 static const cast_ray::CastRaySettings RAY_BACKFACES = {true, false, true};
 
-/** every hit of a ray against the mesh in a pose (rotation identity), as crashcat's scaled mesh ray tests cast it */
+/** every hit of a ray against the mesh in a pose (rotation identity) */
 static uint32_t ray_hits(cast_ray::CastRayCollector &collector, const Shape *s, const Float3 &scale, const Float3 &origin,
                          const Float3 &direction, float length, const cast_ray::CastRaySettings &settings = RAY_FRONT) {
     cast_ray::reset(collector);
@@ -545,7 +545,7 @@ void test_triangle_mesh_sphere_resting_on_quad(TestCtx &ctx) {
     for (uint32_t i = 0; i < collector.hits.length; i++) tilted |= vec3f::y(unit(collector.hits[i].penetration_axis)) > -0.99f;
     CHECK(ctx, tilted);
 
-    // jolt's internal edge removal keeps one contact, the face's, even with every edge active
+    // internal edge removal keeps one contact, the face's, even with every edge active
     internal_edge_removing::InternalEdgeRemovingCollector remover = internal_edge_removing::create();
     collide_shape::reset(collector);
     internal_edge_removing::set(remover, collector, settings.internal_edge_removal_vertex_tolerance_sq);
@@ -729,7 +729,7 @@ void test_triangle_mesh_box_sliding_on_grid(TestCtx &ctx) {
     // the box 0.05 into the grid, slid along x across cell edges and diagonals. where it overlaps a triangle by
     // a thin sliver the shortest way out is sideways through that triangle's inner edge: a ghost. active edges
     // give those contacts the face normal; with the slide as the hint they keep the edge normal only where it
-    // points away from the motion (jolt's fix_normal), so nothing pushes against the slide
+    // points away from the motion, so nothing pushes against the slide
     uint32_t hits = 0;
     bool all_face = true;
     bool none_against_hinted = true;
@@ -795,7 +795,7 @@ void test_triangle_mesh_box_sliding_on_grid(TestCtx &ctx) {
 void test_triangle_mesh_active_edges_ported(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
-    // crashcat's active edge integration tests, their xy grids laid in xz with y up
+    // xy grids laid in xz with y up
     Shape *floor = grid(4, 1.0f);
     Shape *ball = sphere::create({.radius = 0.4f});
     cast_shape::CastShapeSettings settings = cast_shape::default_settings();
@@ -1283,7 +1283,7 @@ void test_triangle_mesh_sphere_cast_inactive_edge_no_hint(TestCtx &ctx) {
 
     // 0.3 above the grid beside the interior edge at x = 2: the triangles across it are touched only at that
     // edge, so their closest point is off to the side. every edge here is inactive, so each contact takes the
-    // face normal, a to b down into the grid (jolt's fix_normal with no movement hint)
+    // face normal, a to b down into the grid, with no movement hint
     cast(collector, cast_shape::default_settings(), ball, pose({1.9f, 0.3f, 2.5f}), {0, -0.1f, 0}, floor, pose({0, 0, 0}));
     CHECK(ctx, collector.hits.length > 1);
     for (uint32_t i = 0; i < collector.hits.length; i++) CHECK(ctx, vec3f::y(unit(collector.hits[i].penetration_axis)) < -0.9999f);

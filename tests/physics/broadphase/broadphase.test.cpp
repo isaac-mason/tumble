@@ -16,7 +16,7 @@ using rigid_body::RigidBody;
 
 namespace {
 
-/** crashcat's test world: a moving and a not-moving layer, each with its own broadphase layer. */
+/** a moving and a not-moving layer, each with its own broadphase layer */
 struct World {
     bodies::Bodies bodies;
     layers::Layers layers;
@@ -51,7 +51,7 @@ void release_world(World &world) {
     layers::release(world.layers);
 }
 
-/** a dynamic box body filling the given world-space box, added to the broadphase, as crashcat's tests make them. */
+/** a dynamic box body filling the given world-space box, added to the broadphase */
 RigidBody *make_body(World &world, float min_x, float min_y, float min_z, float max_x, float max_y, float max_z, uint32_t object_layer,
                      uint32_t collision_groups = 0xffffffffu, uint32_t collision_mask = 0xffffffffu) {
     const Float3 half_extents = {(max_x - min_x) * 0.5f, (max_y - min_y) * 0.5f, (max_z - min_z) * 0.5f};
@@ -214,7 +214,7 @@ void test_broadphase_layer_filter(TestCtx &ctx) {
 void test_broadphase_groups_and_mask(TestCtx &ctx) {
     World world = make_world(ctx);
 
-    // three bodies at one place with different groups and masks (crashcat's point query test)
+    // three bodies at one place with different groups and masks
     RigidBody *first = make_body(world, 0, 0, 0, 2, 2, 2, world.moving, 0b0001, 0b0010);
     RigidBody *second = make_body(world, 0, 0, 0, 2, 2, 2, world.moving, 0b0010, 0b0001);
     RigidBody *third = make_body(world, 0, 0, 0, 2, 2, 2, world.moving, 0b0100, 0b1000);
@@ -238,7 +238,7 @@ void test_broadphase_groups_and_mask(TestCtx &ctx) {
     broadphase::cast_ray(world.broadphase, world.bodies, cast_ray::Rayf{vec3f::make(-5.0f, 1.0f, 1.0f), vec3f::make(1.0f, 0.0f, 0.0f), 10.0f}, world.filter, visitor);
     CHECK(ctx, hits.count == 1 && hits.bodies[0] == second);
 
-    // the pair from crashcat's group test: each in the other's mask
+    // each in the other's mask
     RigidBody *a = make_body(world, 10, 0, 0, 12, 2, 2, world.moving, 0b0001, 0b0010);
     world.filter.collision_groups = 0b0010;
     world.filter.collision_mask = 0b0001;
@@ -435,7 +435,7 @@ void test_broadphase_cast_ray_layers(TestCtx &ctx) {
     broadphase::cast_ray(world.broadphase, world.bodies, ray, world.filter, visitor);
     CHECK(ctx, hits.count == 1 && hits.bodies[0] == moving_near);
 
-    // the sweep finds the body along its path (crashcat's sweep test)
+    // the sweep finds the body along its path
     visitor = visitor_for(hits);
     broadphase::cast_aabb(world.broadphase, world.bodies, Box3f{{-0.5f, 4.5f, -0.5f}, {0.5f, 5.5f, 0.5f}}, vec3f::make(10.0f, 0.0f, 0.0f), world.filter,
                           visitor);

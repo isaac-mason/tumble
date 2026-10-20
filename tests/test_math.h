@@ -1,7 +1,5 @@
 #pragma once
 
-// what the tests check with, in the register types: near comparisons, unit vectors, rotations about an axis, poses.
-
 #include "tumble/math/aabox.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"

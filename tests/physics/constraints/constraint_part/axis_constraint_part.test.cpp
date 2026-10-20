@@ -238,7 +238,7 @@ void test_axis_constraint_part_position_solve(TestCtx &ctx) {
     CHECK(ctx, part.effective_mass == from_settings.effective_mass && part.spring.bias == from_settings.spring.bias);
 }
 
-// crashcat axis-constraint-part.test.ts: jolt clamps as min(max(lambda, min), max), so inverted bounds (the ccd friction
+// the clamp is min(max(lambda, min), max), so inverted bounds (the ccd friction
 // limit of a contact whose normal lambda came out negative) give the max bound
 void test_axis_constraint_part_inverted_bounds_clamp_to_the_max(TestCtx &ctx) {
     RigidBody ground = make_body(motion_type::MOTION_STATIC, 0.0f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f});

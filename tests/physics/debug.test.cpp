@@ -138,7 +138,7 @@ void test_debug_shape_line_counts_per_type(TestCtx &ctx) {
     CHECK(ctx, shape_lines(*buffers, scaled_shape) == CAPSULE_LINES);
     CHECK(ctx, shape_lines(*buffers, offset_shape) == CYLINDER_LINES);
     CHECK(ctx, shape_lines(*buffers, empty_shape) == 0);
-    // nothing crashcat draws is filled
+    // nothing is drawn filled
     CHECK(ctx, buffers->triangle_count == 0);
     debug::release(buffers);
 }

@@ -13,7 +13,7 @@ using rigid_body::RigidBody;
 
 namespace {
 
-/** crashcat's test world: a moving and a not-moving layer, each with its own broadphase layer */
+/** a moving and a not-moving layer, each with its own broadphase layer */
 struct World {
     layers::Layers layers;
     bodies::Bodies bodies;
@@ -55,7 +55,7 @@ void release_world(World &world) {
     layers::release(world.layers);
 }
 
-/** crashcat's makeBody: a unit sphere, dynamic, in the moving layer, in the broadphase and marked moved */
+/** a unit sphere, dynamic, in the moving layer, in the broadphase and marked moved */
 RigidBody *make_body(World &world, const Float3 &position = {0, 0, 0}, motion_type::MotionType motion_type = motion_type::MOTION_DYNAMIC) {
     RigidBody *body = rigid_body::create(world.bodies, world.layers,
                                          {.shape = world.sphere,

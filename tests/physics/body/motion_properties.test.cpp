@@ -18,7 +18,7 @@ static Float4 turn(float x, float y, float z, float rad) {
     return quatf::store(out, axis_angle(vec3f::make(x, y, z), rad));
 }
 
-// crashcat's tests set the inertia by hand: inverse diagonal (1, 2, 3), turned 0.7 rad about (1, 2, 3)
+// the inertia set by hand: inverse diagonal (1, 2, 3), turned 0.7 rad about (1, 2, 3)
 static MotionProperties make_motion_properties() {
     MotionProperties mp = motion_properties::create();
     mp.inv_mass = 1.0f;

@@ -42,7 +42,6 @@ void test_ccd_reset_and_swept_aabb(TestCtx &ctx) {
     CHECK(ctx, swept.max.x == 5.0f && swept.max.y == 2.0f && swept.max.z == 3.5f);
 }
 
-// crashcat ccd.test.ts
 
 void test_ccd_fast_sphere_stopped_by_thin_wall(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
@@ -113,7 +112,6 @@ void test_ccd_sweeps_target_moved_into_path_this_step(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// crashcat contact-pair-nesting.test.ts, the ccd part
 
 void test_ccd_contact_creates_pair_record(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
@@ -137,7 +135,6 @@ void test_ccd_contact_creates_pair_record(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// crashcat islands-ccd-bookkeeping.test.ts, the ccd part
 
 namespace {
 
@@ -197,7 +194,6 @@ void test_ccd_two_bullets_in_time_of_impact_order(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// crashcat ccd.test.ts, ccd resolution
 
 namespace {
 
@@ -321,7 +317,7 @@ void test_ccd_bodies_resolved_out_of_creation_order_find_their_targets_records(T
     release_world_scene(scene);
 }
 
-// crashcat ccd.test.ts: a grazes b, which is discrete and has already moved this step, up and away from a's path
+// a grazes b, which is discrete and has already moved this step, up and away from a's path
 // (0.045, inside its broadphase leaf). at the time of impact the normal is nearly along +y, where b moves away faster
 // than a follows, so the bodies are separating. the ccd contact is solved anyway, with an unbounded normal impulse,
 // so they leave with no relative normal velocity
@@ -342,7 +338,7 @@ void test_ccd_contact_whose_bodies_are_separating_is_still_solved(TestCtx &ctx) 
     release_world_scene(scene);
 }
 
-// crashcat ccd.test.ts: b is linear cast but moves 0.04 this step, under its 0.05 threshold, so it has already moved.
+// b is linear cast but moves 0.04 this step, under its 0.05 threshold, so it has already moved.
 // its motion still counts against a's sweep: a sweeps 1 - 0.04 relative to b and stops short of b's face, which the
 // full 1 would have reached (at 0.97, inside the step even with a's 0.02 allowed penetration)
 void test_ccd_linear_cast_target_below_its_threshold_still_shortens_the_sweep(TestCtx &ctx) {

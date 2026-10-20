@@ -19,7 +19,7 @@ void test_world_create_takes_settings_and_destroy_frees(TestCtx &ctx) {
     world::World *world = world::create(settings);
     CHECK(ctx, world != nullptr);
 
-    // crashcat's defaults, the tuned value, and the layers moved in
+    // the defaults, the tuned value, and the layers moved in
     CHECK(ctx, world->settings.solver.velocity_iterations == 7);
     CHECK(ctx, world->settings.solver.position_iterations == 2);
     CHECK(ctx, world->settings.gravity.y == -9.81f && world->settings.gravity_enabled);
@@ -48,7 +48,6 @@ void test_world_create_takes_settings_and_destroy_frees(TestCtx &ctx) {
     CHECK(ctx, after.bytes_in_use == before.bytes_in_use);
 }
 
-// crashcat world.test.ts
 
 void test_world_stale_contacts_removed_when_bodies_move_apart(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
@@ -115,7 +114,7 @@ void test_world_contacts_removed_the_step_after_body_removal(TestCtx &ctx) {
     CHECK(ctx, body_contact_count(world, *body_a) > 0);
     CHECK(ctx, world.events.contacts_removed.length == 0);
 
-    // the removal queues the report; the buffers js reads after this step are untouched
+    // the removal queues the report; the buffers the caller reads after this step are untouched
     const body_id::BodyId body_b_id = body_b->id;
     CHECK(ctx, remove_body(world, body_b));
     CHECK(ctx, world.events.contacts_removed.length == 0);

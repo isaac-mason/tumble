@@ -7,7 +7,7 @@ using rigid_body::RigidBody;
 
 namespace {
 
-/** crashcat's query tests' scene: a 2 m static box at the origin */
+/** a 2 m static box at the origin */
 WorldScene make_box_scene(TestCtx &ctx, RigidBody **out_box = nullptr) {
     WorldScene scene = make_world_scene(ctx);
     RigidBody *box_body = add_body(scene, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}), motion_type::MOTION_STATIC, {0.0f, 0.0f, 0.0f});
@@ -17,7 +17,6 @@ WorldScene make_box_scene(TestCtx &ctx, RigidBody **out_box = nullptr) {
 
 }  // namespace
 
-// crashcat query.test.ts
 
 void test_query_cast_ray_hits_box(TestCtx &ctx) {
     RigidBody *box_body;

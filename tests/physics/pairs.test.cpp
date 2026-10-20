@@ -35,7 +35,7 @@ World make_world(const layers::Layers &layers) {
     return world;
 }
 
-/** a world with a single object layer that collides with itself, as crashcat's persistent-pair tests */
+/** a world with a single object layer that collides with itself */
 World make_single_layer_world(uint32_t &layer) {
     layers::Layers layers = layers::create();
     const uint32_t broadphase_layer = layers::add_broadphase_layer(layers);
@@ -60,7 +60,7 @@ struct BoxOptions {
     uint64_t user_data = 0;
 };
 
-/** a body added to the world as crashcat's rigidBody.create adds one: in the broadphase and marked moved */
+/** in the broadphase and marked moved */
 RigidBody *add_body(World &world, shapes::Shape *shape, uint32_t layer, const Float3 &position, const BoxOptions &options = {}) {
     RigidBody *body = rigid_body::create(world.bodies, world.layers,
                                          {.shape = shape,
@@ -76,14 +76,14 @@ RigidBody *add_body(World &world, shapes::Shape *shape, uint32_t layer, const Fl
     return body;
 }
 
-/** crashcat's rigidBody.remove: pairs purged, out of the broadphase, slot freed */
+/** pairs purged, out of the broadphase, slot freed */
 void remove_body(World &world, RigidBody *body) {
     pairs::purge_body_pairs(world.pairs, world.contacts, world.bodies, *body, world.events);
     broadphase::remove_body(world.broadphase, body);
     rigid_body::remove(world.bodies, body);
 }
 
-/** crashcat's rigidBody.setPosition: the leaf refreshed, the body marked moved if it escaped */
+/** the leaf refreshed, the body marked moved if it escaped */
 void set_position(World &world, RigidBody *body, const Float3 &position, bool wake) {
     rigid_body::set_position(world.bodies, body, vec3f::load(position), wake);
     if (broadphase::update_body(world.broadphase, body)) pairs::mark_moved(world.pairs, *body);
@@ -124,7 +124,7 @@ struct PairBodySpec {
     bool opt_in;
 };
 
-/** the pair-reporting contract, written from the intended behaviour, not from the implementation (crashcat's reference) */
+/** the pair-reporting contract, written from the intended behaviour, not from the implementation */
 bool reference_should_report(const PairBodySpec &a, const PairBodySpec &b, bool layers_collide) {
     // at least one body must query the broadphase (awake and non-static)
     const bool queries_a = a.motion_type != motion_type::MOTION_STATIC && !a.sleeping;

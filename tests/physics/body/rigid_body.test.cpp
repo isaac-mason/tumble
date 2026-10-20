@@ -73,7 +73,7 @@ void test_rigid_body_create_box_mass(TestCtx &ctx) {
     CHECK_NEAR(ctx, m[10] * izz, 1.0f, 1e-4f);
     CHECK(ctx, scalar::abs(m[1]) < 1e-9f && scalar::abs(m[2]) < 1e-9f && scalar::abs(m[6]) < 1e-9f);
 
-    // the settings' defaults are crashcat's DEFAULT_RIGID_BODY_SETTINGS
+    // the settings' defaults
     // all 64 bits of the user data come through
     CHECK(ctx, body->user_data == 0x100000007ull && body->shape == shape && body->object_layer == f.moving);
     CHECK(ctx, body->friction == 0.2f && body->restitution == 0.0f);
@@ -464,7 +464,7 @@ void test_rigid_body_move_kinematic(TestCtx &ctx) {
 }
 
 void test_rigid_body_inverse_inertia_outside_the_step(TestCtx &ctx) {
-    // crashcat's "in the step" setup, without the step: a rotated 1 x 2 x 4 box with rotation about y locked
+    // the in-step setup, without the step: a rotated 1 x 2 x 4 box with rotation about y locked
     Fixture f = make_fixture(ctx);
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 1.0f, 2.0f}});
     const Float4 rotation = stored_axis_angle(vec3f::make(0.3f, 0.8f, -0.5f), 0.9f);

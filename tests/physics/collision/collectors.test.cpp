@@ -38,7 +38,7 @@ static cast_ray::CastRayHit ray_hit(float fraction) {
     return h;
 }
 
-/** a custom collector that counts and chains to the one in its context, like crashcat's wrappers. */
+/** a custom collector that counts and chains to the one in its context, as a wrapper does */
 static void counting_add_hit(cast_ray::CastRayCollector &c, const cast_ray::CastRayHit &h) {
     cast_ray::CastRayCollector &inner = *static_cast<cast_ray::CastRayCollector *>(c.context);
     cast_ray::add_hit(inner, h);
@@ -103,7 +103,7 @@ void test_collectors(TestCtx &ctx) {
     collide_shape::add_hit(deepest, h);
     CHECK(ctx, deepest.hits.length == 1 && collide_shape::hit(deepest)->penetration == 0.2f);
     CHECK(ctx, collide_shape::hit(deepest)->face_a.num_vertices == 3 && vec3f::z(collide_shape::hit(deepest)->face_a.vertices[2]) == 9.0f);
-    // the bound is minus the best penetration, as jolt's, so deeper hits still get through
+    // the bound is minus the best penetration, so deeper hits still get through
     CHECK(ctx, deepest.early_out_fraction == -0.2f);
 
     cast_ray::release(all);
@@ -117,7 +117,7 @@ void test_collectors_any_early_out(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
 
-    // the ray's any collector drops to 0 as jolt's; the others to -FLT_MAX, below any -penetration bound
+    // the ray's any collector drops to 0; the others to -FLT_MAX, below any -penetration bound
     collide_shape::CollideShapeCollector any_collide = collide_shape::create_collector(collector::COLLECT_ANY);
     collide_shape::CollideShapeHit shallow = collide_shape::create_hit();
     shallow.penetration = 0.01f;
@@ -134,7 +134,7 @@ void test_collectors_any_early_out(TestCtx &ctx) {
     cast_hit.fraction = 0.0f;
     cast_shape::add_hit(any_cast, cast_hit);
     CHECK(ctx, any_cast.early_out_fraction == -__FLT_MAX__ && cast_shape::should_early_out(any_cast));
-    // a closest cast collector bounds a fraction-0 hit by its depth, as jolt, and keeps looking for deeper ones
+    // a closest cast collector bounds a fraction-0 hit by its depth and keeps looking for deeper ones
     cast_shape::CastShapeCollector closest_cast = cast_shape::create_collector(collector::COLLECT_CLOSEST);
     cast_hit.penetration_depth = 0.2f;
     cast_shape::add_hit(closest_cast, cast_hit);
@@ -243,7 +243,7 @@ static void collide_marker(collide_shape::CollideShapeCollector &c, const collid
 void test_shape_tables(TestCtx &ctx) {
     using namespace shapes;
     CHECK(ctx, shape_type_index(SHAPE_SPHERE) == 0 && shape_type_index(SHAPE_STATIC_COMPOUND) == 12);
-    // define_shape fills what a def leaves null, as crashcat's defineShape
+    // define_shape fills what a def leaves null
     ShapeDef def = {};
     def.type = SHAPE_EMPTY;
     def.get_inner_radius = inner_radius_two;
@@ -332,7 +332,7 @@ void test_world_tier_types(TestCtx &ctx) {
     events::release(ev);
     events::release(an);
 
-    // world settings carry crashcat's defaults; the layers are the only part that needs releasing
+    // world settings carry the defaults; the layers are the only part that needs releasing
     world_settings::WorldSettings settings = world_settings::create();
     CHECK(ctx, settings.gravity.y == -9.81f && settings.gravity_enabled && settings.solver.velocity_iterations == 10);
     CHECK(ctx, settings.narrowphase.speculative_contact_distance == 0.02f && !settings.narrowphase.collide_with_backfaces);
