@@ -149,6 +149,17 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::events::read_contact_removed), names("out", "world", "index"));
     bind::fn(b, BIND(adapters::events::moved), names("world"));
     bind::fn(b, BIND(adapters::events::moved_body), names("world", "index"));
+    RECORD(adapters::Poses);
+    bind::fn(b, BIND(adapters::poses::create), names("world"), GROWS);
+    bind::fn(b, BIND(adapters::poses::destroy), names("poses"));
+    bind::fn(b, BIND(adapters::poses::add), names("poses", "body"), GROWS);
+    bind::fn(b, BIND(adapters::poses::remove), names("poses", "slot"), GROWS);
+    bind::fn(b, BIND(adapters::poses::read), names("poses"));
+    bind::fn(b, BIND(adapters::poses::slots), names("poses"));
+    bind::fn(b, BIND(adapters::poses::body), names("poses", "slot"));
+    bind::fn(b, BIND(adapters::poses::positions), names("poses"));
+    bind::fn(b, BIND(adapters::poses::quaternions), names("poses"));
+    bind::fn(b, BIND(adapters::poses::changed), names("poses"));
     bind::fn(b, BIND(adapters::answers::reject_pair), names("world", "index"));
     bind::fn(b, BIND(adapters::answers::override_contact), names("world", "index", "settings"));
     bind::fn(b, BIND(adapters::answers::reject_contact), names("world", "index"));
@@ -205,7 +216,6 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::rigid_body::get_user_data_high), names("world", "body"));
     bind::fn(b, BIND(adapters::rigid_body::get_shape), names("world", "body"));
     bind::fn(b, BIND(adapters::rigid_body::is_sleeping), names("world", "body"));
-    bind::fn(b, BIND(adapters::rigid_body::read_transforms), names("world", "ids", "count", "out"));
     bind::fn(b, BIND(adapters::rigid_body::set_position), names("world", "body", "position", "wake"), GROWS);
     bind::fn(b, BIND(adapters::rigid_body::set_quaternion), names("world", "body", "quaternion", "wake"), GROWS);
     bind::fn(b, BIND(adapters::rigid_body::set_transform), names("world", "body", "position", "quaternion", "wake"), GROWS);

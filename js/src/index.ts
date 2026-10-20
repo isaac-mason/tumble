@@ -1,6 +1,7 @@
 export { Answers, ContactEvent, ContactRemovedEvent, type ContactSettings, PairEvent } from './events';
 export { type InitOptions, init } from './init';
 export type { Box3, Mat4, Quat, Vec3 } from './math';
+export { Poses, type PoseViews } from './poses';
 export {
     type BodyId,
     Dof,

@@ -1,4 +1,3 @@
-import { withUints } from './arrays';
 import * as Low from './generated/tumble';
 import type { Box3, Mat4, Quat, Vec3 } from './math';
 import type { Shape } from './shapes';
@@ -169,6 +168,12 @@ export const RigidBody = {
     getQuaternion(out: Quat, world: World, body: BodyId): boolean {
         return copied(out, quat, Low.RigidBody.getQuaternion(quat, world, body));
     },
+    getTransform(outPosition: Vec3, outQuaternion: Quat, world: World, body: BodyId): boolean {
+        if (!Low.RigidBody.getTransform(vec3, quat, world, body)) return false;
+        copied(outPosition, vec3, true);
+        copied(outQuaternion, quat, true);
+        return true;
+    },
     getCenterOfMassPosition(out: Vec3, world: World, body: BodyId): boolean {
         return copied(out, vec3, Low.RigidBody.getCenterOfMassPosition(vec3, world, body));
     },
@@ -188,29 +193,6 @@ export const RigidBody = {
         copied(out.min, box3.min, true);
         copied(out.max, box3.max, true);
         return true;
-    },
-    /**
-     * the poses of many bodies in one call, seven floats each into out (position x y z, then quaternion x y z w), in
-     * the order of `bodies`: for a renderer, every frame. a body that is gone leaves its seven as they were. how many
-     * were found
-     */
-    getTransforms(out: Float32Array, world: World, bodies: ArrayLike<BodyId>): number {
-        const floats = bodies.length * 7;
-        if (out.length < floats) throw new Error(`tumble: getTransforms needs ${floats} floats, out has ${out.length}`);
-        const bytes = floats * 4;
-        const block = bytes === 0 ? 0 : Low.allocBytes(bytes);
-        if (bytes > 0 && block === 0) Low.getWasm().check();
-        const mem = Low.getWasm().mem;
-        mem.f32.set(out.subarray(0, floats), block >> 2);
-        try {
-            const found = withUints(bodies, (ids) =>
-                Low.RigidBody.readTransforms(world, ids as Low.Pointer<'u32'>, bodies.length, block as Low.Pointer<'f32'>),
-            );
-            out.set(Low.getWasm().mem.f32.subarray(block >> 2, (block >> 2) + floats));
-            return found;
-        } finally {
-            if (block !== 0) Low.freeBytes(block, bytes);
-        }
     },
     /** kg; 0 for a static or kinematic body, or an id naming no body */
     getMass(world: World, body: BodyId): number {

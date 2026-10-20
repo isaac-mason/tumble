@@ -44,6 +44,16 @@ WASM_EXPORT uint32_t tumble_events_contacts_removed(const world::World * world) 
 WASM_EXPORT bool tumble_events_read_contact_removed(adapters::ContactRemovedEvent * out, const world::World * world, uint32_t index) { return adapters::events::read_contact_removed(*out, world, index); }
 WASM_EXPORT uint32_t tumble_events_moved(const world::World * world) { return adapters::events::moved(world); }
 WASM_EXPORT uint32_t tumble_events_moved_body(const world::World * world, uint32_t index) { return adapters::events::moved_body(world, index); }
+WASM_EXPORT adapters::Poses * tumble_poses_create(world::World * world) { return adapters::poses::create(world); }
+WASM_EXPORT void tumble_poses_destroy(adapters::Poses * poses) { adapters::poses::destroy(poses); }
+WASM_EXPORT uint32_t tumble_poses_add(adapters::Poses * poses, uint32_t body) { return adapters::poses::add(poses, body); }
+WASM_EXPORT bool tumble_poses_remove(adapters::Poses * poses, uint32_t slot) { return adapters::poses::remove(poses, slot); }
+WASM_EXPORT uint32_t tumble_poses_read(adapters::Poses * poses) { return adapters::poses::read(poses); }
+WASM_EXPORT uint32_t tumble_poses_slots(const adapters::Poses * poses) { return adapters::poses::slots(poses); }
+WASM_EXPORT uint32_t tumble_poses_body(const adapters::Poses * poses, uint32_t slot) { return adapters::poses::body(poses, slot); }
+WASM_EXPORT const float * tumble_poses_positions(const adapters::Poses * poses) { return adapters::poses::positions(poses); }
+WASM_EXPORT const float * tumble_poses_quaternions(const adapters::Poses * poses) { return adapters::poses::quaternions(poses); }
+WASM_EXPORT const uint32_t * tumble_poses_changed(const adapters::Poses * poses) { return adapters::poses::changed(poses); }
 WASM_EXPORT bool tumble_answers_reject_pair(world::World * world, uint32_t index) { return adapters::answers::reject_pair(world, index); }
 WASM_EXPORT bool tumble_answers_override_contact(world::World * world, uint32_t index, const contact_constraints::ContactSettings * settings) { return adapters::answers::override_contact(world, index, *settings); }
 WASM_EXPORT bool tumble_answers_reject_contact(world::World * world, uint32_t index) { return adapters::answers::reject_contact(world, index); }
@@ -66,7 +76,6 @@ WASM_EXPORT uint32_t tumble_rigid_body_get_user_data_low(world::World * world, u
 WASM_EXPORT uint32_t tumble_rigid_body_get_user_data_high(world::World * world, uint32_t body) { return adapters::rigid_body::get_user_data_high(world, body); }
 WASM_EXPORT shapes::Shape * tumble_rigid_body_get_shape(world::World * world, uint32_t body) { return adapters::rigid_body::get_shape(world, body); }
 WASM_EXPORT bool tumble_rigid_body_is_sleeping(world::World * world, uint32_t body) { return adapters::rigid_body::is_sleeping(world, body); }
-WASM_EXPORT uint32_t tumble_rigid_body_read_transforms(world::World * world, const uint32_t * ids, uint32_t count, float * out) { return adapters::rigid_body::read_transforms(world, ids, count, out); }
 WASM_EXPORT bool tumble_rigid_body_set_position(world::World * world, uint32_t body, const Float3 * position, bool wake) { return adapters::rigid_body::set_position(world, body, *position, wake); }
 WASM_EXPORT bool tumble_rigid_body_set_quaternion(world::World * world, uint32_t body, const Float4 * quaternion, bool wake) { return adapters::rigid_body::set_quaternion(world, body, *quaternion, wake); }
 WASM_EXPORT bool tumble_rigid_body_set_transform(world::World * world, uint32_t body, const Float3 * position, const Float4 * quaternion, bool wake) { return adapters::rigid_body::set_transform(world, body, *position, *quaternion, wake); }

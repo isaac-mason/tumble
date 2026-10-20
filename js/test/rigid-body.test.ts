@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { Box, type Box3, Dof, MotionType, RigidBody, Sphere, type Vec3, World } from '../src';
+import { Box, type Box3, Dof, MotionType, type Quat, RigidBody, Sphere, type Vec3, World } from '../src';
 import { makeScene, releaseScene, steps } from './helpers';
 
 describe('rigid bodies', () => {
@@ -121,24 +121,21 @@ describe('rigid bodies', () => {
         Box.destroy(crate);
     });
 
-    test('getTransforms reads many poses at once, leaving gone bodies as they were', async () => {
+    test('getTransform reads position and rotation together', async () => {
         const scene = await makeScene();
-        const { world } = scene;
         const ball = Sphere.create({ radius: 0.5 });
-        const bodies = [0, 1, 2].map((i) =>
-            RigidBody.create(world, {
-                shape: ball,
-                objectLayer: scene.moving,
-                motionType: MotionType.DYNAMIC,
-                position: [i * 2, 3, 0],
-            }),
-        );
-        RigidBody.remove(world, bodies[1]!);
-        const out = new Float32Array(21).fill(-1);
-        expect(RigidBody.getTransforms(out, world, bodies)).toBe(2);
-        expect(Array.from(out.subarray(0, 7))).toEqual([0, 3, 0, 0, 0, 0, 1]);
-        expect(Array.from(out.subarray(7, 14))).toEqual([-1, -1, -1, -1, -1, -1, -1]);
-        expect(out[14]).toBe(4);
+        const body = RigidBody.create(scene.world, {
+            shape: ball,
+            objectLayer: scene.moving,
+            motionType: MotionType.STATIC,
+            position: [1, 2, 3],
+            quaternion: [0, 1, 0, 0],
+        });
+        const position: Vec3 = [0, 0, 0];
+        const quaternion: Quat = [0, 0, 0, 0];
+        expect(RigidBody.getTransform(position, quaternion, scene.world, body)).toBe(true);
+        expect(position).toEqual([1, 2, 3]);
+        expect(quaternion).toEqual([0, 1, 0, 0]);
         releaseScene(scene);
         Sphere.destroy(ball);
     });

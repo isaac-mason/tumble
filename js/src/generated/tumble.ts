@@ -7,7 +7,7 @@
 import type { Instance } from '../module';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0xed410096;
+export const SCHEMA_HASH = 0xa1a1057f;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 208;
 
@@ -1655,13 +1655,13 @@ export const WorldSettings = {
     addBroadphaseLayer(settings: WorldSettings): number {
         const r = wasm.exports.tumble_world_settings_add_broadphase_layer(settings);
         wasm.grew();
-        return r;
+        return r >>> 0;
     },
 
     addObjectLayer(settings: WorldSettings, broadphaseLayer: number): number {
         const r = wasm.exports.tumble_world_settings_add_object_layer(settings, broadphaseLayer);
         wasm.grew();
-        return r;
+        return r >>> 0;
     },
 
     enableCollision(settings: WorldSettings, objectLayerA: number, objectLayerB: number): void {
@@ -1732,7 +1732,7 @@ export const World = {
 
     woken(world: World): number {
         const r = wasm.exports.tumble_world_woken(world);
-        return r;
+        return r >>> 0;
     },
 
     setMaterials(world: World, frictionRestitution: Pointer<'f32'>, count: number): boolean {
@@ -1763,6 +1763,80 @@ export const Shape = {
     },
 };
 
+export type Poses = Handle<'Poses'>;
+/** Poses's fields as a plain object, for Poses.writeTo / readFrom over another realm's buffer. */
+export type PosesValue = {  };
+export const Poses = {
+    size: 76,
+    align: 4,
+    /** byte offset of each field, for hot paths that read the views directly. */
+    offset: {
+    },
+    createValue(): PosesValue {
+        return {  };
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: PosesValue): void {
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: PosesValue, view: DataView, offset: number): PosesValue {
+        return out;
+    },
+
+    create(world: World): Poses {
+        const r = wasm.exports.tumble_poses_create(world);
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as Poses;
+    },
+
+    destroy(poses: Poses): void {
+        wasm.exports.tumble_poses_destroy(poses);
+    },
+
+    add(poses: Poses, body: number): number {
+        const r = wasm.exports.tumble_poses_add(poses, body);
+        wasm.grew();
+        return r >>> 0;
+    },
+
+    remove(poses: Poses, slot: number): boolean {
+        const r = wasm.exports.tumble_poses_remove(poses, slot);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    read(poses: Poses): number {
+        const r = wasm.exports.tumble_poses_read(poses);
+        return r >>> 0;
+    },
+
+    slots(poses: Poses): number {
+        const r = wasm.exports.tumble_poses_slots(poses);
+        return r >>> 0;
+    },
+
+    body(poses: Poses, slot: number): number {
+        const r = wasm.exports.tumble_poses_body(poses, slot);
+        return r >>> 0;
+    },
+
+    positions(poses: Poses): Pointer<'f32'> {
+        const r = wasm.exports.tumble_poses_positions(poses);
+        return r as Pointer<'f32'>;
+    },
+
+    quaternions(poses: Poses): Pointer<'f32'> {
+        const r = wasm.exports.tumble_poses_quaternions(poses);
+        return r as Pointer<'f32'>;
+    },
+
+    changed(poses: Poses): Pointer<'u32'> {
+        const r = wasm.exports.tumble_poses_changed(poses);
+        return r as Pointer<'u32'>;
+    },
+};
+
 export function init(heapBegin: number): boolean {
     const r = wasm.exports.tumble_wasm_init(heapBegin);
     wasm.grew();
@@ -1771,12 +1845,12 @@ export function init(heapBegin: number): boolean {
 
 export function abiVersion(): number {
     const r = wasm.exports.tumble_wasm_abi_version();
-    return r;
+    return r >>> 0;
 }
 
 export function schemaHash(): number {
     const r = wasm.exports.tumble_wasm_schema_hash();
-    return r;
+    return r >>> 0;
 }
 
 export function simdCheck(): number {
@@ -1786,7 +1860,7 @@ export function simdCheck(): number {
 
 export function error(): number {
     const r = wasm.exports.tumble_wasm_error();
-    return r;
+    return r >>> 0;
 }
 
 export function errorClear(): void {
@@ -1805,13 +1879,13 @@ export function freeBytes(block: number, bytes: number): void {
 
 export function allocatedBytes(): number {
     const r = wasm.exports.tumble_wasm_allocated_bytes();
-    return r;
+    return r >>> 0;
 }
 
 export const Events = {
     pairs(world: World): number {
         const r = wasm.exports.tumble_events_pairs(world);
-        return r;
+        return r >>> 0;
     },
 
     readPair(out: PairEvent, world: World, index: number): boolean {
@@ -1823,7 +1897,7 @@ export const Events = {
 
     contactsAdded(world: World): number {
         const r = wasm.exports.tumble_events_contacts_added(world);
-        return r;
+        return r >>> 0;
     },
 
     readContactAdded(out: ContactEvent, world: World, index: number): boolean {
@@ -1835,7 +1909,7 @@ export const Events = {
 
     contactsPersisted(world: World): number {
         const r = wasm.exports.tumble_events_contacts_persisted(world);
-        return r;
+        return r >>> 0;
     },
 
     readContactPersisted(out: ContactEvent, world: World, index: number): boolean {
@@ -1847,7 +1921,7 @@ export const Events = {
 
     contactsRemoved(world: World): number {
         const r = wasm.exports.tumble_events_contacts_removed(world);
-        return r;
+        return r >>> 0;
     },
 
     readContactRemoved(out: ContactRemovedEvent, world: World, index: number): boolean {
@@ -1859,12 +1933,12 @@ export const Events = {
 
     moved(world: World): number {
         const r = wasm.exports.tumble_events_moved(world);
-        return r;
+        return r >>> 0;
     },
 
     movedBody(world: World, index: number): number {
         const r = wasm.exports.tumble_events_moved_body(world, index);
-        return r;
+        return r >>> 0;
     },
 };
 
@@ -1900,7 +1974,7 @@ export const RigidBody = {
         BodySettings.write(scratch + 0, settings);
         const r = wasm.exports.tumble_rigid_body_create(world, scratch + 0);
         wasm.grew();
-        return r;
+        return r >>> 0;
     },
 
     remove(world: World, body: number): boolean {
@@ -1978,22 +2052,22 @@ export const RigidBody = {
 
     getMotionType(world: World, body: number): number {
         const r = wasm.exports.tumble_rigid_body_get_motion_type(world, body);
-        return r;
+        return r >>> 0;
     },
 
     getObjectLayer(world: World, body: number): number {
         const r = wasm.exports.tumble_rigid_body_get_object_layer(world, body);
-        return r;
+        return r >>> 0;
     },
 
     getUserDataLow(world: World, body: number): number {
         const r = wasm.exports.tumble_rigid_body_get_user_data_low(world, body);
-        return r;
+        return r >>> 0;
     },
 
     getUserDataHigh(world: World, body: number): number {
         const r = wasm.exports.tumble_rigid_body_get_user_data_high(world, body);
-        return r;
+        return r >>> 0;
     },
 
     getShape(world: World, body: number): Shape | null {
@@ -2004,11 +2078,6 @@ export const RigidBody = {
     isSleeping(world: World, body: number): boolean {
         const r = wasm.exports.tumble_rigid_body_is_sleeping(world, body);
         return r !== 0;
-    },
-
-    readTransforms(world: World, ids: Pointer<'u32'>, count: number, out: Pointer<'f32'>): number {
-        const r = wasm.exports.tumble_rigid_body_read_transforms(world, ids, count, out);
-        return r;
     },
 
     setPosition(world: World, body: number, position: Vec3, wake: boolean): boolean {
@@ -2240,6 +2309,16 @@ export type WasmExports = {
     tumble_events_read_contact_removed(out: number, world: number, index: number): number;
     tumble_events_moved(world: number): number;
     tumble_events_moved_body(world: number, index: number): number;
+    tumble_poses_create(world: number): number;
+    tumble_poses_destroy(poses: number): void;
+    tumble_poses_add(poses: number, body: number): number;
+    tumble_poses_remove(poses: number, slot: number): number;
+    tumble_poses_read(poses: number): number;
+    tumble_poses_slots(poses: number): number;
+    tumble_poses_body(poses: number, slot: number): number;
+    tumble_poses_positions(poses: number): number;
+    tumble_poses_quaternions(poses: number): number;
+    tumble_poses_changed(poses: number): number;
     tumble_answers_reject_pair(world: number, index: number): number;
     tumble_answers_override_contact(world: number, index: number, settings: number): number;
     tumble_answers_reject_contact(world: number, index: number): number;
@@ -2262,7 +2341,6 @@ export type WasmExports = {
     tumble_rigid_body_get_user_data_high(world: number, body: number): number;
     tumble_rigid_body_get_shape(world: number, body: number): number;
     tumble_rigid_body_is_sleeping(world: number, body: number): number;
-    tumble_rigid_body_read_transforms(world: number, ids: number, count: number, out: number): number;
     tumble_rigid_body_set_position(world: number, body: number, position: number, wake: number): number;
     tumble_rigid_body_set_quaternion(world: number, body: number, quaternion: number, wake: number): number;
     tumble_rigid_body_set_transform(world: number, body: number, position: number, quaternion: number, wake: number): number;

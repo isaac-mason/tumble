@@ -516,6 +516,8 @@ function emitFunction(f: FunctionDesc, indent: string, moduleLevel: boolean): st
         body.push(`return r as ${jsOf(r, where)};`);
     } else if (r.kind === 'handle') body.push(`return r === 0 ? null : (r as ${jsOf(r, where)});`);
     else if (r.kind === 'scalar' && r.scalar === 'bool') body.push('return r !== 0;');
+    // wasm returns i32; a u32 of 2^31 or more would read negative
+    else if (r.kind === 'scalar' && r.scalar === 'u32') body.push('return r >>> 0;');
     else if ((r.kind === 'ptr-scalar' || r.kind === 'ptr-array') && returnType !== 'number')
         body.push(`return r as ${returnType};`);
     else if (!nothing) body.push('return r;');

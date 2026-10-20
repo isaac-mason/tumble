@@ -99,6 +99,46 @@ struct ContactRemovedEvent {
     uint32_t sub_shape_b;
 };
 
+/**
+ * a renderer's view of bodies: each body it draws in a slot, with the slot's pose in flat arrays here (positions xyz,
+ * quaternions xyzw), refreshed by read
+ */
+struct Poses {
+    tumble::world::World *world;
+    /** by slot; INVALID_BODY_ID for a free slot */
+    tumble::collections::Vec<tumble::body_id::BodyId> bodies;
+    tumble::collections::Vec<uint32_t> free_slots;
+    tumble::collections::Vec<float> positions;
+    tumble::collections::Vec<float> quaternions;
+    /** by slot: added since the last read, so it reads as changed */
+    tumble::collections::Vec<uint8_t> fresh;
+    /** the slots the last read changed */
+    tumble::collections::Vec<uint32_t> changed;
+};
+
+namespace poses {
+
+/** null when the allocator fails */
+Poses *create(tumble::world::World *world);
+void destroy(Poses *poses);
+/** a slot for the body, its pose filled now; a free slot is reused. UINT32_MAX (error set) for a bad id or out of memory */
+uint32_t add(Poses *poses, tumble::body_id::BodyId body);
+/** the slot freed, its pose left as it was; false for a free or out of range slot */
+bool remove(Poses *poses, uint32_t slot);
+/**
+ * every live slot's pose brought to its body's, comparing with what is there: exact whatever stepped or teleported
+ * since. a slot whose body is gone keeps its pose. how many slots changed, listed in changed
+ */
+uint32_t read(Poses *poses);
+/** slots in use or freed: the length of the arrays, over 3 and 4 */
+uint32_t slots(const Poses *poses);
+tumble::body_id::BodyId body(const Poses *poses, uint32_t slot);
+const float *positions(const Poses *poses);
+const float *quaternions(const Poses *poses);
+const uint32_t *changed(const Poses *poses);
+
+}  // namespace poses
+
 // a step's events: a count, and a reader of one by index (false past the count)
 namespace events {
 
@@ -190,11 +230,6 @@ uint32_t get_user_data_low(tumble::world::World *world, tumble::body_id::BodyId 
 uint32_t get_user_data_high(tumble::world::World *world, tumble::body_id::BodyId id);
 tumble::shapes::Shape *get_shape(tumble::world::World *world, tumble::body_id::BodyId id);
 bool is_sleeping(tumble::world::World *world, tumble::body_id::BodyId id);
-/**
- * the poses of `count` bodies into out, seven floats each (position, then quaternion), in one call; a body that is gone
- * leaves its seven as they were. how many were live
- */
-uint32_t read_transforms(tumble::world::World *world, const uint32_t *ids, uint32_t count, float *out);
 
 // writers: false when the id names no body
 bool set_position(tumble::world::World *world, tumble::body_id::BodyId id, const tumble::Float3 &position, bool wake);

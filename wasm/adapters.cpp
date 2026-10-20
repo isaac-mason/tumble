@@ -156,6 +156,111 @@ body_id::BodyId moved_body(const tumble::world::World *world, uint32_t index) {
 
 }  // namespace events
 
+namespace poses {
+
+Poses *create(tumble::world::World *world) {
+    Poses *poses = util::alloc<Poses>(1);
+    if (poses == nullptr) {
+        util::set_error(util::ERROR_OUT_OF_MEMORY);
+        return nullptr;
+    }
+    *poses = {};
+    poses->world = world;
+    return poses;
+}
+
+void destroy(Poses *poses) {
+    poses->bodies.release();
+    poses->free_slots.release();
+    poses->positions.release();
+    poses->quaternions.release();
+    poses->fresh.release();
+    poses->changed.release();
+    util::free(poses, 1);
+}
+
+static void store_pose(Poses *poses, uint32_t slot, const tumble::rigid_body::RigidBody *body) {
+    float *position = poses->positions.data + slot * 3;
+    float *quaternion = poses->quaternions.data + slot * 4;
+    position[0] = body->position.x;
+    position[1] = body->position.y;
+    position[2] = body->position.z;
+    quaternion[0] = body->quaternion.x;
+    quaternion[1] = body->quaternion.y;
+    quaternion[2] = body->quaternion.z;
+    quaternion[3] = body->quaternion.w;
+}
+
+uint32_t add(Poses *poses, body_id::BodyId id) {
+    const tumble::rigid_body::RigidBody *body = tumble::rigid_body::get(*poses->world, id);
+    if (body == nullptr) {
+        util::set_error(util::ERROR_BAD_HANDLE);
+        return UINT32_MAX;
+    }
+    uint32_t slot;
+    if (poses->free_slots.length > 0) {
+        slot = poses->free_slots[--poses->free_slots.length];
+    } else {
+        slot = poses->bodies.length;
+        const uint32_t wanted = slot == poses->bodies.capacity ? (slot == 0 ? 16 : slot * 2) : poses->bodies.capacity;
+        if (!poses->bodies.reserve(wanted) || !poses->fresh.reserve(wanted) || !poses->positions.reserve(wanted * 3) ||
+            !poses->quaternions.reserve(wanted * 4) || !poses->changed.reserve(wanted)) {
+            util::set_error(util::ERROR_OUT_OF_MEMORY);
+            return UINT32_MAX;
+        }
+        poses->bodies.push(body_id::INVALID_BODY_ID);
+        poses->fresh.push(0);
+        poses->positions.length += 3;
+        poses->quaternions.length += 4;
+    }
+    poses->bodies[slot] = id;
+    poses->fresh[slot] = 1;
+    store_pose(poses, slot, body);
+    return slot;
+}
+
+bool remove(Poses *poses, uint32_t slot) {
+    if (slot >= poses->bodies.length || poses->bodies[slot] == body_id::INVALID_BODY_ID) return false;
+    poses->bodies[slot] = body_id::INVALID_BODY_ID;
+    poses->fresh[slot] = 0;
+    // when this cannot grow, the slot is never reused, which is all it costs
+    poses->free_slots.push(slot);
+    return true;
+}
+
+uint32_t read(Poses *poses) {
+    poses->changed.length = 0;
+    for (uint32_t slot = 0; slot < poses->bodies.length; slot++) {
+        const body_id::BodyId id = poses->bodies[slot];
+        if (id == body_id::INVALID_BODY_ID) continue;
+        const tumble::rigid_body::RigidBody *body = tumble::rigid_body::get(*poses->world, id);
+        if (body == nullptr) continue;
+        const float *position = poses->positions.data + slot * 3;
+        const float *quaternion = poses->quaternions.data + slot * 4;
+        const bool same = position[0] == body->position.x && position[1] == body->position.y && position[2] == body->position.z &&
+                          quaternion[0] == body->quaternion.x && quaternion[1] == body->quaternion.y &&
+                          quaternion[2] == body->quaternion.z && quaternion[3] == body->quaternion.w;
+        if (same && poses->fresh[slot] == 0) continue;
+        store_pose(poses, slot, body);
+        poses->fresh[slot] = 0;
+        // reserved to the slots' capacity in add, so this never grows
+        poses->changed.push(slot);
+    }
+    return poses->changed.length;
+}
+
+uint32_t slots(const Poses *poses) { return poses->bodies.length; }
+
+body_id::BodyId body(const Poses *poses, uint32_t slot) {
+    return slot < poses->bodies.length ? poses->bodies[slot] : body_id::INVALID_BODY_ID;
+}
+
+const float *positions(const Poses *poses) { return poses->positions.data; }
+const float *quaternions(const Poses *poses) { return poses->quaternions.data; }
+const uint32_t *changed(const Poses *poses) { return poses->changed.data; }
+
+}  // namespace poses
+
 namespace answers {
 
 bool reject_pair(tumble::world::World *world, uint32_t index) {
@@ -330,24 +435,6 @@ shapes::Shape *get_shape(tumble::world::World *world, body_id::BodyId id) {
 bool is_sleeping(tumble::world::World *world, body_id::BodyId id) {
     const tumble::rigid_body::RigidBody *body = resolve(world, id);
     return body != nullptr && body->sleeping;
-}
-
-uint32_t read_transforms(tumble::world::World *world, const uint32_t *ids, uint32_t count, float *out) {
-    uint32_t live = 0;
-    for (uint32_t i = 0; i < count; i++) {
-        const tumble::rigid_body::RigidBody *body = tumble::rigid_body::get(*world, ids[i]);
-        if (body == nullptr) continue;
-        float *at = out + i * 7;
-        at[0] = body->position.x;
-        at[1] = body->position.y;
-        at[2] = body->position.z;
-        at[3] = body->quaternion.x;
-        at[4] = body->quaternion.y;
-        at[5] = body->quaternion.z;
-        at[6] = body->quaternion.w;
-        live++;
-    }
-    return live;
 }
 
 bool set_position(tumble::world::World *world, body_id::BodyId id, const Float3 &position, bool wake) {
