@@ -33,6 +33,11 @@ TUMBLE_BINDINGS {
 
     TUPLE_AS(Float3, "Vec3").field(FIELD(Float3, x)).field(FIELD(Float3, y)).field(FIELD(Float3, z));
     TUPLE_AS(Float4, "Quat").field(FIELD(Float4, x)).field(FIELD(Float4, y)).field(FIELD(Float4, z)).field(FIELD(Float4, w));
+    TUPLE_AS(Float4x4, "Mat4").field(FIELD(Float4x4, m));
+    VALUE_AS(Box3f, "Box3").field(FIELD(Box3f, min)).field(FIELD(Box3f, max));
+    VALUE_AS(mass_properties::MassProperties, "MassProperties")
+        .field(FIELD(mass_properties::MassProperties, mass), "kg.")
+        .field(FIELD(mass_properties::MassProperties, inertia), "kg m^2, the upper 3x3 of a column-major matrix.");
 
     VALUE_AS(world_settings::ContactsSettings, "ContactsSettings")
         .field(FIELD(world_settings::ContactsSettings, contact_point_preserve_lambda_max_dist_sq));
@@ -177,15 +182,52 @@ TUMBLE_BINDINGS {
         .field(FIELD(adapters::BodySettings, enhanced_internal_edge_removal))
         .field(FIELD(adapters::BodySettings, collide_kinematic_vs_non_dynamic))
         .field(FIELD(adapters::BodySettings, observes_contacts))
-        .field(FIELD(adapters::BodySettings, mass));
+        .field(FIELD(adapters::BodySettings, mass))
+        .field(FIELD(adapters::BodySettings, has_mass_properties))
+        .field(FIELD(adapters::BodySettings, mass_properties));
 
     bind::fn(b, BIND(adapters::rigid_body::default_settings), names("out"));
     bind::fn(b, BIND(adapters::rigid_body::create), names("world", "settings"), GROWS);
     bind::fn(b, BIND(adapters::rigid_body::remove), names("world", "body"));
+    bind::fn(b, BIND(adapters::rigid_body::exists), names("world", "body"));
     bind::fn(b, BIND(adapters::rigid_body::get_position), names("out", "world", "body"));
     bind::fn(b, BIND(adapters::rigid_body::get_quaternion), names("out", "world", "body"));
+    bind::fn(b, BIND(adapters::rigid_body::get_transform), names("outPosition", "outQuaternion", "world", "body"));
+    bind::fn(b, BIND(adapters::rigid_body::get_center_of_mass_position), names("out", "world", "body"));
     bind::fn(b, BIND(adapters::rigid_body::get_linear_velocity), names("out", "world", "body"));
-    bind::fn(b, BIND(adapters::rigid_body::set_linear_velocity), names("world", "body", "velocity"));
+    bind::fn(b, BIND(adapters::rigid_body::get_angular_velocity), names("out", "world", "body"));
+    bind::fn(b, BIND(adapters::rigid_body::get_velocity_at_point), names("out", "world", "body", "point"));
+    bind::fn(b, BIND(adapters::rigid_body::get_aabb), names("out", "world", "body"));
+    bind::fn(b, BIND(adapters::rigid_body::get_mass), names("world", "body"));
+    bind::fn(b, BIND(adapters::rigid_body::get_motion_type), names("world", "body"));
+    bind::fn(b, BIND(adapters::rigid_body::get_object_layer), names("world", "body"));
+    bind::fn(b, BIND(adapters::rigid_body::get_user_data_low), names("world", "body"));
+    bind::fn(b, BIND(adapters::rigid_body::get_user_data_high), names("world", "body"));
+    bind::fn(b, BIND(adapters::rigid_body::get_shape), names("world", "body"));
+    bind::fn(b, BIND(adapters::rigid_body::is_sleeping), names("world", "body"));
+    bind::fn(b, BIND(adapters::rigid_body::read_transforms), names("world", "ids", "count", "out"));
+    bind::fn(b, BIND(adapters::rigid_body::set_position), names("world", "body", "position", "wake"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::set_quaternion), names("world", "body", "quaternion", "wake"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::set_transform), names("world", "body", "position", "quaternion", "wake"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::set_linear_velocity), names("world", "body", "velocity"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::set_angular_velocity), names("world", "body", "velocity"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::add_linear_velocity), names("world", "body", "velocity"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::add_angular_velocity), names("world", "body", "velocity"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::add_force), names("world", "body", "force", "wake"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::add_torque), names("world", "body", "torque", "wake"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::add_force_at_position), names("world", "body", "force", "position", "wake"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::add_impulse), names("world", "body", "impulse"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::add_impulse_at_position), names("world", "body", "impulse", "position"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::add_angular_impulse), names("world", "body", "impulse"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::set_motion_type), names("world", "body", "motionType", "wake"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::set_object_layer), names("world", "body", "objectLayer"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::set_shape), names("world", "body", "shape"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::move_kinematic), names("world", "body", "position", "quaternion", "deltaTime"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::sleep), names("world", "body"));
+    bind::fn(b, BIND(adapters::rigid_body::wake), names("world", "body"), GROWS);
+    bind::fn(b, BIND(adapters::rigid_body::set_user_data), names("world", "body", "low", "high"));
+    bind::fn(b, BIND(adapters::rigid_body::set_friction), names("world", "body", "friction"));
+    bind::fn(b, BIND(adapters::rigid_body::set_restitution), names("world", "body", "restitution"));
 
     VALUE_AS(box::BoxShapeSettings, "BoxSettings")
         .field(FIELD(box::BoxShapeSettings, half_extents))

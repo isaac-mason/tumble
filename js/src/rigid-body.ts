@@ -1,10 +1,14 @@
+import { withUints } from './arrays';
 import * as Low from './generated/tumble';
-import type { Quat, Vec3 } from './math';
+import type { Box3, Mat4, Quat, Vec3 } from './math';
 import type { Shape } from './shapes';
 import type { World } from './world';
 
-/** a body in a world: an index and a sequence in one number, so an id of a removed body names nothing */
+/** a body in a world: an index and a sequence in one number, so the id of a removed body names nothing */
 export type BodyId = number;
+
+/** the id naming no body */
+export const INVALID_BODY_ID = 0xffffffff;
 
 export const MotionType = {
     /** never moves */
@@ -16,8 +20,46 @@ export const MotionType = {
 } as const;
 export type MotionType = (typeof MotionType)[keyof typeof MotionType];
 
+export const MotionQuality = {
+    DISCRETE: 0,
+    /** swept between steps so a small fast body stops at what it would pass through */
+    LINEAR_CAST: 1,
+} as const;
+export type MotionQuality = (typeof MotionQuality)[keyof typeof MotionQuality];
+
+/** bits of allowedDegreesOfFreedom: the axes a body may move along and turn about */
+export const Dof = {
+    TRANSLATION_X: 1 << 0,
+    TRANSLATION_Y: 1 << 1,
+    TRANSLATION_Z: 1 << 2,
+    ROTATION_X: 1 << 3,
+    ROTATION_Y: 1 << 4,
+    ROTATION_Z: 1 << 5,
+    ALL: 0x3f,
+    TRANSLATION_ONLY: 0x07,
+    ROTATION_ONLY: 0x38,
+} as const;
+
+/** how two bodies' friction or restitution combine; when the modes differ the more restrictive wins */
+export const MaterialCombineMode = {
+    AVERAGE: 0,
+    MULTIPLY: 1,
+    MIN: 2,
+    MAX: 3,
+    GEOMETRIC_MEAN: 4,
+} as const;
+export type MaterialCombineMode = (typeof MaterialCombineMode)[keyof typeof MaterialCombineMode];
+
+export type MassProperties = {
+    /** kg */
+    mass: number;
+    /** kg m2, the upper 3x3 of a column-major 4x4 */
+    inertia: Mat4;
+};
+
 /** what a body is made with; everything but the shape, the layer and the motion type has a default */
 export type RigidBodySettings = {
+    /** borrowed: it outlives the body */
     shape: Shape;
     objectLayer: number;
     motionType: MotionType;
@@ -25,22 +67,47 @@ export type RigidBodySettings = {
     userData?: number;
     position?: Vec3;
     quaternion?: Quat;
-    friction?: number;
-    restitution?: number;
+    motionQuality?: MotionQuality;
+    /** Dof bits */
+    allowedDegreesOfFreedom?: number;
+    gravityFactor?: number;
     linearDamping?: number;
     angularDamping?: number;
-    gravityFactor?: number;
+    maxLinearVelocity?: number;
+    maxAngularVelocity?: number;
+    /** for a dynamic body in contact; 0 takes the world's */
+    numVelocityStepsOverride?: number;
+    numPositionStepsOverride?: number;
+    friction?: number;
+    restitution?: number;
+    frictionCombineMode?: MaterialCombineMode;
+    restitutionCombineMode?: MaterialCombineMode;
+    /** the groups it is in */
+    collisionGroups?: number;
+    /** the groups it collides with */
+    collisionMask?: number;
+    useManifoldReduction?: boolean;
+    allowSleeping?: boolean;
+    /** reports its contacts, pushes nothing */
+    sensor?: boolean;
+    enhancedInternalEdgeRemoval?: boolean;
+    /** a kinematic body that also collides with static and kinematic ones */
+    collideKinematicVsNonDynamic?: boolean;
+    /** its contact pairs are recorded (see ContactPairs) */
+    observesContacts?: boolean;
     /** the mass with the shape's inertia scaled to it; without it, from the shape's volume and density */
     mass?: number;
-    allowSleeping?: boolean;
-    sensor?: boolean;
-    observesContacts?: boolean;
+    /** mass and inertia outright, for a shape they cannot be derived from (a triangle mesh) */
+    massPropertiesOverride?: MassProperties;
 };
 
+const TWO_32 = 0x100000000;
+
 let defaults: Low.BodySettings | null = null;
-const scratch: Low.BodySettings = Low.BodySettings.create();
+const native: Low.BodySettings = Low.BodySettings.create();
 const vec3: Vec3 = [0, 0, 0];
 const quat: Quat = [0, 0, 0, 1];
+const box3: Box3 = { min: [0, 0, 0], max: [0, 0, 0] };
 
 /** out filled only when the read succeeded */
 function copied<T extends number[]>(out: T, read: T, ok: boolean): boolean {
@@ -48,52 +115,200 @@ function copied<T extends number[]>(out: T, read: T, ok: boolean): boolean {
     return ok;
 }
 
+function nativeSettings(settings: RigidBodySettings): Low.BodySettings {
+    if (defaults === null) defaults = Low.RigidBody.defaultSettings(Low.BodySettings.create());
+    Object.assign(native, defaults);
+    native.position = [...(settings.position ?? defaults.position)];
+    native.quaternion = [...(settings.quaternion ?? defaults.quaternion)];
+    const target = native as unknown as Record<string, unknown>;
+    for (const [key, value] of Object.entries(settings)) {
+        if (
+            value === undefined ||
+            key === 'userData' ||
+            key === 'massPropertiesOverride' ||
+            key === 'position' ||
+            key === 'quaternion'
+        ) {
+            continue;
+        }
+        target[key] = value;
+    }
+    const userData = settings.userData ?? 0;
+    native.userDataLow = userData >>> 0;
+    native.userDataHigh = Math.floor(userData / TWO_32);
+    const override = settings.massPropertiesOverride;
+    native.hasMassProperties = override !== undefined;
+    if (override !== undefined) native.massProperties = { mass: override.mass, inertia: [...override.inertia] as Mat4 };
+    return native;
+}
+
 export const RigidBody = {
-    /** a new body in the world, found by the next step; the shape is borrowed and outlives it */
+    /** a new body in the world, found by the next step */
     create(world: World, settings: RigidBodySettings): BodyId {
-        if (defaults === null) defaults = Low.RigidBody.defaultSettings(Low.BodySettings.create());
-        Object.assign(scratch, defaults);
-        scratch.position = [...(settings.position ?? defaults.position)];
-        scratch.quaternion = [...(settings.quaternion ?? defaults.quaternion)];
-        scratch.shape = settings.shape;
-        scratch.objectLayer = settings.objectLayer;
-        scratch.motionType = settings.motionType;
-        const userData = settings.userData ?? 0;
-        scratch.userDataLow = userData >>> 0;
-        scratch.userDataHigh = Math.floor(userData / 0x100000000);
-        if (settings.friction !== undefined) scratch.friction = settings.friction;
-        if (settings.restitution !== undefined) scratch.restitution = settings.restitution;
-        if (settings.linearDamping !== undefined) scratch.linearDamping = settings.linearDamping;
-        if (settings.angularDamping !== undefined) scratch.angularDamping = settings.angularDamping;
-        if (settings.gravityFactor !== undefined) scratch.gravityFactor = settings.gravityFactor;
-        if (settings.mass !== undefined) scratch.mass = settings.mass;
-        if (settings.allowSleeping !== undefined) scratch.allowSleeping = settings.allowSleeping;
-        if (settings.sensor !== undefined) scratch.sensor = settings.sensor;
-        if (settings.observesContacts !== undefined) scratch.observesContacts = settings.observesContacts;
+        const native = nativeSettings(settings);
         Low.errorClear();
-        const id = Low.RigidBody.create(world, scratch);
+        const id = Low.RigidBody.create(world, native);
         if (id === INVALID_BODY_ID) Low.getWasm().check();
         return id;
     },
-    /** out of the world; false when the id names no body */
+    /** out of the world, with its constraints; its contacts' removal events come with the next step */
     remove(world: World, body: BodyId): boolean {
         return Low.RigidBody.remove(world, body);
     },
-    /** the shape's origin, world space; false (out unchanged) when the id names no body */
+    /** whether the id names a body in the world */
+    exists(world: World, body: BodyId): boolean {
+        return Low.RigidBody.exists(world, body);
+    },
+
+    // readers: out-first, false (out as it was) when the id names no body
+
+    /** the shape's origin, world space */
     getPosition(out: Vec3, world: World, body: BodyId): boolean {
         return copied(out, vec3, Low.RigidBody.getPosition(vec3, world, body));
     },
     getQuaternion(out: Quat, world: World, body: BodyId): boolean {
         return copied(out, quat, Low.RigidBody.getQuaternion(quat, world, body));
     },
+    getCenterOfMassPosition(out: Vec3, world: World, body: BodyId): boolean {
+        return copied(out, vec3, Low.RigidBody.getCenterOfMassPosition(vec3, world, body));
+    },
     getLinearVelocity(out: Vec3, world: World, body: BodyId): boolean {
         return copied(out, vec3, Low.RigidBody.getLinearVelocity(vec3, world, body));
     },
-    /** wakes the body */
+    getAngularVelocity(out: Vec3, world: World, body: BodyId): boolean {
+        return copied(out, vec3, Low.RigidBody.getAngularVelocity(vec3, world, body));
+    },
+    /** the velocity of a world point carried with the body */
+    getVelocityAtPoint(out: Vec3, world: World, body: BodyId, point: Vec3): boolean {
+        return copied(out, vec3, Low.RigidBody.getVelocityAtPoint(vec3, world, body, point));
+    },
+    /** world space bounds */
+    getBounds(out: Box3, world: World, body: BodyId): boolean {
+        if (!Low.RigidBody.getAabb(box3, world, body)) return false;
+        copied(out.min, box3.min, true);
+        copied(out.max, box3.max, true);
+        return true;
+    },
+    /**
+     * the poses of many bodies in one call, seven floats each into out (position x y z, then quaternion x y z w), in
+     * the order of `bodies`: for a renderer, every frame. a body that is gone leaves its seven as they were. how many
+     * were found
+     */
+    getTransforms(out: Float32Array, world: World, bodies: ArrayLike<BodyId>): number {
+        const floats = bodies.length * 7;
+        if (out.length < floats) throw new Error(`tumble: getTransforms needs ${floats} floats, out has ${out.length}`);
+        const bytes = floats * 4;
+        const block = bytes === 0 ? 0 : Low.allocBytes(bytes);
+        if (bytes > 0 && block === 0) Low.getWasm().check();
+        const mem = Low.getWasm().mem;
+        mem.f32.set(out.subarray(0, floats), block >> 2);
+        try {
+            const found = withUints(bodies, (ids) =>
+                Low.RigidBody.readTransforms(world, ids as Low.Pointer<'u32'>, bodies.length, block as Low.Pointer<'f32'>),
+            );
+            out.set(Low.getWasm().mem.f32.subarray(block >> 2, (block >> 2) + floats));
+            return found;
+        } finally {
+            if (block !== 0) Low.freeBytes(block, bytes);
+        }
+    },
+    /** kg; 0 for a static or kinematic body, or an id naming no body */
+    getMass(world: World, body: BodyId): number {
+        return Low.RigidBody.getMass(world, body);
+    },
+    getMotionType(world: World, body: BodyId): MotionType {
+        return Low.RigidBody.getMotionType(world, body) as MotionType;
+    },
+    getObjectLayer(world: World, body: BodyId): number {
+        return Low.RigidBody.getObjectLayer(world, body);
+    },
+    getUserData(world: World, body: BodyId): number {
+        return Low.RigidBody.getUserDataHigh(world, body) * TWO_32 + Low.RigidBody.getUserDataLow(world, body);
+    },
+    /** null for an id naming no body */
+    getShape(world: World, body: BodyId): Shape | null {
+        return Low.RigidBody.getShape(world, body);
+    },
+    isSleeping(world: World, body: BodyId): boolean {
+        return Low.RigidBody.isSleeping(world, body);
+    },
+
+    // writers: false when the id names no body
+
+    /** a teleport: the broadphase and the pairs follow; nothing between here and there stops it */
+    setPosition(world: World, body: BodyId, position: Vec3, wake = true): boolean {
+        return Low.RigidBody.setPosition(world, body, position, wake);
+    },
+    setQuaternion(world: World, body: BodyId, quaternion: Quat, wake = true): boolean {
+        return Low.RigidBody.setQuaternion(world, body, quaternion, wake);
+    },
+    setTransform(world: World, body: BodyId, position: Vec3, quaternion: Quat, wake = true): boolean {
+        return Low.RigidBody.setTransform(world, body, position, quaternion, wake);
+    },
+    /** m/s, world space; wakes the body */
     setLinearVelocity(world: World, body: BodyId, velocity: Vec3): boolean {
         return Low.RigidBody.setLinearVelocity(world, body, velocity);
     },
+    /** rad/s, world space; wakes the body */
+    setAngularVelocity(world: World, body: BodyId, velocity: Vec3): boolean {
+        return Low.RigidBody.setAngularVelocity(world, body, velocity);
+    },
+    addLinearVelocity(world: World, body: BodyId, velocity: Vec3): boolean {
+        return Low.RigidBody.addLinearVelocity(world, body, velocity);
+    },
+    addAngularVelocity(world: World, body: BodyId, velocity: Vec3): boolean {
+        return Low.RigidBody.addAngularVelocity(world, body, velocity);
+    },
+    /** N at the centre of mass over the next step, then cleared; dynamic bodies only */
+    addForce(world: World, body: BodyId, force: Vec3, wake = true): boolean {
+        return Low.RigidBody.addForce(world, body, force, wake);
+    },
+    addTorque(world: World, body: BodyId, torque: Vec3, wake = true): boolean {
+        return Low.RigidBody.addTorque(world, body, torque, wake);
+    },
+    /** the force, and the torque it makes about the centre of mass */
+    addForceAtPosition(world: World, body: BodyId, force: Vec3, position: Vec3, wake = true): boolean {
+        return Low.RigidBody.addForceAtPosition(world, body, force, position, wake);
+    },
+    /** N s at the centre of mass, the velocity changed at once; dynamic bodies only, always wakes */
+    addImpulse(world: World, body: BodyId, impulse: Vec3): boolean {
+        return Low.RigidBody.addImpulse(world, body, impulse);
+    },
+    addImpulseAtPosition(world: World, body: BodyId, impulse: Vec3, position: Vec3): boolean {
+        return Low.RigidBody.addImpulseAtPosition(world, body, impulse, position);
+    },
+    addAngularImpulse(world: World, body: BodyId, impulse: Vec3): boolean {
+        return Low.RigidBody.addAngularImpulse(world, body, impulse);
+    },
+    /** the active list follows; `wake` wakes one that keeps moving */
+    setMotionType(world: World, body: BodyId, motionType: MotionType, wake = true): boolean {
+        return Low.RigidBody.setMotionType(world, body, motionType, wake);
+    },
+    /** into another object layer's broadphase tree, finding its pairs again */
+    setObjectLayer(world: World, body: BodyId, objectLayer: number): boolean {
+        return Low.RigidBody.setObjectLayer(world, body, objectLayer);
+    },
+    /** mass and bounds follow, and the constraints keep their anchors where they were on the body */
+    setShape(world: World, body: BodyId, shape: Shape): boolean {
+        return Low.RigidBody.setShape(world, body, shape);
+    },
+    /** the velocities that bring a kinematic body to the target in deltaTime, waking it */
+    moveKinematic(world: World, body: BodyId, position: Vec3, quaternion: Quat, deltaTime: number): boolean {
+        return Low.RigidBody.moveKinematic(world, body, position, quaternion, deltaTime);
+    },
+    sleep(world: World, body: BodyId): boolean {
+        return Low.RigidBody.sleep(world, body);
+    },
+    wake(world: World, body: BodyId): boolean {
+        return Low.RigidBody.wake(world, body);
+    },
+    setUserData(world: World, body: BodyId, userData: number): boolean {
+        return Low.RigidBody.setUserData(world, body, userData >>> 0, Math.floor(userData / TWO_32));
+    },
+    setFriction(world: World, body: BodyId, friction: number): boolean {
+        return Low.RigidBody.setFriction(world, body, friction);
+    },
+    setRestitution(world: World, body: BodyId, restitution: number): boolean {
+        return Low.RigidBody.setRestitution(world, body, restitution);
+    },
 };
-
-/** the id naming no body */
-export const INVALID_BODY_ID = 0xffffffff;

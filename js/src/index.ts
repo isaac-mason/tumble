@@ -1,7 +1,17 @@
 export { Answers, ContactEvent, ContactRemovedEvent, type ContactSettings, PairEvent } from './events';
 export { type InitOptions, init } from './init';
-export type { Quat, Vec3 } from './math';
-export { type BodyId, INVALID_BODY_ID, MotionType, RigidBody, type RigidBodySettings } from './rigid-body';
+export type { Box3, Mat4, Quat, Vec3 } from './math';
+export {
+    type BodyId,
+    Dof,
+    INVALID_BODY_ID,
+    type MassProperties,
+    MaterialCombineMode,
+    MotionQuality,
+    MotionType,
+    RigidBody,
+    type RigidBodySettings,
+} from './rigid-body';
 export { Box, type BoxSettings, type Shape, Sphere, type SphereSettings } from './shapes';
 export {
     type CcdSettings,

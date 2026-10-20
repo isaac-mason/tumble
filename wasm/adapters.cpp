@@ -3,6 +3,7 @@
 
 #include "wasm/adapters.h"
 
+#include "tumble/math/quatf.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/body/rigid_body.h"
 #include "tumble/physics/events.h"
@@ -186,7 +187,7 @@ void default_settings(BodySettings &out) {
            d.max_angular_velocity, d.num_velocity_steps_override, d.num_position_steps_override, d.friction, d.restitution,
            d.friction_combine_mode, d.restitution_combine_mode, d.collision_groups, d.collision_mask, d.use_manifold_reduction,
            d.allow_sleeping, d.sensor, d.enhanced_internal_edge_removal, d.collide_kinematic_vs_non_dynamic, d.observes_contacts,
-           d.mass};
+           d.mass, false, mass_properties::create()};
 }
 
 body_id::BodyId create(tumble::world::World *world, const BodySettings &s) {
@@ -219,6 +220,7 @@ body_id::BodyId create(tumble::world::World *world, const BodySettings &s) {
     settings.collide_kinematic_vs_non_dynamic = s.collide_kinematic_vs_non_dynamic;
     settings.observes_contacts = s.observes_contacts;
     settings.mass = s.mass;
+    settings.mass_properties_override = s.has_mass_properties ? &s.mass_properties : nullptr;
     tumble::rigid_body::RigidBody *body = tumble::rigid_body::create(*world, settings);
     return body == nullptr ? body_id::INVALID_BODY_ID : body->id;
 }
@@ -235,6 +237,8 @@ bool remove(tumble::world::World *world, body_id::BodyId id) {
     return body != nullptr && tumble::rigid_body::remove(*world, body);
 }
 
+bool exists(tumble::world::World *world, body_id::BodyId id) { return tumble::rigid_body::get(*world, id) != nullptr; }
+
 bool get_position(Float3 &out, tumble::world::World *world, body_id::BodyId id) {
     const tumble::rigid_body::RigidBody *body = resolve(world, id);
     if (body == nullptr) return false;
@@ -249,6 +253,21 @@ bool get_quaternion(Float4 &out, tumble::world::World *world, body_id::BodyId id
     return true;
 }
 
+bool get_transform(Float3 &out_position, Float4 &out_quaternion, tumble::world::World *world, body_id::BodyId id) {
+    const tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    out_position = body->position;
+    out_quaternion = body->quaternion;
+    return true;
+}
+
+bool get_center_of_mass_position(Float3 &out, tumble::world::World *world, body_id::BodyId id) {
+    const tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    out = body->center_of_mass_position;
+    return true;
+}
+
 bool get_linear_velocity(Float3 &out, tumble::world::World *world, body_id::BodyId id) {
     const tumble::rigid_body::RigidBody *body = resolve(world, id);
     if (body == nullptr) return false;
@@ -256,10 +275,232 @@ bool get_linear_velocity(Float3 &out, tumble::world::World *world, body_id::Body
     return true;
 }
 
+bool get_angular_velocity(Float3 &out, tumble::world::World *world, body_id::BodyId id) {
+    const tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    out = body->motion_properties.angular_velocity;
+    return true;
+}
+
+bool get_velocity_at_point(Float3 &out, tumble::world::World *world, body_id::BodyId id, const Float3 &point) {
+    const tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    vec3f::store(out, tumble::rigid_body::get_velocity_at_point(body, vec3f::load(point)));
+    return true;
+}
+
+bool get_aabb(Box3f &out, tumble::world::World *world, body_id::BodyId id) {
+    const tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    out = body->aabb;
+    return true;
+}
+
+float get_mass(tumble::world::World *world, body_id::BodyId id) {
+    const tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr || body->motion_properties.inv_mass <= 0.0f) return 0.0f;
+    return 1.0f / body->motion_properties.inv_mass;
+}
+
+uint32_t get_motion_type(tumble::world::World *world, body_id::BodyId id) {
+    const tumble::rigid_body::RigidBody *body = resolve(world, id);
+    return body == nullptr ? 0 : (uint32_t)body->motion_type;
+}
+
+uint32_t get_object_layer(tumble::world::World *world, body_id::BodyId id) {
+    const tumble::rigid_body::RigidBody *body = resolve(world, id);
+    return body == nullptr ? 0 : body->object_layer;
+}
+
+uint32_t get_user_data_low(tumble::world::World *world, body_id::BodyId id) {
+    const tumble::rigid_body::RigidBody *body = resolve(world, id);
+    return body == nullptr ? 0 : (uint32_t)body->user_data;
+}
+
+uint32_t get_user_data_high(tumble::world::World *world, body_id::BodyId id) {
+    const tumble::rigid_body::RigidBody *body = resolve(world, id);
+    return body == nullptr ? 0 : (uint32_t)(body->user_data >> 32);
+}
+
+shapes::Shape *get_shape(tumble::world::World *world, body_id::BodyId id) {
+    const tumble::rigid_body::RigidBody *body = resolve(world, id);
+    return body == nullptr ? nullptr : body->shape;
+}
+
+bool is_sleeping(tumble::world::World *world, body_id::BodyId id) {
+    const tumble::rigid_body::RigidBody *body = resolve(world, id);
+    return body != nullptr && body->sleeping;
+}
+
+uint32_t read_transforms(tumble::world::World *world, const uint32_t *ids, uint32_t count, float *out) {
+    uint32_t live = 0;
+    for (uint32_t i = 0; i < count; i++) {
+        const tumble::rigid_body::RigidBody *body = tumble::rigid_body::get(*world, ids[i]);
+        if (body == nullptr) continue;
+        float *at = out + i * 7;
+        at[0] = body->position.x;
+        at[1] = body->position.y;
+        at[2] = body->position.z;
+        at[3] = body->quaternion.x;
+        at[4] = body->quaternion.y;
+        at[5] = body->quaternion.z;
+        at[6] = body->quaternion.w;
+        live++;
+    }
+    return live;
+}
+
+bool set_position(tumble::world::World *world, body_id::BodyId id, const Float3 &position, bool wake) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::set_position(*world, body, vec3f::load(position), wake);
+    return true;
+}
+
+bool set_quaternion(tumble::world::World *world, body_id::BodyId id, const Float4 &quaternion, bool wake) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::set_quaternion(*world, body, quatf::load(quaternion), wake);
+    return true;
+}
+
+bool set_transform(tumble::world::World *world, body_id::BodyId id, const Float3 &position, const Float4 &quaternion, bool wake) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::set_transform(*world, body, vec3f::load(position), quatf::load(quaternion), wake);
+    return true;
+}
+
 bool set_linear_velocity(tumble::world::World *world, body_id::BodyId id, const Float3 &velocity) {
     tumble::rigid_body::RigidBody *body = resolve(world, id);
     if (body == nullptr) return false;
     tumble::rigid_body::set_linear_velocity(*world, body, vec3f::load(velocity));
+    return true;
+}
+
+bool set_angular_velocity(tumble::world::World *world, body_id::BodyId id, const Float3 &velocity) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::set_angular_velocity(*world, body, vec3f::load(velocity));
+    return true;
+}
+
+bool add_linear_velocity(tumble::world::World *world, body_id::BodyId id, const Float3 &velocity) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::add_linear_velocity(*world, body, vec3f::load(velocity));
+    return true;
+}
+
+bool add_angular_velocity(tumble::world::World *world, body_id::BodyId id, const Float3 &velocity) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::add_angular_velocity(*world, body, vec3f::load(velocity));
+    return true;
+}
+
+bool add_force(tumble::world::World *world, body_id::BodyId id, const Float3 &force, bool wake) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::add_force(*world, body, vec3f::load(force), wake);
+    return true;
+}
+
+bool add_torque(tumble::world::World *world, body_id::BodyId id, const Float3 &torque, bool wake) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::add_torque(*world, body, vec3f::load(torque), wake);
+    return true;
+}
+
+bool add_force_at_position(tumble::world::World *world, body_id::BodyId id, const Float3 &force, const Float3 &position, bool wake) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::add_force_at_position(*world, body, vec3f::load(force), vec3f::load(position), wake);
+    return true;
+}
+
+bool add_impulse(tumble::world::World *world, body_id::BodyId id, const Float3 &impulse) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::add_impulse(*world, body, vec3f::load(impulse));
+    return true;
+}
+
+bool add_impulse_at_position(tumble::world::World *world, body_id::BodyId id, const Float3 &impulse, const Float3 &position) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::add_impulse_at_position(*world, body, vec3f::load(impulse), vec3f::load(position));
+    return true;
+}
+
+bool add_angular_impulse(tumble::world::World *world, body_id::BodyId id, const Float3 &impulse) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::add_angular_impulse(*world, body, vec3f::load(impulse));
+    return true;
+}
+
+bool set_motion_type(tumble::world::World *world, body_id::BodyId id, uint32_t motion_type, bool wake) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::set_motion_type(*world, body, (motion_type::MotionType)motion_type, wake);
+    return true;
+}
+
+bool set_object_layer(tumble::world::World *world, body_id::BodyId id, uint32_t object_layer) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::set_object_layer(*world, body, object_layer);
+    return true;
+}
+
+bool set_shape(tumble::world::World *world, body_id::BodyId id, shapes::Shape *shape) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::set_shape(*world, body, shape);
+    return true;
+}
+
+bool move_kinematic(tumble::world::World *world, body_id::BodyId id, const Float3 &position, const Float4 &quaternion, float delta_time) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::move_kinematic(*world, body, vec3f::load(position), quatf::load(quaternion), delta_time);
+    return true;
+}
+
+bool sleep(tumble::world::World *world, body_id::BodyId id) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::sleep(*world, body);
+    return true;
+}
+
+bool wake(tumble::world::World *world, body_id::BodyId id) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    tumble::rigid_body::wake(*world, body);
+    return true;
+}
+
+bool set_user_data(tumble::world::World *world, body_id::BodyId id, uint32_t low, uint32_t high) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    body->user_data = (uint64_t)high << 32 | low;
+    return true;
+}
+
+bool set_friction(tumble::world::World *world, body_id::BodyId id, float friction) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    body->friction = friction;
+    return true;
+}
+
+bool set_restitution(tumble::world::World *world, body_id::BodyId id, float restitution) {
+    tumble::rigid_body::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    body->restitution = restitution;
     return true;
 }
 

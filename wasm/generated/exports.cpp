@@ -50,10 +50,45 @@ WASM_EXPORT bool tumble_answers_reject_contact(world::World * world, uint32_t in
 WASM_EXPORT void tumble_rigid_body_default_settings(adapters::BodySettings * out) { adapters::rigid_body::default_settings(*out); }
 WASM_EXPORT uint32_t tumble_rigid_body_create(world::World * world, const adapters::BodySettings * settings) { return adapters::rigid_body::create(world, *settings); }
 WASM_EXPORT bool tumble_rigid_body_remove(world::World * world, uint32_t body) { return adapters::rigid_body::remove(world, body); }
+WASM_EXPORT bool tumble_rigid_body_exists(world::World * world, uint32_t body) { return adapters::rigid_body::exists(world, body); }
 WASM_EXPORT bool tumble_rigid_body_get_position(Float3 * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_position(*out, world, body); }
 WASM_EXPORT bool tumble_rigid_body_get_quaternion(Float4 * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_quaternion(*out, world, body); }
+WASM_EXPORT bool tumble_rigid_body_get_transform(Float3 * outPosition, Float4 * outQuaternion, world::World * world, uint32_t body) { return adapters::rigid_body::get_transform(*outPosition, *outQuaternion, world, body); }
+WASM_EXPORT bool tumble_rigid_body_get_center_of_mass_position(Float3 * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_center_of_mass_position(*out, world, body); }
 WASM_EXPORT bool tumble_rigid_body_get_linear_velocity(Float3 * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_linear_velocity(*out, world, body); }
+WASM_EXPORT bool tumble_rigid_body_get_angular_velocity(Float3 * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_angular_velocity(*out, world, body); }
+WASM_EXPORT bool tumble_rigid_body_get_velocity_at_point(Float3 * out, world::World * world, uint32_t body, const Float3 * point) { return adapters::rigid_body::get_velocity_at_point(*out, world, body, *point); }
+WASM_EXPORT bool tumble_rigid_body_get_aabb(Box3f * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_aabb(*out, world, body); }
+WASM_EXPORT float tumble_rigid_body_get_mass(world::World * world, uint32_t body) { return adapters::rigid_body::get_mass(world, body); }
+WASM_EXPORT uint32_t tumble_rigid_body_get_motion_type(world::World * world, uint32_t body) { return adapters::rigid_body::get_motion_type(world, body); }
+WASM_EXPORT uint32_t tumble_rigid_body_get_object_layer(world::World * world, uint32_t body) { return adapters::rigid_body::get_object_layer(world, body); }
+WASM_EXPORT uint32_t tumble_rigid_body_get_user_data_low(world::World * world, uint32_t body) { return adapters::rigid_body::get_user_data_low(world, body); }
+WASM_EXPORT uint32_t tumble_rigid_body_get_user_data_high(world::World * world, uint32_t body) { return adapters::rigid_body::get_user_data_high(world, body); }
+WASM_EXPORT shapes::Shape * tumble_rigid_body_get_shape(world::World * world, uint32_t body) { return adapters::rigid_body::get_shape(world, body); }
+WASM_EXPORT bool tumble_rigid_body_is_sleeping(world::World * world, uint32_t body) { return adapters::rigid_body::is_sleeping(world, body); }
+WASM_EXPORT uint32_t tumble_rigid_body_read_transforms(world::World * world, const uint32_t * ids, uint32_t count, float * out) { return adapters::rigid_body::read_transforms(world, ids, count, out); }
+WASM_EXPORT bool tumble_rigid_body_set_position(world::World * world, uint32_t body, const Float3 * position, bool wake) { return adapters::rigid_body::set_position(world, body, *position, wake); }
+WASM_EXPORT bool tumble_rigid_body_set_quaternion(world::World * world, uint32_t body, const Float4 * quaternion, bool wake) { return adapters::rigid_body::set_quaternion(world, body, *quaternion, wake); }
+WASM_EXPORT bool tumble_rigid_body_set_transform(world::World * world, uint32_t body, const Float3 * position, const Float4 * quaternion, bool wake) { return adapters::rigid_body::set_transform(world, body, *position, *quaternion, wake); }
 WASM_EXPORT bool tumble_rigid_body_set_linear_velocity(world::World * world, uint32_t body, const Float3 * velocity) { return adapters::rigid_body::set_linear_velocity(world, body, *velocity); }
+WASM_EXPORT bool tumble_rigid_body_set_angular_velocity(world::World * world, uint32_t body, const Float3 * velocity) { return adapters::rigid_body::set_angular_velocity(world, body, *velocity); }
+WASM_EXPORT bool tumble_rigid_body_add_linear_velocity(world::World * world, uint32_t body, const Float3 * velocity) { return adapters::rigid_body::add_linear_velocity(world, body, *velocity); }
+WASM_EXPORT bool tumble_rigid_body_add_angular_velocity(world::World * world, uint32_t body, const Float3 * velocity) { return adapters::rigid_body::add_angular_velocity(world, body, *velocity); }
+WASM_EXPORT bool tumble_rigid_body_add_force(world::World * world, uint32_t body, const Float3 * force, bool wake) { return adapters::rigid_body::add_force(world, body, *force, wake); }
+WASM_EXPORT bool tumble_rigid_body_add_torque(world::World * world, uint32_t body, const Float3 * torque, bool wake) { return adapters::rigid_body::add_torque(world, body, *torque, wake); }
+WASM_EXPORT bool tumble_rigid_body_add_force_at_position(world::World * world, uint32_t body, const Float3 * force, const Float3 * position, bool wake) { return adapters::rigid_body::add_force_at_position(world, body, *force, *position, wake); }
+WASM_EXPORT bool tumble_rigid_body_add_impulse(world::World * world, uint32_t body, const Float3 * impulse) { return adapters::rigid_body::add_impulse(world, body, *impulse); }
+WASM_EXPORT bool tumble_rigid_body_add_impulse_at_position(world::World * world, uint32_t body, const Float3 * impulse, const Float3 * position) { return adapters::rigid_body::add_impulse_at_position(world, body, *impulse, *position); }
+WASM_EXPORT bool tumble_rigid_body_add_angular_impulse(world::World * world, uint32_t body, const Float3 * impulse) { return adapters::rigid_body::add_angular_impulse(world, body, *impulse); }
+WASM_EXPORT bool tumble_rigid_body_set_motion_type(world::World * world, uint32_t body, uint32_t motionType, bool wake) { return adapters::rigid_body::set_motion_type(world, body, motionType, wake); }
+WASM_EXPORT bool tumble_rigid_body_set_object_layer(world::World * world, uint32_t body, uint32_t objectLayer) { return adapters::rigid_body::set_object_layer(world, body, objectLayer); }
+WASM_EXPORT bool tumble_rigid_body_set_shape(world::World * world, uint32_t body, shapes::Shape * shape) { return adapters::rigid_body::set_shape(world, body, shape); }
+WASM_EXPORT bool tumble_rigid_body_move_kinematic(world::World * world, uint32_t body, const Float3 * position, const Float4 * quaternion, float deltaTime) { return adapters::rigid_body::move_kinematic(world, body, *position, *quaternion, deltaTime); }
+WASM_EXPORT bool tumble_rigid_body_sleep(world::World * world, uint32_t body) { return adapters::rigid_body::sleep(world, body); }
+WASM_EXPORT bool tumble_rigid_body_wake(world::World * world, uint32_t body) { return adapters::rigid_body::wake(world, body); }
+WASM_EXPORT bool tumble_rigid_body_set_user_data(world::World * world, uint32_t body, uint32_t low, uint32_t high) { return adapters::rigid_body::set_user_data(world, body, low, high); }
+WASM_EXPORT bool tumble_rigid_body_set_friction(world::World * world, uint32_t body, float friction) { return adapters::rigid_body::set_friction(world, body, friction); }
+WASM_EXPORT bool tumble_rigid_body_set_restitution(world::World * world, uint32_t body, float restitution) { return adapters::rigid_body::set_restitution(world, body, restitution); }
 WASM_EXPORT shapes::Shape * tumble_box_create(const box::BoxShapeSettings * settings) { return adapters::box::create(*settings); }
 WASM_EXPORT void tumble_box_destroy(shapes::Shape * shape) { adapters::box::destroy(shape); }
 WASM_EXPORT shapes::Shape * tumble_sphere_create(const sphere::SphereShapeSettings * settings) { return adapters::sphere::create(*settings); }

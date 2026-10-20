@@ -7,7 +7,7 @@
 import type { Instance } from '../module';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x8aea1cfd;
+export const SCHEMA_HASH = 0xed410096;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 208;
 
@@ -119,6 +119,251 @@ export const Quat = {
         out[1] = view.getFloat32(offset + 4, true);
         out[2] = view.getFloat32(offset + 8, true);
         out[3] = view.getFloat32(offset + 12, true);
+        return out;
+    },
+};
+
+export type Mat4 = [
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+];
+export const Mat4 = {
+    size: 64,
+    create(): Mat4 {
+        return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: Mat4, address: number): Mat4 {
+        const mem = wasm.mem;
+        out[0] = mem.f32[(address + 0) >> 2]!;
+        out[1] = mem.f32[(address + 4) >> 2]!;
+        out[2] = mem.f32[(address + 8) >> 2]!;
+        out[3] = mem.f32[(address + 12) >> 2]!;
+        out[4] = mem.f32[(address + 16) >> 2]!;
+        out[5] = mem.f32[(address + 20) >> 2]!;
+        out[6] = mem.f32[(address + 24) >> 2]!;
+        out[7] = mem.f32[(address + 28) >> 2]!;
+        out[8] = mem.f32[(address + 32) >> 2]!;
+        out[9] = mem.f32[(address + 36) >> 2]!;
+        out[10] = mem.f32[(address + 40) >> 2]!;
+        out[11] = mem.f32[(address + 44) >> 2]!;
+        out[12] = mem.f32[(address + 48) >> 2]!;
+        out[13] = mem.f32[(address + 52) >> 2]!;
+        out[14] = mem.f32[(address + 56) >> 2]!;
+        out[15] = mem.f32[(address + 60) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: Mat4): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value[0];
+        mem.f32[(address + 4) >> 2] = value[1];
+        mem.f32[(address + 8) >> 2] = value[2];
+        mem.f32[(address + 12) >> 2] = value[3];
+        mem.f32[(address + 16) >> 2] = value[4];
+        mem.f32[(address + 20) >> 2] = value[5];
+        mem.f32[(address + 24) >> 2] = value[6];
+        mem.f32[(address + 28) >> 2] = value[7];
+        mem.f32[(address + 32) >> 2] = value[8];
+        mem.f32[(address + 36) >> 2] = value[9];
+        mem.f32[(address + 40) >> 2] = value[10];
+        mem.f32[(address + 44) >> 2] = value[11];
+        mem.f32[(address + 48) >> 2] = value[12];
+        mem.f32[(address + 52) >> 2] = value[13];
+        mem.f32[(address + 56) >> 2] = value[14];
+        mem.f32[(address + 60) >> 2] = value[15];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: Mat4): void {
+        view.setFloat32(offset + 0, value[0], true);
+        view.setFloat32(offset + 4, value[1], true);
+        view.setFloat32(offset + 8, value[2], true);
+        view.setFloat32(offset + 12, value[3], true);
+        view.setFloat32(offset + 16, value[4], true);
+        view.setFloat32(offset + 20, value[5], true);
+        view.setFloat32(offset + 24, value[6], true);
+        view.setFloat32(offset + 28, value[7], true);
+        view.setFloat32(offset + 32, value[8], true);
+        view.setFloat32(offset + 36, value[9], true);
+        view.setFloat32(offset + 40, value[10], true);
+        view.setFloat32(offset + 44, value[11], true);
+        view.setFloat32(offset + 48, value[12], true);
+        view.setFloat32(offset + 52, value[13], true);
+        view.setFloat32(offset + 56, value[14], true);
+        view.setFloat32(offset + 60, value[15], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: Mat4, view: DataView, offset: number): Mat4 {
+        out[0] = view.getFloat32(offset + 0, true);
+        out[1] = view.getFloat32(offset + 4, true);
+        out[2] = view.getFloat32(offset + 8, true);
+        out[3] = view.getFloat32(offset + 12, true);
+        out[4] = view.getFloat32(offset + 16, true);
+        out[5] = view.getFloat32(offset + 20, true);
+        out[6] = view.getFloat32(offset + 24, true);
+        out[7] = view.getFloat32(offset + 28, true);
+        out[8] = view.getFloat32(offset + 32, true);
+        out[9] = view.getFloat32(offset + 36, true);
+        out[10] = view.getFloat32(offset + 40, true);
+        out[11] = view.getFloat32(offset + 44, true);
+        out[12] = view.getFloat32(offset + 48, true);
+        out[13] = view.getFloat32(offset + 52, true);
+        out[14] = view.getFloat32(offset + 56, true);
+        out[15] = view.getFloat32(offset + 60, true);
+        return out;
+    },
+};
+
+export type Box3 = { min: Vec3; max: Vec3 };
+export const Box3 = {
+    size: 24,
+    create(): Box3 {
+        return { min: Vec3.create(), max: Vec3.create() };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: Box3, address: number): Box3 {
+        const mem = wasm.mem;
+        out.min[0] = mem.f32[(address + 0) >> 2]!;
+        out.min[1] = mem.f32[(address + 4) >> 2]!;
+        out.min[2] = mem.f32[(address + 8) >> 2]!;
+        out.max[0] = mem.f32[(address + 12) >> 2]!;
+        out.max[1] = mem.f32[(address + 16) >> 2]!;
+        out.max[2] = mem.f32[(address + 20) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: Box3): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.min[0];
+        mem.f32[(address + 4) >> 2] = value.min[1];
+        mem.f32[(address + 8) >> 2] = value.min[2];
+        mem.f32[(address + 12) >> 2] = value.max[0];
+        mem.f32[(address + 16) >> 2] = value.max[1];
+        mem.f32[(address + 20) >> 2] = value.max[2];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: Box3): void {
+        view.setFloat32(offset + 0, value.min[0], true);
+        view.setFloat32(offset + 4, value.min[1], true);
+        view.setFloat32(offset + 8, value.min[2], true);
+        view.setFloat32(offset + 12, value.max[0], true);
+        view.setFloat32(offset + 16, value.max[1], true);
+        view.setFloat32(offset + 20, value.max[2], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: Box3, view: DataView, offset: number): Box3 {
+        out.min[0] = view.getFloat32(offset + 0, true);
+        out.min[1] = view.getFloat32(offset + 4, true);
+        out.min[2] = view.getFloat32(offset + 8, true);
+        out.max[0] = view.getFloat32(offset + 12, true);
+        out.max[1] = view.getFloat32(offset + 16, true);
+        out.max[2] = view.getFloat32(offset + 20, true);
+        return out;
+    },
+};
+
+export type MassProperties = { mass: number; inertia: Mat4 };
+export const MassProperties = {
+    size: 68,
+    create(): MassProperties {
+        return { mass: 0, inertia: Mat4.create() };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: MassProperties, address: number): MassProperties {
+        const mem = wasm.mem;
+        out.mass = mem.f32[(address + 0) >> 2]!;
+        out.inertia[0] = mem.f32[(address + 4) >> 2]!;
+        out.inertia[1] = mem.f32[(address + 8) >> 2]!;
+        out.inertia[2] = mem.f32[(address + 12) >> 2]!;
+        out.inertia[3] = mem.f32[(address + 16) >> 2]!;
+        out.inertia[4] = mem.f32[(address + 20) >> 2]!;
+        out.inertia[5] = mem.f32[(address + 24) >> 2]!;
+        out.inertia[6] = mem.f32[(address + 28) >> 2]!;
+        out.inertia[7] = mem.f32[(address + 32) >> 2]!;
+        out.inertia[8] = mem.f32[(address + 36) >> 2]!;
+        out.inertia[9] = mem.f32[(address + 40) >> 2]!;
+        out.inertia[10] = mem.f32[(address + 44) >> 2]!;
+        out.inertia[11] = mem.f32[(address + 48) >> 2]!;
+        out.inertia[12] = mem.f32[(address + 52) >> 2]!;
+        out.inertia[13] = mem.f32[(address + 56) >> 2]!;
+        out.inertia[14] = mem.f32[(address + 60) >> 2]!;
+        out.inertia[15] = mem.f32[(address + 64) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: MassProperties): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.mass;
+        mem.f32[(address + 4) >> 2] = value.inertia[0];
+        mem.f32[(address + 8) >> 2] = value.inertia[1];
+        mem.f32[(address + 12) >> 2] = value.inertia[2];
+        mem.f32[(address + 16) >> 2] = value.inertia[3];
+        mem.f32[(address + 20) >> 2] = value.inertia[4];
+        mem.f32[(address + 24) >> 2] = value.inertia[5];
+        mem.f32[(address + 28) >> 2] = value.inertia[6];
+        mem.f32[(address + 32) >> 2] = value.inertia[7];
+        mem.f32[(address + 36) >> 2] = value.inertia[8];
+        mem.f32[(address + 40) >> 2] = value.inertia[9];
+        mem.f32[(address + 44) >> 2] = value.inertia[10];
+        mem.f32[(address + 48) >> 2] = value.inertia[11];
+        mem.f32[(address + 52) >> 2] = value.inertia[12];
+        mem.f32[(address + 56) >> 2] = value.inertia[13];
+        mem.f32[(address + 60) >> 2] = value.inertia[14];
+        mem.f32[(address + 64) >> 2] = value.inertia[15];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: MassProperties): void {
+        view.setFloat32(offset + 0, value.mass, true);
+        view.setFloat32(offset + 4, value.inertia[0], true);
+        view.setFloat32(offset + 8, value.inertia[1], true);
+        view.setFloat32(offset + 12, value.inertia[2], true);
+        view.setFloat32(offset + 16, value.inertia[3], true);
+        view.setFloat32(offset + 20, value.inertia[4], true);
+        view.setFloat32(offset + 24, value.inertia[5], true);
+        view.setFloat32(offset + 28, value.inertia[6], true);
+        view.setFloat32(offset + 32, value.inertia[7], true);
+        view.setFloat32(offset + 36, value.inertia[8], true);
+        view.setFloat32(offset + 40, value.inertia[9], true);
+        view.setFloat32(offset + 44, value.inertia[10], true);
+        view.setFloat32(offset + 48, value.inertia[11], true);
+        view.setFloat32(offset + 52, value.inertia[12], true);
+        view.setFloat32(offset + 56, value.inertia[13], true);
+        view.setFloat32(offset + 60, value.inertia[14], true);
+        view.setFloat32(offset + 64, value.inertia[15], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: MassProperties, view: DataView, offset: number): MassProperties {
+        out.mass = view.getFloat32(offset + 0, true);
+        out.inertia[0] = view.getFloat32(offset + 4, true);
+        out.inertia[1] = view.getFloat32(offset + 8, true);
+        out.inertia[2] = view.getFloat32(offset + 12, true);
+        out.inertia[3] = view.getFloat32(offset + 16, true);
+        out.inertia[4] = view.getFloat32(offset + 20, true);
+        out.inertia[5] = view.getFloat32(offset + 24, true);
+        out.inertia[6] = view.getFloat32(offset + 28, true);
+        out.inertia[7] = view.getFloat32(offset + 32, true);
+        out.inertia[8] = view.getFloat32(offset + 36, true);
+        out.inertia[9] = view.getFloat32(offset + 40, true);
+        out.inertia[10] = view.getFloat32(offset + 44, true);
+        out.inertia[11] = view.getFloat32(offset + 48, true);
+        out.inertia[12] = view.getFloat32(offset + 52, true);
+        out.inertia[13] = view.getFloat32(offset + 56, true);
+        out.inertia[14] = view.getFloat32(offset + 60, true);
+        out.inertia[15] = view.getFloat32(offset + 64, true);
         return out;
     },
 };
@@ -888,9 +1133,11 @@ export type BodySettings = {
     collideKinematicVsNonDynamic: boolean;
     observesContacts: boolean;
     mass: number;
+    hasMassProperties: boolean;
+    massProperties: MassProperties;
 };
 export const BodySettings = {
-    size: 120,
+    size: 192,
     create(): BodySettings {
         return {
             shape: null,
@@ -922,6 +1169,8 @@ export const BodySettings = {
             collideKinematicVsNonDynamic: false,
             observesContacts: false,
             mass: 0,
+            hasMassProperties: false,
+            massProperties: MassProperties.create(),
         };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
@@ -961,6 +1210,24 @@ export const BodySettings = {
         out.collideKinematicVsNonDynamic = mem.u8[address + 112]! !== 0;
         out.observesContacts = mem.u8[address + 113]! !== 0;
         out.mass = mem.f32[(address + 116) >> 2]!;
+        out.hasMassProperties = mem.u8[address + 120]! !== 0;
+        out.massProperties.mass = mem.f32[(address + 124) >> 2]!;
+        out.massProperties.inertia[0] = mem.f32[(address + 128) >> 2]!;
+        out.massProperties.inertia[1] = mem.f32[(address + 132) >> 2]!;
+        out.massProperties.inertia[2] = mem.f32[(address + 136) >> 2]!;
+        out.massProperties.inertia[3] = mem.f32[(address + 140) >> 2]!;
+        out.massProperties.inertia[4] = mem.f32[(address + 144) >> 2]!;
+        out.massProperties.inertia[5] = mem.f32[(address + 148) >> 2]!;
+        out.massProperties.inertia[6] = mem.f32[(address + 152) >> 2]!;
+        out.massProperties.inertia[7] = mem.f32[(address + 156) >> 2]!;
+        out.massProperties.inertia[8] = mem.f32[(address + 160) >> 2]!;
+        out.massProperties.inertia[9] = mem.f32[(address + 164) >> 2]!;
+        out.massProperties.inertia[10] = mem.f32[(address + 168) >> 2]!;
+        out.massProperties.inertia[11] = mem.f32[(address + 172) >> 2]!;
+        out.massProperties.inertia[12] = mem.f32[(address + 176) >> 2]!;
+        out.massProperties.inertia[13] = mem.f32[(address + 180) >> 2]!;
+        out.massProperties.inertia[14] = mem.f32[(address + 184) >> 2]!;
+        out.massProperties.inertia[15] = mem.f32[(address + 188) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -1000,6 +1267,24 @@ export const BodySettings = {
         mem.u8[address + 112] = value.collideKinematicVsNonDynamic ? 1 : 0;
         mem.u8[address + 113] = value.observesContacts ? 1 : 0;
         mem.f32[(address + 116) >> 2] = value.mass;
+        mem.u8[address + 120] = value.hasMassProperties ? 1 : 0;
+        mem.f32[(address + 124) >> 2] = value.massProperties.mass;
+        mem.f32[(address + 128) >> 2] = value.massProperties.inertia[0];
+        mem.f32[(address + 132) >> 2] = value.massProperties.inertia[1];
+        mem.f32[(address + 136) >> 2] = value.massProperties.inertia[2];
+        mem.f32[(address + 140) >> 2] = value.massProperties.inertia[3];
+        mem.f32[(address + 144) >> 2] = value.massProperties.inertia[4];
+        mem.f32[(address + 148) >> 2] = value.massProperties.inertia[5];
+        mem.f32[(address + 152) >> 2] = value.massProperties.inertia[6];
+        mem.f32[(address + 156) >> 2] = value.massProperties.inertia[7];
+        mem.f32[(address + 160) >> 2] = value.massProperties.inertia[8];
+        mem.f32[(address + 164) >> 2] = value.massProperties.inertia[9];
+        mem.f32[(address + 168) >> 2] = value.massProperties.inertia[10];
+        mem.f32[(address + 172) >> 2] = value.massProperties.inertia[11];
+        mem.f32[(address + 176) >> 2] = value.massProperties.inertia[12];
+        mem.f32[(address + 180) >> 2] = value.massProperties.inertia[13];
+        mem.f32[(address + 184) >> 2] = value.massProperties.inertia[14];
+        mem.f32[(address + 188) >> 2] = value.massProperties.inertia[15];
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: BodySettings): void {
@@ -1037,6 +1322,24 @@ export const BodySettings = {
         view.setUint8(offset + 112, value.collideKinematicVsNonDynamic ? 1 : 0);
         view.setUint8(offset + 113, value.observesContacts ? 1 : 0);
         view.setFloat32(offset + 116, value.mass, true);
+        view.setUint8(offset + 120, value.hasMassProperties ? 1 : 0);
+        view.setFloat32(offset + 124, value.massProperties.mass, true);
+        view.setFloat32(offset + 128, value.massProperties.inertia[0], true);
+        view.setFloat32(offset + 132, value.massProperties.inertia[1], true);
+        view.setFloat32(offset + 136, value.massProperties.inertia[2], true);
+        view.setFloat32(offset + 140, value.massProperties.inertia[3], true);
+        view.setFloat32(offset + 144, value.massProperties.inertia[4], true);
+        view.setFloat32(offset + 148, value.massProperties.inertia[5], true);
+        view.setFloat32(offset + 152, value.massProperties.inertia[6], true);
+        view.setFloat32(offset + 156, value.massProperties.inertia[7], true);
+        view.setFloat32(offset + 160, value.massProperties.inertia[8], true);
+        view.setFloat32(offset + 164, value.massProperties.inertia[9], true);
+        view.setFloat32(offset + 168, value.massProperties.inertia[10], true);
+        view.setFloat32(offset + 172, value.massProperties.inertia[11], true);
+        view.setFloat32(offset + 176, value.massProperties.inertia[12], true);
+        view.setFloat32(offset + 180, value.massProperties.inertia[13], true);
+        view.setFloat32(offset + 184, value.massProperties.inertia[14], true);
+        view.setFloat32(offset + 188, value.massProperties.inertia[15], true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: BodySettings, view: DataView, offset: number): BodySettings {
@@ -1074,6 +1377,24 @@ export const BodySettings = {
         out.collideKinematicVsNonDynamic = view.getUint8(offset + 112) !== 0;
         out.observesContacts = view.getUint8(offset + 113) !== 0;
         out.mass = view.getFloat32(offset + 116, true);
+        out.hasMassProperties = view.getUint8(offset + 120) !== 0;
+        out.massProperties.mass = view.getFloat32(offset + 124, true);
+        out.massProperties.inertia[0] = view.getFloat32(offset + 128, true);
+        out.massProperties.inertia[1] = view.getFloat32(offset + 132, true);
+        out.massProperties.inertia[2] = view.getFloat32(offset + 136, true);
+        out.massProperties.inertia[3] = view.getFloat32(offset + 140, true);
+        out.massProperties.inertia[4] = view.getFloat32(offset + 144, true);
+        out.massProperties.inertia[5] = view.getFloat32(offset + 148, true);
+        out.massProperties.inertia[6] = view.getFloat32(offset + 152, true);
+        out.massProperties.inertia[7] = view.getFloat32(offset + 156, true);
+        out.massProperties.inertia[8] = view.getFloat32(offset + 160, true);
+        out.massProperties.inertia[9] = view.getFloat32(offset + 164, true);
+        out.massProperties.inertia[10] = view.getFloat32(offset + 168, true);
+        out.massProperties.inertia[11] = view.getFloat32(offset + 172, true);
+        out.massProperties.inertia[12] = view.getFloat32(offset + 176, true);
+        out.massProperties.inertia[13] = view.getFloat32(offset + 180, true);
+        out.massProperties.inertia[14] = view.getFloat32(offset + 184, true);
+        out.massProperties.inertia[15] = view.getFloat32(offset + 188, true);
         return out;
     },
 };
@@ -1587,6 +1908,11 @@ export const RigidBody = {
         return r !== 0;
     },
 
+    exists(world: World, body: number): boolean {
+        const r = wasm.exports.tumble_rigid_body_exists(world, body);
+        return r !== 0;
+    },
+
     getPosition(out: Vec3, world: World, body: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_rigid_body_get_position(scratch + 0, world, body);
@@ -1601,6 +1927,21 @@ export const RigidBody = {
         return r !== 0;
     },
 
+    getTransform(outPosition: Vec3, outQuaternion: Quat, world: World, body: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_rigid_body_get_transform(scratch + 0, scratch + 16, world, body);
+        Vec3.read(outPosition, scratch + 0);
+        Quat.read(outQuaternion, scratch + 16);
+        return r !== 0;
+    },
+
+    getCenterOfMassPosition(out: Vec3, world: World, body: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_rigid_body_get_center_of_mass_position(scratch + 0, world, body);
+        Vec3.read(out, scratch + 0);
+        return r !== 0;
+    },
+
     getLinearVelocity(out: Vec3, world: World, body: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_rigid_body_get_linear_velocity(scratch + 0, world, body);
@@ -1608,10 +1949,225 @@ export const RigidBody = {
         return r !== 0;
     },
 
+    getAngularVelocity(out: Vec3, world: World, body: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_rigid_body_get_angular_velocity(scratch + 0, world, body);
+        Vec3.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    getVelocityAtPoint(out: Vec3, world: World, body: number, point: Vec3): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 16, point);
+        const r = wasm.exports.tumble_rigid_body_get_velocity_at_point(scratch + 0, world, body, scratch + 16);
+        Vec3.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    getAabb(out: Box3, world: World, body: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_rigid_body_get_aabb(scratch + 0, world, body);
+        Box3.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    getMass(world: World, body: number): number {
+        const r = wasm.exports.tumble_rigid_body_get_mass(world, body);
+        return r;
+    },
+
+    getMotionType(world: World, body: number): number {
+        const r = wasm.exports.tumble_rigid_body_get_motion_type(world, body);
+        return r;
+    },
+
+    getObjectLayer(world: World, body: number): number {
+        const r = wasm.exports.tumble_rigid_body_get_object_layer(world, body);
+        return r;
+    },
+
+    getUserDataLow(world: World, body: number): number {
+        const r = wasm.exports.tumble_rigid_body_get_user_data_low(world, body);
+        return r;
+    },
+
+    getUserDataHigh(world: World, body: number): number {
+        const r = wasm.exports.tumble_rigid_body_get_user_data_high(world, body);
+        return r;
+    },
+
+    getShape(world: World, body: number): Shape | null {
+        const r = wasm.exports.tumble_rigid_body_get_shape(world, body);
+        return r === 0 ? null : (r as Shape);
+    },
+
+    isSleeping(world: World, body: number): boolean {
+        const r = wasm.exports.tumble_rigid_body_is_sleeping(world, body);
+        return r !== 0;
+    },
+
+    readTransforms(world: World, ids: Pointer<'u32'>, count: number, out: Pointer<'f32'>): number {
+        const r = wasm.exports.tumble_rigid_body_read_transforms(world, ids, count, out);
+        return r;
+    },
+
+    setPosition(world: World, body: number, position: Vec3, wake: boolean): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, position);
+        const r = wasm.exports.tumble_rigid_body_set_position(world, body, scratch + 0, wake ? 1 : 0);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    setQuaternion(world: World, body: number, quaternion: Quat, wake: boolean): boolean {
+        const scratch = wasm.scratch;
+        Quat.write(scratch + 0, quaternion);
+        const r = wasm.exports.tumble_rigid_body_set_quaternion(world, body, scratch + 0, wake ? 1 : 0);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    setTransform(world: World, body: number, position: Vec3, quaternion: Quat, wake: boolean): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, position);
+        Quat.write(scratch + 16, quaternion);
+        const r = wasm.exports.tumble_rigid_body_set_transform(world, body, scratch + 0, scratch + 16, wake ? 1 : 0);
+        wasm.grew();
+        return r !== 0;
+    },
+
     setLinearVelocity(world: World, body: number, velocity: Vec3): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, velocity);
         const r = wasm.exports.tumble_rigid_body_set_linear_velocity(world, body, scratch + 0);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    setAngularVelocity(world: World, body: number, velocity: Vec3): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, velocity);
+        const r = wasm.exports.tumble_rigid_body_set_angular_velocity(world, body, scratch + 0);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    addLinearVelocity(world: World, body: number, velocity: Vec3): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, velocity);
+        const r = wasm.exports.tumble_rigid_body_add_linear_velocity(world, body, scratch + 0);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    addAngularVelocity(world: World, body: number, velocity: Vec3): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, velocity);
+        const r = wasm.exports.tumble_rigid_body_add_angular_velocity(world, body, scratch + 0);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    addForce(world: World, body: number, force: Vec3, wake: boolean): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, force);
+        const r = wasm.exports.tumble_rigid_body_add_force(world, body, scratch + 0, wake ? 1 : 0);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    addTorque(world: World, body: number, torque: Vec3, wake: boolean): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, torque);
+        const r = wasm.exports.tumble_rigid_body_add_torque(world, body, scratch + 0, wake ? 1 : 0);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    addForceAtPosition(world: World, body: number, force: Vec3, position: Vec3, wake: boolean): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, force);
+        Vec3.write(scratch + 16, position);
+        const r = wasm.exports.tumble_rigid_body_add_force_at_position(world, body, scratch + 0, scratch + 16, wake ? 1 : 0);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    addImpulse(world: World, body: number, impulse: Vec3): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, impulse);
+        const r = wasm.exports.tumble_rigid_body_add_impulse(world, body, scratch + 0);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    addImpulseAtPosition(world: World, body: number, impulse: Vec3, position: Vec3): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, impulse);
+        Vec3.write(scratch + 16, position);
+        const r = wasm.exports.tumble_rigid_body_add_impulse_at_position(world, body, scratch + 0, scratch + 16);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    addAngularImpulse(world: World, body: number, impulse: Vec3): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, impulse);
+        const r = wasm.exports.tumble_rigid_body_add_angular_impulse(world, body, scratch + 0);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    setMotionType(world: World, body: number, motionType: number, wake: boolean): boolean {
+        const r = wasm.exports.tumble_rigid_body_set_motion_type(world, body, motionType, wake ? 1 : 0);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    setObjectLayer(world: World, body: number, objectLayer: number): boolean {
+        const r = wasm.exports.tumble_rigid_body_set_object_layer(world, body, objectLayer);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    setShape(world: World, body: number, shape: Shape): boolean {
+        const r = wasm.exports.tumble_rigid_body_set_shape(world, body, shape);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    moveKinematic(world: World, body: number, position: Vec3, quaternion: Quat, deltaTime: number): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, position);
+        Quat.write(scratch + 16, quaternion);
+        const r = wasm.exports.tumble_rigid_body_move_kinematic(world, body, scratch + 0, scratch + 16, deltaTime);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    sleep(world: World, body: number): boolean {
+        const r = wasm.exports.tumble_rigid_body_sleep(world, body);
+        return r !== 0;
+    },
+
+    wake(world: World, body: number): boolean {
+        const r = wasm.exports.tumble_rigid_body_wake(world, body);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    setUserData(world: World, body: number, low: number, high: number): boolean {
+        const r = wasm.exports.tumble_rigid_body_set_user_data(world, body, low, high);
+        return r !== 0;
+    },
+
+    setFriction(world: World, body: number, friction: number): boolean {
+        const r = wasm.exports.tumble_rigid_body_set_friction(world, body, friction);
+        return r !== 0;
+    },
+
+    setRestitution(world: World, body: number, restitution: number): boolean {
+        const r = wasm.exports.tumble_rigid_body_set_restitution(world, body, restitution);
         return r !== 0;
     },
 };
@@ -1690,10 +2246,51 @@ export type WasmExports = {
     tumble_rigid_body_default_settings(out: number): void;
     tumble_rigid_body_create(world: number, settings: number): number;
     tumble_rigid_body_remove(world: number, body: number): number;
+    tumble_rigid_body_exists(world: number, body: number): number;
     tumble_rigid_body_get_position(out: number, world: number, body: number): number;
     tumble_rigid_body_get_quaternion(out: number, world: number, body: number): number;
+    tumble_rigid_body_get_transform(outPosition: number, outQuaternion: number, world: number, body: number): number;
+    tumble_rigid_body_get_center_of_mass_position(out: number, world: number, body: number): number;
     tumble_rigid_body_get_linear_velocity(out: number, world: number, body: number): number;
+    tumble_rigid_body_get_angular_velocity(out: number, world: number, body: number): number;
+    tumble_rigid_body_get_velocity_at_point(out: number, world: number, body: number, point: number): number;
+    tumble_rigid_body_get_aabb(out: number, world: number, body: number): number;
+    tumble_rigid_body_get_mass(world: number, body: number): number;
+    tumble_rigid_body_get_motion_type(world: number, body: number): number;
+    tumble_rigid_body_get_object_layer(world: number, body: number): number;
+    tumble_rigid_body_get_user_data_low(world: number, body: number): number;
+    tumble_rigid_body_get_user_data_high(world: number, body: number): number;
+    tumble_rigid_body_get_shape(world: number, body: number): number;
+    tumble_rigid_body_is_sleeping(world: number, body: number): number;
+    tumble_rigid_body_read_transforms(world: number, ids: number, count: number, out: number): number;
+    tumble_rigid_body_set_position(world: number, body: number, position: number, wake: number): number;
+    tumble_rigid_body_set_quaternion(world: number, body: number, quaternion: number, wake: number): number;
+    tumble_rigid_body_set_transform(world: number, body: number, position: number, quaternion: number, wake: number): number;
     tumble_rigid_body_set_linear_velocity(world: number, body: number, velocity: number): number;
+    tumble_rigid_body_set_angular_velocity(world: number, body: number, velocity: number): number;
+    tumble_rigid_body_add_linear_velocity(world: number, body: number, velocity: number): number;
+    tumble_rigid_body_add_angular_velocity(world: number, body: number, velocity: number): number;
+    tumble_rigid_body_add_force(world: number, body: number, force: number, wake: number): number;
+    tumble_rigid_body_add_torque(world: number, body: number, torque: number, wake: number): number;
+    tumble_rigid_body_add_force_at_position(world: number, body: number, force: number, position: number, wake: number): number;
+    tumble_rigid_body_add_impulse(world: number, body: number, impulse: number): number;
+    tumble_rigid_body_add_impulse_at_position(world: number, body: number, impulse: number, position: number): number;
+    tumble_rigid_body_add_angular_impulse(world: number, body: number, impulse: number): number;
+    tumble_rigid_body_set_motion_type(world: number, body: number, motionType: number, wake: number): number;
+    tumble_rigid_body_set_object_layer(world: number, body: number, objectLayer: number): number;
+    tumble_rigid_body_set_shape(world: number, body: number, shape: number): number;
+    tumble_rigid_body_move_kinematic(
+        world: number,
+        body: number,
+        position: number,
+        quaternion: number,
+        deltaTime: number,
+    ): number;
+    tumble_rigid_body_sleep(world: number, body: number): number;
+    tumble_rigid_body_wake(world: number, body: number): number;
+    tumble_rigid_body_set_user_data(world: number, body: number, low: number, high: number): number;
+    tumble_rigid_body_set_friction(world: number, body: number, friction: number): number;
+    tumble_rigid_body_set_restitution(world: number, body: number, restitution: number): number;
     tumble_box_create(settings: number): number;
     tumble_box_destroy(shape: number): void;
     tumble_sphere_create(settings: number): number;

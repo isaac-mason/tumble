@@ -4,6 +4,7 @@
 
 #include "tumble/math/types.h"
 #include "tumble/physics/body/body_id.h"
+#include "tumble/physics/body/mass_properties.h"
 #include "tumble/physics/shapes/box.h"
 #include "tumble/physics/shapes/sphere.h"
 #include "tumble/physics/world.h"
@@ -158,6 +159,9 @@ struct BodySettings {
     bool collide_kinematic_vs_non_dynamic;
     bool observes_contacts;
     float mass;
+    /** mass_properties in place of the shape's, for shapes they cannot be derived from */
+    bool has_mass_properties;
+    tumble::mass_properties::MassProperties mass_properties;
 };
 
 namespace rigid_body {
@@ -167,10 +171,57 @@ void default_settings(BodySettings &out);
 /** the new body's id, or INVALID_BODY_ID (error set) when the allocator fails */
 tumble::body_id::BodyId create(tumble::world::World *world, const BodySettings &settings);
 bool remove(tumble::world::World *world, tumble::body_id::BodyId id);
+/** whether the id names a live body */
+bool exists(tumble::world::World *world, tumble::body_id::BodyId id);
+
+// readers: false (out unchanged) or 0 when the id names no body
 bool get_position(tumble::Float3 &out, tumble::world::World *world, tumble::body_id::BodyId id);
 bool get_quaternion(tumble::Float4 &out, tumble::world::World *world, tumble::body_id::BodyId id);
+bool get_transform(tumble::Float3 &out_position, tumble::Float4 &out_quaternion, tumble::world::World *world, tumble::body_id::BodyId id);
+bool get_center_of_mass_position(tumble::Float3 &out, tumble::world::World *world, tumble::body_id::BodyId id);
 bool get_linear_velocity(tumble::Float3 &out, tumble::world::World *world, tumble::body_id::BodyId id);
+bool get_angular_velocity(tumble::Float3 &out, tumble::world::World *world, tumble::body_id::BodyId id);
+bool get_velocity_at_point(tumble::Float3 &out, tumble::world::World *world, tumble::body_id::BodyId id, const tumble::Float3 &point);
+bool get_aabb(tumble::Box3f &out, tumble::world::World *world, tumble::body_id::BodyId id);
+float get_mass(tumble::world::World *world, tumble::body_id::BodyId id);
+uint32_t get_motion_type(tumble::world::World *world, tumble::body_id::BodyId id);
+uint32_t get_object_layer(tumble::world::World *world, tumble::body_id::BodyId id);
+uint32_t get_user_data_low(tumble::world::World *world, tumble::body_id::BodyId id);
+uint32_t get_user_data_high(tumble::world::World *world, tumble::body_id::BodyId id);
+tumble::shapes::Shape *get_shape(tumble::world::World *world, tumble::body_id::BodyId id);
+bool is_sleeping(tumble::world::World *world, tumble::body_id::BodyId id);
+/**
+ * the poses of `count` bodies into out, seven floats each (position, then quaternion), in one call; a body that is gone
+ * leaves its seven as they were. how many were live
+ */
+uint32_t read_transforms(tumble::world::World *world, const uint32_t *ids, uint32_t count, float *out);
+
+// writers: false when the id names no body
+bool set_position(tumble::world::World *world, tumble::body_id::BodyId id, const tumble::Float3 &position, bool wake);
+bool set_quaternion(tumble::world::World *world, tumble::body_id::BodyId id, const tumble::Float4 &quaternion, bool wake);
+bool set_transform(tumble::world::World *world, tumble::body_id::BodyId id, const tumble::Float3 &position, const tumble::Float4 &quaternion,
+                   bool wake);
 bool set_linear_velocity(tumble::world::World *world, tumble::body_id::BodyId id, const tumble::Float3 &velocity);
+bool set_angular_velocity(tumble::world::World *world, tumble::body_id::BodyId id, const tumble::Float3 &velocity);
+bool add_linear_velocity(tumble::world::World *world, tumble::body_id::BodyId id, const tumble::Float3 &velocity);
+bool add_angular_velocity(tumble::world::World *world, tumble::body_id::BodyId id, const tumble::Float3 &velocity);
+bool add_force(tumble::world::World *world, tumble::body_id::BodyId id, const tumble::Float3 &force, bool wake);
+bool add_torque(tumble::world::World *world, tumble::body_id::BodyId id, const tumble::Float3 &torque, bool wake);
+bool add_force_at_position(tumble::world::World *world, tumble::body_id::BodyId id, const tumble::Float3 &force, const tumble::Float3 &position,
+                           bool wake);
+bool add_impulse(tumble::world::World *world, tumble::body_id::BodyId id, const tumble::Float3 &impulse);
+bool add_impulse_at_position(tumble::world::World *world, tumble::body_id::BodyId id, const tumble::Float3 &impulse, const tumble::Float3 &position);
+bool add_angular_impulse(tumble::world::World *world, tumble::body_id::BodyId id, const tumble::Float3 &impulse);
+bool set_motion_type(tumble::world::World *world, tumble::body_id::BodyId id, uint32_t motion_type, bool wake);
+bool set_object_layer(tumble::world::World *world, tumble::body_id::BodyId id, uint32_t object_layer);
+bool set_shape(tumble::world::World *world, tumble::body_id::BodyId id, tumble::shapes::Shape *shape);
+bool move_kinematic(tumble::world::World *world, tumble::body_id::BodyId id, const tumble::Float3 &position, const tumble::Float4 &quaternion,
+                    float delta_time);
+bool sleep(tumble::world::World *world, tumble::body_id::BodyId id);
+bool wake(tumble::world::World *world, tumble::body_id::BodyId id);
+bool set_user_data(tumble::world::World *world, tumble::body_id::BodyId id, uint32_t low, uint32_t high);
+bool set_friction(tumble::world::World *world, tumble::body_id::BodyId id, float friction);
+bool set_restitution(tumble::world::World *world, tumble::body_id::BodyId id, float restitution);
 
 }  // namespace rigid_body
 
