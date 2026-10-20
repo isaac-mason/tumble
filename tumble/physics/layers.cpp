@@ -20,6 +20,27 @@ void release(Layers &layers) {
     layers.object_layers = 0;
 }
 
+template <typename T>
+static bool copy_table(collections::Vec<T> &out, const collections::Vec<T> &from) {
+    if (!out.reserve(from.length)) return false;
+    for (uint32_t i = 0; i < from.length; i++) out.data[i] = from.data[i];
+    out.length = from.length;
+    return true;
+}
+
+bool copy(Layers &out, const Layers &from) {
+    release(out);
+    if (!copy_table(out.object_layer_to_broadphase_layer, from.object_layer_to_broadphase_layer) ||
+        !copy_table(out.object_layer_pairs, from.object_layer_pairs) || !copy_table(out.object_vs_broadphase, from.object_vs_broadphase) ||
+        !copy_table(out.broadphase_pairs, from.broadphase_pairs)) {
+        release(out);
+        return false;
+    }
+    out.broadphase_layers = from.broadphase_layers;
+    out.object_layers = from.object_layers;
+    return true;
+}
+
 /** the tables are row-major on the current counts; a new row or column means rebuilding them. */
 static void resize_tables(Layers &layers, uint32_t object_layers, uint32_t broadphase_layers) {
     const uint32_t old_objects = layers.object_layers;

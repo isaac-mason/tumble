@@ -30,6 +30,7 @@ static void make_scene(Scene &scene, const Float3 &velocity) {
     const uint32_t object_layer = world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
     world_settings::enable_collision(settings, object_layer, object_layer);
     scene.world = world::create(settings);
+    world_settings::release(settings);
 
     scene.ball_shape = sphere::create({.radius = RADIUS, .density = 1000.0f});
     scene.ground_shape = box::create({.half_extents = {5, 1, 5}});

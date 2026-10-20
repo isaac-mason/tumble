@@ -14,8 +14,12 @@ namespace {
 
 constexpr float SPEC = 0.02f;
 
-/** a world over `settings`, which it takes */
-world::World &make_world(world_settings::WorldSettings &settings) { return *world::create(settings); }
+/** a world over `settings`, which it releases */
+world::World &make_world(world_settings::WorldSettings &settings) {
+    world::World *world = world::create(settings);
+    world_settings::release(settings);
+    return *world;
+}
 
 /** a world with a single object layer that collides with itself */
 world::World &make_single_layer_world(uint32_t &layer) {

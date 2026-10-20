@@ -94,6 +94,7 @@ WorldScene make_floor_scene() {
     WorldScene scene = {};
     world_settings::WorldSettings settings = make_world_test_settings(scene.moving, scene.not_moving);
     scene.world = world::create(settings);
+    world_settings::release(settings);
     add_body(scene, box::create({.half_extents = {10.0f, 0.5f, 10.0f}}), motion_type::MOTION_STATIC, {0.0f, -0.5f, 0.0f});
     return scene;
 }

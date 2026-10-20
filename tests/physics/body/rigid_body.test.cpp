@@ -29,6 +29,7 @@ static Fixture make_fixture() {
     f.moving = world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
     world_settings::enable_collision(settings, f.moving, f.moving);
     f.world = world::create(settings);
+    world_settings::release(settings);
     return f;
 }
 

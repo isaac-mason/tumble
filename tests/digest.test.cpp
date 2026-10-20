@@ -149,6 +149,7 @@ void hash_pile(Hash &hash) {
     WorldScene scene = {};
     world_settings::WorldSettings settings = make_world_test_settings(scene.moving, scene.not_moving);
     scene.world = world::create(settings);
+    world_settings::release(settings);
     add_body(scene, make_ground(), motion_type::MOTION_STATIC, {0.0f, 0.0f, 0.0f});
 
     // a small hull walks every point; a large one climbs its adjacency

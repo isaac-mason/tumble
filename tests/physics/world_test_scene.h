@@ -41,6 +41,7 @@ inline WorldScene make_world_scene(TestCtx &ctx, void (*tune)(world_settings::Wo
     world_settings::WorldSettings settings = make_world_test_settings(scene.moving, scene.not_moving);
     if (tune != nullptr) tune(settings);
     scene.world = world::create(settings);
+    world_settings::release(settings);
     CHECK(ctx, scene.world != nullptr);
     return scene;
 }

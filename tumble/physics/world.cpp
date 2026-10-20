@@ -16,6 +16,11 @@ World *create(const world_settings::WorldSettings &settings) {
     World *world = util::create<World>();
     if (world == nullptr) return nullptr;
     world->settings = settings;
+    world->settings.layers = {};
+    if (!layers::copy(world->settings.layers, settings.layers)) {
+        util::destroy(world);
+        return nullptr;
+    }
     world->broadphase = broadphase::init(world->settings.layers);
     world->pairs = pairs::create();
     world->bodies = bodies::init();

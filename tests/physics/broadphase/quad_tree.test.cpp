@@ -36,6 +36,7 @@ World make_world() {
     world_settings::WorldSettings settings = world_settings::create();
     world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
     world.physics = world::create(settings);
+    world_settings::release(settings);
     world.filter = filter::create(world.physics->settings.layers);
     world.tree = quad_tree::create();
     return world;

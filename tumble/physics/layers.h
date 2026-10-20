@@ -25,6 +25,8 @@ struct Layers {
 /** an empty set of layers; a zeroed struct is the same. */
 inline Layers create() { return {}; }
 void release(Layers &layers);
+/** out becomes a copy of `from` (out's own tables released first); false (error set) when the allocator fails, out empty */
+bool copy(Layers &out, const Layers &from);
 
 /** adds a broadphase layer and returns its index. */
 uint32_t add_broadphase_layer(Layers &layers);

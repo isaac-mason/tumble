@@ -7,7 +7,7 @@
 
 using rigid_body::RigidBody;
 
-void test_world_create_takes_settings_and_destroy_frees(TestCtx &ctx) {
+void test_world_create_copies_settings_and_destroy_frees(TestCtx &ctx) {
     dispatch::init();
     const size_t bytes_before = util::allocated_bytes();
     const size_t blocks_before = util::allocated_blocks();
@@ -16,9 +16,10 @@ void test_world_create_takes_settings_and_destroy_frees(TestCtx &ctx) {
     world_settings::WorldSettings settings = make_world_test_settings(moving, not_moving);
     settings.solver.velocity_iterations = 7;
     world::World *world = world::create(settings);
+    world_settings::release(settings);
     CHECK(ctx, world != nullptr);
 
-    // the defaults, the tuned value, and the layers moved in
+    // the defaults, the tuned value, and the layers, copied: the settings were released before any of this
     CHECK(ctx, world->settings.solver.velocity_iterations == 7);
     CHECK(ctx, world->settings.solver.position_iterations == 2);
     CHECK(ctx, world->settings.gravity.y == -9.81f && world->settings.gravity_enabled);
@@ -134,4 +135,21 @@ void test_world_contacts_removed_the_step_after_body_removal(TestCtx &ctx) {
     step_world(world);
     CHECK(ctx, world.events.contacts_removed.length == 0);
     release_world_scene(scene);
+}
+
+void test_world_one_settings_makes_two_worlds(TestCtx &ctx) {
+    dispatch::init();
+    uint32_t moving, not_moving;
+    world_settings::WorldSettings settings = make_world_test_settings(moving, not_moving);
+    world::World *first = world::create(settings);
+    world_settings::disable_collision(settings, moving, not_moving);
+    world::World *second = world::create(settings);
+    world_settings::release(settings);
+
+    // each world kept the layers as they were when it was made
+    CHECK(ctx, layers::object_layer_collides_with_object_layer(first->settings.layers, moving, not_moving));
+    CHECK(ctx, !layers::object_layer_collides_with_object_layer(second->settings.layers, moving, not_moving));
+    CHECK(ctx, first->settings.layers.object_layer_pairs.data != second->settings.layers.object_layer_pairs.data);
+    world::destroy(first);
+    world::destroy(second);
 }

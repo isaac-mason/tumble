@@ -38,6 +38,7 @@ Scene make_scene() {
     world_settings::enable_collision(settings, scene.moving, scene.moving);
     world_settings::enable_collision(settings, scene.moving, scene.not_moving);
     scene.world = world::create(settings);
+    world_settings::release(settings);
     scene.filter = filter::create(scene.world->settings.layers);
     return scene;
 }

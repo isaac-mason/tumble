@@ -877,6 +877,7 @@ void test_update_determinism_two_worlds_bit_identical(TestCtx &ctx) {
     {
         world_settings::WorldSettings settings = make_world_test_settings(scene_b.moving, scene_b.not_moving);
         scene_b.world = world::create(settings);
+        world_settings::release(settings);
         WorldScene &scene = scene_b;
         add_floor(scene);
         for (uint32_t i = 0; i < 12; i++) {
@@ -967,6 +968,7 @@ WorldScene make_single_layer_world() {
     world_settings::enable_collision(settings, layer, layer);
     WorldScene scene = {};
     scene.world = world::create(settings);
+    world_settings::release(settings);
     scene.moving = layer;
     scene.not_moving = layer;
     return scene;

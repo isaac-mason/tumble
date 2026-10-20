@@ -28,6 +28,7 @@ inline ContactScene make_contact_scene() {
     world_settings::WorldSettings settings = world_settings::create();
     scene.layer = world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
     scene.world = world::create(settings);
+    world_settings::release(settings);
     return scene;
 }
 
