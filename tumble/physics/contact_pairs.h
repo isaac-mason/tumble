@@ -13,9 +13,13 @@ TUMBLE_NAMESPACE_BEGIN
 namespace world {
 struct World;
 }
+namespace kcc {
+struct KCC;
+}
 
 // the pairs of body sub shapes in contact that a body observing contacts is a side of: a stable handle while a pair
-// lives, added / persisted / removed each step, recorded from the world's contact events
+// lives, added / persisted / removed each frame. a frame is begin, then the records of everything that moved in it
+// (each world step's contact events, each character's move), then end
 namespace contact_pairs {
 
 struct Side {
@@ -97,6 +101,11 @@ void release(ContactPairs &pairs);
 void begin(world::World &world);
 /** the world's contact events from these indices of contacts_added and contacts_persisted on */
 void record_world_contacts(world::World &world, uint32_t first_added, uint32_t first_persisted);
+/**
+ * the character's collisions from its last move or refresh, its inner body as side a (sub shape empty), the normal from
+ * the character into the body. a character without an inner body has no id in the world and records nothing
+ */
+void record_character_contacts(world::World &world, const kcc::KCC &character);
 /** the step's bookkeeping ends: the live pairs it did not record are removed */
 void end(world::World &world);
 

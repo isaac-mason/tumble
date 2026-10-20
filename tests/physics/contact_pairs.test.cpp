@@ -1,6 +1,8 @@
 #include "tumble/physics/contact_pairs.h"
 
+#include "tumble/physics/character/kcc.h"
 #include "tumble/physics/shapes/box.h"
+#include "tumble/physics/shapes/capsule.h"
 #include "world_test_scene.h"
 
 using contact_pairs::ContactPair;
@@ -183,5 +185,118 @@ void test_contact_pairs_a_body_made_again_is_a_new_pair(TestCtx &ctx) {
     step(*s.scene.world);
     CHECK(ctx, pairs.active.length == 1 && active_pair(pairs, 0).added && count_pairs(pairs, *again, *s.ground) == 1);
     CHECK(ctx, pairs.removed.length == 1);
+    release_scene(s);
+}
+
+namespace {
+
+/** a capsule character standing on the ground at x, with an inner body when `inner` and observing when `observes` */
+kcc::KCC *add_character(GroundScene &s, float x, bool inner, bool observes) {
+    kcc::KCCSettings settings;
+    settings.shape = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
+    settings.observes_contacts = observes;
+    settings.user_data = 0xc0ffeeull;
+    if (inner) {
+        settings.inner_rigid_body_shape = settings.shape;
+        settings.inner_rigid_body_object_layer = s.scene.moving;
+    }
+    kcc::KCC *character = kcc::create(settings, vec3f::make(x, 1.8f, 0.0f), quatf::identity());
+    kcc::add(*character, *s.scene.world);
+    return character;
+}
+
+/** a frame of the character alone: its contacts refreshed and recorded */
+void character_frame(world::World &world, kcc::KCC &character, const filter::Filter &filter) {
+    contact_pairs::begin(world);
+    kcc::refresh_contacts(character, world, filter, nullptr);
+    contact_pairs::record_character_contacts(world, character);
+    contact_pairs::end(world);
+}
+
+const ContactPair *pair_of(const ContactPairs &pairs, body_id::BodyId a, body_id::BodyId b) {
+    for (uint32_t i = 0; i < pairs.active.length; i++) {
+        const ContactPair &pair = pairs.pairs[pairs.active[i]];
+        if (pair.a.body_id == a && pair.b.body_id == b) return &pair;
+    }
+    return nullptr;
+}
+
+}  // namespace
+
+void test_contact_pairs_a_character_records_through_its_inner_body(TestCtx &ctx) {
+    GroundScene s = make_scene(ctx);
+    world::World &world = *s.scene.world;
+    // a wall whose face is at x = 0.5, the character touching it from the left
+    RigidBody *wall = add_body(s.scene, box::create({.half_extents = {0.5f, 2.0f, 2.0f}}), motion_type::MOTION_STATIC, {1.0f, 2.0f, 0.0f});
+    kcc::KCC *character = add_character(s, 0.2f, true, true);
+    filter::Filter filter = filter::create(world.settings.layers);
+    step_world(world);
+
+    character_frame(world, *character, filter);
+    const ContactPairs &pairs = world.contact_pairs;
+    const ContactPair *with_wall = pair_of(pairs, character->inner_rigid_body_id, wall->id);
+    const ContactPair *with_ground = pair_of(pairs, character->inner_rigid_body_id, s.ground->id);
+    CHECK(ctx, with_wall != nullptr && with_ground != nullptr);
+    if (with_wall != nullptr) {
+        // the character is side a, its inner body's user data on it; the normal runs from it into the wall
+        CHECK(ctx, with_wall->added && with_wall->a.sub_shape_id == sub_shape::EMPTY_SUB_SHAPE_ID && with_wall->a.user_data == 0xc0ffeeull);
+        CHECK(ctx, with_wall->normal.x > 0.99f);
+        CHECK_NEAR(ctx, with_wall->point.x, 0.5f, 0.02f);
+    }
+    if (with_ground != nullptr) CHECK(ctx, with_ground->normal.y < -0.99f);
+
+    // the next frame finds them again: persisted, the handles kept
+    const uint32_t wall_handle = with_wall != nullptr ? (uint32_t)(with_wall - pairs.pairs.data) : 0;
+    character_frame(world, *character, filter);
+    with_wall = pair_of(pairs, character->inner_rigid_body_id, wall->id);
+    CHECK(ctx, with_wall != nullptr && !with_wall->added && (uint32_t)(with_wall - pairs.pairs.data) == wall_handle);
+
+    // stepped away from the wall: its pair is removed, the ground's stays
+    kcc::set_position(*character, world, vec3f::make(-3.0f, 1.8f, 0.0f));
+    character_frame(world, *character, filter);
+    CHECK(ctx, pair_of(pairs, character->inner_rigid_body_id, wall->id) == nullptr);
+    CHECK(ctx, pairs.removed.length == 1 && pairs.removed[0] == wall_handle);
+    CHECK(ctx, pair_of(pairs, character->inner_rigid_body_id, s.ground->id) != nullptr);
+
+    filter::release(filter);
+    kcc::remove(*character, world);
+    kcc::destroy(character);
+    release_scene(s);
+}
+
+void test_contact_pairs_a_character_records_only_when_a_side_observes(TestCtx &ctx) {
+    GroundScene s = make_scene(ctx);
+    world::World &world = *s.scene.world;
+    filter::Filter filter = filter::create(world.settings.layers);
+
+    // no inner body: no id in the world, nothing recorded
+    kcc::KCC *bodiless = add_character(s, -4.0f, false, true);
+    // an inner body, but neither it nor the ground observes
+    kcc::KCC *unobserved = add_character(s, 0.0f, true, false);
+    step_world(world);
+    contact_pairs::begin(world);
+    kcc::refresh_contacts(*bodiless, world, filter, nullptr);
+    kcc::refresh_contacts(*unobserved, world, filter, nullptr);
+    CHECK(ctx, bodiless->contacts.length > 0 && unobserved->contacts.length > 0);
+    contact_pairs::record_character_contacts(world, *bodiless);
+    contact_pairs::record_character_contacts(world, *unobserved);
+    contact_pairs::end(world);
+    CHECK(ctx, world.contact_pairs.active.length == 0);
+
+    // a body that observes is enough on its own
+    RigidBody *crate = add_box(s, 0.5f, {0.8f, 1.5f, 0.0f}, 7, true);
+    step_world(world);
+    contact_pairs::begin(world);
+    kcc::refresh_contacts(*unobserved, world, filter, nullptr);
+    contact_pairs::record_character_contacts(world, *unobserved);
+    contact_pairs::end(world);
+    const ContactPair *with_crate = pair_of(world.contact_pairs, unobserved->inner_rigid_body_id, crate->id);
+    CHECK(ctx, with_crate != nullptr && with_crate->b.user_data == 7);
+    CHECK(ctx, pair_of(world.contact_pairs, unobserved->inner_rigid_body_id, s.ground->id) == nullptr);
+
+    filter::release(filter);
+    kcc::remove(*unobserved, world);
+    kcc::destroy(unobserved);
+    kcc::destroy(bodiless);
     release_scene(s);
 }

@@ -1,5 +1,6 @@
 #include "tumble/physics/debug.h"
 
+#include "tumble/physics/character/kcc.h"
 #include "tumble/physics/constraints/distance_constraint.h"
 #include "tumble/physics/constraints/hinge_constraint.h"
 #include "tumble/physics/constraints/point_constraint.h"
@@ -515,3 +516,29 @@ void test_debug_contacts_draw_each_manifold_point_with_its_normal(TestCtx &ctx) 
     release_world_scene(scene);
 }
 
+
+void test_debug_character_contacts_cross_and_normal_per_contact(TestCtx &ctx) {
+    WorldScene scene = make_world_scene(ctx);
+    add_body(scene, box::create({.half_extents = {10.0f, 0.5f, 10.0f}}), motion_type::MOTION_STATIC, {0.0f, -0.5f, 0.0f});
+    kcc::KCCSettings settings;
+    settings.shape = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
+    kcc::KCC *character = kcc::create(settings, vec3f::make(0.0f, 0.8f, 0.0f), quatf::identity());
+    filter::Filter filter = filter::create(scene.world->settings.layers);
+    step_world(*scene.world);
+    kcc::refresh_contacts(*character, *scene.world, filter, nullptr);
+    CHECK(ctx, character->contacts.length > 0);
+
+    debug::DebugBuffers *buffers = debug::create();
+    debug::character_contacts(*buffers, *character);
+    CHECK(ctx, buffers->line_count == 4 * character->contacts.length);
+    // the cross is at the first contact, and its normal line leaves it toward the character, up off the floor
+    const Vec3f at = character->contacts[0].position;
+    CHECK_NEAR(ctx, (buffers->lines[0] + buffers->lines[6]) * 0.5f, vec3f::x(at), 1e-5f);
+    const float *normal_line = buffers->lines.data + 3 * debug::LINE_STRIDE;
+    CHECK(ctx, normal_line[7] > normal_line[1]);
+
+    debug::release(buffers);
+    filter::release(filter);
+    kcc::destroy(character);
+    release_world_scene(scene);
+}

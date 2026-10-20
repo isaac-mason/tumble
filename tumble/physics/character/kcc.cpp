@@ -158,6 +158,7 @@ KCC *create(const KCCSettings &settings, Vec3f position, Quatf quaternion) {
     character->ground.position = vec3f::make(0.0f, 0.0f, 0.0f);
 
     character->user_data = settings.user_data;
+    character->observes_contacts = settings.observes_contacts;
     character->inner_rigid_body_id = body_id::INVALID_BODY_ID;
     character->inner_rigid_body_shape = settings.inner_rigid_body_shape;
     character->inner_rigid_body_object_layer = settings.inner_rigid_body_object_layer;
@@ -206,6 +207,7 @@ void add(KCC &character, World &world) {
     settings.object_layer = character.inner_rigid_body_object_layer;
     settings.motion_type = motion_type::MOTION_KINEMATIC;
     settings.user_data = character.user_data;
+    settings.observes_contacts = character.observes_contacts;
     vec3f::store(settings.position, get_inner_body_position(character));
     quatf::store(settings.quaternion, character.quaternion);
     // disable sleeping so sensor contacts keep coming

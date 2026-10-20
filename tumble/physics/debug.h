@@ -11,6 +11,10 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+namespace kcc {
+struct KCC;
+}
+
 namespace debug {
 
 /** floats per vertex: x, y, z, r, g, b */
@@ -85,6 +89,8 @@ void line(DebugBuffers &out, Vec3f a, Vec3f b, Vec3f color);
 void shape(DebugBuffers &out, const shapes::Shape *shape, Vec3f position, Quatf quaternion, const ShapeOptions &options);
 /** each contact constraint's points on body a with the normal */
 void contacts(DebugBuffers &out, const world::World &world);
+/** the character's contacts from its last move or refresh: each point, and its normal toward the character */
+void character_contacts(DebugBuffers &out, const kcc::KCC &character);
 /** each contact constraint's manifold: both points, the outline, the normal and tangents */
 void contact_constraints(DebugBuffers &out, const world::World &world);
 /** every enabled constraint's anchors and axes, and its limits when asked */

@@ -185,6 +185,8 @@ struct KCCSettings {
 
     /** carried by the inner body */
     uint64_t user_data = 0;
+    /** carried by the inner body: the character's contacts become contact pairs (contact_pairs::record_character_contacts) */
+    bool observes_contacts = false;
 
     /** the character's presence in the world, null for none; borrowed */
     shapes::Shape *inner_rigid_body_shape = nullptr;
@@ -226,6 +228,7 @@ struct KCC {
     GroundInfo ground;
 
     uint64_t user_data;
+    bool observes_contacts;
 
     /** INVALID_BODY_ID until add */
     body_id::BodyId inner_rigid_body_id;

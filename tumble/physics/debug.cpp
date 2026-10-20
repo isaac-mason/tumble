@@ -5,6 +5,7 @@
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/body/bodies.h"
 #include "tumble/physics/body/motion_type.h"
+#include "tumble/physics/character/kcc.h"
 #include "tumble/physics/constraints/cone_constraint.h"
 #include "tumble/physics/constraints/constraints.h"
 #include "tumble/physics/constraints/distance_constraint.h"
@@ -461,6 +462,18 @@ void contacts(DebugBuffers &out, const world::World &world) {
             Vec3f tip = vec3f::scale_and_add(a, vec3f::load(constraint.normal), 0.15f);
             push_line(out, a, tip, vec3f::make(1.0f, 0.0f, 1.0f));
         }
+    }
+}
+
+void character_contacts(DebugBuffers &out, const kcc::KCC &character) {
+    for (uint32_t i = 0; i < character.contacts.length; i++) {
+        const kcc::CharacterContact &contact = character.contacts[i];
+        // a collision red, a predictive contact yellow, a discarded one grey; the normal toward the character
+        const Vec3f color = contact.was_discarded ? vec3f::make(0.5f, 0.5f, 0.5f)
+                            : contact.had_collision ? vec3f::make(1.0f, 0.0f, 0.0f)
+                                                    : vec3f::make(1.0f, 1.0f, 0.0f);
+        push_cross(out, contact.position, 0.05f, color);
+        push_line(out, contact.position, vec3f::scale_and_add(contact.position, contact.contact_normal, 0.15f), color);
     }
 }
 

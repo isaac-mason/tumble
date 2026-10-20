@@ -1,6 +1,8 @@
 #include "tumble/physics/contact_pairs.h"
 
+#include "tumble/math/vec3f.h"
 #include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/character/kcc.h"
 #include "tumble/physics/events.h"
 #include "tumble/physics/world.h"
 
@@ -154,6 +156,25 @@ void record_world_contacts(world::World &world, uint32_t first_added, uint32_t f
     const events::PhysicsEvents &events = world.events;
     for (uint32_t i = first_added; i < events.contacts_added.length; i++) record_world_contact(world, events.contacts_added[i]);
     for (uint32_t i = first_persisted; i < events.contacts_persisted.length; i++) record_world_contact(world, events.contacts_persisted[i]);
+}
+
+void record_character_contacts(world::World &world, const kcc::KCC &character) {
+    const RigidBody *inner = bodies::get(world.bodies, character.inner_rigid_body_id);
+    if (inner == nullptr) return;
+    for (uint32_t i = 0; i < character.contacts.length; i++) {
+        const kcc::CharacterContact &contact = character.contacts[i];
+        if (!contact.had_collision || contact.was_discarded) continue;
+        const RigidBody *body = bodies::get(world.bodies, contact.body_id);
+        if (body == nullptr) continue;
+        if (!inner->observes_contacts && !body->observes_contacts) continue;
+        ContactPair *pair = record(world.contact_pairs, side_of(*inner, sub_shape::EMPTY_SUB_SHAPE_ID), side_of(*body, contact.sub_shape_id));
+        if (pair == nullptr) continue;
+        vec3f::store(pair->point, contact.position);
+        // the contact's normal points at the character
+        vec3f::store(pair->normal, vec3f::negate(contact.contact_normal));
+        pair->penetration_depth = contact.distance < 0.0f ? -contact.distance : 0.0f;
+        vec3f::store(pair->relative_velocity, vec3f::subtract(contact.linear_velocity, character.linear_velocity));
+    }
 }
 
 }  // namespace contact_pairs
