@@ -185,7 +185,7 @@ void test_point_constraint_part_position_solve_closes_the_gap(TestCtx &ctx) {
         CHECK(ctx, vec3f::length(separation(part, a, b)) < 1e-4f);
         // both turned to meet, and stayed unit rotations
         CHECK(ctx, scalar::abs(a.quaternion.w) < 1.0f);
-        CHECK_NEAR(ctx, quatf::length(quatf::load(b.quaternion)), 1.0f, 1e-5f);
+        CHECK_NEAR(ctx, quat_length(quatf::load(b.quaternion)), 1.0f, 1e-5f);
         // equal masses, no momentum added: the centre of mass between them has not moved
         const Vec3f centre = vec3f::add(vec3f::load(a.center_of_mass_position), vec3f::load(b.center_of_mass_position));
         CHECK(ctx, vec3f::distance(centre, vec3f::make(2.3f, 0.5f, -0.2f)) < 1e-5f);

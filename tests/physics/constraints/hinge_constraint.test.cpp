@@ -4,6 +4,7 @@
 #include "physics/constraints/constraint_test_scene.h"
 #include "tumble/physics/constraints/hinge_constraint.h"
 #include "test.h"
+#include "test_math.h"
 
 using hinge_constraint::HingeConstraint;
 using rigid_body::RigidBody;
@@ -86,7 +87,7 @@ void test_hinge_constraint_create(TestCtx &ctx) {
     HingeConstraint *local = hinge_constraint::get(scene.constraints, local_id);
     CHECK(ctx, vec3f::exact_equals(local->local_space_position1, vec3f::make(0.0f, 0.5f, 0.0f)));
     CHECK(ctx, vec3f::exact_equals(local->local_space_hinge_axis2, vec3f::make(1.0f, 0.0f, 0.0f)));
-    CHECK(ctx, quatf::exact_equals(local->inv_initial_orientation, quatf::make(0.0f, 0.0f, 0.0f, 1.0f)));
+    CHECK(ctx, same_bits(local->inv_initial_orientation, quatf::make(0.0f, 0.0f, 0.0f, 1.0f)));
     hinge_constraint::setup_velocity(*local, scene.bodies, DT);
     CHECK(ctx, scalar::abs(hinge_constraint::get_current_angle(*local)) < 1e-6f);
     d->quaternion = stored_axis_angle(vec3f::make(1.0f, 0.0f, 0.0f), -0.4f);

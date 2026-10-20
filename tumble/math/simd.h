@@ -91,9 +91,6 @@ inline void transpose3x4(v128_t r0, v128_t r1, v128_t r2, v128_t r3, v128_t &x, 
     z = shuffle2<0, 1, 4, 5>(zw01, zw23);
 }
 
-inline v128_t yzx(v128_t a) { return shuffle<1, 2, 0, 3>(a); }
-inline v128_t zxy(v128_t a) { return shuffle<2, 0, 1, 3>(a); }
-
 inline float hsum3(v128_t v) { return lane<0>(v) + lane<1>(v) + lane<2>(v); }
 
 inline float hsum4(v128_t v) {
@@ -103,10 +100,6 @@ inline float hsum4(v128_t v) {
 
 inline float dot3(v128_t a, v128_t b) { return hsum3(wasm_f32x4_mul(a, b)); }
 inline float dot4(v128_t a, v128_t b) { return hsum4(wasm_f32x4_mul(a, b)); }
-
-inline v128_t cross(v128_t a, v128_t b) {
-    return wasm_f32x4_sub(wasm_f32x4_mul(yzx(a), zxy(b)), wasm_f32x4_mul(zxy(a), yzx(b)));
-}
 
 inline v128_t lt(v128_t a, v128_t b) { return wasm_f32x4_lt(a, b); }
 inline v128_t le(v128_t a, v128_t b) { return wasm_f32x4_le(a, b); }

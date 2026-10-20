@@ -138,7 +138,7 @@ void test_dual_axis_constraint_part_position_closes_separation(TestCtx &ctx) {
     CHECK(ctx, dual_axis_constraint_part::solve_position_constraint(part, a, b, u, vec3f::load(N1), vec3f::load(N2), 1.0f));
     CHECK(ctx, vec3f::distance(vec3f::load(a.center_of_mass_position), vec3f::make(0.0f, 0.1f, -0.05f)) < 1e-6f);
     CHECK(ctx, vec3f::distance(vec3f::load(b.center_of_mass_position), vec3f::make(5.0f, 0.1f, -0.05f)) < 1e-6f);
-    CHECK(ctx, quatf::exact_equals(quatf::load(a.quaternion), quatf::identity()));
+    CHECK(ctx, same_bits(quatf::load(a.quaternion), quatf::identity()));
 
     // separated only along the slide axis: nothing to correct
     CHECK(ctx, !dual_axis_constraint_part::solve_position_constraint(part, a, b, vec3f::make(5.0f, 0.0f, 0.0f), vec3f::load(N1), vec3f::load(N2), 1.0f));

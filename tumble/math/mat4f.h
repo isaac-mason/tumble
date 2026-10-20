@@ -24,8 +24,7 @@ inline Mat4f identity() {
 }
 inline Mat4f zero() { return {{v4f::zero(), v4f::zero(), v4f::zero(), v4f::zero()}}; }
 
-inline Vec4f column(const Mat4f &m, int i) { return {m.c[i]}; }
-/** the first three lanes of column i. */
+/** the first three lanes of column i */
 inline Vec3f axis(const Mat4f &m, int i) { return {vec3f::fix_w(m.c[i])}; }
 
 inline Mat4f transpose(const Mat4f &a) {
@@ -201,94 +200,12 @@ inline Mat4f scale(const Mat4f &a, Vec3f v) {
              v4f::mul(a.c[2], v4f::splat(vec3f::z(v))), a.c[3]}};
 }
 
-/** a rotated by rad about axis; false, out untouched, for a zero axis. */
-inline bool rotate(Mat4f &out, const Mat4f &a, float rad, Vec3f axis) {
-    float x = vec3f::x(axis), y = vec3f::y(axis), z = vec3f::z(axis);
-    float len = scalar::sqrt(x * x + y * y + z * z);
-    if (len < scalar::EPSILON) return false;
-    len = 1.0f / len;
-    x *= len;
-    y *= len;
-    z *= len;
-    const float s = scalar::sin(rad);
-    const float c = scalar::cos(rad);
-    const float t = 1.0f - c;
-    const v128_t a0 = a.c[0], a1 = a.c[1], a2 = a.c[2];
-    const float b00 = x * x * t + c, b01 = y * x * t + z * s, b02 = z * x * t - y * s;
-    const float b10 = x * y * t - z * s, b11 = y * y * t + c, b12 = z * y * t + x * s;
-    const float b20 = x * z * t + y * s, b21 = y * z * t - x * s, b22 = z * z * t + c;
-    out.c[0] = v4f::mul_add(a2, v4f::splat(b02), v4f::mul_add(a1, v4f::splat(b01), v4f::mul(a0, v4f::splat(b00))));
-    out.c[1] = v4f::mul_add(a2, v4f::splat(b12), v4f::mul_add(a1, v4f::splat(b11), v4f::mul(a0, v4f::splat(b10))));
-    out.c[2] = v4f::mul_add(a2, v4f::splat(b22), v4f::mul_add(a1, v4f::splat(b21), v4f::mul(a0, v4f::splat(b20))));
-    out.c[3] = a.c[3];
-    return true;
-}
-
-inline Mat4f rotate_x(const Mat4f &a, float rad) {
-    const v128_t s = v4f::splat(scalar::sin(rad));
-    const v128_t c = v4f::splat(scalar::cos(rad));
-    return {{a.c[0], v4f::mul_add(a.c[2], s, v4f::mul(a.c[1], c)), v4f::sub(v4f::mul(a.c[2], c), v4f::mul(a.c[1], s)), a.c[3]}};
-}
-
-inline Mat4f rotate_y(const Mat4f &a, float rad) {
-    const v128_t s = v4f::splat(scalar::sin(rad));
-    const v128_t c = v4f::splat(scalar::cos(rad));
-    return {{v4f::sub(v4f::mul(a.c[0], c), v4f::mul(a.c[2], s)), a.c[1], v4f::mul_add(a.c[0], s, v4f::mul(a.c[2], c)), a.c[3]}};
-}
-
-inline Mat4f rotate_z(const Mat4f &a, float rad) {
-    const v128_t s = v4f::splat(scalar::sin(rad));
-    const v128_t c = v4f::splat(scalar::cos(rad));
-    return {{v4f::mul_add(a.c[1], s, v4f::mul(a.c[0], c)), v4f::sub(v4f::mul(a.c[1], c), v4f::mul(a.c[0], s)), a.c[2], a.c[3]}};
-}
-
-inline Mat4f from_translation(Vec3f v) {
-    return {{v4f::make(1, 0, 0, 0), v4f::make(0, 1, 0, 0), v4f::make(0, 0, 1, 0), v4f::set_lane<3>(v.v, 1.0f)}};
-}
-
 inline Mat4f from_scaling(Vec3f v) {
     return {{v4f::make(vec3f::x(v), 0, 0, 0), v4f::make(0, vec3f::y(v), 0, 0), v4f::make(0, 0, vec3f::z(v), 0),
              v4f::make(0, 0, 0, 1)}};
 }
 
-/** false, out untouched, for a zero axis. */
-inline bool from_rotation(Mat4f &out, float rad, Vec3f axis) {
-    float x = vec3f::x(axis), y = vec3f::y(axis), z = vec3f::z(axis);
-    float len = scalar::sqrt(x * x + y * y + z * z);
-    if (len < scalar::EPSILON) return false;
-    len = 1.0f / len;
-    x *= len;
-    y *= len;
-    z *= len;
-    const float s = scalar::sin(rad);
-    const float c = scalar::cos(rad);
-    const float t = 1.0f - c;
-    out.c[0] = v4f::make(x * x * t + c, y * x * t + z * s, z * x * t - y * s, 0);
-    out.c[1] = v4f::make(x * y * t - z * s, y * y * t + c, z * y * t + x * s, 0);
-    out.c[2] = v4f::make(x * z * t + y * s, y * z * t - x * s, z * z * t + c, 0);
-    out.c[3] = v4f::make(0, 0, 0, 1);
-    return true;
-}
-
-inline Mat4f from_x_rotation(float rad) {
-    const float s = scalar::sin(rad);
-    const float c = scalar::cos(rad);
-    return {{v4f::make(1, 0, 0, 0), v4f::make(0, c, s, 0), v4f::make(0, -s, c, 0), v4f::make(0, 0, 0, 1)}};
-}
-
-inline Mat4f from_y_rotation(float rad) {
-    const float s = scalar::sin(rad);
-    const float c = scalar::cos(rad);
-    return {{v4f::make(c, 0, -s, 0), v4f::make(0, 1, 0, 0), v4f::make(s, 0, c, 0), v4f::make(0, 0, 0, 1)}};
-}
-
-inline Mat4f from_z_rotation(float rad) {
-    const float s = scalar::sin(rad);
-    const float c = scalar::cos(rad);
-    return {{v4f::make(c, s, 0, 0), v4f::make(-s, c, 0, 0), v4f::make(0, 0, 1, 0), v4f::make(0, 0, 0, 1)}};
-}
-
-/** the three rotation columns of q, lane 3 zero. */
+/** the three rotation columns of q, lane 3 zero */
 inline void rotation_columns(v128_t &c0, v128_t &c1, v128_t &c2, Quatf q) {
     const float qx = v4f::lane<0>(q.v), qy = v4f::lane<1>(q.v), qz = v4f::lane<2>(q.v), qw = v4f::lane<3>(q.v);
     const float x2 = qx + qx, y2 = qy + qy, z2 = qz + qz;
@@ -309,50 +226,6 @@ inline Mat4f from_rotation_translation(Quatf q, Vec3f v) {
 
 inline Vec3f get_translation(const Mat4f &mat) { return {vec3f::fix_w(mat.c[3])}; }
 
-/** the length of each of the three axis columns. */
-inline Vec3f get_scaling(const Mat4f &mat) {
-    const Mat4f t = transpose(mat);
-    v128_t sq = v4f::mul(t.c[0], t.c[0]);
-    sq = v4f::add(sq, v4f::mul(t.c[1], t.c[1]));
-    sq = v4f::add(sq, v4f::mul(t.c[2], t.c[2]));
-    return {vec3f::fix_w(v4f::sqrt(sq))};
-}
-
-/** the rotation of a matrix with the given scaling divided out. */
-inline Quatf rotation_with_scaling(const Mat4f &mat, Vec3f scaling) {
-    const float is1 = 1.0f / vec3f::x(scaling);
-    const float is2 = 1.0f / vec3f::y(scaling);
-    const float is3 = 1.0f / vec3f::z(scaling);
-    const float sm11 = v4f::lane<0>(mat.c[0]) * is1, sm12 = v4f::lane<1>(mat.c[0]) * is2, sm13 = v4f::lane<2>(mat.c[0]) * is3;
-    const float sm21 = v4f::lane<0>(mat.c[1]) * is1, sm22 = v4f::lane<1>(mat.c[1]) * is2, sm23 = v4f::lane<2>(mat.c[1]) * is3;
-    const float sm31 = v4f::lane<0>(mat.c[2]) * is1, sm32 = v4f::lane<1>(mat.c[2]) * is2, sm33 = v4f::lane<2>(mat.c[2]) * is3;
-    const float trace = sm11 + sm22 + sm33;
-    float S;
-    if (trace > 0.0f) {
-        S = scalar::sqrt(trace + 1.0f) * 2.0f;
-        return {v4f::make((sm23 - sm32) / S, (sm31 - sm13) / S, (sm12 - sm21) / S, 0.25f * S)};
-    }
-    if (sm11 > sm22 && sm11 > sm33) {
-        S = scalar::sqrt(1.0f + sm11 - sm22 - sm33) * 2.0f;
-        return {v4f::make(0.25f * S, (sm12 + sm21) / S, (sm31 + sm13) / S, (sm23 - sm32) / S)};
-    }
-    if (sm22 > sm33) {
-        S = scalar::sqrt(1.0f + sm22 - sm11 - sm33) * 2.0f;
-        return {v4f::make((sm12 + sm21) / S, 0.25f * S, (sm23 + sm32) / S, (sm31 - sm13) / S)};
-    }
-    S = scalar::sqrt(1.0f + sm33 - sm11 - sm22) * 2.0f;
-    return {v4f::make((sm31 + sm13) / S, (sm23 + sm32) / S, 0.25f * S, (sm12 - sm21) / S)};
-}
-
-inline Quatf get_rotation(const Mat4f &mat) { return rotation_with_scaling(mat, get_scaling(mat)); }
-
-/** rotation, translation and scale of a trs matrix. */
-inline Quatf decompose(Vec3f &out_t, Vec3f &out_s, const Mat4f &mat) {
-    out_t = get_translation(mat);
-    out_s = get_scaling(mat);
-    return rotation_with_scaling(mat, out_s);
-}
-
 inline Mat4f from_rotation_translation_scale(Quatf q, Vec3f v, Vec3f s) {
     Mat4f out;
     rotation_columns(out.c[0], out.c[1], out.c[2], q);
@@ -360,14 +233,6 @@ inline Mat4f from_rotation_translation_scale(Quatf q, Vec3f v, Vec3f s) {
     out.c[1] = v4f::mul(out.c[1], v4f::splat(vec3f::y(s)));
     out.c[2] = v4f::mul(out.c[2], v4f::splat(vec3f::z(s)));
     out.c[3] = v4f::set_lane<3>(v.v, 1.0f);
-    return out;
-}
-
-/** as from_rotation_translation_scale, rotating and scaling about origin o. */
-inline Mat4f from_rotation_translation_scale_origin(Quatf q, Vec3f v, Vec3f s, Vec3f o) {
-    Mat4f out = from_rotation_translation_scale(q, v, s);
-    const v128_t moved = combine3(out, o.v);
-    out.c[3] = v4f::set_lane<3>(v4f::sub(v4f::add(v.v, o.v), moved), 1.0f);
     return out;
 }
 
@@ -381,86 +246,6 @@ inline Mat4f from_quat(Quatf q) {
              v4f::make(zx + wy, zy - wx, 1.0f - xx - yy, 0), v4f::make(0, 0, 0, 1)}};
 }
 
-/** a view matrix looking from eye at center; identity when they coincide. */
-inline Mat4f look_at(Vec3f eye, Vec3f center, Vec3f up) {
-    const float ex = vec3f::x(eye), ey = vec3f::y(eye), ez = vec3f::z(eye);
-    const float ux = vec3f::x(up), uy = vec3f::y(up), uz = vec3f::z(up);
-    if (scalar::abs(ex - vec3f::x(center)) < scalar::EPSILON && scalar::abs(ey - vec3f::y(center)) < scalar::EPSILON &&
-        scalar::abs(ez - vec3f::z(center)) < scalar::EPSILON) {
-        return identity();
-    }
-    float z0 = ex - vec3f::x(center);
-    float z1 = ey - vec3f::y(center);
-    float z2 = ez - vec3f::z(center);
-    float len = 1.0f / scalar::sqrt(z0 * z0 + z1 * z1 + z2 * z2);
-    z0 *= len;
-    z1 *= len;
-    z2 *= len;
-    float x0 = uy * z2 - uz * z1;
-    float x1 = uz * z0 - ux * z2;
-    float x2 = ux * z1 - uy * z0;
-    len = scalar::sqrt(x0 * x0 + x1 * x1 + x2 * x2);
-    if (len == 0.0f) {
-        x0 = 0.0f;
-        x1 = 0.0f;
-        x2 = 0.0f;
-    } else {
-        len = 1.0f / len;
-        x0 *= len;
-        x1 *= len;
-        x2 *= len;
-    }
-    float y0 = z1 * x2 - z2 * x1;
-    float y1 = z2 * x0 - z0 * x2;
-    float y2 = z0 * x1 - z1 * x0;
-    len = scalar::sqrt(y0 * y0 + y1 * y1 + y2 * y2);
-    if (len == 0.0f) {
-        y0 = 0.0f;
-        y1 = 0.0f;
-        y2 = 0.0f;
-    } else {
-        len = 1.0f / len;
-        y0 *= len;
-        y1 *= len;
-        y2 *= len;
-    }
-    return {{v4f::make(x0, y0, z0, 0), v4f::make(x1, y1, z1, 0), v4f::make(x2, y2, z2, 0),
-             v4f::make(-(x0 * ex + x1 * ey + x2 * ez), -(y0 * ex + y1 * ey + y2 * ez), -(z0 * ex + z1 * ey + z2 * ez), 1)}};
-}
-
-/** the model matrix of something at eye facing target, the inverse of look_at's view. */
-inline Mat4f target_to(Vec3f eye, Vec3f target, Vec3f up) {
-    const float ux = vec3f::x(up), uy = vec3f::y(up), uz = vec3f::z(up);
-    float z0 = vec3f::x(eye) - vec3f::x(target);
-    float z1 = vec3f::y(eye) - vec3f::y(target);
-    float z2 = vec3f::z(eye) - vec3f::z(target);
-    float len = z0 * z0 + z1 * z1 + z2 * z2;
-    if (len > 0.0f) {
-        len = 1.0f / scalar::sqrt(len);
-        z0 *= len;
-        z1 *= len;
-        z2 *= len;
-    }
-    float x0 = uy * z2 - uz * z1;
-    float x1 = uz * z0 - ux * z2;
-    float x2 = ux * z1 - uy * z0;
-    len = x0 * x0 + x1 * x1 + x2 * x2;
-    if (len > 0.0f) {
-        len = 1.0f / scalar::sqrt(len);
-        x0 *= len;
-        x1 *= len;
-        x2 *= len;
-    }
-    return {{v4f::make(x0, x1, x2, 0), v4f::make(z1 * x2 - z2 * x1, z2 * x0 - z0 * x2, z0 * x1 - z1 * x0, 0),
-             v4f::make(z0, z1, z2, 0), v4f::set_lane<3>(eye.v, 1.0f)}};
-}
-
-inline float frob(const Mat4f &a) {
-    v128_t sum = v4f::mul(a.c[0], a.c[0]);
-    for (int i = 1; i < 4; i++) sum = v4f::mul_add(a.c[i], a.c[i], sum);
-    return scalar::sqrt(v4f::hsum4(sum));
-}
-
 inline Mat4f add(const Mat4f &a, const Mat4f &b) {
     return {{v4f::add(a.c[0], b.c[0]), v4f::add(a.c[1], b.c[1]), v4f::add(a.c[2], b.c[2]), v4f::add(a.c[3], b.c[3])}};
 }
@@ -472,27 +257,6 @@ inline Mat4f subtract(const Mat4f &a, const Mat4f &b) {
 inline Mat4f multiply_scalar(const Mat4f &a, float b) {
     const v128_t s = v4f::splat(b);
     return {{v4f::mul(a.c[0], s), v4f::mul(a.c[1], s), v4f::mul(a.c[2], s), v4f::mul(a.c[3], s)}};
-}
-
-inline Mat4f multiply_scalar_and_add(const Mat4f &a, const Mat4f &b, float s) {
-    const v128_t vs = v4f::splat(s);
-    return {{v4f::mul_add(b.c[0], vs, a.c[0]), v4f::mul_add(b.c[1], vs, a.c[1]), v4f::mul_add(b.c[2], vs, a.c[2]),
-             v4f::mul_add(b.c[3], vs, a.c[3])}};
-}
-
-inline bool exact_equals(const Mat4f &a, const Mat4f &b) {
-    return v4f::all_true(v4f::eq(a.c[0], b.c[0])) && v4f::all_true(v4f::eq(a.c[1], b.c[1])) &&
-           v4f::all_true(v4f::eq(a.c[2], b.c[2])) && v4f::all_true(v4f::eq(a.c[3], b.c[3]));
-}
-
-inline bool equals(const Mat4f &a, const Mat4f &b) {
-    Float4x4 fa, fb;
-    store(fa, a);
-    store(fb, b);
-    for (int i = 0; i < 16; i++) {
-        if (!scalar::equals(fa.m[i], fb.m[i])) return false;
-    }
-    return true;
 }
 
 }  // namespace mat4f

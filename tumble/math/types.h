@@ -92,17 +92,9 @@ struct Plane3f {
     float constant;
 };
 
-struct Triangle3f {
-    Float3 a, b, c;
-};
-
 struct Spheref {
     Float3 center;
     float radius;
-};
-
-struct Frustumf {
-    Plane3f planes[6];
 };
 
 struct Transformf {

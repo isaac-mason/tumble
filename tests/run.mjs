@@ -68,12 +68,8 @@ if (wasm.probe_sin) {
     failed += sweep('sin', wasm.probe_sin, Math.sin, -100, 100, 20000);
     failed += sweep('sin large', wasm.probe_sin, Math.sin, -1e6, 1e6, 2000, 1e-4);
     failed += sweep('cos', wasm.probe_cos, Math.cos, -100, 100, 20000);
-    failed += sweep('tan', wasm.probe_tan, Math.tan, -1.5, 1.5, 20000, 1e-5);
     failed += sweep('atan', wasm.probe_atan, Math.atan, -100, 100, 20000);
     failed += sweep('acos', wasm.probe_acos, Math.acos, -1, 1, 20000);
-    failed += sweep('asin', wasm.probe_asin, Math.asin, -1, 1, 20000);
-    failed += sweep('exp', wasm.probe_exp, Math.exp, -80, 80, 20000);
-    failed += sweep('log', wasm.probe_log, Math.log, 1e-6, 1e6, 20000);
     let bad = 0;
     for (let yd = -10; yd <= 10; yd += 0.37) {
         for (let xd = -10; xd <= 10; xd += 0.41) {
@@ -87,19 +83,7 @@ if (wasm.probe_sin) {
             }
         }
     }
-    for (let xd = 0.01; xd <= 50; xd += 0.73) {
-        for (let yd = -8; yd <= 8; yd += 0.57) {
-            const x = Math.fround(xd);
-            const y = Math.fround(yd);
-            const got = wasm.probe_pow(x, y);
-            const want = Math.fround(x ** y);
-            if (!close(got, want, 1e-5)) {
-                if (bad < 3) console.error(`FAIL pow(${x}, ${y}): got ${got}, want ${want}`);
-                bad++;
-            }
-        }
-    }
-    console.log(`atan2 + pow grids: ${bad} bad`);
+    console.log(`atan2 grid: ${bad} bad`);
     failed += bad;
 }
 

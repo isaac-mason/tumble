@@ -31,7 +31,7 @@ static support::Support box_support(const Float3 &half_extents) {
 
 static void place(support::Support &s, const Float3 &position) {
     s.has_transform = true;
-    s.transform = mat4f::from_translation(vec3f::load(position));
+    s.transform = translation(vec3f::load(position));
 }
 
 static void place(support::Support &s, const Float4 &rotation, const Float3 &position) {
@@ -223,7 +223,7 @@ void test_gjk_cast_shape(TestCtx &ctx) {
     support::Support box = box_support({0.95f, 0.95f, 0.95f});
     box.convex_radius = 0.05f;
 
-    Mat4f a_to_b = mat4f::from_translation(vec3f::make(-5.0f, 0.2f, -0.1f));
+    Mat4f a_to_b = translation(vec3f::make(-5.0f, 0.2f, -0.1f));
     gjk::GjkCastShapeResult result = gjk::create_gjk_cast_shape_result();
     gjk::cast_shape(result, a_to_b, sphere, box, vec3f::make(10, 0, 0), TOLERANCE, sphere.convex_radius, box.convex_radius, 1.0f);
     CHECK(ctx, result.hit);
@@ -247,7 +247,7 @@ void test_gjk_cast_shape(TestCtx &ctx) {
     support::Support falling = box_support({0.45f, 0.45f, 0.45f});
     falling.convex_radius = 0.05f;
     support::Support ball = sphere_support(1.0f, false);
-    a_to_b = mat4f::from_translation(vec3f::make(0.0f, 2.0f, 0.0f));
+    a_to_b = translation(vec3f::make(0.0f, 2.0f, 0.0f));
     gjk::cast_shape(result, a_to_b, falling, ball, vec3f::make(0, -2, 0), TOLERANCE, falling.convex_radius, ball.convex_radius, 1.0f);
     CHECK(ctx, result.hit);
     CHECK_NEAR(ctx, result.lambda, 0.25f, 1e-4f);

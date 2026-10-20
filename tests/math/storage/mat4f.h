@@ -1,8 +1,5 @@
 #pragma once
 
-// the scalar functions over the storage types, retired from src when the register types took over: the reference the
-// register functions are checked against, bit for bit.
-
 #include "tumble/math/mat4f.h"
 #include "math/storage/vec3f.h"
 #include "math/storage/vec4f.h"
@@ -13,8 +10,6 @@ TUMBLE_NAMESPACE_BEGIN
 namespace mat4f {
 
 inline Float4x4 create() { return {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}}; }
-inline Float4x4 clone(const Float4x4 &a) { return a; }
-
 inline Float4x4 from_values(float m00, float m01, float m02, float m03, float m10, float m11, float m12, float m13, float m20,
                          float m21, float m22, float m23, float m30, float m31, float m32, float m33) {
     return {{m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33}};
@@ -262,109 +257,8 @@ inline Float4x4 &scale(Float4x4 &out, const Float4x4 &a, const Float3 &v) {
     return out;
 }
 
-/** a rotated by rad about axis; false, out untouched, for a zero axis. */
-inline bool rotate(Float4x4 &out, const Float4x4 &a, float rad, const Float3 &axis) {
-    float x = axis.x, y = axis.y, z = axis.z;
-    float len = scalar::sqrt(x * x + y * y + z * z);
-    if (len < scalar::EPSILON) return false;
-    len = 1.0f / len;
-    x *= len;
-    y *= len;
-    z *= len;
-    const float s = scalar::sin(rad);
-    const float c = scalar::cos(rad);
-    const float t = 1.0f - c;
-    const v128_t a0 = col(a, 0), a1 = col(a, 1), a2 = col(a, 2);
-    const float b00 = x * x * t + c, b01 = y * x * t + z * s, b02 = z * x * t - y * s;
-    const float b10 = x * y * t - z * s, b11 = y * y * t + c, b12 = z * y * t + x * s;
-    const float b20 = x * z * t + y * s, b21 = y * z * t - x * s, b22 = z * z * t + c;
-    set_col(out, 0, v4f::mul_add(a2, v4f::splat(b02), v4f::mul_add(a1, v4f::splat(b01), v4f::mul(a0, v4f::splat(b00)))));
-    set_col(out, 1, v4f::mul_add(a2, v4f::splat(b12), v4f::mul_add(a1, v4f::splat(b11), v4f::mul(a0, v4f::splat(b10)))));
-    set_col(out, 2, v4f::mul_add(a2, v4f::splat(b22), v4f::mul_add(a1, v4f::splat(b21), v4f::mul(a0, v4f::splat(b20)))));
-    if (&a != &out) set_col(out, 3, col(a, 3));
-    return true;
-}
-
-inline Float4x4 &rotate_x(Float4x4 &out, const Float4x4 &a, float rad) {
-    const float s = scalar::sin(rad);
-    const float c = scalar::cos(rad);
-    const v128_t a1 = col(a, 1), a2 = col(a, 2);
-    if (&a != &out) {
-        set_col(out, 0, col(a, 0));
-        set_col(out, 3, col(a, 3));
-    }
-    set_col(out, 1, v4f::mul_add(a2, v4f::splat(s), v4f::mul(a1, v4f::splat(c))));
-    set_col(out, 2, v4f::sub(v4f::mul(a2, v4f::splat(c)), v4f::mul(a1, v4f::splat(s))));
-    return out;
-}
-
-inline Float4x4 &rotate_y(Float4x4 &out, const Float4x4 &a, float rad) {
-    const float s = scalar::sin(rad);
-    const float c = scalar::cos(rad);
-    const v128_t a0 = col(a, 0), a2 = col(a, 2);
-    if (&a != &out) {
-        set_col(out, 1, col(a, 1));
-        set_col(out, 3, col(a, 3));
-    }
-    set_col(out, 0, v4f::sub(v4f::mul(a0, v4f::splat(c)), v4f::mul(a2, v4f::splat(s))));
-    set_col(out, 2, v4f::mul_add(a0, v4f::splat(s), v4f::mul(a2, v4f::splat(c))));
-    return out;
-}
-
-inline Float4x4 &rotate_z(Float4x4 &out, const Float4x4 &a, float rad) {
-    const float s = scalar::sin(rad);
-    const float c = scalar::cos(rad);
-    const v128_t a0 = col(a, 0), a1 = col(a, 1);
-    if (&a != &out) {
-        set_col(out, 2, col(a, 2));
-        set_col(out, 3, col(a, 3));
-    }
-    set_col(out, 0, v4f::mul_add(a1, v4f::splat(s), v4f::mul(a0, v4f::splat(c))));
-    set_col(out, 1, v4f::sub(v4f::mul(a1, v4f::splat(c)), v4f::mul(a0, v4f::splat(s))));
-    return out;
-}
-
-inline Float4x4 &from_translation(Float4x4 &out, const Float3 &v) {
-    return set(out, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, v.x, v.y, v.z, 1);
-}
-
 inline Float4x4 &from_scaling(Float4x4 &out, const Float3 &v) {
     return set(out, v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, v.z, 0, 0, 0, 0, 1);
-}
-
-/** false, out untouched, for a zero axis. */
-inline bool from_rotation(Float4x4 &out, float rad, const Float3 &axis) {
-    float x = axis.x, y = axis.y, z = axis.z;
-    float len = scalar::sqrt(x * x + y * y + z * z);
-    if (len < scalar::EPSILON) return false;
-    len = 1.0f / len;
-    x *= len;
-    y *= len;
-    z *= len;
-    const float s = scalar::sin(rad);
-    const float c = scalar::cos(rad);
-    const float t = 1.0f - c;
-    set(out, x * x * t + c, y * x * t + z * s, z * x * t - y * s, 0, x * y * t - z * s, y * y * t + c, z * y * t + x * s, 0,
-        x * z * t + y * s, y * z * t - x * s, z * z * t + c, 0, 0, 0, 0, 1);
-    return true;
-}
-
-inline Float4x4 &from_x_rotation(Float4x4 &out, float rad) {
-    const float s = scalar::sin(rad);
-    const float c = scalar::cos(rad);
-    return set(out, 1, 0, 0, 0, 0, c, s, 0, 0, -s, c, 0, 0, 0, 0, 1);
-}
-
-inline Float4x4 &from_y_rotation(Float4x4 &out, float rad) {
-    const float s = scalar::sin(rad);
-    const float c = scalar::cos(rad);
-    return set(out, c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, 0, 0, 0, 1);
-}
-
-inline Float4x4 &from_z_rotation(Float4x4 &out, float rad) {
-    const float s = scalar::sin(rad);
-    const float c = scalar::cos(rad);
-    return set(out, c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 }
 
 inline Float4x4 &from_rotation_translation(Float4x4 &out, const Float4 &q, const Float3 &v) {
@@ -383,65 +277,6 @@ inline Float3 &get_translation(Float3 &out, const Float4x4 &mat) {
     return out;
 }
 
-/** the length of each of the three axis columns. */
-inline Float3 &get_scaling(Float3 &out, const Float4x4 &mat) {
-    out.x = scalar::sqrt(mat.m[0] * mat.m[0] + mat.m[1] * mat.m[1] + mat.m[2] * mat.m[2]);
-    out.y = scalar::sqrt(mat.m[4] * mat.m[4] + mat.m[5] * mat.m[5] + mat.m[6] * mat.m[6]);
-    out.z = scalar::sqrt(mat.m[8] * mat.m[8] + mat.m[9] * mat.m[9] + mat.m[10] * mat.m[10]);
-    return out;
-}
-
-/** the rotation of a matrix with the given scaling divided out. */
-inline Float4 &rotation_with_scaling(Float4 &out, const Float4x4 &mat, const Float3 &scaling) {
-    const float is1 = 1.0f / scaling.x;
-    const float is2 = 1.0f / scaling.y;
-    const float is3 = 1.0f / scaling.z;
-    const float sm11 = mat.m[0] * is1, sm12 = mat.m[1] * is2, sm13 = mat.m[2] * is3;
-    const float sm21 = mat.m[4] * is1, sm22 = mat.m[5] * is2, sm23 = mat.m[6] * is3;
-    const float sm31 = mat.m[8] * is1, sm32 = mat.m[9] * is2, sm33 = mat.m[10] * is3;
-    const float trace = sm11 + sm22 + sm33;
-    float S;
-    if (trace > 0.0f) {
-        S = scalar::sqrt(trace + 1.0f) * 2.0f;
-        out.w = 0.25f * S;
-        out.x = (sm23 - sm32) / S;
-        out.y = (sm31 - sm13) / S;
-        out.z = (sm12 - sm21) / S;
-    } else if (sm11 > sm22 && sm11 > sm33) {
-        S = scalar::sqrt(1.0f + sm11 - sm22 - sm33) * 2.0f;
-        out.w = (sm23 - sm32) / S;
-        out.x = 0.25f * S;
-        out.y = (sm12 + sm21) / S;
-        out.z = (sm31 + sm13) / S;
-    } else if (sm22 > sm33) {
-        S = scalar::sqrt(1.0f + sm22 - sm11 - sm33) * 2.0f;
-        out.w = (sm31 - sm13) / S;
-        out.x = (sm12 + sm21) / S;
-        out.y = 0.25f * S;
-        out.z = (sm23 + sm32) / S;
-    } else {
-        S = scalar::sqrt(1.0f + sm33 - sm11 - sm22) * 2.0f;
-        out.w = (sm12 - sm21) / S;
-        out.x = (sm31 + sm13) / S;
-        out.y = (sm23 + sm32) / S;
-        out.z = 0.25f * S;
-    }
-    return out;
-}
-
-inline Float4 &get_rotation(Float4 &out, const Float4x4 &mat) {
-    Float3 scaling;
-    get_scaling(scaling, mat);
-    return rotation_with_scaling(out, mat, scaling);
-}
-
-/** rotation, translation and scale of a trs matrix. */
-inline Float4 &decompose(Float4 &out_r, Float3 &out_t, Float3 &out_s, const Float4x4 &mat) {
-    get_translation(out_t, mat);
-    get_scaling(out_s, mat);
-    return rotation_with_scaling(out_r, mat, out_s);
-}
-
 inline Float4x4 &from_rotation_translation_scale(Float4x4 &out, const Float4 &q, const Float3 &v, const Float3 &s) {
     const float x2 = q.x + q.x, y2 = q.y + q.y, z2 = q.z + q.z;
     const float xx = q.x * x2, xy = q.x * y2, xz = q.x * z2;
@@ -454,17 +289,6 @@ inline Float4x4 &from_rotation_translation_scale(Float4x4 &out, const Float4 &q,
     return out;
 }
 
-/** as from_rotation_translation_scale, rotating and scaling about origin o. */
-inline Float4x4 &from_rotation_translation_scale_origin(Float4x4 &out, const Float4 &q, const Float3 &v, const Float3 &s,
-                                                     const Float3 &o) {
-    from_rotation_translation_scale(out, q, v, s);
-    const float *m = out.m;
-    out.m[12] = v.x + o.x - (m[0] * o.x + m[4] * o.y + m[8] * o.z);
-    out.m[13] = v.y + o.y - (m[1] * o.x + m[5] * o.y + m[9] * o.z);
-    out.m[14] = v.z + o.z - (m[2] * o.x + m[6] * o.y + m[10] * o.z);
-    return out;
-}
-
 inline Float4x4 &from_quat(Float4x4 &out, const Float4 &q) {
     const float x2 = q.x + q.x, y2 = q.y + q.y, z2 = q.z + q.z;
     const float xx = q.x * x2, yx = q.y * x2, yy = q.y * y2;
@@ -472,83 +296,6 @@ inline Float4x4 &from_quat(Float4x4 &out, const Float4 &q) {
     const float wx = q.w * x2, wy = q.w * y2, wz = q.w * z2;
     return set(out, 1.0f - yy - zz, yx + wz, zx - wy, 0, yx - wz, 1.0f - xx - zz, zy + wx, 0, zx + wy, zy - wx,
                1.0f - xx - yy, 0, 0, 0, 0, 1);
-}
-
-/** a view matrix looking from eye at center; identity when they coincide. */
-inline Float4x4 &look_at(Float4x4 &out, const Float3 &eye, const Float3 &center, const Float3 &up) {
-    if (scalar::abs(eye.x - center.x) < scalar::EPSILON && scalar::abs(eye.y - center.y) < scalar::EPSILON &&
-        scalar::abs(eye.z - center.z) < scalar::EPSILON) {
-        return identity(out);
-    }
-    float z0 = eye.x - center.x;
-    float z1 = eye.y - center.y;
-    float z2 = eye.z - center.z;
-    float len = 1.0f / scalar::sqrt(z0 * z0 + z1 * z1 + z2 * z2);
-    z0 *= len;
-    z1 *= len;
-    z2 *= len;
-    float x0 = up.y * z2 - up.z * z1;
-    float x1 = up.z * z0 - up.x * z2;
-    float x2 = up.x * z1 - up.y * z0;
-    len = scalar::sqrt(x0 * x0 + x1 * x1 + x2 * x2);
-    if (len == 0.0f) {
-        x0 = 0.0f;
-        x1 = 0.0f;
-        x2 = 0.0f;
-    } else {
-        len = 1.0f / len;
-        x0 *= len;
-        x1 *= len;
-        x2 *= len;
-    }
-    float y0 = z1 * x2 - z2 * x1;
-    float y1 = z2 * x0 - z0 * x2;
-    float y2 = z0 * x1 - z1 * x0;
-    len = scalar::sqrt(y0 * y0 + y1 * y1 + y2 * y2);
-    if (len == 0.0f) {
-        y0 = 0.0f;
-        y1 = 0.0f;
-        y2 = 0.0f;
-    } else {
-        len = 1.0f / len;
-        y0 *= len;
-        y1 *= len;
-        y2 *= len;
-    }
-    return set(out, x0, y0, z0, 0, x1, y1, z1, 0, x2, y2, z2, 0, -(x0 * eye.x + x1 * eye.y + x2 * eye.z),
-               -(y0 * eye.x + y1 * eye.y + y2 * eye.z), -(z0 * eye.x + z1 * eye.y + z2 * eye.z), 1);
-}
-
-/** the model matrix of something at eye facing target, the inverse of look_at's view. */
-inline Float4x4 &target_to(Float4x4 &out, const Float3 &eye, const Float3 &target, const Float3 &up) {
-    float z0 = eye.x - target.x;
-    float z1 = eye.y - target.y;
-    float z2 = eye.z - target.z;
-    float len = z0 * z0 + z1 * z1 + z2 * z2;
-    if (len > 0.0f) {
-        len = 1.0f / scalar::sqrt(len);
-        z0 *= len;
-        z1 *= len;
-        z2 *= len;
-    }
-    float x0 = up.y * z2 - up.z * z1;
-    float x1 = up.z * z0 - up.x * z2;
-    float x2 = up.x * z1 - up.y * z0;
-    len = x0 * x0 + x1 * x1 + x2 * x2;
-    if (len > 0.0f) {
-        len = 1.0f / scalar::sqrt(len);
-        x0 *= len;
-        x1 *= len;
-        x2 *= len;
-    }
-    return set(out, x0, x1, x2, 0, z1 * x2 - z2 * x1, z2 * x0 - z0 * x2, z0 * x1 - z1 * x0, 0, z0, z1, z2, 0, eye.x, eye.y,
-               eye.z, 1);
-}
-
-inline float frob(const Float4x4 &a) {
-    v128_t sum = v4f::mul(col(a, 0), col(a, 0));
-    for (int i = 1; i < 4; i++) sum = v4f::mul_add(col(a, i), col(a, i), sum);
-    return scalar::sqrt(v4f::hsum4(sum));
 }
 
 inline Float4x4 &add(Float4x4 &out, const Float4x4 &a, const Float4x4 &b) {
@@ -567,28 +314,12 @@ inline Float4x4 &multiply_scalar(Float4x4 &out, const Float4x4 &a, float b) {
     return out;
 }
 
-inline Float4x4 &multiply_scalar_and_add(Float4x4 &out, const Float4x4 &a, const Float4x4 &b, float s) {
-    const v128_t vs = v4f::splat(s);
-    for (int i = 0; i < 4; i++) set_col(out, i, v4f::mul_add(col(b, i), vs, col(a, i)));
-    return out;
-}
-
 inline bool exact_equals(const Float4x4 &a, const Float4x4 &b) {
     for (int i = 0; i < 16; i++) {
         if (a.m[i] != b.m[i]) return false;
     }
     return true;
 }
-
-inline bool equals(const Float4x4 &a, const Float4x4 &b) {
-    for (int i = 0; i < 16; i++) {
-        if (!scalar::equals(a.m[i], b.m[i])) return false;
-    }
-    return true;
-}
-
-inline Float4x4 &mul(Float4x4 &out, const Float4x4 &a, const Float4x4 &b) { return multiply(out, a, b); }
-inline Float4x4 &sub(Float4x4 &out, const Float4x4 &a, const Float4x4 &b) { return subtract(out, a, b); }
 
 }  // namespace mat4f
 

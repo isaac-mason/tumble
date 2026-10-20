@@ -478,7 +478,7 @@ void test_rigid_body_inverse_inertia_outside_the_step(TestCtx &ctx) {
     mat4f::store(rotation_matrix, mat4f::from_quat(quatf::load(rotation)));
     Float4x4 fresh;
     mat4f::store(fresh, motion_properties::get_inverse_inertia_for_rotation(body->motion_properties, mat4f::load(rotation_matrix)));
-    CHECK(ctx, mat4f::exact_equals(mat4f::load(inverse_inertia), mat4f::load(fresh)));
+    CHECK(ctx, same_bits(mat4f::load(inverse_inertia), mat4f::load(fresh)));
     // a torque gets no response about the locked world y axis
     const Vec3f response = mat4f::multiply3x3_vec(mat4f::load(inverse_inertia), vec3f::make(3.0f, -2.0f, 5.0f));
     CHECK(ctx, vec3f::y(response) == 0.0f && (vec3f::x(response) != 0.0f || vec3f::z(response) != 0.0f));
@@ -531,7 +531,7 @@ void test_rigid_body_center_of_mass_and_surface_normal(TestCtx &ctx) {
     shapes::GetSubShapeTransformedShapeResult transformed = rigid_body::create_get_sub_shape_transformed_shape_result();
     rigid_body::get_sub_shape_transformed_shape(transformed, shape, sub_shape::EMPTY_SUB_SHAPE_ID, vec3f::make(1.0f, 2.0f, 3.0f), quatf::load(turned), vec3f::make(2.0f, 2.0f, 2.0f));
     CHECK(ctx, transformed.shape == shape && near_point(transformed.position, 1.0f, 2.0f, 3.0f) && near_point(transformed.scale, 2.0f, 2.0f, 2.0f));
-    CHECK(ctx, quatf::exact_equals(transformed.rotation, quatf::load(turned)));
+    CHECK(ctx, same_bits(transformed.rotation, quatf::load(turned)));
 
     release_fixture(f);
     box::destroy(shape);

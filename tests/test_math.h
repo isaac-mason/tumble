@@ -38,6 +38,39 @@ inline Vec3f unit(Vec3f v) { return vec3f::normalize(v); }
 /** a rotation of rad about axis, which need not be unit length */
 inline Quatf axis_angle(Vec3f axis, float rad) { return quatf::set_axis_angle(vec3f::normalize(axis), rad); }
 
+/** the same rotation within 1e-6: q and -q are the same */
+inline bool same_rotation(Quatf a, Quatf b) { return scalar::abs(quatf::dot(a, b)) >= 1.0f - 1e-6f; }
+
+inline bool same_bits(Quatf a, Quatf b) { return v4f::all_true(v4f::eq(a.v, b.v)); }
+
+inline bool same_bits(const Mat4f &a, const Mat4f &b) {
+    for (int i = 0; i < 4; i++) {
+        if (!v4f::all_true(v4f::eq(a.c[i], b.c[i]))) return false;
+    }
+    return true;
+}
+
+inline float quat_length(Quatf q) { return scalar::sqrt(quatf::dot(q, q)); }
+
+inline Mat4f translation(Vec3f v) {
+    return {{v4f::make(1, 0, 0, 0), v4f::make(0, 1, 0, 0), v4f::make(0, 0, 1, 0), v4f::set_lane<3>(v.v, 1.0f)}};
+}
+
+/** in [0, pi]; zero when either is zero */
+inline float angle_between(Vec3f a, Vec3f b) {
+    const float mag = scalar::sqrt(vec3f::squared_length(a) * vec3f::squared_length(b));
+    const float cosine = mag != 0.0f ? vec3f::dot(a, b) / mag : 0.0f;
+    return scalar::acos(scalar::clamp(cosine, -1.0f, 1.0f));
+}
+
+/** the rotation's angle, its axis into out_axis (x for the identity) */
+inline float axis_angle_of(Vec3f &out_axis, Quatf q) {
+    const float rad = scalar::acos(quatf::w(q)) * 2.0f;
+    const float s = scalar::sin(rad / 2.0f);
+    out_axis = s > 1e-6f ? vec3f::make(quatf::x(q) / s, quatf::y(q) / s, quatf::z(q) / s) : vec3f::axis_x();
+    return rad;
+}
+
 /** a register matrix's 16 floats, column-major, to read by index */
 inline Float4x4 elements(const Mat4f &m) {
     Float4x4 out;

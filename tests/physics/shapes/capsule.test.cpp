@@ -162,7 +162,7 @@ void test_capsule_supporting_face(TestCtx &ctx) {
     CHECK_NEAR(ctx, vec3f::z(io.face.vertices[1]), 0.0f, 1e-6f);
 
     // through the transform (translation) and scale
-    io.transform = mat4f::from_translation(vec3f::make(10.0f, 20.0f, 30.0f));
+    io.transform = translation(vec3f::make(10.0f, 20.0f, 30.0f));
     io.scale = vec3f::make(2.0f, 2.0f, 2.0f);
     capsule::get_supporting_face(io, vec3f::make(0.0f, 0.0f, 1.0f), c, sub_shape::EMPTY_SUB_SHAPE_ID);
     CHECK(ctx, io.face.num_vertices == 2);

@@ -4,6 +4,7 @@
 #include "physics/constraints/constraint_test_scene.h"
 #include "tumble/physics/constraints/swing_twist_constraint.h"
 #include "test.h"
+#include "test_math.h"
 
 using rigid_body::RigidBody;
 using swing_twist_constraint::SwingTwistConstraint;
@@ -91,7 +92,7 @@ void test_swing_twist_constraint_create(TestCtx &ctx) {
         scene.constraints, scene.bodies, a, b, {.position1 = {0.5f, 0.0f, 0.0f}, .space = constraints::SPACE_LOCAL});
     const SwingTwistConstraint *local = swing_twist_constraint::get(scene.constraints, local_id);
     CHECK(ctx, vec3f::exact_equals(local->local_space_position1, vec3f::make(0.5f, 0.0f, 0.0f)));
-    CHECK(ctx, quatf::equals(local->constraint_to_body1, quatf::make(0.0f, 0.0f, 0.0f, 1.0f)));
+    CHECK(ctx, same_rotation(local->constraint_to_body1, quatf::make(0.0f, 0.0f, 0.0f, 1.0f)));
     CHECK(ctx, swing_twist_constraint::get(scene.constraints, constraint_id::ser(0, constraint_id::CONE, 0)) == nullptr);
     release_constraint_scene(scene);
 }
@@ -108,7 +109,7 @@ void test_swing_twist_constraint_target_orientation(TestCtx &ctx) {
     // inside the limits the target is kept as given
     const Float4 inside = stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.2f);
     swing_twist_constraint::set_target_orientation_cs(*constraint, quatf::load(inside));
-    CHECK(ctx, quatf::exact_equals(constraint->target_orientation, quatf::load(inside)));
+    CHECK(ctx, same_bits(constraint->target_orientation, quatf::load(inside)));
 
     // outside them it is clamped to the cone and the twist range
     swing_twist_constraint::set_target_orientation_cs(*constraint, axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 1.0f));
@@ -121,7 +122,7 @@ void test_swing_twist_constraint_target_orientation(TestCtx &ctx) {
 
     // body space: R2 = R1 * orientation, here with both constraint frames the identity
     swing_twist_constraint::set_target_orientation_bs(*constraint, quatf::load(inside));
-    CHECK(ctx, quatf::equals(constraint->target_orientation, quatf::load(inside)));
+    CHECK(ctx, same_rotation(constraint->target_orientation, quatf::load(inside)));
 
     // changing a motor's state clears its warm start
     constraint->motor_constraint_parts[0].total_lambda = 1.0f;

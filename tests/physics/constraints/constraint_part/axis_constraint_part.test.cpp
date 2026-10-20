@@ -210,7 +210,7 @@ void test_axis_constraint_part_position_solve(TestCtx &ctx) {
     CHECK(ctx, axis_constraint_part::solve_position_constraint(part, a, b, vec3f::load(X_AXIS), -0.1f, 1.0f));
     CHECK_NEAR(ctx, a.center_of_mass_position.x, -0.05f, 1e-6f);
     CHECK_NEAR(ctx, b.center_of_mass_position.x, 0.95f, 1e-6f);
-    CHECK(ctx, quatf::exact_equals(quatf::load(a.quaternion), quatf::identity()));
+    CHECK(ctx, same_bits(quatf::load(a.quaternion), quatf::identity()));
     // velocities are untouched: the correction does not add momentum
     CHECK(ctx, vec3f::exact_equals(vec3f::load(a.motion_properties.linear_velocity), vec3f::zero()));
 

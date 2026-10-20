@@ -53,7 +53,7 @@ void test_rotation_euler_constraint_part_inv_initial_orientation(TestCtx &ctx) {
     // identical axes give the identity
     Quatf from_axes = rotation_euler_constraint_part::get_inv_initial_orientation_xy(vec3f::axis_x(), vec3f::axis_y(), vec3f::axis_x(),
                                                                                          vec3f::axis_y());
-    CHECK(ctx, quatf::exact_equals(from_axes, quatf::identity()));
+    CHECK(ctx, same_bits(from_axes, quatf::identity()));
 
     // body 2's axes are body 1's turned by r: c2 c1^-1 = r
     const Quatf r = axis_angle(vec3f::make(0.3f, -1.0f, 0.5f), 1.2f);

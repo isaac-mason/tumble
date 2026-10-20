@@ -29,11 +29,6 @@ inline AABox from_triangle(Vec3f a, Vec3f b, Vec3f c) {
     return {{v4f::min(a.v, v4f::min(b.v, c.v))}, {v4f::max(a.v, v4f::max(b.v, c.v))}};
 }
 
-inline AABox from_center_and_size(Vec3f center, Vec3f size) {
-    const Vec3f half = vec3f::scale(size, 0.5f);
-    return {vec3f::subtract(center, half), vec3f::add(center, half)};
-}
-
 inline AABox expand_by_point(const AABox &box, Vec3f point) { return {{v4f::min(box.min.v, point.v)}, {v4f::max(box.max.v, point.v)}}; }
 inline AABox expand_by_extents(const AABox &box, Vec3f extents) { return {vec3f::subtract(box.min, extents), vec3f::add(box.max, extents)}; }
 inline AABox expand_by_margin(const AABox &box, float margin) {

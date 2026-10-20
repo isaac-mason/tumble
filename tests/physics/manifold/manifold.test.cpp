@@ -196,7 +196,7 @@ void test_manifold_two_boxes_face_to_face(TestCtx &ctx) {
     io.scale = vec3f::make(1, 1, 1);
     box::get_supporting_face(io, vec3f::make(0, -1, 0), box_a, sub_shape::EMPTY_SUB_SHAPE_ID);
     const face::Face face_a = io.face;
-    io.transform = mat4f::from_translation(vec3f::load(position_b));
+    io.transform = translation(vec3f::load(position_b));
     box::get_supporting_face(io, vec3f::make(0, 1, 0), box_b, sub_shape::EMPTY_SUB_SHAPE_ID);
     const face::Face face_b = io.face;
     CHECK(ctx, face_a.num_vertices == 4 && face_b.num_vertices == 4);
@@ -307,7 +307,7 @@ void test_manifold_prune_counts(TestCtx &ctx) {
 
     m = manifold::create();
     for (uint32_t i = 0; i < 6; i++) {
-        const float angle = (float)i / 6.0f * scalar::TAU;
+        const float angle = (float)i / 6.0f * 2.0f * scalar::PI;
         set_point(m, i, scalar::cos(angle) * 0.5f, scalar::sin(angle) * 0.5f, 0.01f);
     }
     m.num_contact_points = 6;

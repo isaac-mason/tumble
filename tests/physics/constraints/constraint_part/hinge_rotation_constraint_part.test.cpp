@@ -17,7 +17,7 @@ static const uint32_t STAMP = motion_properties::STEP_STAMP_NONE;
 static float axis_misalignment(const RigidBody &a, const RigidBody &b, const Float3 &local_axis) {
     const Vec3f a1 = vec3f::transform_quat(vec3f::load(local_axis), quatf::load(a.quaternion));
     const Vec3f a2 = vec3f::transform_quat(vec3f::load(local_axis), quatf::load(b.quaternion));
-    return vec3f::angle(a1, a2);
+    return angle_between(a1, a2);
 }
 
 void test_hinge_rotation_constraint_part_create_and_deactivate(TestCtx &ctx) {
@@ -111,9 +111,9 @@ void test_hinge_rotation_constraint_part_position_realigns_axes(TestCtx &ctx) {
     CHECK(ctx, misalignment[0] < 0.3f * 0.05f);
     CHECK(ctx, misalignment[7] < 1e-3f);
     // both bodies moved: the correction is split by inverse inertia, not dumped on one side
-    CHECK(ctx, !quatf::exact_equals(quatf::load(a.quaternion), quatf::identity()));
-    CHECK_NEAR(ctx, quatf::length(quatf::load(a.quaternion)), 1.0f, 1e-6f);
-    CHECK_NEAR(ctx, quatf::length(quatf::load(b.quaternion)), 1.0f, 1e-6f);
+    CHECK(ctx, !same_bits(quatf::load(a.quaternion), quatf::identity()));
+    CHECK_NEAR(ctx, quat_length(quatf::load(a.quaternion)), 1.0f, 1e-6f);
+    CHECK_NEAR(ctx, quat_length(quatf::load(b.quaternion)), 1.0f, 1e-6f);
 }
 
 void test_hinge_rotation_constraint_part_opposite_and_degenerate(TestCtx &ctx) {
@@ -125,7 +125,7 @@ void test_hinge_rotation_constraint_part_opposite_and_degenerate(TestCtx &ctx) {
     CHECK(ctx, hinge_rotation_constraint_part::is_active(part));
     CHECK_NEAR(ctx, vec3f::length(part.b2), 1.0f, 1e-6f);
     CHECK_NEAR(ctx, vec3f::length(part.c2), 1.0f, 1e-6f);
-    for (int i = 0; i < 4; i++) CHECK(ctx, scalar::is_finite(part.effective_mass[i]));
+    for (int i = 0; i < 4; i++) CHECK(ctx, __builtin_isfinite(part.effective_mass[i]));
 
     // nothing dynamic: K is zero, the part deactivates
     a.motion_type = motion_type::MOTION_STATIC;

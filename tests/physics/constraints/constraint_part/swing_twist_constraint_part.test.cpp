@@ -73,8 +73,8 @@ void test_swing_twist_constraint_part_get_swing_twist(TestCtx &ctx) {
 
     // a half turn about y has no x or w: all swing
     swing_twist_constraint_part::get_swing_twist(out_swing, out_twist, quatf::make(0.0f, 1.0f, 0.0f, 0.0f));
-    CHECK(ctx, quatf::exact_equals(out_twist, quatf::identity()));
-    CHECK(ctx, quatf::exact_equals(out_swing, quatf::make(0.0f, 1.0f, 0.0f, 0.0f)));
+    CHECK(ctx, same_bits(out_twist, quatf::identity()));
+    CHECK(ctx, same_bits(out_swing, quatf::make(0.0f, 1.0f, 0.0f, 0.0f)));
 }
 
 void test_swing_twist_constraint_part_clamp_twist(TestCtx &ctx) {
@@ -86,17 +86,17 @@ void test_swing_twist_constraint_part_clamp_twist(TestCtx &ctx) {
     Quatf swing = quatf::identity();
     Quatf twist = axis_angle(vec3f::axis_x(), 0.8f);
     CHECK(ctx, swing_twist_constraint_part::clamp_swing_twist(part, swing, twist) == swing_twist_constraint_part::TWIST_MAX);
-    CHECK(ctx, quatf::exact_equals(twist, twist_max));
+    CHECK(ctx, same_bits(twist, twist_max));
 
     twist = axis_angle(vec3f::axis_x(), -0.8f);
     CHECK(ctx, swing_twist_constraint_part::clamp_swing_twist(part, swing, twist) == swing_twist_constraint_part::TWIST_MIN);
-    CHECK(ctx, quatf::exact_equals(twist, twist_min));
+    CHECK(ctx, same_bits(twist, twist_min));
 
     // within: untouched
     twist = axis_angle(vec3f::axis_x(), 0.3f);
     const Quatf inside = twist;
     CHECK(ctx, swing_twist_constraint_part::clamp_swing_twist(part, swing, twist) == 0);
-    CHECK(ctx, quatf::exact_equals(twist, inside));
+    CHECK(ctx, same_bits(twist, inside));
 
     // the same rotation with negative w clamps the same and keeps its sign
     twist = quatf::scale(axis_angle(vec3f::axis_x(), 0.8f), -1.0f);
@@ -108,7 +108,7 @@ void test_swing_twist_constraint_part_clamp_twist(TestCtx &ctx) {
     twist = axis_angle(vec3f::axis_x(), 0.1f);
     CHECK(ctx, swing_twist_constraint_part::clamp_swing_twist(part, swing, twist) ==
                    (swing_twist_constraint_part::TWIST_MIN | swing_twist_constraint_part::TWIST_MAX));
-    CHECK(ctx, quatf::exact_equals(twist, quatf::identity()));
+    CHECK(ctx, same_bits(twist, quatf::identity()));
 }
 
 void test_swing_twist_constraint_part_clamp_swing(TestCtx &ctx) {
@@ -124,7 +124,7 @@ void test_swing_twist_constraint_part_clamp_swing(TestCtx &ctx) {
     swing = axis_angle(vec3f::make(0.0f, 1.0f, 1.0f), 0.3f);
     const Quatf inside = swing;
     CHECK(ctx, swing_twist_constraint_part::clamp_swing_twist(cone, swing, twist) == 0);
-    CHECK(ctx, quatf::exact_equals(swing, inside));
+    CHECK(ctx, same_bits(swing, inside));
 
     // an elliptic cone (0.8 about y, 0.4 about z): a diagonal swing is projected onto the ellipse, unit length
     SwingTwistConstraintPart ellipse = swing_twist_constraint_part::create();
@@ -134,7 +134,7 @@ void test_swing_twist_constraint_part_clamp_swing(TestCtx &ctx) {
     const float ey = quatf::y(swing) / scalar::sin(0.4f);
     const float ez = quatf::z(swing) / scalar::sin(0.2f);
     CHECK_NEAR(ctx, ey * ey + ez * ez, 1.0f, 1e-5f);
-    CHECK_NEAR(ctx, quatf::length(swing), 1.0f, 1e-6f);
+    CHECK_NEAR(ctx, quat_length(swing), 1.0f, 1e-6f);
     CHECK(ctx, quatf::x(swing) == 0.0f && quatf::y(swing) > 0.0f && quatf::z(swing) > 0.0f);
 
     // pyramid: y in [-0.2, 0.6], z in [-0.4, 0.4]; y = -0.5 is clamped to -0.2, z within is kept
@@ -153,7 +153,7 @@ void test_swing_twist_constraint_part_clamp_swing(TestCtx &ctx) {
     swing_twist_constraint_part::set_limits(z_locked, -PI, PI, -0.4f, 0.4f, 0.0f, 0.0f);
     swing = axis_angle(vec3f::axis_y(), 0.6f);
     CHECK(ctx, swing_twist_constraint_part::clamp_swing_twist(z_locked, swing, twist) == swing_twist_constraint_part::SWING_Y_MAX);
-    CHECK(ctx, quatf::exact_equals(swing, quatf::make(0.0f, scalar::sin(0.2f), 0.0f, scalar::cos(0.2f))));
+    CHECK(ctx, same_bits(swing, quatf::make(0.0f, scalar::sin(0.2f), 0.0f, scalar::cos(0.2f))));
 }
 
 void test_swing_twist_constraint_part_cone_velocity_limit(TestCtx &ctx) {
@@ -231,13 +231,13 @@ void test_swing_twist_constraint_part_position_returns_to_cone(TestCtx &ctx) {
     CHECK_NEAR(ctx, 2.0f * scalar::atan2(b.quaternion.z, b.quaternion.w), 0.4f, 1e-3f);
     CHECK_NEAR(ctx, b.quaternion.x, 0.0f, 1e-6f);
     CHECK_NEAR(ctx, b.quaternion.y, 0.0f, 1e-6f);
-    CHECK(ctx, quatf::exact_equals(quatf::load(a.quaternion), quatf::identity()));
+    CHECK(ctx, same_bits(quatf::load(a.quaternion), quatf::identity()));
 
     // within the cone nothing is corrected
     b.quaternion = stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.3f);
     const Quatf inside = quatf::load(b.quaternion);
     CHECK(ctx, !swing_twist_constraint_part::solve_position_constraint(part, a, b, inside, quatf::identity(), quatf::identity(), 1.0f));
-    CHECK(ctx, quatf::exact_equals(quatf::load(b.quaternion), inside));
+    CHECK(ctx, same_bits(quatf::load(b.quaternion), inside));
 }
 
 void test_swing_twist_constraint_part_tiny_overshoot_activates_limit(TestCtx &ctx) {
@@ -268,5 +268,5 @@ void test_swing_twist_constraint_part_eccentric_cone_clamp_converges(TestCtx &ct
     const float y = quatf::y(swing) / part.sin_swing_y_half_max_angle;
     const float z = quatf::z(swing) / part.sin_swing_z_half_max_angle;
     CHECK(ctx, scalar::abs(y * y + z * z - 1.0f) < 2e-6f);
-    CHECK_NEAR(ctx, quatf::length(swing), 1.0f, 1e-6f);
+    CHECK_NEAR(ctx, quat_length(swing), 1.0f, 1e-6f);
 }

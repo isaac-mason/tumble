@@ -5,6 +5,7 @@
 #include "physics/constraints/constraint_test_scene.h"
 #include "tumble/physics/constraints/fixed_constraint.h"
 #include "test.h"
+#include "test_math.h"
 
 using fixed_constraint::FixedConstraint;
 using rigid_body::RigidBody;
@@ -64,14 +65,14 @@ void test_fixed_constraint_create_local_space(TestCtx &ctx) {
     CHECK(ctx, vec3f::exact_equals(constraint->local_space_position2, vec3f::make(-1.0f, 0.0f, 0.0f)));
     const Quatf expected = rotation_euler_constraint_part::get_inv_initial_orientation_xy(
         vec3f::make(1.0f, 0.0f, 0.0f), vec3f::make(0.0f, 1.0f, 0.0f), vec3f::make(0.0f, 1.0f, 0.0f), vec3f::make(-1.0f, 0.0f, 0.0f));
-    CHECK(ctx, quatf::equals(constraint->inv_initial_orientation, expected));
+    CHECK(ctx, same_rotation(constraint->inv_initial_orientation, expected));
     // body 2's x axis along body 1's y: a quarter turn about z
     CHECK_NEAR(ctx, scalar::abs(quatf::dot(constraint->inv_initial_orientation, axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), scalar::PI / 2.0f))), 1.0f,
                1e-5f);
 
     // default axes in local space: no relative rotation
     const constraint_id::ConstraintId plain = fixed_constraint::create(scene.constraints, scene.bodies, a, b, {.space = constraints::SPACE_LOCAL});
-    CHECK(ctx, quatf::equals(fixed_constraint::get(scene.constraints, plain)->inv_initial_orientation, quatf::identity()));
+    CHECK(ctx, same_rotation(fixed_constraint::get(scene.constraints, plain)->inv_initial_orientation, quatf::identity()));
     release_constraint_scene(scene);
 }
 

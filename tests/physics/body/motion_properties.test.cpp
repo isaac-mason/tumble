@@ -66,7 +66,7 @@ void test_motion_properties_create(TestCtx &ctx) {
     CHECK(ctx, mp.num_velocity_steps_override == 0 && mp.num_position_steps_override == 0);
     CHECK(ctx, mp.allow_sleeping && mp.sleep_test_timer == 0.0f);
     for (int i = 0; i < 3; i++) CHECK(ctx, mp.sleep_test_spheres[i].radius == 0.0f);
-    CHECK(ctx, quatf::exact_equals(quatf::load(mp.inertia_rotation), quatf::identity()));
+    CHECK(ctx, same_bits(quatf::load(mp.inertia_rotation), quatf::identity()));
     CHECK(ctx, vec3f::exact_equals(vec3f::load(mp.linear_velocity), vec3f::zero()) &&
                    vec3f::exact_equals(vec3f::load(mp.angular_velocity), vec3f::zero()));
     CHECK(ctx, mp.world_inverse_inertia_stamp == motion_properties::STEP_STAMP_NONE);
@@ -308,7 +308,7 @@ void test_motion_properties_set_mass_properties_box(TestCtx &ctx) {
     CHECK_NEAR(ctx, mp.inv_inertia_diagonal.x, 1.0f / 6.5f, 1e-6f);
     CHECK_NEAR(ctx, mp.inv_inertia_diagonal.y, 1.0f / 5.0f, 1e-6f);
     CHECK_NEAR(ctx, mp.inv_inertia_diagonal.z, 1.0f / 2.5f, 1e-6f);
-    CHECK_NEAR(ctx, quatf::length(quatf::load(mp.inertia_rotation)), 1.0f, 1e-5f);
+    CHECK_NEAR(ctx, quat_length(quatf::load(mp.inertia_rotation)), 1.0f, 1e-5f);
 
     // whatever the inertia rotation, the body-space inverse inertia is the box's diagonal inverted
     const Float4x4 local = fresh_world_inverse_inertia(mp, NO_ROTATION);
@@ -339,7 +339,7 @@ void test_motion_properties_set_mass_properties_box(TestCtx &ctx) {
     CHECK_NEAR(ctx, mp.inv_inertia_diagonal.x, 1.25f, 1e-6f);
     CHECK_NEAR(ctx, mp.inv_inertia_diagonal.y, 1.25f, 1e-6f);
     CHECK_NEAR(ctx, mp.inv_inertia_diagonal.z, 1.25f, 1e-6f);
-    CHECK(ctx, quatf::exact_equals(quatf::load(mp.inertia_rotation), quatf::identity()));
+    CHECK(ctx, same_bits(quatf::load(mp.inertia_rotation), quatf::identity()));
 }
 
 void test_motion_properties_dof_locking(TestCtx &ctx) {
@@ -357,7 +357,7 @@ void test_motion_properties_dof_locking(TestCtx &ctx) {
     motion_properties::set_mass_properties(sliding, dof::DOF_TRANSLATION_ONLY, slab);
     CHECK_NEAR(ctx, sliding.inv_mass, 1.0f / 6.0f, 1e-7f);
     CHECK(ctx, vec3f::exact_equals(vec3f::load(sliding.inv_inertia_diagonal), vec3f::zero()));
-    CHECK(ctx, quatf::exact_equals(quatf::load(sliding.inertia_rotation), quatf::identity()));
+    CHECK(ctx, same_bits(quatf::load(sliding.inertia_rotation), quatf::identity()));
     sliding.angular_velocity = {0.1f, 0.2f, 0.3f};
     motion_properties::add_angular_impulse(sliding, vec3f::make(5.0f, 5.0f, 5.0f), quatf::identity());
     CHECK(ctx, vec3f::exact_equals(vec3f::load(sliding.angular_velocity), vec3f::make(0.1f, 0.2f, 0.3f)));
@@ -555,5 +555,5 @@ void test_motion_properties_gyroscopic_force(TestCtx &ctx) {
     const Vec3f local_after = vec3f::transform_quat(vec3f::load(mp.angular_velocity), to_local);
     const Vec3f momentum_after = vec3f::divide(local_after, inertia);
     CHECK_NEAR(ctx, vec3f::length(momentum_after), vec3f::length(momentum_before), 1e-5f);
-    CHECK(ctx, !vec3f::equals(local_after, local_before));
+    CHECK(ctx, !near3(local_after, local_before, 1e-6f));
 }

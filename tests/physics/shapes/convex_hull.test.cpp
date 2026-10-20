@@ -833,7 +833,7 @@ void test_convex_hull_supporting_face_cases(TestCtx &ctx) {
     for (uint32_t i = 0; i < face.num_vertices; i++) CHECK_NEAR(ctx, vec3f::y(face.vertices[i]), -3.0f, 1e-6f);
 
     // translated: the bottom at 10 - 1
-    const Mat4f translated = mat4f::from_translation(vec3f::make(5, 10, -3));
+    const Mat4f translated = translation(vec3f::make(5, 10, -3));
     shapes::get_shape_supporting_face(face, h, sub_shape::EMPTY_SUB_SHAPE_ID, vec3f::make(0, 1, 0), translated, vec3f::make(1, 1, 1));
     for (uint32_t i = 0; i < face.num_vertices; i++) CHECK_NEAR(ctx, vec3f::y(face.vertices[i]), 9.0f, 1e-6f);
 

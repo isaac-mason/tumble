@@ -170,7 +170,7 @@ void test_convex_hull_builder_2d_max_vertices(TestCtx &ctx) {
     Float3 points[16];
     Vec3f vec_points[16];
     for (int32_t i = 0; i < 16; i++) {
-        const float angle = scalar::TAU * (float)i / 16.0f;
+        const float angle = 2.0f * scalar::PI * (float)i / 16.0f;
         points[i] = {scalar::cos(angle), scalar::sin(angle), 0.0f};
     }
     hull_2d::ConvexHullBuilder2D builder = hull_2d::create(as_vec3f(vec_points, points, 16), 16);

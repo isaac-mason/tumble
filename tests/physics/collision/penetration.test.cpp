@@ -36,7 +36,7 @@ static support::Support box_support(const Float3 &half_extents, float convex_rad
         s.box.half_extents = vec3f::load(half_extents);
         s.convex_radius = 0.0f;
     } else {
-        s.box.half_extents = vec3f::subtract_scalar(vec3f::load(half_extents), convex_radius);
+        s.box.half_extents = vec3f::subtract(vec3f::load(half_extents), vec3f::splat(convex_radius));
         s.convex_radius = convex_radius;
     }
     return s;
@@ -44,7 +44,7 @@ static support::Support box_support(const Float3 &half_extents, float convex_rad
 
 static void place(support::Support &s, const Float3 &position) {
     s.has_transform = true;
-    s.transform = mat4f::from_translation(vec3f::load(position));
+    s.transform = translation(vec3f::load(position));
 }
 
 /** the narrowphase's two steps as convex.ts runs them: gjk on the cores, epa on the whole shapes when the cores overlap. */
@@ -299,7 +299,7 @@ void test_penetration_cast_shape_starting_inside(TestCtx &ctx) {
     // a sphere of radius 0.5 (exclude mode: a point core) whose centre is already inside a unit box rounded by 0.05
     support::Support sphere = sphere_support(0.5f, false);
     support::Support box = box_support({1.0f, 1.0f, 1.0f}, 0.05f, false);
-    Mat4f a_to_b = mat4f::from_translation(vec3f::make(0.7f, 0.0f, 0.0f));
+    Mat4f a_to_b = translation(vec3f::make(0.7f, 0.0f, 0.0f));
 
     // without asking for the deepest point: a hit at fraction 0, and since the cores overlap there is no
     // usable contact normal, so the cast direction stands in for it
@@ -314,7 +314,7 @@ void test_penetration_cast_shape_starting_inside(TestCtx &ctx) {
 
     // touching within the convex radii only (the sphere's centre outside the box's core): a hit at 0 with
     // gjk's own normal, no epa needed even when the deepest point is asked for
-    a_to_b = mat4f::from_translation(vec3f::make(1.3f, 0.2f, 0.0f));
+    a_to_b = translation(vec3f::make(1.3f, 0.2f, 0.0f));
     penetration::cast_shape(result, a_to_b, sphere, box, vec3f::make(0, 5, 0), COLLISION_TOLERANCE, PENETRATION_TOLERANCE, sphere.convex_radius,
                             box.convex_radius, 1.0f, true);
     CHECK(ctx, result.hit);
@@ -327,7 +327,7 @@ void test_penetration_cast_shape_starting_inside(TestCtx &ctx) {
     // the radius, 0.8 along x, with the two contact points 0.8 apart on that line
     support::Support whole_sphere = sphere_support(0.5f, true);
     support::Support whole_box = box_support({1.0f, 1.0f, 1.0f}, 0.05f, true);
-    a_to_b = mat4f::from_translation(vec3f::make(0.7f, 0.0f, 0.0f));
+    a_to_b = translation(vec3f::make(0.7f, 0.0f, 0.0f));
     penetration::cast_shape(result, a_to_b, whole_sphere, whole_box, vec3f::make(0, 5, 0), COLLISION_TOLERANCE, PENETRATION_TOLERANCE,
                             whole_sphere.convex_radius, whole_box.convex_radius, 1.0f, true);
     CHECK(ctx, result.hit);
@@ -345,7 +345,7 @@ void test_penetration_cast_shape_sweep(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));
 
     // a sphere of radius 0.5 sweeping along +x into a unit box rounded by 0.05, as in the gjk cast test
-    const Mat4f a_to_b = mat4f::from_translation(vec3f::make(-5.0f, 0.2f, -0.1f));
+    const Mat4f a_to_b = translation(vec3f::make(-5.0f, 0.2f, -0.1f));
     const Float3 displacements[3] = {{10, 0, 0}, {0, 10, 0}, {3, 0, 0}};
     for (uint32_t i = 0; i < 3; i++) {
         support::Support sphere = sphere_support(0.5f, false);

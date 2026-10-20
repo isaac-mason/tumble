@@ -47,7 +47,7 @@ void test_rigid_body_step_rotation(TestCtx &ctx) {
     rigid_body_step::add_rotation_step(&body, vec3f::make(0.0f, 0.0f, scalar::PI * 0.5f));
     Vec3f x_axis = vec3f::transform_quat(vec3f::make(1.0f, 0.0f, 0.0f), quatf::load(q));
     CHECK(ctx, vec3f::distance(x_axis, vec3f::make(0.0f, 1.0f, 0.0f)) < 1e-5f);
-    CHECK_NEAR(ctx, quatf::length(quatf::load(q)), 1.0f, 1e-6f);
+    CHECK_NEAR(ctx, quat_length(quatf::load(q)), 1.0f, 1e-6f);
 
     // then a quarter turn about x, applied in world space: the rotated x axis (now y) goes to z
     rigid_body_step::add_rotation_step(&body, vec3f::make(scalar::PI * 0.5f, 0.0f, 0.0f));

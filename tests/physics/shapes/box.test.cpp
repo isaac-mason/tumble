@@ -189,7 +189,7 @@ void test_box_supporting_face(TestCtx &ctx) {
     CHECK(ctx, vec3f::y(face_winding(io.face)) > 0.0f);
 
     // the transform places the face, scale applied first
-    io.transform = mat4f::from_translation(vec3f::make(10.0f, 0.0f, -5.0f));
+    io.transform = translation(vec3f::make(10.0f, 0.0f, -5.0f));
     io.scale = vec3f::make(2.0f, 0.5f, 1.0f);
     box::get_supporting_face(io, vec3f::make(0.0f, -1.0f, 0.0f), b, sub_shape::EMPTY_SUB_SHAPE_ID);
     CHECK(ctx, vertex_is(io.face, 0, 8.0f, 1.0f, -8.0f));

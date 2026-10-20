@@ -80,7 +80,7 @@ void test_support_create(TestCtx &ctx) {
     support::Support s = support::create();
     CHECK(ctx, s.get_support == support::sphere_support);
     CHECK(ctx, s.convex_radius == 0.0f && s.add_radius == 0.0f && !s.has_transform);
-    CHECK(ctx, mat4f::exact_equals(s.transform, mat4f::identity()));
+    CHECK(ctx, same_bits(s.transform, mat4f::identity()));
     CHECK(ctx, s.hull.output_scale == 1.0f && s.hull.last_vertex == -1);
     CHECK(ctx, near3(get(s, vec3f::make(1.0f, 2.0f, 3.0f)), 0.0f, 0.0f, 0.0f, EPS));
 }
@@ -232,7 +232,7 @@ struct RandomHull {
 
 static void build_random_hull(RandomHull &hull, uint32_t &rng, uint32_t n) {
     float angles[15];
-    for (uint32_t i = 0; i < n; i++) angles[i] = (float)i / (float)n * scalar::TAU + mulberry32_unit(rng) * (scalar::TAU / (float)n) * 0.8f;
+    for (uint32_t i = 0; i < n; i++) angles[i] = (float)i / (float)n * 2.0f * scalar::PI + mulberry32_unit(rng) * (2.0f * scalar::PI / (float)n) * 0.8f;
     const uint32_t top_apex = 2 * n;
     const uint32_t bottom_apex = 2 * n + 1;
     hull.vertex_count = 2 * n + 2;

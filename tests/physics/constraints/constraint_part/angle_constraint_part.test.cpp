@@ -196,5 +196,5 @@ void test_angle_constraint_part_position_corrects_angle(TestCtx &ctx) {
     angle_constraint_part::calculate_constraint_properties_with_frequency_and_damping(part, 1.0f / 60.0f, a, b, vec3f::load(AXIS_Z), 0.0f, c,
                                                                                        2.0f, 1.0f);
     CHECK(ctx, !angle_constraint_part::solve_position_constraint(part, a, b, c, 1.0f));
-    CHECK(ctx, quatf::exact_equals(quatf::load(b.quaternion), quatf::load(before)));
+    CHECK(ctx, same_bits(quatf::load(b.quaternion), quatf::load(before)));
 }

@@ -6,6 +6,7 @@
 #include "tumble/physics/constraints/point_constraint.h"
 #include "tumble/physics/constraints/six_dof_constraint.h"
 #include "test.h"
+#include "test_math.h"
 
 using rigid_body::RigidBody;
 using six_dof_constraint::SixDOFConstraint;
@@ -319,7 +320,7 @@ void test_six_dof_constraint_motors(TestCtx &ctx) {
     six_dof_constraint::set_target_orientation_cs(*rotor, axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.5f));
     for (int i = 0; i < 180; i++) step_constraint_scene(scene, DT, vec3f::zero());
     Vec3f axis;
-    const float angle = quatf::get_axis_angle(axis, quatf::load(spinner->quaternion));
+    const float angle = axis_angle_of(axis, quatf::load(spinner->quaternion));
     CHECK_NEAR(ctx, angle, 0.5f, 2e-3f);
     CHECK(ctx, vec3f::distance(axis, vec3f::make(0.0f, 0.0f, 1.0f)) < 1e-3f);
     CHECK(ctx, vec3f::length(vec3f::load(spinner->motion_properties.angular_velocity)) < 1e-2f);
@@ -486,7 +487,7 @@ void test_six_dof_constraint_motor_limits_and_targets(TestCtx &ctx) {
         SixDOFConstraint *constraint = make_joint(scene, ball, {});
         const Quatf orientation = quatf::scale(axis_angle(vec3f::make(1.0f, 2.0f, 3.0f), 0.2f), -1.0f);
         six_dof_constraint::set_target_orientation_cs(*constraint, orientation);
-        CHECK(ctx, quatf::exact_equals(constraint->target_orientation, orientation));
+        CHECK(ctx, same_bits(constraint->target_orientation, orientation));
         release_constraint_scene(scene);
     }
 

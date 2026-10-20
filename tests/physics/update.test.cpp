@@ -352,7 +352,7 @@ void test_update_body_at_rest_sleeps_and_impulse_wakes(TestCtx &ctx) {
     CHECK(ctx, !body->sleeping);
 
     // time_before_sleep (0.5 s) and a margin
-    const uint32_t steps = (uint32_t)scalar::ceil((scene.world->settings.sleeping.time_before_sleep + 0.1f) * 60.0f);
+    const uint32_t steps = (uint32_t)__builtin_ceilf((scene.world->settings.sleeping.time_before_sleep + 0.1f) * 60.0f);
     for (uint32_t i = 0; i < steps; i++) step_world(*scene.world);
     CHECK(ctx, body->sleeping);
 

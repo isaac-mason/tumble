@@ -18,7 +18,7 @@ static Vec3f face_normal(const Float3 &a, const Float3 &b, const Float3 &c) {
 }
 
 void test_active_edges_is_edge_active(TestCtx &ctx) {
-    const float cos10 = scalar::cos(scalar::degrees_to_radians(10.0f));
+    const float cos10 = scalar::cos(10.0f * scalar::DEGREES_TO_RADIANS);
 
     // coplanar triangles: inactive
     CHECK(ctx, !active_edges::is_edge_active(vec3f::make(0, 1, 0), vec3f::make(0, 1, 0), vec3f::make(1, 0, 0), cos10));
@@ -27,7 +27,7 @@ void test_active_edges_is_edge_active(TestCtx &ctx) {
     // sharp convex edge (45 degrees)
     CHECK(ctx, active_edges::is_edge_active(vec3f::make(0, 1, 0), unit(vec3f::make(1, 1, 0)), vec3f::make(0, 0, -1), cos10));
     // small convex edge (5 degrees) under a 10 degree threshold: inactive
-    const float five = scalar::degrees_to_radians(5.0f);
+    const float five = 5.0f * scalar::DEGREES_TO_RADIANS;
     CHECK(ctx, !active_edges::is_edge_active(vec3f::make(0, 1, 0), unit(vec3f::make(scalar::sin(five), scalar::cos(five), 0)), vec3f::make(0, 0, 1), cos10));
     // concave edge: inactive even with a permissive threshold
     CHECK(ctx, !active_edges::is_edge_active(vec3f::make(0, 1, 0), vec3f::make(-1, 0, 0), vec3f::make(0, 0, 1), 0.0f));
@@ -35,7 +35,7 @@ void test_active_edges_is_edge_active(TestCtx &ctx) {
     CHECK(ctx, active_edges::is_edge_active(vec3f::make(0, 1, 0), vec3f::make(0, -1, 0), vec3f::make(1, 0, 0), cos10));
     CHECK(ctx, active_edges::is_edge_active(vec3f::make(0, 1, 0), vec3f::make(0, -1, 0), vec3f::make(-1, 0, 0), cos10));
     // nearly back to back (179 degrees): active
-    const float near_opposite = scalar::cos(scalar::degrees_to_radians(179.0f));
+    const float near_opposite = scalar::cos(179.0f * scalar::DEGREES_TO_RADIANS);
     CHECK(ctx, active_edges::is_edge_active(vec3f::make(0, 1, 0), vec3f::make(0, near_opposite, 0), vec3f::make(0, 0, 1), cos10));
     // swapping which side is left flips convex to concave
     CHECK(ctx, !active_edges::is_edge_active(vec3f::make(1, 0, 0), vec3f::make(0, 1, 0), vec3f::make(0, 0, -1), cos10));
