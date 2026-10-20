@@ -567,8 +567,7 @@ void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, cons
     const uint32_t first_vtx_idx = best_face.first_vertex;
     const int32_t num_vertices = (int32_t)best_face.num_vertices;
 
-    // downsample if too many vertices (prevent overflow in contact clipping)
-    // TODO: (comment from JoltPhysics) This really needs a better algorithm to determine which vertices are important!
+    // downsampled so contact clipping cannot overflow; every nth vertex, not the ones that matter most
     const int32_t max_vertices_to_return = (int32_t)(MAX_FACE_VERTICES / 2);
     const int32_t delta_vtx = (num_vertices + max_vertices_to_return - 1) / max_vertices_to_return;
 

@@ -30,7 +30,7 @@ static constexpr uint32_t MAX_REDUCTION_MANIFOLDS = 32;
 /** the body's pose as the narrowphase takes it: the shape origin, unscaled */
 static Transformf body_transform(const RigidBody &body) { return {body.position, body.quaternion, {1.0f, 1.0f, 1.0f}}; }
 
-/** broadphase.ts's notifyBodyBoundsChanged: the leaf follows the body, and a body that escaped its fat leaf rediscovers its pairs */
+/** the leaf follows the body, and a body that escaped its fat leaf rediscovers its pairs */
 static void notify_body_bounds_changed(World &world, RigidBody &body) {
     if (broadphase::update_body(world.broadphase, &body)) pairs::mark_moved(world.pairs, body);
 }

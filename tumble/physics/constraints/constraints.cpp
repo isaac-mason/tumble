@@ -87,7 +87,7 @@ ConstraintPool &ensure_pool(Constraints &constraints, ConstraintType type) {
         case constraint_id::SIX_DOF:
             pool.stride = record_stride<six_dof_constraint::SixDOFConstraint>();
             break;
-        // the core has no user constraints
+        // there are no user constraint types
         default:
             TUMBLE_ASSERT(false);
             break;
