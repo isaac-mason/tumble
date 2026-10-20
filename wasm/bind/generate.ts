@@ -268,7 +268,9 @@ function leavesOf(s: StructDesc, base: number, path: string): Leaf[] {
             }
         } else if (t.kind === 'value') {
             const expr = s.tuple ? `${path}[${index++}]` : `${path}.${js}`;
-            out.push(...leavesOf(structOf(t, where), base + f.offset, expr));
+            const value = structOf(t, where);
+            if (t.count === 1) out.push(...leavesOf(value, base + f.offset, expr));
+            else for (let k = 0; k < t.count; k++) out.push(...leavesOf(value, base + f.offset + k * value.size, `${expr}[${k}]!`));
         } else if (t.kind === 'handle' && t.count === 1) {
             const expr = s.tuple ? `${path}[${index++}]` : `${path}.${js}`;
             out.push({ offset: base + f.offset, scalar: 'u32', expr, address: { type: jsOf(t, where), nullable: true } });
@@ -281,7 +283,7 @@ function leavesOf(s: StructDesc, base: number, path: string): Leaf[] {
 
 function valueFieldType(t: TypeRef, where: string): string {
     if (t.kind === 'scalar') return t.count === 1 ? scalarTsType(t.scalar) : 'number[]';
-    if (t.kind === 'value') return jsOf(t, where);
+    if (t.kind === 'value') return t.count === 1 ? jsOf(t, where) : `${jsOf(t, where)}[]`;
     if (t.kind === 'handle') return `${jsOf(t, where)} | null`;
     throw new Error(`${where}: ${t.kind} cannot be a value field`);
 }
@@ -316,6 +318,7 @@ function valueCreate(s: StructDesc): string[] {
         let expr: string;
         if (t.kind === 'scalar') expr = t.scalar === 'bool' ? 'false' : '0';
         else if (t.kind === 'handle') expr = 'null';
+        else if (t.count > 1) expr = `Array.from({ length: ${t.count} }, () => ${jsOf(t, s.cpp)}.create())`;
         else expr = `${jsOf(t, s.cpp)}.create()`;
         parts.push({ js, expr, elements: null });
     }

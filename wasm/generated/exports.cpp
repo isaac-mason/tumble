@@ -27,6 +27,26 @@ WASM_EXPORT void tumble_world_settings_enable_collision(world_settings::WorldSet
 WASM_EXPORT world::World * tumble_world_create(const world_settings::WorldSettings * settings) { return adapters::world::create(settings); }
 WASM_EXPORT void tumble_world_destroy(world::World * world) { adapters::world::destroy(world); }
 WASM_EXPORT void tumble_world_step(world::World * world, float deltaTime) { adapters::world::step(world, deltaTime); }
+WASM_EXPORT void tumble_world_step_begin(world::World * world, float deltaTime) { adapters::world::step_begin(world, deltaTime); }
+WASM_EXPORT void tumble_world_find_pairs(world::World * world) { adapters::world::find_pairs(world); }
+WASM_EXPORT void tumble_world_narrowphase(world::World * world) { adapters::world::narrowphase(world); }
+WASM_EXPORT void tumble_world_solve(world::World * world) { adapters::world::solve(world); }
+WASM_EXPORT void tumble_world_step_end(world::World * world) { adapters::world::step_end(world); }
+WASM_EXPORT uint32_t tumble_world_woken(const world::World * world) { return adapters::world::woken(world); }
+WASM_EXPORT bool tumble_world_set_materials(world::World * world, const float * frictionRestitution, uint32_t count) { return adapters::world::set_materials(world, frictionRestitution, count); }
+WASM_EXPORT uint32_t tumble_events_pairs(const world::World * world) { return adapters::events::pairs(world); }
+WASM_EXPORT bool tumble_events_read_pair(adapters::PairEvent * out, const world::World * world, uint32_t index) { return adapters::events::read_pair(*out, world, index); }
+WASM_EXPORT uint32_t tumble_events_contacts_added(const world::World * world) { return adapters::events::contacts_added(world); }
+WASM_EXPORT bool tumble_events_read_contact_added(adapters::ContactEvent * out, const world::World * world, uint32_t index) { return adapters::events::read_contact_added(*out, world, index); }
+WASM_EXPORT uint32_t tumble_events_contacts_persisted(const world::World * world) { return adapters::events::contacts_persisted(world); }
+WASM_EXPORT bool tumble_events_read_contact_persisted(adapters::ContactEvent * out, const world::World * world, uint32_t index) { return adapters::events::read_contact_persisted(*out, world, index); }
+WASM_EXPORT uint32_t tumble_events_contacts_removed(const world::World * world) { return adapters::events::contacts_removed(world); }
+WASM_EXPORT bool tumble_events_read_contact_removed(adapters::ContactRemovedEvent * out, const world::World * world, uint32_t index) { return adapters::events::read_contact_removed(*out, world, index); }
+WASM_EXPORT uint32_t tumble_events_moved(const world::World * world) { return adapters::events::moved(world); }
+WASM_EXPORT uint32_t tumble_events_moved_body(const world::World * world, uint32_t index) { return adapters::events::moved_body(world, index); }
+WASM_EXPORT bool tumble_answers_reject_pair(world::World * world, uint32_t index) { return adapters::answers::reject_pair(world, index); }
+WASM_EXPORT bool tumble_answers_override_contact(world::World * world, uint32_t index, const contact_constraints::ContactSettings * settings) { return adapters::answers::override_contact(world, index, *settings); }
+WASM_EXPORT bool tumble_answers_reject_contact(world::World * world, uint32_t index) { return adapters::answers::reject_contact(world, index); }
 WASM_EXPORT void tumble_rigid_body_default_settings(adapters::BodySettings * out) { adapters::rigid_body::default_settings(*out); }
 WASM_EXPORT uint32_t tumble_rigid_body_create(world::World * world, const adapters::BodySettings * settings) { return adapters::rigid_body::create(world, *settings); }
 WASM_EXPORT bool tumble_rigid_body_remove(world::World * world, uint32_t body) { return adapters::rigid_body::remove(world, body); }

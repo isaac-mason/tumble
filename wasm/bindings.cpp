@@ -34,7 +34,47 @@ TUMBLE_BINDINGS {
     TUPLE_AS(Float3, "Vec3").field(FIELD(Float3, x)).field(FIELD(Float3, y)).field(FIELD(Float3, z));
     TUPLE_AS(Float4, "Quat").field(FIELD(Float4, x)).field(FIELD(Float4, y)).field(FIELD(Float4, z)).field(FIELD(Float4, w));
 
-    RECORD(world_settings::WorldSettings).field(FIELD(world_settings::WorldSettings, gravity), bind::WRITABLE);
+    VALUE_AS(world_settings::ContactsSettings, "ContactsSettings")
+        .field(FIELD(world_settings::ContactsSettings, contact_point_preserve_lambda_max_dist_sq));
+    VALUE_AS(world_settings::NarrowphaseSettings, "NarrowphaseSettings")
+        .field(FIELD(world_settings::NarrowphaseSettings, collision_tolerance))
+        .field(FIELD(world_settings::NarrowphaseSettings, penetration_tolerance))
+        .field(FIELD(world_settings::NarrowphaseSettings, return_deepest_point))
+        .field(FIELD(world_settings::NarrowphaseSettings, collide_only_with_active_edges))
+        .field(FIELD(world_settings::NarrowphaseSettings, speculative_contact_distance))
+        .field(FIELD(world_settings::NarrowphaseSettings, manifold_tolerance))
+        .field(FIELD(world_settings::NarrowphaseSettings, collide_with_backfaces))
+        .field(FIELD(world_settings::NarrowphaseSettings, use_manifold_reduction))
+        .field(FIELD(world_settings::NarrowphaseSettings, normal_cos_max_delta_rotation))
+        .field(FIELD(world_settings::NarrowphaseSettings, use_body_pair_contact_cache))
+        .field(FIELD(world_settings::NarrowphaseSettings, body_pair_cache_max_delta_position_sq))
+        .field(FIELD(world_settings::NarrowphaseSettings, body_pair_cache_cos_max_delta_rotation_div_2))
+        .field(FIELD(world_settings::NarrowphaseSettings, internal_edge_removal_vertex_tolerance_sq));
+    VALUE_AS(world_settings::SolverSettings, "SolverSettings")
+        .field(FIELD(world_settings::SolverSettings, min_velocity_for_restitution))
+        .field(FIELD(world_settings::SolverSettings, velocity_iterations))
+        .field(FIELD(world_settings::SolverSettings, position_iterations))
+        .field(FIELD(world_settings::SolverSettings, warm_starting))
+        .field(FIELD(world_settings::SolverSettings, penetration_slop))
+        .field(FIELD(world_settings::SolverSettings, baumgarte_factor))
+        .field(FIELD(world_settings::SolverSettings, warm_start_impulse_ratio))
+        .field(FIELD(world_settings::SolverSettings, max_penetration_distance));
+    VALUE_AS(world_settings::SleepingSettings, "SleepingSettings")
+        .field(FIELD(world_settings::SleepingSettings, allow_sleeping))
+        .field(FIELD(world_settings::SleepingSettings, time_before_sleep))
+        .field(FIELD(world_settings::SleepingSettings, point_velocity_sleep_threshold));
+    VALUE_AS(world_settings::CcdSettings, "CcdSettings")
+        .field(FIELD(world_settings::CcdSettings, linear_cast_threshold))
+        .field(FIELD(world_settings::CcdSettings, linear_cast_max_penetration))
+        .field(FIELD(world_settings::CcdSettings, min_velocity_for_restitution));
+    RECORD(world_settings::WorldSettings)
+        .field(FIELD(world_settings::WorldSettings, gravity), bind::WRITABLE)
+        .field(FIELD(world_settings::WorldSettings, gravity_enabled), bind::WRITABLE)
+        .field(FIELD(world_settings::WorldSettings, contacts), bind::WRITABLE)
+        .field(FIELD(world_settings::WorldSettings, narrowphase), bind::WRITABLE)
+        .field(FIELD(world_settings::WorldSettings, solver), bind::WRITABLE)
+        .field(FIELD(world_settings::WorldSettings, sleeping), bind::WRITABLE)
+        .field(FIELD(world_settings::WorldSettings, ccd), bind::WRITABLE);
     RECORD(world::World);
     RECORD_AS(shapes::Shape, "Shape");
 
@@ -47,6 +87,66 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::world::create), names("settings"), GROWS);
     bind::fn(b, BIND(adapters::world::destroy));
     bind::fn(b, BIND(adapters::world::step), names("world", "deltaTime"), GROWS);
+    bind::fn(b, BIND(adapters::world::step_begin), names("world", "deltaTime"), GROWS);
+    bind::fn(b, BIND(adapters::world::find_pairs), names("world"), GROWS);
+    bind::fn(b, BIND(adapters::world::narrowphase), names("world"), GROWS);
+    bind::fn(b, BIND(adapters::world::solve), names("world"), GROWS);
+    bind::fn(b, BIND(adapters::world::step_end), names("world"), GROWS);
+    bind::fn(b, BIND(adapters::world::woken), names("world"));
+    bind::fn(b, BIND(adapters::world::set_materials), names("world", "frictionRestitution", "count"), GROWS);
+
+    VALUE_AS(contact_constraints::ContactSettings, "ContactSettings")
+        .field(FIELD(contact_constraints::ContactSettings, combined_friction))
+        .field(FIELD(contact_constraints::ContactSettings, combined_restitution))
+        .field(FIELD(contact_constraints::ContactSettings, is_sensor))
+        .field(FIELD(contact_constraints::ContactSettings, inv_mass_scale_1))
+        .field(FIELD(contact_constraints::ContactSettings, inv_mass_scale_2))
+        .field(FIELD(contact_constraints::ContactSettings, inv_inertia_scale_1))
+        .field(FIELD(contact_constraints::ContactSettings, inv_inertia_scale_2))
+        .field(FIELD(contact_constraints::ContactSettings, relative_linear_surface_velocity))
+        .field(FIELD(contact_constraints::ContactSettings, relative_angular_surface_velocity));
+    VALUE_AS(adapters::PairEvent, "PairEvent")
+        .field(FIELD(adapters::PairEvent, body_a))
+        .field(FIELD(adapters::PairEvent, body_b))
+        .field(FIELD(adapters::PairEvent, user_data_a_low))
+        .field(FIELD(adapters::PairEvent, user_data_a_high))
+        .field(FIELD(adapters::PairEvent, user_data_b_low))
+        .field(FIELD(adapters::PairEvent, user_data_b_high));
+    VALUE_AS(adapters::ContactEvent, "ContactEvent")
+        .field(FIELD(adapters::ContactEvent, body_a))
+        .field(FIELD(adapters::ContactEvent, body_b))
+        .field(FIELD(adapters::ContactEvent, user_data_a_low))
+        .field(FIELD(adapters::ContactEvent, user_data_a_high))
+        .field(FIELD(adapters::ContactEvent, user_data_b_low))
+        .field(FIELD(adapters::ContactEvent, user_data_b_high))
+        .field(FIELD(adapters::ContactEvent, sub_shape_a))
+        .field(FIELD(adapters::ContactEvent, sub_shape_b))
+        .field(FIELD(adapters::ContactEvent, material_a))
+        .field(FIELD(adapters::ContactEvent, material_b))
+        .field(FIELD(adapters::ContactEvent, normal))
+        .field(FIELD(adapters::ContactEvent, penetration))
+        .field(FIELD(adapters::ContactEvent, num_points))
+        .field(FIELD(adapters::ContactEvent, points_a))
+        .field(FIELD(adapters::ContactEvent, points_b))
+        .field(FIELD(adapters::ContactEvent, settings));
+    VALUE_AS(adapters::ContactRemovedEvent, "ContactRemovedEvent")
+        .field(FIELD(adapters::ContactRemovedEvent, body_a))
+        .field(FIELD(adapters::ContactRemovedEvent, body_b))
+        .field(FIELD(adapters::ContactRemovedEvent, sub_shape_a))
+        .field(FIELD(adapters::ContactRemovedEvent, sub_shape_b));
+    bind::fn(b, BIND(adapters::events::pairs), names("world"));
+    bind::fn(b, BIND(adapters::events::read_pair), names("out", "world", "index"));
+    bind::fn(b, BIND(adapters::events::contacts_added), names("world"));
+    bind::fn(b, BIND(adapters::events::read_contact_added), names("out", "world", "index"));
+    bind::fn(b, BIND(adapters::events::contacts_persisted), names("world"));
+    bind::fn(b, BIND(adapters::events::read_contact_persisted), names("out", "world", "index"));
+    bind::fn(b, BIND(adapters::events::contacts_removed), names("world"));
+    bind::fn(b, BIND(adapters::events::read_contact_removed), names("out", "world", "index"));
+    bind::fn(b, BIND(adapters::events::moved), names("world"));
+    bind::fn(b, BIND(adapters::events::moved_body), names("world", "index"));
+    bind::fn(b, BIND(adapters::answers::reject_pair), names("world", "index"));
+    bind::fn(b, BIND(adapters::answers::override_contact), names("world", "index", "settings"));
+    bind::fn(b, BIND(adapters::answers::reject_contact), names("world", "index"));
 
     VALUE_AS(adapters::BodySettings, "BodySettings")
         .field(FIELD(adapters::BodySettings, shape))

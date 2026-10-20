@@ -5,7 +5,9 @@
 
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/events.h"
 #include "tumble/physics/shapes/dispatch.h"
+#include "tumble/physics/update.h"
 #include "tumble/util/alloc.h"
 #include "tumble/util/error.h"
 #include "tumble/util/object.h"
@@ -65,7 +67,115 @@ tumble::world::World *create(const tumble::world_settings::WorldSettings *settin
 void destroy(tumble::world::World *world) { tumble::world::destroy(world); }
 void step(tumble::world::World *world, float delta_time) { tumble::world::step(*world, delta_time); }
 
+void step_begin(tumble::world::World *world, float delta_time) { update::step_begin(*world, delta_time); }
+void find_pairs(tumble::world::World *world) { update::find_pairs(*world); }
+void narrowphase(tumble::world::World *world) { update::narrowphase(*world); }
+void solve(tumble::world::World *world) { update::solve(*world); }
+void step_end(tumble::world::World *world) { update::step_end(*world); }
+uint32_t woken(const tumble::world::World *world) { return world->events.woken; }
+
+bool set_materials(tumble::world::World *world, const float *friction_restitution, uint32_t count) {
+    collections::Owned<contact_constraints::Material> materials;
+    if (!materials.v.reserve(count)) return false;
+    for (uint32_t i = 0; i < count; i++) materials.v.push({friction_restitution[i * 2], friction_restitution[i * 2 + 1]});
+    return tumble::world::set_materials(*world, materials.v.data, count);
+}
+
 }  // namespace world
+
+namespace events {
+
+static void split(uint32_t &low, uint32_t &high, uint64_t value) {
+    low = (uint32_t)value;
+    high = (uint32_t)(value >> 32);
+}
+
+uint32_t pairs(const tumble::world::World *world) { return world->events.pairs.length; }
+
+bool read_pair(PairEvent &out, const tumble::world::World *world, uint32_t index) {
+    if (index >= world->events.pairs.length) return false;
+    const tumble::events::PairEvent &event = world->events.pairs[index];
+    out.body_a = event.body_id_a;
+    out.body_b = event.body_id_b;
+    split(out.user_data_a_low, out.user_data_a_high, event.user_data_a);
+    split(out.user_data_b_low, out.user_data_b_high, event.user_data_b);
+    return true;
+}
+
+static void copy_contact(ContactEvent &out, const tumble::events::ContactEvent &event) {
+    out.body_a = event.body_id_a;
+    out.body_b = event.body_id_b;
+    split(out.user_data_a_low, out.user_data_a_high, event.user_data_a);
+    split(out.user_data_b_low, out.user_data_b_high, event.user_data_b);
+    out.sub_shape_a = event.sub_shape_id_a;
+    out.sub_shape_b = event.sub_shape_id_b;
+    out.material_a = event.material_id_a;
+    out.material_b = event.material_id_b;
+    out.normal = event.normal;
+    out.penetration = event.penetration;
+    out.num_points = event.num_points;
+    for (uint32_t i = 0; i < manifold::MAX_CONTACT_POINTS; i++) {
+        out.points_a[i] = event.points_a[i];
+        out.points_b[i] = event.points_b[i];
+    }
+    out.settings = event.settings;
+}
+
+uint32_t contacts_added(const tumble::world::World *world) { return world->events.contacts_added.length; }
+
+bool read_contact_added(ContactEvent &out, const tumble::world::World *world, uint32_t index) {
+    if (index >= world->events.contacts_added.length) return false;
+    copy_contact(out, world->events.contacts_added[index]);
+    return true;
+}
+
+uint32_t contacts_persisted(const tumble::world::World *world) { return world->events.contacts_persisted.length; }
+
+bool read_contact_persisted(ContactEvent &out, const tumble::world::World *world, uint32_t index) {
+    if (index >= world->events.contacts_persisted.length) return false;
+    copy_contact(out, world->events.contacts_persisted[index]);
+    return true;
+}
+
+uint32_t contacts_removed(const tumble::world::World *world) { return world->events.contacts_removed.length; }
+
+bool read_contact_removed(ContactRemovedEvent &out, const tumble::world::World *world, uint32_t index) {
+    if (index >= world->events.contacts_removed.length) return false;
+    const tumble::events::ContactRemovedEvent &event = world->events.contacts_removed[index];
+    out = {event.body_id_a, event.body_id_b, event.sub_shape_id_a, event.sub_shape_id_b};
+    return true;
+}
+
+uint32_t moved(const tumble::world::World *world) { return world->events.moved.length; }
+
+body_id::BodyId moved_body(const tumble::world::World *world, uint32_t index) {
+    if (index >= world->events.moved.length) return body_id::INVALID_BODY_ID;
+    return world->bodies.pool[world->events.moved[index]]->id;
+}
+
+}  // namespace events
+
+namespace answers {
+
+bool reject_pair(tumble::world::World *world, uint32_t index) {
+    if (index >= world->events.pairs.length) return false;
+    tumble::events::reject_pair(world->answers, index);
+    return true;
+}
+
+bool override_contact(tumble::world::World *world, uint32_t index, const contact_constraints::ContactSettings &settings) {
+    if (index >= world->answers.contact_override.length) return false;
+    tumble::events::override_contact(world->answers, world->events, index).settings = settings;
+    return true;
+}
+
+bool reject_contact(tumble::world::World *world, uint32_t index) {
+    if (index >= world->answers.contact_override.length) return false;
+    tumble::events::override_contact(world->answers, world->events, index).reject = true;
+    return true;
+}
+
+}  // namespace answers
 
 namespace rigid_body {
 

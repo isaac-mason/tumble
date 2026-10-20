@@ -7,9 +7,9 @@
 import type { Instance } from '../module';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x16118fa3;
+export const SCHEMA_HASH = 0x8aea1cfd;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
-export const SCRATCH_BYTES = 128;
+export const SCRATCH_BYTES = 208;
 
 /** the address of an object the wasm owns, typed by what it is; 0 never occurs, null stands for no object. */
 export type Handle<Name extends string> = number & { readonly [HANDLE_OF]: Name };
@@ -119,6 +119,741 @@ export const Quat = {
         out[1] = view.getFloat32(offset + 4, true);
         out[2] = view.getFloat32(offset + 8, true);
         out[3] = view.getFloat32(offset + 12, true);
+        return out;
+    },
+};
+
+export type ContactsSettings = { contactPointPreserveLambdaMaxDistSq: number };
+export const ContactsSettings = {
+    size: 4,
+    create(): ContactsSettings {
+        return { contactPointPreserveLambdaMaxDistSq: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: ContactsSettings, address: number): ContactsSettings {
+        const mem = wasm.mem;
+        out.contactPointPreserveLambdaMaxDistSq = mem.f32[(address + 0) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: ContactsSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.contactPointPreserveLambdaMaxDistSq;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: ContactsSettings): void {
+        view.setFloat32(offset + 0, value.contactPointPreserveLambdaMaxDistSq, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: ContactsSettings, view: DataView, offset: number): ContactsSettings {
+        out.contactPointPreserveLambdaMaxDistSq = view.getFloat32(offset + 0, true);
+        return out;
+    },
+};
+
+export type NarrowphaseSettings = {
+    collisionTolerance: number;
+    penetrationTolerance: number;
+    returnDeepestPoint: boolean;
+    collideOnlyWithActiveEdges: boolean;
+    speculativeContactDistance: number;
+    manifoldTolerance: number;
+    collideWithBackfaces: boolean;
+    useManifoldReduction: boolean;
+    normalCosMaxDeltaRotation: number;
+    useBodyPairContactCache: boolean;
+    bodyPairCacheMaxDeltaPositionSq: number;
+    bodyPairCacheCosMaxDeltaRotationDiv2: number;
+    internalEdgeRemovalVertexToleranceSq: number;
+};
+export const NarrowphaseSettings = {
+    size: 44,
+    create(): NarrowphaseSettings {
+        return {
+            collisionTolerance: 0,
+            penetrationTolerance: 0,
+            returnDeepestPoint: false,
+            collideOnlyWithActiveEdges: false,
+            speculativeContactDistance: 0,
+            manifoldTolerance: 0,
+            collideWithBackfaces: false,
+            useManifoldReduction: false,
+            normalCosMaxDeltaRotation: 0,
+            useBodyPairContactCache: false,
+            bodyPairCacheMaxDeltaPositionSq: 0,
+            bodyPairCacheCosMaxDeltaRotationDiv2: 0,
+            internalEdgeRemovalVertexToleranceSq: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: NarrowphaseSettings, address: number): NarrowphaseSettings {
+        const mem = wasm.mem;
+        out.collisionTolerance = mem.f32[(address + 0) >> 2]!;
+        out.penetrationTolerance = mem.f32[(address + 4) >> 2]!;
+        out.returnDeepestPoint = mem.u8[address + 8]! !== 0;
+        out.collideOnlyWithActiveEdges = mem.u8[address + 9]! !== 0;
+        out.speculativeContactDistance = mem.f32[(address + 12) >> 2]!;
+        out.manifoldTolerance = mem.f32[(address + 16) >> 2]!;
+        out.collideWithBackfaces = mem.u8[address + 20]! !== 0;
+        out.useManifoldReduction = mem.u8[address + 21]! !== 0;
+        out.normalCosMaxDeltaRotation = mem.f32[(address + 24) >> 2]!;
+        out.useBodyPairContactCache = mem.u8[address + 28]! !== 0;
+        out.bodyPairCacheMaxDeltaPositionSq = mem.f32[(address + 32) >> 2]!;
+        out.bodyPairCacheCosMaxDeltaRotationDiv2 = mem.f32[(address + 36) >> 2]!;
+        out.internalEdgeRemovalVertexToleranceSq = mem.f32[(address + 40) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: NarrowphaseSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.collisionTolerance;
+        mem.f32[(address + 4) >> 2] = value.penetrationTolerance;
+        mem.u8[address + 8] = value.returnDeepestPoint ? 1 : 0;
+        mem.u8[address + 9] = value.collideOnlyWithActiveEdges ? 1 : 0;
+        mem.f32[(address + 12) >> 2] = value.speculativeContactDistance;
+        mem.f32[(address + 16) >> 2] = value.manifoldTolerance;
+        mem.u8[address + 20] = value.collideWithBackfaces ? 1 : 0;
+        mem.u8[address + 21] = value.useManifoldReduction ? 1 : 0;
+        mem.f32[(address + 24) >> 2] = value.normalCosMaxDeltaRotation;
+        mem.u8[address + 28] = value.useBodyPairContactCache ? 1 : 0;
+        mem.f32[(address + 32) >> 2] = value.bodyPairCacheMaxDeltaPositionSq;
+        mem.f32[(address + 36) >> 2] = value.bodyPairCacheCosMaxDeltaRotationDiv2;
+        mem.f32[(address + 40) >> 2] = value.internalEdgeRemovalVertexToleranceSq;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: NarrowphaseSettings): void {
+        view.setFloat32(offset + 0, value.collisionTolerance, true);
+        view.setFloat32(offset + 4, value.penetrationTolerance, true);
+        view.setUint8(offset + 8, value.returnDeepestPoint ? 1 : 0);
+        view.setUint8(offset + 9, value.collideOnlyWithActiveEdges ? 1 : 0);
+        view.setFloat32(offset + 12, value.speculativeContactDistance, true);
+        view.setFloat32(offset + 16, value.manifoldTolerance, true);
+        view.setUint8(offset + 20, value.collideWithBackfaces ? 1 : 0);
+        view.setUint8(offset + 21, value.useManifoldReduction ? 1 : 0);
+        view.setFloat32(offset + 24, value.normalCosMaxDeltaRotation, true);
+        view.setUint8(offset + 28, value.useBodyPairContactCache ? 1 : 0);
+        view.setFloat32(offset + 32, value.bodyPairCacheMaxDeltaPositionSq, true);
+        view.setFloat32(offset + 36, value.bodyPairCacheCosMaxDeltaRotationDiv2, true);
+        view.setFloat32(offset + 40, value.internalEdgeRemovalVertexToleranceSq, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: NarrowphaseSettings, view: DataView, offset: number): NarrowphaseSettings {
+        out.collisionTolerance = view.getFloat32(offset + 0, true);
+        out.penetrationTolerance = view.getFloat32(offset + 4, true);
+        out.returnDeepestPoint = view.getUint8(offset + 8) !== 0;
+        out.collideOnlyWithActiveEdges = view.getUint8(offset + 9) !== 0;
+        out.speculativeContactDistance = view.getFloat32(offset + 12, true);
+        out.manifoldTolerance = view.getFloat32(offset + 16, true);
+        out.collideWithBackfaces = view.getUint8(offset + 20) !== 0;
+        out.useManifoldReduction = view.getUint8(offset + 21) !== 0;
+        out.normalCosMaxDeltaRotation = view.getFloat32(offset + 24, true);
+        out.useBodyPairContactCache = view.getUint8(offset + 28) !== 0;
+        out.bodyPairCacheMaxDeltaPositionSq = view.getFloat32(offset + 32, true);
+        out.bodyPairCacheCosMaxDeltaRotationDiv2 = view.getFloat32(offset + 36, true);
+        out.internalEdgeRemovalVertexToleranceSq = view.getFloat32(offset + 40, true);
+        return out;
+    },
+};
+
+export type SolverSettings = {
+    minVelocityForRestitution: number;
+    velocityIterations: number;
+    positionIterations: number;
+    warmStarting: boolean;
+    penetrationSlop: number;
+    baumgarteFactor: number;
+    warmStartImpulseRatio: number;
+    maxPenetrationDistance: number;
+};
+export const SolverSettings = {
+    size: 32,
+    create(): SolverSettings {
+        return {
+            minVelocityForRestitution: 0,
+            velocityIterations: 0,
+            positionIterations: 0,
+            warmStarting: false,
+            penetrationSlop: 0,
+            baumgarteFactor: 0,
+            warmStartImpulseRatio: 0,
+            maxPenetrationDistance: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: SolverSettings, address: number): SolverSettings {
+        const mem = wasm.mem;
+        out.minVelocityForRestitution = mem.f32[(address + 0) >> 2]!;
+        out.velocityIterations = mem.u32[(address + 4) >> 2]!;
+        out.positionIterations = mem.u32[(address + 8) >> 2]!;
+        out.warmStarting = mem.u8[address + 12]! !== 0;
+        out.penetrationSlop = mem.f32[(address + 16) >> 2]!;
+        out.baumgarteFactor = mem.f32[(address + 20) >> 2]!;
+        out.warmStartImpulseRatio = mem.f32[(address + 24) >> 2]!;
+        out.maxPenetrationDistance = mem.f32[(address + 28) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: SolverSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.minVelocityForRestitution;
+        mem.u32[(address + 4) >> 2] = value.velocityIterations;
+        mem.u32[(address + 8) >> 2] = value.positionIterations;
+        mem.u8[address + 12] = value.warmStarting ? 1 : 0;
+        mem.f32[(address + 16) >> 2] = value.penetrationSlop;
+        mem.f32[(address + 20) >> 2] = value.baumgarteFactor;
+        mem.f32[(address + 24) >> 2] = value.warmStartImpulseRatio;
+        mem.f32[(address + 28) >> 2] = value.maxPenetrationDistance;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: SolverSettings): void {
+        view.setFloat32(offset + 0, value.minVelocityForRestitution, true);
+        view.setUint32(offset + 4, value.velocityIterations, true);
+        view.setUint32(offset + 8, value.positionIterations, true);
+        view.setUint8(offset + 12, value.warmStarting ? 1 : 0);
+        view.setFloat32(offset + 16, value.penetrationSlop, true);
+        view.setFloat32(offset + 20, value.baumgarteFactor, true);
+        view.setFloat32(offset + 24, value.warmStartImpulseRatio, true);
+        view.setFloat32(offset + 28, value.maxPenetrationDistance, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: SolverSettings, view: DataView, offset: number): SolverSettings {
+        out.minVelocityForRestitution = view.getFloat32(offset + 0, true);
+        out.velocityIterations = view.getUint32(offset + 4, true);
+        out.positionIterations = view.getUint32(offset + 8, true);
+        out.warmStarting = view.getUint8(offset + 12) !== 0;
+        out.penetrationSlop = view.getFloat32(offset + 16, true);
+        out.baumgarteFactor = view.getFloat32(offset + 20, true);
+        out.warmStartImpulseRatio = view.getFloat32(offset + 24, true);
+        out.maxPenetrationDistance = view.getFloat32(offset + 28, true);
+        return out;
+    },
+};
+
+export type SleepingSettings = { allowSleeping: boolean; timeBeforeSleep: number; pointVelocitySleepThreshold: number };
+export const SleepingSettings = {
+    size: 12,
+    create(): SleepingSettings {
+        return { allowSleeping: false, timeBeforeSleep: 0, pointVelocitySleepThreshold: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: SleepingSettings, address: number): SleepingSettings {
+        const mem = wasm.mem;
+        out.allowSleeping = mem.u8[address + 0]! !== 0;
+        out.timeBeforeSleep = mem.f32[(address + 4) >> 2]!;
+        out.pointVelocitySleepThreshold = mem.f32[(address + 8) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: SleepingSettings): void {
+        const mem = wasm.mem;
+        mem.u8[address + 0] = value.allowSleeping ? 1 : 0;
+        mem.f32[(address + 4) >> 2] = value.timeBeforeSleep;
+        mem.f32[(address + 8) >> 2] = value.pointVelocitySleepThreshold;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: SleepingSettings): void {
+        view.setUint8(offset + 0, value.allowSleeping ? 1 : 0);
+        view.setFloat32(offset + 4, value.timeBeforeSleep, true);
+        view.setFloat32(offset + 8, value.pointVelocitySleepThreshold, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: SleepingSettings, view: DataView, offset: number): SleepingSettings {
+        out.allowSleeping = view.getUint8(offset + 0) !== 0;
+        out.timeBeforeSleep = view.getFloat32(offset + 4, true);
+        out.pointVelocitySleepThreshold = view.getFloat32(offset + 8, true);
+        return out;
+    },
+};
+
+export type CcdSettings = { linearCastThreshold: number; linearCastMaxPenetration: number; minVelocityForRestitution: number };
+export const CcdSettings = {
+    size: 12,
+    create(): CcdSettings {
+        return { linearCastThreshold: 0, linearCastMaxPenetration: 0, minVelocityForRestitution: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: CcdSettings, address: number): CcdSettings {
+        const mem = wasm.mem;
+        out.linearCastThreshold = mem.f32[(address + 0) >> 2]!;
+        out.linearCastMaxPenetration = mem.f32[(address + 4) >> 2]!;
+        out.minVelocityForRestitution = mem.f32[(address + 8) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: CcdSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.linearCastThreshold;
+        mem.f32[(address + 4) >> 2] = value.linearCastMaxPenetration;
+        mem.f32[(address + 8) >> 2] = value.minVelocityForRestitution;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: CcdSettings): void {
+        view.setFloat32(offset + 0, value.linearCastThreshold, true);
+        view.setFloat32(offset + 4, value.linearCastMaxPenetration, true);
+        view.setFloat32(offset + 8, value.minVelocityForRestitution, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: CcdSettings, view: DataView, offset: number): CcdSettings {
+        out.linearCastThreshold = view.getFloat32(offset + 0, true);
+        out.linearCastMaxPenetration = view.getFloat32(offset + 4, true);
+        out.minVelocityForRestitution = view.getFloat32(offset + 8, true);
+        return out;
+    },
+};
+
+export type ContactSettings = {
+    combinedFriction: number;
+    combinedRestitution: number;
+    isSensor: boolean;
+    invMassScale1: number;
+    invMassScale2: number;
+    invInertiaScale1: number;
+    invInertiaScale2: number;
+    relativeLinearSurfaceVelocity: Vec3;
+    relativeAngularSurfaceVelocity: Vec3;
+};
+export const ContactSettings = {
+    size: 52,
+    create(): ContactSettings {
+        return {
+            combinedFriction: 0,
+            combinedRestitution: 0,
+            isSensor: false,
+            invMassScale1: 0,
+            invMassScale2: 0,
+            invInertiaScale1: 0,
+            invInertiaScale2: 0,
+            relativeLinearSurfaceVelocity: Vec3.create(),
+            relativeAngularSurfaceVelocity: Vec3.create(),
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: ContactSettings, address: number): ContactSettings {
+        const mem = wasm.mem;
+        out.combinedFriction = mem.f32[(address + 0) >> 2]!;
+        out.combinedRestitution = mem.f32[(address + 4) >> 2]!;
+        out.isSensor = mem.u8[address + 8]! !== 0;
+        out.invMassScale1 = mem.f32[(address + 12) >> 2]!;
+        out.invMassScale2 = mem.f32[(address + 16) >> 2]!;
+        out.invInertiaScale1 = mem.f32[(address + 20) >> 2]!;
+        out.invInertiaScale2 = mem.f32[(address + 24) >> 2]!;
+        out.relativeLinearSurfaceVelocity[0] = mem.f32[(address + 28) >> 2]!;
+        out.relativeLinearSurfaceVelocity[1] = mem.f32[(address + 32) >> 2]!;
+        out.relativeLinearSurfaceVelocity[2] = mem.f32[(address + 36) >> 2]!;
+        out.relativeAngularSurfaceVelocity[0] = mem.f32[(address + 40) >> 2]!;
+        out.relativeAngularSurfaceVelocity[1] = mem.f32[(address + 44) >> 2]!;
+        out.relativeAngularSurfaceVelocity[2] = mem.f32[(address + 48) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: ContactSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.combinedFriction;
+        mem.f32[(address + 4) >> 2] = value.combinedRestitution;
+        mem.u8[address + 8] = value.isSensor ? 1 : 0;
+        mem.f32[(address + 12) >> 2] = value.invMassScale1;
+        mem.f32[(address + 16) >> 2] = value.invMassScale2;
+        mem.f32[(address + 20) >> 2] = value.invInertiaScale1;
+        mem.f32[(address + 24) >> 2] = value.invInertiaScale2;
+        mem.f32[(address + 28) >> 2] = value.relativeLinearSurfaceVelocity[0];
+        mem.f32[(address + 32) >> 2] = value.relativeLinearSurfaceVelocity[1];
+        mem.f32[(address + 36) >> 2] = value.relativeLinearSurfaceVelocity[2];
+        mem.f32[(address + 40) >> 2] = value.relativeAngularSurfaceVelocity[0];
+        mem.f32[(address + 44) >> 2] = value.relativeAngularSurfaceVelocity[1];
+        mem.f32[(address + 48) >> 2] = value.relativeAngularSurfaceVelocity[2];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: ContactSettings): void {
+        view.setFloat32(offset + 0, value.combinedFriction, true);
+        view.setFloat32(offset + 4, value.combinedRestitution, true);
+        view.setUint8(offset + 8, value.isSensor ? 1 : 0);
+        view.setFloat32(offset + 12, value.invMassScale1, true);
+        view.setFloat32(offset + 16, value.invMassScale2, true);
+        view.setFloat32(offset + 20, value.invInertiaScale1, true);
+        view.setFloat32(offset + 24, value.invInertiaScale2, true);
+        view.setFloat32(offset + 28, value.relativeLinearSurfaceVelocity[0], true);
+        view.setFloat32(offset + 32, value.relativeLinearSurfaceVelocity[1], true);
+        view.setFloat32(offset + 36, value.relativeLinearSurfaceVelocity[2], true);
+        view.setFloat32(offset + 40, value.relativeAngularSurfaceVelocity[0], true);
+        view.setFloat32(offset + 44, value.relativeAngularSurfaceVelocity[1], true);
+        view.setFloat32(offset + 48, value.relativeAngularSurfaceVelocity[2], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: ContactSettings, view: DataView, offset: number): ContactSettings {
+        out.combinedFriction = view.getFloat32(offset + 0, true);
+        out.combinedRestitution = view.getFloat32(offset + 4, true);
+        out.isSensor = view.getUint8(offset + 8) !== 0;
+        out.invMassScale1 = view.getFloat32(offset + 12, true);
+        out.invMassScale2 = view.getFloat32(offset + 16, true);
+        out.invInertiaScale1 = view.getFloat32(offset + 20, true);
+        out.invInertiaScale2 = view.getFloat32(offset + 24, true);
+        out.relativeLinearSurfaceVelocity[0] = view.getFloat32(offset + 28, true);
+        out.relativeLinearSurfaceVelocity[1] = view.getFloat32(offset + 32, true);
+        out.relativeLinearSurfaceVelocity[2] = view.getFloat32(offset + 36, true);
+        out.relativeAngularSurfaceVelocity[0] = view.getFloat32(offset + 40, true);
+        out.relativeAngularSurfaceVelocity[1] = view.getFloat32(offset + 44, true);
+        out.relativeAngularSurfaceVelocity[2] = view.getFloat32(offset + 48, true);
+        return out;
+    },
+};
+
+export type PairEvent = {
+    bodyA: number;
+    bodyB: number;
+    userDataALow: number;
+    userDataAHigh: number;
+    userDataBLow: number;
+    userDataBHigh: number;
+};
+export const PairEvent = {
+    size: 24,
+    create(): PairEvent {
+        return { bodyA: 0, bodyB: 0, userDataALow: 0, userDataAHigh: 0, userDataBLow: 0, userDataBHigh: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: PairEvent, address: number): PairEvent {
+        const mem = wasm.mem;
+        out.bodyA = mem.u32[(address + 0) >> 2]!;
+        out.bodyB = mem.u32[(address + 4) >> 2]!;
+        out.userDataALow = mem.u32[(address + 8) >> 2]!;
+        out.userDataAHigh = mem.u32[(address + 12) >> 2]!;
+        out.userDataBLow = mem.u32[(address + 16) >> 2]!;
+        out.userDataBHigh = mem.u32[(address + 20) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: PairEvent): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.bodyA;
+        mem.u32[(address + 4) >> 2] = value.bodyB;
+        mem.u32[(address + 8) >> 2] = value.userDataALow;
+        mem.u32[(address + 12) >> 2] = value.userDataAHigh;
+        mem.u32[(address + 16) >> 2] = value.userDataBLow;
+        mem.u32[(address + 20) >> 2] = value.userDataBHigh;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: PairEvent): void {
+        view.setUint32(offset + 0, value.bodyA, true);
+        view.setUint32(offset + 4, value.bodyB, true);
+        view.setUint32(offset + 8, value.userDataALow, true);
+        view.setUint32(offset + 12, value.userDataAHigh, true);
+        view.setUint32(offset + 16, value.userDataBLow, true);
+        view.setUint32(offset + 20, value.userDataBHigh, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: PairEvent, view: DataView, offset: number): PairEvent {
+        out.bodyA = view.getUint32(offset + 0, true);
+        out.bodyB = view.getUint32(offset + 4, true);
+        out.userDataALow = view.getUint32(offset + 8, true);
+        out.userDataAHigh = view.getUint32(offset + 12, true);
+        out.userDataBLow = view.getUint32(offset + 16, true);
+        out.userDataBHigh = view.getUint32(offset + 20, true);
+        return out;
+    },
+};
+
+export type ContactEvent = {
+    bodyA: number;
+    bodyB: number;
+    userDataALow: number;
+    userDataAHigh: number;
+    userDataBLow: number;
+    userDataBHigh: number;
+    subShapeA: number;
+    subShapeB: number;
+    materialA: number;
+    materialB: number;
+    normal: Vec3;
+    penetration: number;
+    numPoints: number;
+    pointsA: Vec3[];
+    pointsB: Vec3[];
+    settings: ContactSettings;
+};
+export const ContactEvent = {
+    size: 208,
+    create(): ContactEvent {
+        return {
+            bodyA: 0,
+            bodyB: 0,
+            userDataALow: 0,
+            userDataAHigh: 0,
+            userDataBLow: 0,
+            userDataBHigh: 0,
+            subShapeA: 0,
+            subShapeB: 0,
+            materialA: 0,
+            materialB: 0,
+            normal: Vec3.create(),
+            penetration: 0,
+            numPoints: 0,
+            pointsA: Array.from({ length: 4 }, () => Vec3.create()),
+            pointsB: Array.from({ length: 4 }, () => Vec3.create()),
+            settings: ContactSettings.create(),
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: ContactEvent, address: number): ContactEvent {
+        const mem = wasm.mem;
+        out.bodyA = mem.u32[(address + 0) >> 2]!;
+        out.bodyB = mem.u32[(address + 4) >> 2]!;
+        out.userDataALow = mem.u32[(address + 8) >> 2]!;
+        out.userDataAHigh = mem.u32[(address + 12) >> 2]!;
+        out.userDataBLow = mem.u32[(address + 16) >> 2]!;
+        out.userDataBHigh = mem.u32[(address + 20) >> 2]!;
+        out.subShapeA = mem.u32[(address + 24) >> 2]!;
+        out.subShapeB = mem.u32[(address + 28) >> 2]!;
+        out.materialA = mem.i32[(address + 32) >> 2]!;
+        out.materialB = mem.i32[(address + 36) >> 2]!;
+        out.normal[0] = mem.f32[(address + 40) >> 2]!;
+        out.normal[1] = mem.f32[(address + 44) >> 2]!;
+        out.normal[2] = mem.f32[(address + 48) >> 2]!;
+        out.penetration = mem.f32[(address + 52) >> 2]!;
+        out.numPoints = mem.u32[(address + 56) >> 2]!;
+        out.pointsA[0]![0] = mem.f32[(address + 60) >> 2]!;
+        out.pointsA[0]![1] = mem.f32[(address + 64) >> 2]!;
+        out.pointsA[0]![2] = mem.f32[(address + 68) >> 2]!;
+        out.pointsA[1]![0] = mem.f32[(address + 72) >> 2]!;
+        out.pointsA[1]![1] = mem.f32[(address + 76) >> 2]!;
+        out.pointsA[1]![2] = mem.f32[(address + 80) >> 2]!;
+        out.pointsA[2]![0] = mem.f32[(address + 84) >> 2]!;
+        out.pointsA[2]![1] = mem.f32[(address + 88) >> 2]!;
+        out.pointsA[2]![2] = mem.f32[(address + 92) >> 2]!;
+        out.pointsA[3]![0] = mem.f32[(address + 96) >> 2]!;
+        out.pointsA[3]![1] = mem.f32[(address + 100) >> 2]!;
+        out.pointsA[3]![2] = mem.f32[(address + 104) >> 2]!;
+        out.pointsB[0]![0] = mem.f32[(address + 108) >> 2]!;
+        out.pointsB[0]![1] = mem.f32[(address + 112) >> 2]!;
+        out.pointsB[0]![2] = mem.f32[(address + 116) >> 2]!;
+        out.pointsB[1]![0] = mem.f32[(address + 120) >> 2]!;
+        out.pointsB[1]![1] = mem.f32[(address + 124) >> 2]!;
+        out.pointsB[1]![2] = mem.f32[(address + 128) >> 2]!;
+        out.pointsB[2]![0] = mem.f32[(address + 132) >> 2]!;
+        out.pointsB[2]![1] = mem.f32[(address + 136) >> 2]!;
+        out.pointsB[2]![2] = mem.f32[(address + 140) >> 2]!;
+        out.pointsB[3]![0] = mem.f32[(address + 144) >> 2]!;
+        out.pointsB[3]![1] = mem.f32[(address + 148) >> 2]!;
+        out.pointsB[3]![2] = mem.f32[(address + 152) >> 2]!;
+        out.settings.combinedFriction = mem.f32[(address + 156) >> 2]!;
+        out.settings.combinedRestitution = mem.f32[(address + 160) >> 2]!;
+        out.settings.isSensor = mem.u8[address + 164]! !== 0;
+        out.settings.invMassScale1 = mem.f32[(address + 168) >> 2]!;
+        out.settings.invMassScale2 = mem.f32[(address + 172) >> 2]!;
+        out.settings.invInertiaScale1 = mem.f32[(address + 176) >> 2]!;
+        out.settings.invInertiaScale2 = mem.f32[(address + 180) >> 2]!;
+        out.settings.relativeLinearSurfaceVelocity[0] = mem.f32[(address + 184) >> 2]!;
+        out.settings.relativeLinearSurfaceVelocity[1] = mem.f32[(address + 188) >> 2]!;
+        out.settings.relativeLinearSurfaceVelocity[2] = mem.f32[(address + 192) >> 2]!;
+        out.settings.relativeAngularSurfaceVelocity[0] = mem.f32[(address + 196) >> 2]!;
+        out.settings.relativeAngularSurfaceVelocity[1] = mem.f32[(address + 200) >> 2]!;
+        out.settings.relativeAngularSurfaceVelocity[2] = mem.f32[(address + 204) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: ContactEvent): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.bodyA;
+        mem.u32[(address + 4) >> 2] = value.bodyB;
+        mem.u32[(address + 8) >> 2] = value.userDataALow;
+        mem.u32[(address + 12) >> 2] = value.userDataAHigh;
+        mem.u32[(address + 16) >> 2] = value.userDataBLow;
+        mem.u32[(address + 20) >> 2] = value.userDataBHigh;
+        mem.u32[(address + 24) >> 2] = value.subShapeA;
+        mem.u32[(address + 28) >> 2] = value.subShapeB;
+        mem.i32[(address + 32) >> 2] = value.materialA;
+        mem.i32[(address + 36) >> 2] = value.materialB;
+        mem.f32[(address + 40) >> 2] = value.normal[0];
+        mem.f32[(address + 44) >> 2] = value.normal[1];
+        mem.f32[(address + 48) >> 2] = value.normal[2];
+        mem.f32[(address + 52) >> 2] = value.penetration;
+        mem.u32[(address + 56) >> 2] = value.numPoints;
+        mem.f32[(address + 60) >> 2] = value.pointsA[0]![0];
+        mem.f32[(address + 64) >> 2] = value.pointsA[0]![1];
+        mem.f32[(address + 68) >> 2] = value.pointsA[0]![2];
+        mem.f32[(address + 72) >> 2] = value.pointsA[1]![0];
+        mem.f32[(address + 76) >> 2] = value.pointsA[1]![1];
+        mem.f32[(address + 80) >> 2] = value.pointsA[1]![2];
+        mem.f32[(address + 84) >> 2] = value.pointsA[2]![0];
+        mem.f32[(address + 88) >> 2] = value.pointsA[2]![1];
+        mem.f32[(address + 92) >> 2] = value.pointsA[2]![2];
+        mem.f32[(address + 96) >> 2] = value.pointsA[3]![0];
+        mem.f32[(address + 100) >> 2] = value.pointsA[3]![1];
+        mem.f32[(address + 104) >> 2] = value.pointsA[3]![2];
+        mem.f32[(address + 108) >> 2] = value.pointsB[0]![0];
+        mem.f32[(address + 112) >> 2] = value.pointsB[0]![1];
+        mem.f32[(address + 116) >> 2] = value.pointsB[0]![2];
+        mem.f32[(address + 120) >> 2] = value.pointsB[1]![0];
+        mem.f32[(address + 124) >> 2] = value.pointsB[1]![1];
+        mem.f32[(address + 128) >> 2] = value.pointsB[1]![2];
+        mem.f32[(address + 132) >> 2] = value.pointsB[2]![0];
+        mem.f32[(address + 136) >> 2] = value.pointsB[2]![1];
+        mem.f32[(address + 140) >> 2] = value.pointsB[2]![2];
+        mem.f32[(address + 144) >> 2] = value.pointsB[3]![0];
+        mem.f32[(address + 148) >> 2] = value.pointsB[3]![1];
+        mem.f32[(address + 152) >> 2] = value.pointsB[3]![2];
+        mem.f32[(address + 156) >> 2] = value.settings.combinedFriction;
+        mem.f32[(address + 160) >> 2] = value.settings.combinedRestitution;
+        mem.u8[address + 164] = value.settings.isSensor ? 1 : 0;
+        mem.f32[(address + 168) >> 2] = value.settings.invMassScale1;
+        mem.f32[(address + 172) >> 2] = value.settings.invMassScale2;
+        mem.f32[(address + 176) >> 2] = value.settings.invInertiaScale1;
+        mem.f32[(address + 180) >> 2] = value.settings.invInertiaScale2;
+        mem.f32[(address + 184) >> 2] = value.settings.relativeLinearSurfaceVelocity[0];
+        mem.f32[(address + 188) >> 2] = value.settings.relativeLinearSurfaceVelocity[1];
+        mem.f32[(address + 192) >> 2] = value.settings.relativeLinearSurfaceVelocity[2];
+        mem.f32[(address + 196) >> 2] = value.settings.relativeAngularSurfaceVelocity[0];
+        mem.f32[(address + 200) >> 2] = value.settings.relativeAngularSurfaceVelocity[1];
+        mem.f32[(address + 204) >> 2] = value.settings.relativeAngularSurfaceVelocity[2];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: ContactEvent): void {
+        view.setUint32(offset + 0, value.bodyA, true);
+        view.setUint32(offset + 4, value.bodyB, true);
+        view.setUint32(offset + 8, value.userDataALow, true);
+        view.setUint32(offset + 12, value.userDataAHigh, true);
+        view.setUint32(offset + 16, value.userDataBLow, true);
+        view.setUint32(offset + 20, value.userDataBHigh, true);
+        view.setUint32(offset + 24, value.subShapeA, true);
+        view.setUint32(offset + 28, value.subShapeB, true);
+        view.setInt32(offset + 32, value.materialA, true);
+        view.setInt32(offset + 36, value.materialB, true);
+        view.setFloat32(offset + 40, value.normal[0], true);
+        view.setFloat32(offset + 44, value.normal[1], true);
+        view.setFloat32(offset + 48, value.normal[2], true);
+        view.setFloat32(offset + 52, value.penetration, true);
+        view.setUint32(offset + 56, value.numPoints, true);
+        view.setFloat32(offset + 60, value.pointsA[0]![0], true);
+        view.setFloat32(offset + 64, value.pointsA[0]![1], true);
+        view.setFloat32(offset + 68, value.pointsA[0]![2], true);
+        view.setFloat32(offset + 72, value.pointsA[1]![0], true);
+        view.setFloat32(offset + 76, value.pointsA[1]![1], true);
+        view.setFloat32(offset + 80, value.pointsA[1]![2], true);
+        view.setFloat32(offset + 84, value.pointsA[2]![0], true);
+        view.setFloat32(offset + 88, value.pointsA[2]![1], true);
+        view.setFloat32(offset + 92, value.pointsA[2]![2], true);
+        view.setFloat32(offset + 96, value.pointsA[3]![0], true);
+        view.setFloat32(offset + 100, value.pointsA[3]![1], true);
+        view.setFloat32(offset + 104, value.pointsA[3]![2], true);
+        view.setFloat32(offset + 108, value.pointsB[0]![0], true);
+        view.setFloat32(offset + 112, value.pointsB[0]![1], true);
+        view.setFloat32(offset + 116, value.pointsB[0]![2], true);
+        view.setFloat32(offset + 120, value.pointsB[1]![0], true);
+        view.setFloat32(offset + 124, value.pointsB[1]![1], true);
+        view.setFloat32(offset + 128, value.pointsB[1]![2], true);
+        view.setFloat32(offset + 132, value.pointsB[2]![0], true);
+        view.setFloat32(offset + 136, value.pointsB[2]![1], true);
+        view.setFloat32(offset + 140, value.pointsB[2]![2], true);
+        view.setFloat32(offset + 144, value.pointsB[3]![0], true);
+        view.setFloat32(offset + 148, value.pointsB[3]![1], true);
+        view.setFloat32(offset + 152, value.pointsB[3]![2], true);
+        view.setFloat32(offset + 156, value.settings.combinedFriction, true);
+        view.setFloat32(offset + 160, value.settings.combinedRestitution, true);
+        view.setUint8(offset + 164, value.settings.isSensor ? 1 : 0);
+        view.setFloat32(offset + 168, value.settings.invMassScale1, true);
+        view.setFloat32(offset + 172, value.settings.invMassScale2, true);
+        view.setFloat32(offset + 176, value.settings.invInertiaScale1, true);
+        view.setFloat32(offset + 180, value.settings.invInertiaScale2, true);
+        view.setFloat32(offset + 184, value.settings.relativeLinearSurfaceVelocity[0], true);
+        view.setFloat32(offset + 188, value.settings.relativeLinearSurfaceVelocity[1], true);
+        view.setFloat32(offset + 192, value.settings.relativeLinearSurfaceVelocity[2], true);
+        view.setFloat32(offset + 196, value.settings.relativeAngularSurfaceVelocity[0], true);
+        view.setFloat32(offset + 200, value.settings.relativeAngularSurfaceVelocity[1], true);
+        view.setFloat32(offset + 204, value.settings.relativeAngularSurfaceVelocity[2], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: ContactEvent, view: DataView, offset: number): ContactEvent {
+        out.bodyA = view.getUint32(offset + 0, true);
+        out.bodyB = view.getUint32(offset + 4, true);
+        out.userDataALow = view.getUint32(offset + 8, true);
+        out.userDataAHigh = view.getUint32(offset + 12, true);
+        out.userDataBLow = view.getUint32(offset + 16, true);
+        out.userDataBHigh = view.getUint32(offset + 20, true);
+        out.subShapeA = view.getUint32(offset + 24, true);
+        out.subShapeB = view.getUint32(offset + 28, true);
+        out.materialA = view.getInt32(offset + 32, true);
+        out.materialB = view.getInt32(offset + 36, true);
+        out.normal[0] = view.getFloat32(offset + 40, true);
+        out.normal[1] = view.getFloat32(offset + 44, true);
+        out.normal[2] = view.getFloat32(offset + 48, true);
+        out.penetration = view.getFloat32(offset + 52, true);
+        out.numPoints = view.getUint32(offset + 56, true);
+        out.pointsA[0]![0] = view.getFloat32(offset + 60, true);
+        out.pointsA[0]![1] = view.getFloat32(offset + 64, true);
+        out.pointsA[0]![2] = view.getFloat32(offset + 68, true);
+        out.pointsA[1]![0] = view.getFloat32(offset + 72, true);
+        out.pointsA[1]![1] = view.getFloat32(offset + 76, true);
+        out.pointsA[1]![2] = view.getFloat32(offset + 80, true);
+        out.pointsA[2]![0] = view.getFloat32(offset + 84, true);
+        out.pointsA[2]![1] = view.getFloat32(offset + 88, true);
+        out.pointsA[2]![2] = view.getFloat32(offset + 92, true);
+        out.pointsA[3]![0] = view.getFloat32(offset + 96, true);
+        out.pointsA[3]![1] = view.getFloat32(offset + 100, true);
+        out.pointsA[3]![2] = view.getFloat32(offset + 104, true);
+        out.pointsB[0]![0] = view.getFloat32(offset + 108, true);
+        out.pointsB[0]![1] = view.getFloat32(offset + 112, true);
+        out.pointsB[0]![2] = view.getFloat32(offset + 116, true);
+        out.pointsB[1]![0] = view.getFloat32(offset + 120, true);
+        out.pointsB[1]![1] = view.getFloat32(offset + 124, true);
+        out.pointsB[1]![2] = view.getFloat32(offset + 128, true);
+        out.pointsB[2]![0] = view.getFloat32(offset + 132, true);
+        out.pointsB[2]![1] = view.getFloat32(offset + 136, true);
+        out.pointsB[2]![2] = view.getFloat32(offset + 140, true);
+        out.pointsB[3]![0] = view.getFloat32(offset + 144, true);
+        out.pointsB[3]![1] = view.getFloat32(offset + 148, true);
+        out.pointsB[3]![2] = view.getFloat32(offset + 152, true);
+        out.settings.combinedFriction = view.getFloat32(offset + 156, true);
+        out.settings.combinedRestitution = view.getFloat32(offset + 160, true);
+        out.settings.isSensor = view.getUint8(offset + 164) !== 0;
+        out.settings.invMassScale1 = view.getFloat32(offset + 168, true);
+        out.settings.invMassScale2 = view.getFloat32(offset + 172, true);
+        out.settings.invInertiaScale1 = view.getFloat32(offset + 176, true);
+        out.settings.invInertiaScale2 = view.getFloat32(offset + 180, true);
+        out.settings.relativeLinearSurfaceVelocity[0] = view.getFloat32(offset + 184, true);
+        out.settings.relativeLinearSurfaceVelocity[1] = view.getFloat32(offset + 188, true);
+        out.settings.relativeLinearSurfaceVelocity[2] = view.getFloat32(offset + 192, true);
+        out.settings.relativeAngularSurfaceVelocity[0] = view.getFloat32(offset + 196, true);
+        out.settings.relativeAngularSurfaceVelocity[1] = view.getFloat32(offset + 200, true);
+        out.settings.relativeAngularSurfaceVelocity[2] = view.getFloat32(offset + 204, true);
+        return out;
+    },
+};
+
+export type ContactRemovedEvent = { bodyA: number; bodyB: number; subShapeA: number; subShapeB: number };
+export const ContactRemovedEvent = {
+    size: 16,
+    create(): ContactRemovedEvent {
+        return { bodyA: 0, bodyB: 0, subShapeA: 0, subShapeB: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: ContactRemovedEvent, address: number): ContactRemovedEvent {
+        const mem = wasm.mem;
+        out.bodyA = mem.u32[(address + 0) >> 2]!;
+        out.bodyB = mem.u32[(address + 4) >> 2]!;
+        out.subShapeA = mem.u32[(address + 8) >> 2]!;
+        out.subShapeB = mem.u32[(address + 12) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: ContactRemovedEvent): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.bodyA;
+        mem.u32[(address + 4) >> 2] = value.bodyB;
+        mem.u32[(address + 8) >> 2] = value.subShapeA;
+        mem.u32[(address + 12) >> 2] = value.subShapeB;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: ContactRemovedEvent): void {
+        view.setUint32(offset + 0, value.bodyA, true);
+        view.setUint32(offset + 4, value.bodyB, true);
+        view.setUint32(offset + 8, value.subShapeA, true);
+        view.setUint32(offset + 12, value.subShapeB, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: ContactRemovedEvent, view: DataView, offset: number): ContactRemovedEvent {
+        out.bodyA = view.getUint32(offset + 0, true);
+        out.bodyB = view.getUint32(offset + 4, true);
+        out.subShapeA = view.getUint32(offset + 8, true);
+        out.subShapeB = view.getUint32(offset + 12, true);
         return out;
     },
 };
@@ -429,28 +1164,108 @@ export const SphereSettings = {
 
 export type WorldSettings = Handle<'WorldSettings'>;
 /** WorldSettings's fields as a plain object, for WorldSettings.writeTo / readFrom over another realm's buffer. */
-export type WorldSettingsValue = { gravity: Vec3 };
+export type WorldSettingsValue = {
+    gravity: Vec3;
+    gravityEnabled: boolean;
+    contacts: ContactsSettings;
+    narrowphase: NarrowphaseSettings;
+    solver: SolverSettings;
+    sleeping: SleepingSettings;
+    ccd: CcdSettings;
+};
 export const WorldSettings = {
     size: 176,
     align: 4,
     /** byte offset of each field, for hot paths that read the views directly. */
     offset: {
         gravity: 56,
+        gravityEnabled: 68,
+        contacts: 72,
+        narrowphase: 76,
+        solver: 120,
+        sleeping: 152,
+        ccd: 164,
     },
     createValue(): WorldSettingsValue {
-        return { gravity: Vec3.create() };
+        return {
+            gravity: Vec3.create(),
+            gravityEnabled: false,
+            contacts: ContactsSettings.create(),
+            narrowphase: NarrowphaseSettings.create(),
+            solver: SolverSettings.create(),
+            sleeping: SleepingSettings.create(),
+            ccd: CcdSettings.create(),
+        };
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: WorldSettingsValue): void {
         view.setFloat32(offset + 56, value.gravity[0], true);
         view.setFloat32(offset + 60, value.gravity[1], true);
         view.setFloat32(offset + 64, value.gravity[2], true);
+        view.setUint8(offset + 68, value.gravityEnabled ? 1 : 0);
+        view.setFloat32(offset + 72, value.contacts.contactPointPreserveLambdaMaxDistSq, true);
+        view.setFloat32(offset + 76, value.narrowphase.collisionTolerance, true);
+        view.setFloat32(offset + 80, value.narrowphase.penetrationTolerance, true);
+        view.setUint8(offset + 84, value.narrowphase.returnDeepestPoint ? 1 : 0);
+        view.setUint8(offset + 85, value.narrowphase.collideOnlyWithActiveEdges ? 1 : 0);
+        view.setFloat32(offset + 88, value.narrowphase.speculativeContactDistance, true);
+        view.setFloat32(offset + 92, value.narrowphase.manifoldTolerance, true);
+        view.setUint8(offset + 96, value.narrowphase.collideWithBackfaces ? 1 : 0);
+        view.setUint8(offset + 97, value.narrowphase.useManifoldReduction ? 1 : 0);
+        view.setFloat32(offset + 100, value.narrowphase.normalCosMaxDeltaRotation, true);
+        view.setUint8(offset + 104, value.narrowphase.useBodyPairContactCache ? 1 : 0);
+        view.setFloat32(offset + 108, value.narrowphase.bodyPairCacheMaxDeltaPositionSq, true);
+        view.setFloat32(offset + 112, value.narrowphase.bodyPairCacheCosMaxDeltaRotationDiv2, true);
+        view.setFloat32(offset + 116, value.narrowphase.internalEdgeRemovalVertexToleranceSq, true);
+        view.setFloat32(offset + 120, value.solver.minVelocityForRestitution, true);
+        view.setUint32(offset + 124, value.solver.velocityIterations, true);
+        view.setUint32(offset + 128, value.solver.positionIterations, true);
+        view.setUint8(offset + 132, value.solver.warmStarting ? 1 : 0);
+        view.setFloat32(offset + 136, value.solver.penetrationSlop, true);
+        view.setFloat32(offset + 140, value.solver.baumgarteFactor, true);
+        view.setFloat32(offset + 144, value.solver.warmStartImpulseRatio, true);
+        view.setFloat32(offset + 148, value.solver.maxPenetrationDistance, true);
+        view.setUint8(offset + 152, value.sleeping.allowSleeping ? 1 : 0);
+        view.setFloat32(offset + 156, value.sleeping.timeBeforeSleep, true);
+        view.setFloat32(offset + 160, value.sleeping.pointVelocitySleepThreshold, true);
+        view.setFloat32(offset + 164, value.ccd.linearCastThreshold, true);
+        view.setFloat32(offset + 168, value.ccd.linearCastMaxPenetration, true);
+        view.setFloat32(offset + 172, value.ccd.minVelocityForRestitution, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: WorldSettingsValue, view: DataView, offset: number): WorldSettingsValue {
         out.gravity[0] = view.getFloat32(offset + 56, true);
         out.gravity[1] = view.getFloat32(offset + 60, true);
         out.gravity[2] = view.getFloat32(offset + 64, true);
+        out.gravityEnabled = view.getUint8(offset + 68) !== 0;
+        out.contacts.contactPointPreserveLambdaMaxDistSq = view.getFloat32(offset + 72, true);
+        out.narrowphase.collisionTolerance = view.getFloat32(offset + 76, true);
+        out.narrowphase.penetrationTolerance = view.getFloat32(offset + 80, true);
+        out.narrowphase.returnDeepestPoint = view.getUint8(offset + 84) !== 0;
+        out.narrowphase.collideOnlyWithActiveEdges = view.getUint8(offset + 85) !== 0;
+        out.narrowphase.speculativeContactDistance = view.getFloat32(offset + 88, true);
+        out.narrowphase.manifoldTolerance = view.getFloat32(offset + 92, true);
+        out.narrowphase.collideWithBackfaces = view.getUint8(offset + 96) !== 0;
+        out.narrowphase.useManifoldReduction = view.getUint8(offset + 97) !== 0;
+        out.narrowphase.normalCosMaxDeltaRotation = view.getFloat32(offset + 100, true);
+        out.narrowphase.useBodyPairContactCache = view.getUint8(offset + 104) !== 0;
+        out.narrowphase.bodyPairCacheMaxDeltaPositionSq = view.getFloat32(offset + 108, true);
+        out.narrowphase.bodyPairCacheCosMaxDeltaRotationDiv2 = view.getFloat32(offset + 112, true);
+        out.narrowphase.internalEdgeRemovalVertexToleranceSq = view.getFloat32(offset + 116, true);
+        out.solver.minVelocityForRestitution = view.getFloat32(offset + 120, true);
+        out.solver.velocityIterations = view.getUint32(offset + 124, true);
+        out.solver.positionIterations = view.getUint32(offset + 128, true);
+        out.solver.warmStarting = view.getUint8(offset + 132) !== 0;
+        out.solver.penetrationSlop = view.getFloat32(offset + 136, true);
+        out.solver.baumgarteFactor = view.getFloat32(offset + 140, true);
+        out.solver.warmStartImpulseRatio = view.getFloat32(offset + 144, true);
+        out.solver.maxPenetrationDistance = view.getFloat32(offset + 148, true);
+        out.sleeping.allowSleeping = view.getUint8(offset + 152) !== 0;
+        out.sleeping.timeBeforeSleep = view.getFloat32(offset + 156, true);
+        out.sleeping.pointVelocitySleepThreshold = view.getFloat32(offset + 160, true);
+        out.ccd.linearCastThreshold = view.getFloat32(offset + 164, true);
+        out.ccd.linearCastMaxPenetration = view.getFloat32(offset + 168, true);
+        out.ccd.minVelocityForRestitution = view.getFloat32(offset + 172, true);
         return out;
     },
 
@@ -459,6 +1274,50 @@ export const WorldSettings = {
     },
     writeGravity(worldSettings: WorldSettings, value: Vec3): void {
         Vec3.write(worldSettings + 56, value);
+    },
+
+    gravityEnabled(worldSettings: WorldSettings): boolean {
+        const mem = wasm.mem;
+        return mem.u8[worldSettings + 68]! !== 0;
+    },
+    setGravityEnabled(worldSettings: WorldSettings, value: boolean): void {
+        const mem = wasm.mem;
+        mem.u8[worldSettings + 68] = value ? 1 : 0;
+    },
+
+    readContacts(out: ContactsSettings, worldSettings: WorldSettings): ContactsSettings {
+        return ContactsSettings.read(out, worldSettings + 72);
+    },
+    writeContacts(worldSettings: WorldSettings, value: ContactsSettings): void {
+        ContactsSettings.write(worldSettings + 72, value);
+    },
+
+    readNarrowphase(out: NarrowphaseSettings, worldSettings: WorldSettings): NarrowphaseSettings {
+        return NarrowphaseSettings.read(out, worldSettings + 76);
+    },
+    writeNarrowphase(worldSettings: WorldSettings, value: NarrowphaseSettings): void {
+        NarrowphaseSettings.write(worldSettings + 76, value);
+    },
+
+    readSolver(out: SolverSettings, worldSettings: WorldSettings): SolverSettings {
+        return SolverSettings.read(out, worldSettings + 120);
+    },
+    writeSolver(worldSettings: WorldSettings, value: SolverSettings): void {
+        SolverSettings.write(worldSettings + 120, value);
+    },
+
+    readSleeping(out: SleepingSettings, worldSettings: WorldSettings): SleepingSettings {
+        return SleepingSettings.read(out, worldSettings + 152);
+    },
+    writeSleeping(worldSettings: WorldSettings, value: SleepingSettings): void {
+        SleepingSettings.write(worldSettings + 152, value);
+    },
+
+    readCcd(out: CcdSettings, worldSettings: WorldSettings): CcdSettings {
+        return CcdSettings.read(out, worldSettings + 164);
+    },
+    writeCcd(worldSettings: WorldSettings, value: CcdSettings): void {
+        CcdSettings.write(worldSettings + 164, value);
     },
 
     create(): WorldSettings {
@@ -523,6 +1382,42 @@ export const World = {
     step(world: World, deltaTime: number): void {
         wasm.exports.tumble_world_step(world, deltaTime);
         wasm.grew();
+    },
+
+    stepBegin(world: World, deltaTime: number): void {
+        wasm.exports.tumble_world_step_begin(world, deltaTime);
+        wasm.grew();
+    },
+
+    findPairs(world: World): void {
+        wasm.exports.tumble_world_find_pairs(world);
+        wasm.grew();
+    },
+
+    narrowphase(world: World): void {
+        wasm.exports.tumble_world_narrowphase(world);
+        wasm.grew();
+    },
+
+    solve(world: World): void {
+        wasm.exports.tumble_world_solve(world);
+        wasm.grew();
+    },
+
+    stepEnd(world: World): void {
+        wasm.exports.tumble_world_step_end(world);
+        wasm.grew();
+    },
+
+    woken(world: World): number {
+        const r = wasm.exports.tumble_world_woken(world);
+        return r;
+    },
+
+    setMaterials(world: World, frictionRestitution: Pointer<'f32'>, count: number): boolean {
+        const r = wasm.exports.tumble_world_set_materials(world, frictionRestitution, count);
+        wasm.grew();
+        return r !== 0;
     },
 };
 
@@ -591,6 +1486,85 @@ export function allocatedBytes(): number {
     const r = wasm.exports.tumble_wasm_allocated_bytes();
     return r;
 }
+
+export const Events = {
+    pairs(world: World): number {
+        const r = wasm.exports.tumble_events_pairs(world);
+        return r;
+    },
+
+    readPair(out: PairEvent, world: World, index: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_events_read_pair(scratch + 0, world, index);
+        PairEvent.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    contactsAdded(world: World): number {
+        const r = wasm.exports.tumble_events_contacts_added(world);
+        return r;
+    },
+
+    readContactAdded(out: ContactEvent, world: World, index: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_events_read_contact_added(scratch + 0, world, index);
+        ContactEvent.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    contactsPersisted(world: World): number {
+        const r = wasm.exports.tumble_events_contacts_persisted(world);
+        return r;
+    },
+
+    readContactPersisted(out: ContactEvent, world: World, index: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_events_read_contact_persisted(scratch + 0, world, index);
+        ContactEvent.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    contactsRemoved(world: World): number {
+        const r = wasm.exports.tumble_events_contacts_removed(world);
+        return r;
+    },
+
+    readContactRemoved(out: ContactRemovedEvent, world: World, index: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_events_read_contact_removed(scratch + 0, world, index);
+        ContactRemovedEvent.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    moved(world: World): number {
+        const r = wasm.exports.tumble_events_moved(world);
+        return r;
+    },
+
+    movedBody(world: World, index: number): number {
+        const r = wasm.exports.tumble_events_moved_body(world, index);
+        return r;
+    },
+};
+
+export const Answers = {
+    rejectPair(world: World, index: number): boolean {
+        const r = wasm.exports.tumble_answers_reject_pair(world, index);
+        return r !== 0;
+    },
+
+    overrideContact(world: World, index: number, settings: ContactSettings): boolean {
+        const scratch = wasm.scratch;
+        ContactSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_answers_override_contact(world, index, scratch + 0);
+        return r !== 0;
+    },
+
+    rejectContact(world: World, index: number): boolean {
+        const r = wasm.exports.tumble_answers_reject_contact(world, index);
+        return r !== 0;
+    },
+};
 
 export const RigidBody = {
     defaultSettings(out: BodySettings): BodySettings {
@@ -693,6 +1667,26 @@ export type WasmExports = {
     tumble_world_create(settings: number): number;
     tumble_world_destroy(world: number): void;
     tumble_world_step(world: number, deltaTime: number): void;
+    tumble_world_step_begin(world: number, deltaTime: number): void;
+    tumble_world_find_pairs(world: number): void;
+    tumble_world_narrowphase(world: number): void;
+    tumble_world_solve(world: number): void;
+    tumble_world_step_end(world: number): void;
+    tumble_world_woken(world: number): number;
+    tumble_world_set_materials(world: number, frictionRestitution: number, count: number): number;
+    tumble_events_pairs(world: number): number;
+    tumble_events_read_pair(out: number, world: number, index: number): number;
+    tumble_events_contacts_added(world: number): number;
+    tumble_events_read_contact_added(out: number, world: number, index: number): number;
+    tumble_events_contacts_persisted(world: number): number;
+    tumble_events_read_contact_persisted(out: number, world: number, index: number): number;
+    tumble_events_contacts_removed(world: number): number;
+    tumble_events_read_contact_removed(out: number, world: number, index: number): number;
+    tumble_events_moved(world: number): number;
+    tumble_events_moved_body(world: number, index: number): number;
+    tumble_answers_reject_pair(world: number, index: number): number;
+    tumble_answers_override_contact(world: number, index: number, settings: number): number;
+    tumble_answers_reject_contact(world: number, index: number): number;
     tumble_rigid_body_default_settings(out: number): void;
     tumble_rigid_body_create(world: number, settings: number): number;
     tumble_rigid_body_remove(world: number, body: number): number;
