@@ -8,6 +8,8 @@
 #include "tumble/physics/body/rigid_body.h"
 #include "tumble/physics/events.h"
 #include "tumble/physics/shapes/dispatch.h"
+#include "tumble/physics/shapes/empty.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_data.h"
 #include "tumble/physics/update.h"
 #include "tumble/util/alloc.h"
 #include "tumble/util/error.h"
@@ -160,10 +162,7 @@ namespace poses {
 
 Poses *create(tumble::world::World *world) {
     Poses *poses = util::alloc<Poses>(1);
-    if (poses == nullptr) {
-        util::set_error(util::ERROR_OUT_OF_MEMORY);
-        return nullptr;
-    }
+    if (poses == nullptr) return nullptr;
     *poses = {};
     poses->world = world;
     return poses;
@@ -205,7 +204,6 @@ uint32_t add(Poses *poses, body_id::BodyId id) {
         const uint32_t wanted = slot == poses->bodies.capacity ? (slot == 0 ? 16 : slot * 2) : poses->bodies.capacity;
         if (!poses->bodies.reserve(wanted) || !poses->fresh.reserve(wanted) || !poses->positions.reserve(wanted * 3) ||
             !poses->quaternions.reserve(wanted * 4) || !poses->changed.reserve(wanted)) {
-            util::set_error(util::ERROR_OUT_OF_MEMORY);
             return UINT32_MAX;
         }
         poses->bodies.push(body_id::INVALID_BODY_ID);
@@ -593,8 +591,19 @@ bool set_restitution(tumble::world::World *world, body_id::BodyId id, float rest
 
 }  // namespace rigid_body
 
+namespace shape {
+
+uint32_t get_type(const shapes::Shape *shape) { return (uint32_t)shape->type; }
+void get_local_bounds(Box3f &out, const shapes::Shape *shape) { out = shape->aabb; }
+void get_center_of_mass(Float3 &out, const shapes::Shape *shape) { out = shape->center_of_mass; }
+float get_volume(const shapes::Shape *shape) { return shape->volume; }
+void get_mass_properties(mass_properties::MassProperties &out, const shapes::Shape *shape) { shapes::compute_mass_properties(out, shape); }
+
+}  // namespace shape
+
 namespace box {
 
+void default_settings(tumble::box::BoxShapeSettings &out) { out = {}; }
 shapes::Shape *create(const tumble::box::BoxShapeSettings &settings) { return tumble::box::create(settings); }
 void destroy(shapes::Shape *shape) { tumble::box::destroy(shape); }
 
@@ -602,9 +611,132 @@ void destroy(shapes::Shape *shape) { tumble::box::destroy(shape); }
 
 namespace sphere {
 
+void default_settings(tumble::sphere::SphereShapeSettings &out) { out = {}; }
 shapes::Shape *create(const tumble::sphere::SphereShapeSettings &settings) { return tumble::sphere::create(settings); }
 void destroy(shapes::Shape *shape) { tumble::sphere::destroy(shape); }
 
 }  // namespace sphere
+
+namespace capsule {
+
+void default_settings(tumble::capsule::CapsuleShapeSettings &out) { out = {}; }
+shapes::Shape *create(const tumble::capsule::CapsuleShapeSettings &settings) { return tumble::capsule::create(settings); }
+void destroy(shapes::Shape *shape) { tumble::capsule::destroy(shape); }
+
+}  // namespace capsule
+
+namespace cylinder {
+
+void default_settings(tumble::cylinder::CylinderShapeSettings &out) { out = {}; }
+shapes::Shape *create(const tumble::cylinder::CylinderShapeSettings &settings) { return tumble::cylinder::create(settings); }
+void destroy(shapes::Shape *shape) { tumble::cylinder::destroy(shape); }
+
+}  // namespace cylinder
+
+namespace plane {
+
+void default_settings(tumble::plane::PlaneShapeSettings &out) { out = {}; }
+shapes::Shape *create(const tumble::plane::PlaneShapeSettings &settings) { return tumble::plane::create(settings); }
+void destroy(shapes::Shape *shape) { tumble::plane::destroy(shape); }
+
+}  // namespace plane
+
+namespace empty {
+
+shapes::Shape *create() { return tumble::empty::create(); }
+void destroy(shapes::Shape *shape) { tumble::empty::destroy(shape); }
+
+}  // namespace empty
+
+namespace convex_hull_data {
+
+void default_settings(tumble::convex_hull::ConvexHullBuildSettings &out) { out = {}; }
+
+bool build(ConvexHullBuild &out, const tumble::convex_hull::ConvexHullBuildSettings &settings) {
+    tumble::convex_hull::BuildResult result = tumble::convex_hull::BUILD_SUCCESS;
+    out.data = tumble::convex_hull::build(settings, &result);
+    out.result = result;
+    return out.data != nullptr;
+}
+
+void release(tumble::convex_hull::ConvexHullData *data) { tumble::convex_hull::release(data); }
+
+}  // namespace convex_hull_data
+
+namespace convex_hull {
+
+void default_settings(tumble::convex_hull::ConvexHullShapeSettings &out) { out = {}; }
+shapes::Shape *create(const tumble::convex_hull::ConvexHullShapeSettings &settings) { return tumble::convex_hull::create(settings); }
+void destroy(shapes::Shape *shape) { tumble::convex_hull::destroy(shape); }
+
+}  // namespace convex_hull
+
+namespace triangle_mesh_data {
+
+void default_settings(tumble::triangle_mesh_builder::TriangleMeshBuilderSettings &out) { out = {}; }
+
+tumble::triangle_mesh_data::TriangleMeshData *build(const tumble::triangle_mesh_builder::TriangleMeshBuilderSettings &settings) {
+    return tumble::triangle_mesh_builder::build(settings);
+}
+
+void release(tumble::triangle_mesh_data::TriangleMeshData *data) { tumble::triangle_mesh_data::destroy(data); }
+
+}  // namespace triangle_mesh_data
+
+namespace triangle_mesh {
+
+void default_settings(tumble::triangle_mesh::TriangleMeshShapeSettings &out) { out = {}; }
+shapes::Shape *create(const tumble::triangle_mesh::TriangleMeshShapeSettings &settings) { return tumble::triangle_mesh::create(settings); }
+void destroy(shapes::Shape *shape) { tumble::triangle_mesh::destroy(shape); }
+
+}  // namespace triangle_mesh
+
+namespace compound {
+
+shapes::Shape *create(const uint8_t *children, uint32_t count) {
+    return tumble::compound::create({.children = (const tumble::compound::CompoundShapeChild *)children, .num_children = count});
+}
+
+void destroy(shapes::Shape *shape) { tumble::compound::destroy(shape); }
+
+}  // namespace compound
+
+namespace static_compound {
+
+uint32_t default_bvh_max_leaf_children() { return tumble::static_compound::StaticCompoundShapeSettings{}.bvh_max_leaf_children; }
+
+shapes::Shape *create(const uint8_t *children, uint32_t count, uint32_t bvh_max_leaf_children) {
+    return tumble::static_compound::create({.children = (const tumble::compound::CompoundShapeChild *)children,
+                                            .num_children = count,
+                                            .bvh_max_leaf_children = bvh_max_leaf_children});
+}
+
+void destroy(shapes::Shape *shape) { tumble::static_compound::destroy(shape); }
+
+}  // namespace static_compound
+
+namespace transformed {
+
+void default_settings(tumble::transformed::TransformedShapeSettings &out) { out = {}; }
+shapes::Shape *create(const tumble::transformed::TransformedShapeSettings &settings) { return tumble::transformed::create(settings); }
+void destroy(shapes::Shape *shape) { tumble::transformed::destroy(shape); }
+
+}  // namespace transformed
+
+namespace scaled {
+
+void default_settings(tumble::scaled::ScaledShapeSettings &out) { out = {}; }
+shapes::Shape *create(const tumble::scaled::ScaledShapeSettings &settings) { return tumble::scaled::create(settings); }
+void destroy(shapes::Shape *shape) { tumble::scaled::destroy(shape); }
+
+}  // namespace scaled
+
+namespace offset_center_of_mass {
+
+void default_settings(tumble::offset_center_of_mass::OffsetCenterOfMassShapeSettings &out) { out = {}; }
+shapes::Shape *create(const tumble::offset_center_of_mass::OffsetCenterOfMassShapeSettings &settings) { return tumble::offset_center_of_mass::create(settings); }
+void destroy(shapes::Shape *shape) { tumble::offset_center_of_mass::destroy(shape); }
+
+}  // namespace offset_center_of_mass
 
 }  // namespace adapters

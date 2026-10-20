@@ -274,8 +274,11 @@ function leavesOf(s: StructDesc, base: number, path: string): Leaf[] {
         } else if (t.kind === 'handle' && t.count === 1) {
             const expr = s.tuple ? `${path}[${index++}]` : `${path}.${js}`;
             out.push({ offset: base + f.offset, scalar: 'u32', expr, address: { type: jsOf(t, where), nullable: true } });
+        } else if (t.kind === 'ptr-scalar' || t.kind === 'ptr-array') {
+            const expr = s.tuple ? `${path}[${index++}]` : `${path}.${js}`;
+            out.push({ offset: base + f.offset, scalar: 'u32', expr, address: { type: pointerTsType(t, where), nullable: false } });
         } else {
-            throw new Error(`${where}: a value holds scalars, values and handles, not ${t.kind}`);
+            throw new Error(`${where}: a value holds scalars, values, handles and pointers, not ${t.kind}`);
         }
     }
     return out;
@@ -285,6 +288,7 @@ function valueFieldType(t: TypeRef, where: string): string {
     if (t.kind === 'scalar') return t.count === 1 ? scalarTsType(t.scalar) : 'number[]';
     if (t.kind === 'value') return t.count === 1 ? jsOf(t, where) : `${jsOf(t, where)}[]`;
     if (t.kind === 'handle') return `${jsOf(t, where)} | null`;
+    if (t.kind === 'ptr-scalar' || t.kind === 'ptr-array') return pointerTsType(t, where);
     throw new Error(`${where}: ${t.kind} cannot be a value field`);
 }
 
@@ -318,7 +322,10 @@ function valueCreate(s: StructDesc): string[] {
         let expr: string;
         if (t.kind === 'scalar') expr = t.scalar === 'bool' ? 'false' : '0';
         else if (t.kind === 'handle') expr = 'null';
-        else if (t.count > 1) expr = `Array.from({ length: ${t.count} }, () => ${jsOf(t, s.cpp)}.create())`;
+        else if (t.kind === 'ptr-scalar' || t.kind === 'ptr-array') {
+            const type = pointerTsType(t, s.cpp);
+            expr = type === 'number' ? '0' : `0 as ${type}`;
+        } else if (t.count > 1) expr = `Array.from({ length: ${t.count} }, () => ${jsOf(t, s.cpp)}.create())`;
         else expr = `${jsOf(t, s.cpp)}.create()`;
         parts.push({ js, expr, elements: null });
     }
@@ -788,6 +795,9 @@ function emitNamespace(ns: Namespace): string[] {
     if (ns.record !== null) {
         lines.push(...docLines(ns.record.doc, ''));
         lines.push(`export type ${ns.name} = Handle<'${ns.name}'>;`);
+    }
+    // a record with no bound fields is an opaque handle: no plain object, no layout
+    if (ns.record !== null && ns.record.fields.length > 0) {
         const valueName = recordValueName(ns.record);
         if (schema.structs.some((o) => structJsName(o) === valueName) || schema.enums.some((e) => e.name === valueName))
             throw new Error(`${ns.record.cpp}: its plain object ${valueName} is already a type's name`);
@@ -805,9 +815,10 @@ function emitNamespace(ns: Namespace): string[] {
     }
     for (const f of ns.functions) claim(functionNames(f).name, f.cpp);
     lines.push(`export const ${ns.name} = {`);
-    if (ns.record !== null) lines.push(...emitFields(ns.record));
+    const fields = ns.record !== null && ns.record.fields.length > 0;
+    if (fields) lines.push(...emitFields(ns.record!));
     for (let i = 0; i < ns.functions.length; i++) {
-        if (ns.record !== null || i > 0) lines.push('');
+        if (fields || i > 0) lines.push('');
         lines.push(...emitFunction(ns.functions[i]!, '    ', false));
     }
     lines.push('};');

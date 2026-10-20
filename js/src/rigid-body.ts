@@ -1,6 +1,6 @@
 import * as Low from './generated/tumble';
-import type { Box3, Mat4, Quat, Vec3 } from './math';
-import type { Shape } from './shapes';
+import type { Box3, Quat, Vec3 } from './math';
+import type { MassProperties, Shape } from './shapes';
 import type { World } from './world';
 
 /** a body in a world: an index and a sequence in one number, so the id of a removed body names nothing */
@@ -9,52 +9,14 @@ export type BodyId = number;
 /** the id naming no body */
 export const INVALID_BODY_ID = 0xffffffff;
 
-export const MotionType = {
-    /** never moves */
-    STATIC: 0,
-    /** moves by its velocity, pushing dynamic bodies aside */
-    KINEMATIC: 1,
-    /** moved by gravity, forces and contacts */
-    DYNAMIC: 2,
-} as const;
-export type MotionType = (typeof MotionType)[keyof typeof MotionType];
-
-export const MotionQuality = {
-    DISCRETE: 0,
-    /** swept between steps so a small fast body stops at what it would pass through */
-    LINEAR_CAST: 1,
-} as const;
-export type MotionQuality = (typeof MotionQuality)[keyof typeof MotionQuality];
-
-/** bits of allowedDegreesOfFreedom: the axes a body may move along and turn about */
-export const Dof = {
-    TRANSLATION_X: 1 << 0,
-    TRANSLATION_Y: 1 << 1,
-    TRANSLATION_Z: 1 << 2,
-    ROTATION_X: 1 << 3,
-    ROTATION_Y: 1 << 4,
-    ROTATION_Z: 1 << 5,
-    ALL: 0x3f,
-    TRANSLATION_ONLY: 0x07,
-    ROTATION_ONLY: 0x38,
-} as const;
-
-/** how two bodies' friction or restitution combine; when the modes differ the more restrictive wins */
-export const MaterialCombineMode = {
-    AVERAGE: 0,
-    MULTIPLY: 1,
-    MIN: 2,
-    MAX: 3,
-    GEOMETRIC_MEAN: 4,
-} as const;
-export type MaterialCombineMode = (typeof MaterialCombineMode)[keyof typeof MaterialCombineMode];
-
-export type MassProperties = {
-    /** kg */
-    mass: number;
-    /** kg m2, the upper 3x3 of a column-major 4x4 */
-    inertia: Mat4;
-};
+export const MotionType = Low.MotionType;
+export type MotionType = Low.MotionType;
+export const MotionQuality = Low.MotionQuality;
+export type MotionQuality = Low.MotionQuality;
+/** bits of allowedDegreesOfFreedom */
+export const Dof = Low.Dof;
+export const MaterialCombineMode = Low.MaterialCombineMode;
+export type MaterialCombineMode = Low.MaterialCombineMode;
 
 /** what a body is made with; everything but the shape, the layer and the motion type has a default */
 export type RigidBodySettings = {
@@ -137,7 +99,7 @@ function nativeSettings(settings: RigidBodySettings): Low.BodySettings {
     native.userDataHigh = Math.floor(userData / TWO_32);
     const override = settings.massPropertiesOverride;
     native.hasMassProperties = override !== undefined;
-    if (override !== undefined) native.massProperties = { mass: override.mass, inertia: [...override.inertia] as Mat4 };
+    if (override !== undefined) native.massProperties = override;
     return native;
 }
 

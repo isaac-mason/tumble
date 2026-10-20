@@ -4,12 +4,24 @@
 
 #include "tumble/math/types.h"
 #include "tumble/physics/body/body_id.h"
+#include "tumble/physics/body/dof.h"
 #include "tumble/physics/body/mass_properties.h"
-#include "tumble/physics/shapes/box.h"
-#include "tumble/physics/shapes/sphere.h"
-#include "tumble/physics/world.h"
 #include "tumble/physics/constraints/contact_settings.h"
 #include "tumble/physics/manifold/manifold.h"
+#include "tumble/physics/shapes/box.h"
+#include "tumble/physics/shapes/capsule.h"
+#include "tumble/physics/shapes/compound.h"
+#include "tumble/physics/shapes/convex_hull.h"
+#include "tumble/physics/shapes/cylinder.h"
+#include "tumble/physics/shapes/offset_center_of_mass.h"
+#include "tumble/physics/shapes/plane.h"
+#include "tumble/physics/shapes/scaled.h"
+#include "tumble/physics/shapes/sphere.h"
+#include "tumble/physics/shapes/static_compound.h"
+#include "tumble/physics/shapes/transformed.h"
+#include "tumble/physics/shapes/triangle_mesh.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_builder.h"
+#include "tumble/physics/world.h"
 #include "tumble/physics/world_settings.h"
 
 // what js calls where the C++ api does not cross as it is: bodies by id (an id naming no live body sets
@@ -260,8 +272,24 @@ bool set_restitution(tumble::world::World *world, tumble::body_id::BodyId id, fl
 
 }  // namespace rigid_body
 
+// what every shape has
+namespace shape {
+
+uint32_t get_type(const tumble::shapes::Shape *shape);
+/** local space */
+void get_local_bounds(tumble::Box3f &out, const tumble::shapes::Shape *shape);
+void get_center_of_mass(tumble::Float3 &out, const tumble::shapes::Shape *shape);
+float get_volume(const tumble::shapes::Shape *shape);
+/** at the shape's density, about its centre of mass */
+void get_mass_properties(tumble::mass_properties::MassProperties &out, const tumble::shapes::Shape *shape);
+
+}  // namespace shape
+
+// each shape's create, null when the allocator fails; the defaults are the C++'s
+
 namespace box {
 
+void default_settings(tumble::box::BoxShapeSettings &out);
 tumble::shapes::Shape *create(const tumble::box::BoxShapeSettings &settings);
 void destroy(tumble::shapes::Shape *shape);
 
@@ -269,9 +297,121 @@ void destroy(tumble::shapes::Shape *shape);
 
 namespace sphere {
 
+void default_settings(tumble::sphere::SphereShapeSettings &out);
 tumble::shapes::Shape *create(const tumble::sphere::SphereShapeSettings &settings);
 void destroy(tumble::shapes::Shape *shape);
 
 }  // namespace sphere
+
+namespace capsule {
+
+void default_settings(tumble::capsule::CapsuleShapeSettings &out);
+tumble::shapes::Shape *create(const tumble::capsule::CapsuleShapeSettings &settings);
+void destroy(tumble::shapes::Shape *shape);
+
+}  // namespace capsule
+
+namespace cylinder {
+
+void default_settings(tumble::cylinder::CylinderShapeSettings &out);
+tumble::shapes::Shape *create(const tumble::cylinder::CylinderShapeSettings &settings);
+void destroy(tumble::shapes::Shape *shape);
+
+}  // namespace cylinder
+
+namespace plane {
+
+void default_settings(tumble::plane::PlaneShapeSettings &out);
+tumble::shapes::Shape *create(const tumble::plane::PlaneShapeSettings &settings);
+void destroy(tumble::shapes::Shape *shape);
+
+}  // namespace plane
+
+namespace empty {
+
+tumble::shapes::Shape *create();
+void destroy(tumble::shapes::Shape *shape);
+
+}  // namespace empty
+
+/** a hull build's outcome: the data, or null and why */
+struct ConvexHullBuild {
+    tumble::convex_hull::ConvexHullData *data;
+    int32_t result;
+};
+
+namespace convex_hull_data {
+
+void default_settings(tumble::convex_hull::ConvexHullBuildSettings &out);
+/** false when the points make no hull or the allocator fails, out.result saying which */
+bool build(ConvexHullBuild &out, const tumble::convex_hull::ConvexHullBuildSettings &settings);
+void release(tumble::convex_hull::ConvexHullData *data);
+
+}  // namespace convex_hull_data
+
+namespace convex_hull {
+
+void default_settings(tumble::convex_hull::ConvexHullShapeSettings &out);
+tumble::shapes::Shape *create(const tumble::convex_hull::ConvexHullShapeSettings &settings);
+void destroy(tumble::shapes::Shape *shape);
+
+}  // namespace convex_hull
+
+namespace triangle_mesh_data {
+
+void default_settings(tumble::triangle_mesh_builder::TriangleMeshBuilderSettings &out);
+/** null when the allocator fails */
+tumble::triangle_mesh_data::TriangleMeshData *build(const tumble::triangle_mesh_builder::TriangleMeshBuilderSettings &settings);
+void release(tumble::triangle_mesh_data::TriangleMeshData *data);
+
+}  // namespace triangle_mesh_data
+
+namespace triangle_mesh {
+
+void default_settings(tumble::triangle_mesh::TriangleMeshShapeSettings &out);
+tumble::shapes::Shape *create(const tumble::triangle_mesh::TriangleMeshShapeSettings &settings);
+void destroy(tumble::shapes::Shape *shape);
+
+}  // namespace triangle_mesh
+
+namespace compound {
+
+/** `children` is the address of `count` CompoundShapeChild values, read during the call */
+tumble::shapes::Shape *create(const uint8_t *children, uint32_t count);
+void destroy(tumble::shapes::Shape *shape);
+
+}  // namespace compound
+
+namespace static_compound {
+
+uint32_t default_bvh_max_leaf_children();
+tumble::shapes::Shape *create(const uint8_t *children, uint32_t count, uint32_t bvh_max_leaf_children);
+void destroy(tumble::shapes::Shape *shape);
+
+}  // namespace static_compound
+
+namespace transformed {
+
+void default_settings(tumble::transformed::TransformedShapeSettings &out);
+tumble::shapes::Shape *create(const tumble::transformed::TransformedShapeSettings &settings);
+void destroy(tumble::shapes::Shape *shape);
+
+}  // namespace transformed
+
+namespace scaled {
+
+void default_settings(tumble::scaled::ScaledShapeSettings &out);
+tumble::shapes::Shape *create(const tumble::scaled::ScaledShapeSettings &settings);
+void destroy(tumble::shapes::Shape *shape);
+
+}  // namespace scaled
+
+namespace offset_center_of_mass {
+
+void default_settings(tumble::offset_center_of_mass::OffsetCenterOfMassShapeSettings &out);
+tumble::shapes::Shape *create(const tumble::offset_center_of_mass::OffsetCenterOfMassShapeSettings &settings);
+void destroy(tumble::shapes::Shape *shape);
+
+}  // namespace offset_center_of_mass
 
 }  // namespace adapters

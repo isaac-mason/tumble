@@ -1,18 +1,48 @@
 import * as Low from './generated/tumble';
 
-/**
- * the floats copied into a block of the wasm's memory for the length of `use`, which takes its address: how an array
- * crosses into a call
- */
-export function withFloats<T>(values: ArrayLike<number>, use: (address: number) => T): T {
-    const bytes = values.length * 4;
-    const address = bytes === 0 ? 0 : Low.allocBytes(bytes);
-    if (bytes > 0 && address === 0) Low.getWasm().check();
-    const mem = Low.getWasm().mem;
-    for (let i = 0; i < values.length; i++) mem.f32[(address >> 2) + i] = values[i]!;
+/** copies arrays into blocks of the wasm's memory, each freed when the withCopies that made it returns */
+export type Copier = {
+    f32(values: ArrayLike<number>): Low.Pointer<'f32'>;
+    u32(values: ArrayLike<number>): Low.Pointer<'u32'>;
+    i32(values: ArrayLike<number>): Low.Pointer<'i32'>;
+    /** `count` bytes, as the wasm left them */
+    bytes(count: number): Low.Pointer<'u8'>;
+};
+
+/** how an array crosses into a call: `use` takes the copies' addresses, and the blocks are freed once it returns */
+export function withCopies<T>(use: (copy: Copier) => T): T {
+    const blocks: number[] = [];
+    const block = (bytes: number): number => {
+        if (bytes === 0) return 0;
+        Low.errorClear();
+        const address = Low.allocBytes(bytes);
+        if (address === 0) Low.getWasm().check();
+        blocks.push(address, bytes);
+        return address;
+    };
+    const copier: Copier = {
+        f32(values) {
+            const address = block(values.length * 4);
+            Low.getWasm().mem.f32.set(values, address >> 2);
+            return address as Low.Pointer<'f32'>;
+        },
+        u32(values) {
+            const address = block(values.length * 4);
+            Low.getWasm().mem.u32.set(values, address >> 2);
+            return address as Low.Pointer<'u32'>;
+        },
+        i32(values) {
+            const address = block(values.length * 4);
+            Low.getWasm().mem.i32.set(values, address >> 2);
+            return address as Low.Pointer<'i32'>;
+        },
+        bytes(count) {
+            return block(count) as Low.Pointer<'u8'>;
+        },
+    };
     try {
-        return use(address);
+        return use(copier);
     } finally {
-        if (address !== 0) Low.freeBytes(address, bytes);
+        for (let i = 0; i < blocks.length; i += 2) Low.freeBytes(blocks[i]!, blocks[i + 1]!);
     }
 }

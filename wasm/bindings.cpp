@@ -164,6 +164,32 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::answers::override_contact), names("world", "index", "settings"));
     bind::fn(b, BIND(adapters::answers::reject_contact), names("world", "index"));
 
+    bind::enumeration<uint32_t>(b, "MotionType")
+        .value("STATIC", motion_type::MOTION_STATIC, "never moves.")
+        .value("KINEMATIC", motion_type::MOTION_KINEMATIC, "moves by its velocity, pushing dynamic bodies aside.")
+        .value("DYNAMIC", motion_type::MOTION_DYNAMIC, "moved by gravity, forces and contacts.");
+    bind::enumeration<uint32_t>(b, "MotionQuality")
+        .value("DISCRETE", motion_properties::MOTION_QUALITY_DISCRETE, "fast, but can tunnel through thin geometry at high speed.")
+        .value("LINEAR_CAST", motion_properties::MOTION_QUALITY_LINEAR_CAST,
+               "cast along the velocity so a fast body cannot tunnel; dearer than discrete.");
+    bind::enumeration<uint32_t>(b, "MaterialCombineMode")
+        .doc("how two bodies' friction or restitution combine; when the modes differ the more restrictive wins.")
+        .value("AVERAGE", combine_material::AVERAGE)
+        .value("MULTIPLY", combine_material::MULTIPLY)
+        .value("MIN", combine_material::MIN)
+        .value("MAX", combine_material::MAX)
+        .value("GEOMETRIC_MEAN", combine_material::GEOMETRIC_MEAN);
+    bind::enumeration<uint32_t>(b, "Dof")
+        .doc("bits of allowedDegreesOfFreedom: the axes a body may move along and turn about.")
+        .value("TRANSLATION_X", dof::TRANSLATION_X)
+        .value("TRANSLATION_Y", dof::TRANSLATION_Y)
+        .value("TRANSLATION_Z", dof::TRANSLATION_Z)
+        .value("ROTATION_X", dof::ROTATION_X)
+        .value("ROTATION_Y", dof::ROTATION_Y)
+        .value("ROTATION_Z", dof::ROTATION_Z)
+        .value("ALL", dof::DOF_ALL)
+        .value("TRANSLATION_ONLY", dof::DOF_TRANSLATION_ONLY)
+        .value("ROTATION_ONLY", dof::DOF_ROTATION_ONLY);
     VALUE_AS(adapters::BodySettings, "BodySettings")
         .field(FIELD(adapters::BodySettings, shape))
         .field(FIELD(adapters::BodySettings, object_layer))
@@ -239,17 +265,162 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::rigid_body::set_friction), names("world", "body", "friction"));
     bind::fn(b, BIND(adapters::rigid_body::set_restitution), names("world", "body", "restitution"));
 
+    bind::enumeration<uint32_t>(b, "ShapeType")
+        .value("SPHERE", shapes::SHAPE_SPHERE)
+        .value("BOX", shapes::SHAPE_BOX)
+        .value("CAPSULE", shapes::SHAPE_CAPSULE)
+        .value("CONVEX_HULL", shapes::SHAPE_CONVEX_HULL)
+        .value("TRIANGLE_MESH", shapes::SHAPE_TRIANGLE_MESH)
+        .value("COMPOUND", shapes::SHAPE_COMPOUND)
+        .value("TRANSFORMED", shapes::SHAPE_TRANSFORMED)
+        .value("SCALED", shapes::SHAPE_SCALED)
+        .value("EMPTY", shapes::SHAPE_EMPTY)
+        .value("CYLINDER", shapes::SHAPE_CYLINDER)
+        .value("OFFSET_CENTER_OF_MASS", shapes::SHAPE_OFFSET_CENTER_OF_MASS)
+        .value("PLANE", shapes::SHAPE_PLANE)
+        .value("STATIC_COMPOUND", shapes::SHAPE_STATIC_COMPOUND);
+    bind::fn(b, BIND(adapters::shape::get_type), names("shape"));
+    bind::fn(b, BIND(adapters::shape::get_local_bounds), names("out", "shape"));
+    bind::fn(b, BIND(adapters::shape::get_center_of_mass), names("out", "shape"));
+    bind::fn(b, BIND(adapters::shape::get_volume), names("shape"));
+    bind::fn(b, BIND(adapters::shape::get_mass_properties), names("out", "shape"));
+
     VALUE_AS(box::BoxShapeSettings, "BoxSettings")
         .field(FIELD(box::BoxShapeSettings, half_extents))
         .field(FIELD(box::BoxShapeSettings, convex_radius))
         .field(FIELD(box::BoxShapeSettings, density))
         .field(FIELD(box::BoxShapeSettings, material_id));
+    bind::fn(b, BIND(adapters::box::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::box::create), names("settings"), GROWS);
+    bind::fn(b, BIND(adapters::box::destroy), names("shape"));
     VALUE_AS(sphere::SphereShapeSettings, "SphereSettings")
         .field(FIELD(sphere::SphereShapeSettings, radius))
         .field(FIELD(sphere::SphereShapeSettings, density))
         .field(FIELD(sphere::SphereShapeSettings, material_id));
-    bind::fn(b, BIND(adapters::box::create), names("settings"), GROWS);
-    bind::fn(b, BIND(adapters::box::destroy), names("shape"));
+    bind::fn(b, BIND(adapters::sphere::default_settings), names("out"));
     bind::fn(b, BIND(adapters::sphere::create), names("settings"), GROWS);
     bind::fn(b, BIND(adapters::sphere::destroy), names("shape"));
+    VALUE_AS(capsule::CapsuleShapeSettings, "CapsuleSettings")
+        .field(FIELD(capsule::CapsuleShapeSettings, half_height_of_cylinder))
+        .field(FIELD(capsule::CapsuleShapeSettings, radius))
+        .field(FIELD(capsule::CapsuleShapeSettings, density))
+        .field(FIELD(capsule::CapsuleShapeSettings, material_id));
+    bind::fn(b, BIND(adapters::capsule::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::capsule::create), names("settings"), GROWS);
+    bind::fn(b, BIND(adapters::capsule::destroy), names("shape"));
+    VALUE_AS(cylinder::CylinderShapeSettings, "CylinderSettings")
+        .field(FIELD(cylinder::CylinderShapeSettings, half_height))
+        .field(FIELD(cylinder::CylinderShapeSettings, radius))
+        .field(FIELD(cylinder::CylinderShapeSettings, convex_radius))
+        .field(FIELD(cylinder::CylinderShapeSettings, density))
+        .field(FIELD(cylinder::CylinderShapeSettings, material_id));
+    bind::fn(b, BIND(adapters::cylinder::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::cylinder::create), names("settings"), GROWS);
+    bind::fn(b, BIND(adapters::cylinder::destroy), names("shape"));
+    VALUE_AS(Plane3f, "Plane3").field(FIELD(Plane3f, normal)).field(FIELD(Plane3f, constant));
+    VALUE_AS(plane::PlaneShapeSettings, "PlaneSettings")
+        .field(FIELD(plane::PlaneShapeSettings, plane))
+        .field(FIELD(plane::PlaneShapeSettings, half_extent))
+        .field(FIELD(plane::PlaneShapeSettings, material_id));
+    bind::fn(b, BIND(adapters::plane::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::plane::create), names("settings"), GROWS);
+    bind::fn(b, BIND(adapters::plane::destroy), names("shape"));
+    bind::fn(b, BIND(adapters::empty::create), names(), GROWS);
+    bind::fn(b, BIND(adapters::empty::destroy), names("shape"));
+
+    RECORD(convex_hull::ConvexHullData);
+    bind::enumeration<uint32_t>(b, "ConvexHullBuildResult")
+        .doc("why a hull build failed.")
+        .value("SUCCESS", convex_hull::BUILD_SUCCESS)
+        .value("TOO_FEW_POINTS", convex_hull::BUILD_TOO_FEW_POINTS, "fewer than 3 points.")
+        .value("TOO_FEW_FACES", convex_hull::BUILD_TOO_FEW_FACES, "the points were nearly coplanar and the hull collapsed.")
+        .value("DEGENERATE", convex_hull::BUILD_DEGENERATE, "the points coincide or lie on a line.")
+        .value("INVALID_CONVEX_RADIUS", convex_hull::BUILD_INVALID_CONVEX_RADIUS, "a negative convex radius.")
+        .value("HULL_ERROR_TOO_LARGE", convex_hull::BUILD_HULL_ERROR_TOO_LARGE,
+               "a point lies outside the built hull by more than 4 * max(coplanar distance, hull tolerance).")
+        .value("TOO_MANY_POINTS", convex_hull::BUILD_TOO_MANY_POINTS,
+               "more than 256 vertices survived; a larger hull tolerance gives fewer.")
+        .value("POINT_WITH_TOO_FEW_FACES", convex_hull::BUILD_POINT_WITH_TOO_FEW_FACES, "a hull vertex on fewer than 2 faces.")
+        .value("OUT_OF_MEMORY", convex_hull::BUILD_OUT_OF_MEMORY);
+    bind::enumeration<uint32_t>(b, "BakeSupportAdjacency")
+        .doc("whether a hull keeps its vertex neighbours, for faster support queries on big hulls.")
+        .value("AUTO", convex_hull::BAKE_SUPPORT_ADJACENCY_AUTO, "when the hull has many vertices.")
+        .value("NEVER", convex_hull::BAKE_SUPPORT_ADJACENCY_NEVER)
+        .value("ALWAYS", convex_hull::BAKE_SUPPORT_ADJACENCY_ALWAYS);
+    VALUE_AS(convex_hull::ConvexHullBuildSettings, "ConvexHullBuildSettings")
+        .field(FIELD(convex_hull::ConvexHullBuildSettings, positions))
+        .field(FIELD(convex_hull::ConvexHullBuildSettings, num_positions))
+        .field(FIELD(convex_hull::ConvexHullBuildSettings, convex_radius))
+        .field(FIELD(convex_hull::ConvexHullBuildSettings, hull_tolerance))
+        .field(FIELD(convex_hull::ConvexHullBuildSettings, max_error_convex_radius))
+        .field(FIELD(convex_hull::ConvexHullBuildSettings, bake_support_adjacency));
+    VALUE_AS(adapters::ConvexHullBuild, "ConvexHullBuild")
+        .field(FIELD(adapters::ConvexHullBuild, data))
+        .field(FIELD(adapters::ConvexHullBuild, result));
+    bind::fn(b, BIND(adapters::convex_hull_data::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::convex_hull_data::build), names("out", "settings"), GROWS);
+    bind::fn(b, BIND(adapters::convex_hull_data::release), names("data"));
+    VALUE_AS(convex_hull::ConvexHullShapeSettings, "ConvexHullSettings")
+        .field(FIELD(convex_hull::ConvexHullShapeSettings, data))
+        .field(FIELD(convex_hull::ConvexHullShapeSettings, density))
+        .field(FIELD(convex_hull::ConvexHullShapeSettings, material_id));
+    bind::fn(b, BIND(adapters::convex_hull::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::convex_hull::create), names("settings"), GROWS);
+    bind::fn(b, BIND(adapters::convex_hull::destroy), names("shape"));
+
+    RECORD(triangle_mesh_data::TriangleMeshData);
+    bind::enumeration<uint32_t>(b, "BvhSplitStrategy")
+        .doc("how a mesh's bvh is split while it is built.")
+        .value("CENTER", triangle_mesh_bvh::BVH_SPLIT_STRATEGY_CENTER, "at the midpoint of the centres' bounds: fast, a good balance.")
+        .value("AVERAGE", triangle_mesh_bvh::BVH_SPLIT_STRATEGY_AVERAGE, "at the mean of the centres: fast, can unbalance skewed meshes.")
+        .value("SAH", triangle_mesh_bvh::BVH_SPLIT_STRATEGY_SAH, "by surface area: slow to build, fastest to query, for static meshes.");
+    VALUE_AS(triangle_mesh_builder::TriangleMeshBuilderSettings, "TriangleMeshBuildSettings")
+        .field(FIELD(triangle_mesh_builder::TriangleMeshBuilderSettings, positions))
+        .field(FIELD(triangle_mesh_builder::TriangleMeshBuilderSettings, num_positions))
+        .field(FIELD(triangle_mesh_builder::TriangleMeshBuilderSettings, indices))
+        .field(FIELD(triangle_mesh_builder::TriangleMeshBuilderSettings, num_indices))
+        .field(FIELD(triangle_mesh_builder::TriangleMeshBuilderSettings, material_ids))
+        .field(FIELD(triangle_mesh_builder::TriangleMeshBuilderSettings, degenerate_tolerance))
+        .field(FIELD(triangle_mesh_builder::TriangleMeshBuilderSettings, bvh_split_strategy))
+        .field(FIELD(triangle_mesh_builder::TriangleMeshBuilderSettings, bvh_max_leaf_tris))
+        .field(FIELD(triangle_mesh_builder::TriangleMeshBuilderSettings, active_edge_cos_threshold_angle));
+    bind::fn(b, BIND(adapters::triangle_mesh_data::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::triangle_mesh_data::build), names("settings"), GROWS);
+    bind::fn(b, BIND(adapters::triangle_mesh_data::release), names("data"));
+    VALUE_AS(triangle_mesh::TriangleMeshShapeSettings, "TriangleMeshSettings")
+        .field(FIELD(triangle_mesh::TriangleMeshShapeSettings, data))
+        .field(FIELD(triangle_mesh::TriangleMeshShapeSettings, material_id));
+    bind::fn(b, BIND(adapters::triangle_mesh::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::triangle_mesh::create), names("settings"), GROWS);
+    bind::fn(b, BIND(adapters::triangle_mesh::destroy), names("shape"));
+
+    VALUE_AS(compound::CompoundShapeChild, "CompoundChild")
+        .field(FIELD(compound::CompoundShapeChild, position))
+        .field(FIELD(compound::CompoundShapeChild, quaternion))
+        .field(FIELD(compound::CompoundShapeChild, shape));
+    bind::fn(b, BIND(adapters::compound::create), names("children", "count"), GROWS);
+    bind::fn(b, BIND(adapters::compound::destroy), names("shape"));
+    bind::fn(b, BIND(adapters::static_compound::default_bvh_max_leaf_children), names());
+    bind::fn(b, BIND(adapters::static_compound::create), names("children", "count", "bvhMaxLeafChildren"), GROWS);
+    bind::fn(b, BIND(adapters::static_compound::destroy), names("shape"));
+
+    VALUE_AS(transformed::TransformedShapeSettings, "TransformedSettings")
+        .field(FIELD(transformed::TransformedShapeSettings, shape))
+        .field(FIELD(transformed::TransformedShapeSettings, position))
+        .field(FIELD(transformed::TransformedShapeSettings, quaternion));
+    bind::fn(b, BIND(adapters::transformed::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::transformed::create), names("settings"), GROWS);
+    bind::fn(b, BIND(adapters::transformed::destroy), names("shape"));
+    VALUE_AS(scaled::ScaledShapeSettings, "ScaledSettings")
+        .field(FIELD(scaled::ScaledShapeSettings, shape))
+        .field(FIELD(scaled::ScaledShapeSettings, scale));
+    bind::fn(b, BIND(adapters::scaled::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::scaled::create), names("settings"), GROWS);
+    bind::fn(b, BIND(adapters::scaled::destroy), names("shape"));
+    VALUE_AS(offset_center_of_mass::OffsetCenterOfMassShapeSettings, "OffsetCenterOfMassSettings")
+        .field(FIELD(offset_center_of_mass::OffsetCenterOfMassShapeSettings, shape))
+        .field(FIELD(offset_center_of_mass::OffsetCenterOfMassShapeSettings, offset));
+    bind::fn(b, BIND(adapters::offset_center_of_mass::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::offset_center_of_mass::create), names("settings"), GROWS);
+    bind::fn(b, BIND(adapters::offset_center_of_mass::destroy), names("shape"));
 }

@@ -7,7 +7,7 @@
 import type { Instance } from '../module';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0xa1a1057f;
+export const SCHEMA_HASH = 0x21c46301;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 208;
 
@@ -46,6 +46,106 @@ export const WasmError = {
     QUOTA: 3,
 } as const;
 export type WasmError = (typeof WasmError)[keyof typeof WasmError];
+
+export const MotionType = {
+    /** never moves. */
+    STATIC: 0,
+    /** moves by its velocity, pushing dynamic bodies aside. */
+    KINEMATIC: 1,
+    /** moved by gravity, forces and contacts. */
+    DYNAMIC: 2,
+} as const;
+export type MotionType = (typeof MotionType)[keyof typeof MotionType];
+
+export const MotionQuality = {
+    /** fast, but can tunnel through thin geometry at high speed. */
+    DISCRETE: 0,
+    /** cast along the velocity so a fast body cannot tunnel; dearer than discrete. */
+    LINEAR_CAST: 1,
+} as const;
+export type MotionQuality = (typeof MotionQuality)[keyof typeof MotionQuality];
+
+/** how two bodies' friction or restitution combine; when the modes differ the more restrictive wins. */
+export const MaterialCombineMode = {
+    AVERAGE: 0,
+    MULTIPLY: 1,
+    MIN: 2,
+    MAX: 3,
+    GEOMETRIC_MEAN: 4,
+} as const;
+export type MaterialCombineMode = (typeof MaterialCombineMode)[keyof typeof MaterialCombineMode];
+
+/** bits of allowedDegreesOfFreedom: the axes a body may move along and turn about. */
+export const Dof = {
+    TRANSLATION_X: 1,
+    TRANSLATION_Y: 2,
+    TRANSLATION_Z: 4,
+    ROTATION_X: 8,
+    ROTATION_Y: 16,
+    ROTATION_Z: 32,
+    ALL: 63,
+    TRANSLATION_ONLY: 7,
+    ROTATION_ONLY: 56,
+} as const;
+export type Dof = (typeof Dof)[keyof typeof Dof];
+
+export const ShapeType = {
+    SPHERE: 0,
+    BOX: 1,
+    CAPSULE: 2,
+    CONVEX_HULL: 3,
+    TRIANGLE_MESH: 4,
+    COMPOUND: 5,
+    TRANSFORMED: 6,
+    SCALED: 7,
+    EMPTY: 8,
+    CYLINDER: 9,
+    OFFSET_CENTER_OF_MASS: 10,
+    PLANE: 11,
+    STATIC_COMPOUND: 12,
+} as const;
+export type ShapeType = (typeof ShapeType)[keyof typeof ShapeType];
+
+/** why a hull build failed. */
+export const ConvexHullBuildResult = {
+    SUCCESS: 0,
+    /** fewer than 3 points. */
+    TOO_FEW_POINTS: 2,
+    /** the points were nearly coplanar and the hull collapsed. */
+    TOO_FEW_FACES: 3,
+    /** the points coincide or lie on a line. */
+    DEGENERATE: 4,
+    /** a negative convex radius. */
+    INVALID_CONVEX_RADIUS: 5,
+    /** a point lies outside the built hull by more than 4 * max(coplanar distance, hull tolerance). */
+    HULL_ERROR_TOO_LARGE: 6,
+    /** more than 256 vertices survived; a larger hull tolerance gives fewer. */
+    TOO_MANY_POINTS: 7,
+    /** a hull vertex on fewer than 2 faces. */
+    POINT_WITH_TOO_FEW_FACES: 8,
+    OUT_OF_MEMORY: 9,
+} as const;
+export type ConvexHullBuildResult = (typeof ConvexHullBuildResult)[keyof typeof ConvexHullBuildResult];
+
+/** whether a hull keeps its vertex neighbours, for faster support queries on big hulls. */
+export const BakeSupportAdjacency = {
+    /** when the hull has many vertices. */
+    AUTO: 0,
+    NEVER: 1,
+    ALWAYS: 2,
+} as const;
+export type BakeSupportAdjacency = (typeof BakeSupportAdjacency)[keyof typeof BakeSupportAdjacency];
+
+/** how a mesh's bvh is split while it is built. */
+export const BvhSplitStrategy = {
+    /** at the midpoint of the centres' bounds: fast, a good balance. */
+    CENTER: 0,
+    /** at the mean of the centres: fast, can unbalance skewed meshes. */
+    AVERAGE: 1,
+    /** by surface area: slow to build, fastest to query, for static meshes. */
+    SAH: 2,
+} as const;
+export type BvhSplitStrategy = (typeof BvhSplitStrategy)[keyof typeof BvhSplitStrategy];
 
 export type Vec3 = [x: number, y: number, z: number];
 export const Vec3 = {
@@ -1483,6 +1583,612 @@ export const SphereSettings = {
     },
 };
 
+export type CapsuleSettings = { halfHeightOfCylinder: number; radius: number; density: number; materialId: number };
+export const CapsuleSettings = {
+    size: 16,
+    create(): CapsuleSettings {
+        return { halfHeightOfCylinder: 0, radius: 0, density: 0, materialId: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: CapsuleSettings, address: number): CapsuleSettings {
+        const mem = wasm.mem;
+        out.halfHeightOfCylinder = mem.f32[(address + 0) >> 2]!;
+        out.radius = mem.f32[(address + 4) >> 2]!;
+        out.density = mem.f32[(address + 8) >> 2]!;
+        out.materialId = mem.i32[(address + 12) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: CapsuleSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.halfHeightOfCylinder;
+        mem.f32[(address + 4) >> 2] = value.radius;
+        mem.f32[(address + 8) >> 2] = value.density;
+        mem.i32[(address + 12) >> 2] = value.materialId;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: CapsuleSettings): void {
+        view.setFloat32(offset + 0, value.halfHeightOfCylinder, true);
+        view.setFloat32(offset + 4, value.radius, true);
+        view.setFloat32(offset + 8, value.density, true);
+        view.setInt32(offset + 12, value.materialId, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: CapsuleSettings, view: DataView, offset: number): CapsuleSettings {
+        out.halfHeightOfCylinder = view.getFloat32(offset + 0, true);
+        out.radius = view.getFloat32(offset + 4, true);
+        out.density = view.getFloat32(offset + 8, true);
+        out.materialId = view.getInt32(offset + 12, true);
+        return out;
+    },
+};
+
+export type CylinderSettings = { halfHeight: number; radius: number; convexRadius: number; density: number; materialId: number };
+export const CylinderSettings = {
+    size: 20,
+    create(): CylinderSettings {
+        return { halfHeight: 0, radius: 0, convexRadius: 0, density: 0, materialId: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: CylinderSettings, address: number): CylinderSettings {
+        const mem = wasm.mem;
+        out.halfHeight = mem.f32[(address + 0) >> 2]!;
+        out.radius = mem.f32[(address + 4) >> 2]!;
+        out.convexRadius = mem.f32[(address + 8) >> 2]!;
+        out.density = mem.f32[(address + 12) >> 2]!;
+        out.materialId = mem.i32[(address + 16) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: CylinderSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.halfHeight;
+        mem.f32[(address + 4) >> 2] = value.radius;
+        mem.f32[(address + 8) >> 2] = value.convexRadius;
+        mem.f32[(address + 12) >> 2] = value.density;
+        mem.i32[(address + 16) >> 2] = value.materialId;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: CylinderSettings): void {
+        view.setFloat32(offset + 0, value.halfHeight, true);
+        view.setFloat32(offset + 4, value.radius, true);
+        view.setFloat32(offset + 8, value.convexRadius, true);
+        view.setFloat32(offset + 12, value.density, true);
+        view.setInt32(offset + 16, value.materialId, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: CylinderSettings, view: DataView, offset: number): CylinderSettings {
+        out.halfHeight = view.getFloat32(offset + 0, true);
+        out.radius = view.getFloat32(offset + 4, true);
+        out.convexRadius = view.getFloat32(offset + 8, true);
+        out.density = view.getFloat32(offset + 12, true);
+        out.materialId = view.getInt32(offset + 16, true);
+        return out;
+    },
+};
+
+export type Plane3 = { normal: Vec3; constant: number };
+export const Plane3 = {
+    size: 16,
+    create(): Plane3 {
+        return { normal: Vec3.create(), constant: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: Plane3, address: number): Plane3 {
+        const mem = wasm.mem;
+        out.normal[0] = mem.f32[(address + 0) >> 2]!;
+        out.normal[1] = mem.f32[(address + 4) >> 2]!;
+        out.normal[2] = mem.f32[(address + 8) >> 2]!;
+        out.constant = mem.f32[(address + 12) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: Plane3): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.normal[0];
+        mem.f32[(address + 4) >> 2] = value.normal[1];
+        mem.f32[(address + 8) >> 2] = value.normal[2];
+        mem.f32[(address + 12) >> 2] = value.constant;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: Plane3): void {
+        view.setFloat32(offset + 0, value.normal[0], true);
+        view.setFloat32(offset + 4, value.normal[1], true);
+        view.setFloat32(offset + 8, value.normal[2], true);
+        view.setFloat32(offset + 12, value.constant, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: Plane3, view: DataView, offset: number): Plane3 {
+        out.normal[0] = view.getFloat32(offset + 0, true);
+        out.normal[1] = view.getFloat32(offset + 4, true);
+        out.normal[2] = view.getFloat32(offset + 8, true);
+        out.constant = view.getFloat32(offset + 12, true);
+        return out;
+    },
+};
+
+export type PlaneSettings = { plane: Plane3; halfExtent: number; materialId: number };
+export const PlaneSettings = {
+    size: 24,
+    create(): PlaneSettings {
+        return { plane: Plane3.create(), halfExtent: 0, materialId: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: PlaneSettings, address: number): PlaneSettings {
+        const mem = wasm.mem;
+        out.plane.normal[0] = mem.f32[(address + 0) >> 2]!;
+        out.plane.normal[1] = mem.f32[(address + 4) >> 2]!;
+        out.plane.normal[2] = mem.f32[(address + 8) >> 2]!;
+        out.plane.constant = mem.f32[(address + 12) >> 2]!;
+        out.halfExtent = mem.f32[(address + 16) >> 2]!;
+        out.materialId = mem.i32[(address + 20) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: PlaneSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.plane.normal[0];
+        mem.f32[(address + 4) >> 2] = value.plane.normal[1];
+        mem.f32[(address + 8) >> 2] = value.plane.normal[2];
+        mem.f32[(address + 12) >> 2] = value.plane.constant;
+        mem.f32[(address + 16) >> 2] = value.halfExtent;
+        mem.i32[(address + 20) >> 2] = value.materialId;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: PlaneSettings): void {
+        view.setFloat32(offset + 0, value.plane.normal[0], true);
+        view.setFloat32(offset + 4, value.plane.normal[1], true);
+        view.setFloat32(offset + 8, value.plane.normal[2], true);
+        view.setFloat32(offset + 12, value.plane.constant, true);
+        view.setFloat32(offset + 16, value.halfExtent, true);
+        view.setInt32(offset + 20, value.materialId, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: PlaneSettings, view: DataView, offset: number): PlaneSettings {
+        out.plane.normal[0] = view.getFloat32(offset + 0, true);
+        out.plane.normal[1] = view.getFloat32(offset + 4, true);
+        out.plane.normal[2] = view.getFloat32(offset + 8, true);
+        out.plane.constant = view.getFloat32(offset + 12, true);
+        out.halfExtent = view.getFloat32(offset + 16, true);
+        out.materialId = view.getInt32(offset + 20, true);
+        return out;
+    },
+};
+
+export type ConvexHullBuildSettings = {
+    positions: Pointer<'f32'>;
+    numPositions: number;
+    convexRadius: number;
+    hullTolerance: number;
+    maxErrorConvexRadius: number;
+    bakeSupportAdjacency: number;
+};
+export const ConvexHullBuildSettings = {
+    size: 24,
+    create(): ConvexHullBuildSettings {
+        return {
+            positions: 0 as Pointer<'f32'>,
+            numPositions: 0,
+            convexRadius: 0,
+            hullTolerance: 0,
+            maxErrorConvexRadius: 0,
+            bakeSupportAdjacency: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: ConvexHullBuildSettings, address: number): ConvexHullBuildSettings {
+        const mem = wasm.mem;
+        out.positions = mem.u32[(address + 0) >> 2]! as Pointer<'f32'>;
+        out.numPositions = mem.u32[(address + 4) >> 2]!;
+        out.convexRadius = mem.f32[(address + 8) >> 2]!;
+        out.hullTolerance = mem.f32[(address + 12) >> 2]!;
+        out.maxErrorConvexRadius = mem.f32[(address + 16) >> 2]!;
+        out.bakeSupportAdjacency = mem.u32[(address + 20) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: ConvexHullBuildSettings): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.positions;
+        mem.u32[(address + 4) >> 2] = value.numPositions;
+        mem.f32[(address + 8) >> 2] = value.convexRadius;
+        mem.f32[(address + 12) >> 2] = value.hullTolerance;
+        mem.f32[(address + 16) >> 2] = value.maxErrorConvexRadius;
+        mem.u32[(address + 20) >> 2] = value.bakeSupportAdjacency;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: ConvexHullBuildSettings): void {
+        view.setUint32(offset + 0, value.positions, true);
+        view.setUint32(offset + 4, value.numPositions, true);
+        view.setFloat32(offset + 8, value.convexRadius, true);
+        view.setFloat32(offset + 12, value.hullTolerance, true);
+        view.setFloat32(offset + 16, value.maxErrorConvexRadius, true);
+        view.setUint32(offset + 20, value.bakeSupportAdjacency, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: ConvexHullBuildSettings, view: DataView, offset: number): ConvexHullBuildSettings {
+        out.positions = view.getUint32(offset + 0, true) as Pointer<'f32'>;
+        out.numPositions = view.getUint32(offset + 4, true);
+        out.convexRadius = view.getFloat32(offset + 8, true);
+        out.hullTolerance = view.getFloat32(offset + 12, true);
+        out.maxErrorConvexRadius = view.getFloat32(offset + 16, true);
+        out.bakeSupportAdjacency = view.getUint32(offset + 20, true);
+        return out;
+    },
+};
+
+export type ConvexHullBuild = { data: ConvexHullData | null; result: number };
+export const ConvexHullBuild = {
+    size: 8,
+    create(): ConvexHullBuild {
+        return { data: null, result: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: ConvexHullBuild, address: number): ConvexHullBuild {
+        const mem = wasm.mem;
+        out.data = (mem.u32[(address + 0) >> 2]! || null) as ConvexHullData | null;
+        out.result = mem.i32[(address + 4) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: ConvexHullBuild): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.data ?? 0;
+        mem.i32[(address + 4) >> 2] = value.result;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: ConvexHullBuild): void {
+        view.setUint32(offset + 0, value.data ?? 0, true);
+        view.setInt32(offset + 4, value.result, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: ConvexHullBuild, view: DataView, offset: number): ConvexHullBuild {
+        out.data = (view.getUint32(offset + 0, true) || null) as ConvexHullData | null;
+        out.result = view.getInt32(offset + 4, true);
+        return out;
+    },
+};
+
+export type ConvexHullSettings = { data: ConvexHullData | null; density: number; materialId: number };
+export const ConvexHullSettings = {
+    size: 12,
+    create(): ConvexHullSettings {
+        return { data: null, density: 0, materialId: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: ConvexHullSettings, address: number): ConvexHullSettings {
+        const mem = wasm.mem;
+        out.data = (mem.u32[(address + 0) >> 2]! || null) as ConvexHullData | null;
+        out.density = mem.f32[(address + 4) >> 2]!;
+        out.materialId = mem.i32[(address + 8) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: ConvexHullSettings): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.data ?? 0;
+        mem.f32[(address + 4) >> 2] = value.density;
+        mem.i32[(address + 8) >> 2] = value.materialId;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: ConvexHullSettings): void {
+        view.setUint32(offset + 0, value.data ?? 0, true);
+        view.setFloat32(offset + 4, value.density, true);
+        view.setInt32(offset + 8, value.materialId, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: ConvexHullSettings, view: DataView, offset: number): ConvexHullSettings {
+        out.data = (view.getUint32(offset + 0, true) || null) as ConvexHullData | null;
+        out.density = view.getFloat32(offset + 4, true);
+        out.materialId = view.getInt32(offset + 8, true);
+        return out;
+    },
+};
+
+export type TriangleMeshBuildSettings = {
+    positions: Pointer<'f32'>;
+    numPositions: number;
+    indices: Pointer<'u32'>;
+    numIndices: number;
+    materialIds: Pointer<'i32'>;
+    degenerateTolerance: number;
+    bvhSplitStrategy: number;
+    bvhMaxLeafTris: number;
+    activeEdgeCosThresholdAngle: number;
+};
+export const TriangleMeshBuildSettings = {
+    size: 36,
+    create(): TriangleMeshBuildSettings {
+        return {
+            positions: 0 as Pointer<'f32'>,
+            numPositions: 0,
+            indices: 0 as Pointer<'u32'>,
+            numIndices: 0,
+            materialIds: 0 as Pointer<'i32'>,
+            degenerateTolerance: 0,
+            bvhSplitStrategy: 0,
+            bvhMaxLeafTris: 0,
+            activeEdgeCosThresholdAngle: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: TriangleMeshBuildSettings, address: number): TriangleMeshBuildSettings {
+        const mem = wasm.mem;
+        out.positions = mem.u32[(address + 0) >> 2]! as Pointer<'f32'>;
+        out.numPositions = mem.u32[(address + 4) >> 2]!;
+        out.indices = mem.u32[(address + 8) >> 2]! as Pointer<'u32'>;
+        out.numIndices = mem.u32[(address + 12) >> 2]!;
+        out.materialIds = mem.u32[(address + 16) >> 2]! as Pointer<'i32'>;
+        out.degenerateTolerance = mem.f32[(address + 20) >> 2]!;
+        out.bvhSplitStrategy = mem.u32[(address + 24) >> 2]!;
+        out.bvhMaxLeafTris = mem.u32[(address + 28) >> 2]!;
+        out.activeEdgeCosThresholdAngle = mem.f32[(address + 32) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: TriangleMeshBuildSettings): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.positions;
+        mem.u32[(address + 4) >> 2] = value.numPositions;
+        mem.u32[(address + 8) >> 2] = value.indices;
+        mem.u32[(address + 12) >> 2] = value.numIndices;
+        mem.u32[(address + 16) >> 2] = value.materialIds;
+        mem.f32[(address + 20) >> 2] = value.degenerateTolerance;
+        mem.u32[(address + 24) >> 2] = value.bvhSplitStrategy;
+        mem.u32[(address + 28) >> 2] = value.bvhMaxLeafTris;
+        mem.f32[(address + 32) >> 2] = value.activeEdgeCosThresholdAngle;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: TriangleMeshBuildSettings): void {
+        view.setUint32(offset + 0, value.positions, true);
+        view.setUint32(offset + 4, value.numPositions, true);
+        view.setUint32(offset + 8, value.indices, true);
+        view.setUint32(offset + 12, value.numIndices, true);
+        view.setUint32(offset + 16, value.materialIds, true);
+        view.setFloat32(offset + 20, value.degenerateTolerance, true);
+        view.setUint32(offset + 24, value.bvhSplitStrategy, true);
+        view.setUint32(offset + 28, value.bvhMaxLeafTris, true);
+        view.setFloat32(offset + 32, value.activeEdgeCosThresholdAngle, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: TriangleMeshBuildSettings, view: DataView, offset: number): TriangleMeshBuildSettings {
+        out.positions = view.getUint32(offset + 0, true) as Pointer<'f32'>;
+        out.numPositions = view.getUint32(offset + 4, true);
+        out.indices = view.getUint32(offset + 8, true) as Pointer<'u32'>;
+        out.numIndices = view.getUint32(offset + 12, true);
+        out.materialIds = view.getUint32(offset + 16, true) as Pointer<'i32'>;
+        out.degenerateTolerance = view.getFloat32(offset + 20, true);
+        out.bvhSplitStrategy = view.getUint32(offset + 24, true);
+        out.bvhMaxLeafTris = view.getUint32(offset + 28, true);
+        out.activeEdgeCosThresholdAngle = view.getFloat32(offset + 32, true);
+        return out;
+    },
+};
+
+export type TriangleMeshSettings = { data: TriangleMeshData | null; materialId: number };
+export const TriangleMeshSettings = {
+    size: 8,
+    create(): TriangleMeshSettings {
+        return { data: null, materialId: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: TriangleMeshSettings, address: number): TriangleMeshSettings {
+        const mem = wasm.mem;
+        out.data = (mem.u32[(address + 0) >> 2]! || null) as TriangleMeshData | null;
+        out.materialId = mem.i32[(address + 4) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: TriangleMeshSettings): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.data ?? 0;
+        mem.i32[(address + 4) >> 2] = value.materialId;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: TriangleMeshSettings): void {
+        view.setUint32(offset + 0, value.data ?? 0, true);
+        view.setInt32(offset + 4, value.materialId, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: TriangleMeshSettings, view: DataView, offset: number): TriangleMeshSettings {
+        out.data = (view.getUint32(offset + 0, true) || null) as TriangleMeshData | null;
+        out.materialId = view.getInt32(offset + 4, true);
+        return out;
+    },
+};
+
+export type CompoundChild = { position: Vec3; quaternion: Quat; shape: Shape | null };
+export const CompoundChild = {
+    size: 32,
+    create(): CompoundChild {
+        return { position: Vec3.create(), quaternion: Quat.create(), shape: null };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: CompoundChild, address: number): CompoundChild {
+        const mem = wasm.mem;
+        out.position[0] = mem.f32[(address + 0) >> 2]!;
+        out.position[1] = mem.f32[(address + 4) >> 2]!;
+        out.position[2] = mem.f32[(address + 8) >> 2]!;
+        out.quaternion[0] = mem.f32[(address + 12) >> 2]!;
+        out.quaternion[1] = mem.f32[(address + 16) >> 2]!;
+        out.quaternion[2] = mem.f32[(address + 20) >> 2]!;
+        out.quaternion[3] = mem.f32[(address + 24) >> 2]!;
+        out.shape = (mem.u32[(address + 28) >> 2]! || null) as Shape | null;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: CompoundChild): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.position[0];
+        mem.f32[(address + 4) >> 2] = value.position[1];
+        mem.f32[(address + 8) >> 2] = value.position[2];
+        mem.f32[(address + 12) >> 2] = value.quaternion[0];
+        mem.f32[(address + 16) >> 2] = value.quaternion[1];
+        mem.f32[(address + 20) >> 2] = value.quaternion[2];
+        mem.f32[(address + 24) >> 2] = value.quaternion[3];
+        mem.u32[(address + 28) >> 2] = value.shape ?? 0;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: CompoundChild): void {
+        view.setFloat32(offset + 0, value.position[0], true);
+        view.setFloat32(offset + 4, value.position[1], true);
+        view.setFloat32(offset + 8, value.position[2], true);
+        view.setFloat32(offset + 12, value.quaternion[0], true);
+        view.setFloat32(offset + 16, value.quaternion[1], true);
+        view.setFloat32(offset + 20, value.quaternion[2], true);
+        view.setFloat32(offset + 24, value.quaternion[3], true);
+        view.setUint32(offset + 28, value.shape ?? 0, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: CompoundChild, view: DataView, offset: number): CompoundChild {
+        out.position[0] = view.getFloat32(offset + 0, true);
+        out.position[1] = view.getFloat32(offset + 4, true);
+        out.position[2] = view.getFloat32(offset + 8, true);
+        out.quaternion[0] = view.getFloat32(offset + 12, true);
+        out.quaternion[1] = view.getFloat32(offset + 16, true);
+        out.quaternion[2] = view.getFloat32(offset + 20, true);
+        out.quaternion[3] = view.getFloat32(offset + 24, true);
+        out.shape = (view.getUint32(offset + 28, true) || null) as Shape | null;
+        return out;
+    },
+};
+
+export type TransformedSettings = { shape: Shape | null; position: Vec3; quaternion: Quat };
+export const TransformedSettings = {
+    size: 32,
+    create(): TransformedSettings {
+        return { shape: null, position: Vec3.create(), quaternion: Quat.create() };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: TransformedSettings, address: number): TransformedSettings {
+        const mem = wasm.mem;
+        out.shape = (mem.u32[(address + 0) >> 2]! || null) as Shape | null;
+        out.position[0] = mem.f32[(address + 4) >> 2]!;
+        out.position[1] = mem.f32[(address + 8) >> 2]!;
+        out.position[2] = mem.f32[(address + 12) >> 2]!;
+        out.quaternion[0] = mem.f32[(address + 16) >> 2]!;
+        out.quaternion[1] = mem.f32[(address + 20) >> 2]!;
+        out.quaternion[2] = mem.f32[(address + 24) >> 2]!;
+        out.quaternion[3] = mem.f32[(address + 28) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: TransformedSettings): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.shape ?? 0;
+        mem.f32[(address + 4) >> 2] = value.position[0];
+        mem.f32[(address + 8) >> 2] = value.position[1];
+        mem.f32[(address + 12) >> 2] = value.position[2];
+        mem.f32[(address + 16) >> 2] = value.quaternion[0];
+        mem.f32[(address + 20) >> 2] = value.quaternion[1];
+        mem.f32[(address + 24) >> 2] = value.quaternion[2];
+        mem.f32[(address + 28) >> 2] = value.quaternion[3];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: TransformedSettings): void {
+        view.setUint32(offset + 0, value.shape ?? 0, true);
+        view.setFloat32(offset + 4, value.position[0], true);
+        view.setFloat32(offset + 8, value.position[1], true);
+        view.setFloat32(offset + 12, value.position[2], true);
+        view.setFloat32(offset + 16, value.quaternion[0], true);
+        view.setFloat32(offset + 20, value.quaternion[1], true);
+        view.setFloat32(offset + 24, value.quaternion[2], true);
+        view.setFloat32(offset + 28, value.quaternion[3], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: TransformedSettings, view: DataView, offset: number): TransformedSettings {
+        out.shape = (view.getUint32(offset + 0, true) || null) as Shape | null;
+        out.position[0] = view.getFloat32(offset + 4, true);
+        out.position[1] = view.getFloat32(offset + 8, true);
+        out.position[2] = view.getFloat32(offset + 12, true);
+        out.quaternion[0] = view.getFloat32(offset + 16, true);
+        out.quaternion[1] = view.getFloat32(offset + 20, true);
+        out.quaternion[2] = view.getFloat32(offset + 24, true);
+        out.quaternion[3] = view.getFloat32(offset + 28, true);
+        return out;
+    },
+};
+
+export type ScaledSettings = { shape: Shape | null; scale: Vec3 };
+export const ScaledSettings = {
+    size: 16,
+    create(): ScaledSettings {
+        return { shape: null, scale: Vec3.create() };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: ScaledSettings, address: number): ScaledSettings {
+        const mem = wasm.mem;
+        out.shape = (mem.u32[(address + 0) >> 2]! || null) as Shape | null;
+        out.scale[0] = mem.f32[(address + 4) >> 2]!;
+        out.scale[1] = mem.f32[(address + 8) >> 2]!;
+        out.scale[2] = mem.f32[(address + 12) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: ScaledSettings): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.shape ?? 0;
+        mem.f32[(address + 4) >> 2] = value.scale[0];
+        mem.f32[(address + 8) >> 2] = value.scale[1];
+        mem.f32[(address + 12) >> 2] = value.scale[2];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: ScaledSettings): void {
+        view.setUint32(offset + 0, value.shape ?? 0, true);
+        view.setFloat32(offset + 4, value.scale[0], true);
+        view.setFloat32(offset + 8, value.scale[1], true);
+        view.setFloat32(offset + 12, value.scale[2], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: ScaledSettings, view: DataView, offset: number): ScaledSettings {
+        out.shape = (view.getUint32(offset + 0, true) || null) as Shape | null;
+        out.scale[0] = view.getFloat32(offset + 4, true);
+        out.scale[1] = view.getFloat32(offset + 8, true);
+        out.scale[2] = view.getFloat32(offset + 12, true);
+        return out;
+    },
+};
+
+export type OffsetCenterOfMassSettings = { shape: Shape | null; offset: Vec3 };
+export const OffsetCenterOfMassSettings = {
+    size: 16,
+    create(): OffsetCenterOfMassSettings {
+        return { shape: null, offset: Vec3.create() };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: OffsetCenterOfMassSettings, address: number): OffsetCenterOfMassSettings {
+        const mem = wasm.mem;
+        out.shape = (mem.u32[(address + 0) >> 2]! || null) as Shape | null;
+        out.offset[0] = mem.f32[(address + 4) >> 2]!;
+        out.offset[1] = mem.f32[(address + 8) >> 2]!;
+        out.offset[2] = mem.f32[(address + 12) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: OffsetCenterOfMassSettings): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.shape ?? 0;
+        mem.f32[(address + 4) >> 2] = value.offset[0];
+        mem.f32[(address + 8) >> 2] = value.offset[1];
+        mem.f32[(address + 12) >> 2] = value.offset[2];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: OffsetCenterOfMassSettings): void {
+        view.setUint32(offset + 0, value.shape ?? 0, true);
+        view.setFloat32(offset + 4, value.offset[0], true);
+        view.setFloat32(offset + 8, value.offset[1], true);
+        view.setFloat32(offset + 12, value.offset[2], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: OffsetCenterOfMassSettings, view: DataView, offset: number): OffsetCenterOfMassSettings {
+        out.shape = (view.getUint32(offset + 0, true) || null) as Shape | null;
+        out.offset[0] = view.getFloat32(offset + 4, true);
+        out.offset[1] = view.getFloat32(offset + 8, true);
+        out.offset[2] = view.getFloat32(offset + 12, true);
+        return out;
+    },
+};
+
 export type WorldSettings = Handle<'WorldSettings'>;
 /** WorldSettings's fields as a plain object, for WorldSettings.writeTo / readFrom over another realm's buffer. */
 export type WorldSettingsValue = {
@@ -1670,25 +2376,7 @@ export const WorldSettings = {
 };
 
 export type World = Handle<'World'>;
-/** World's fields as a plain object, for World.writeTo / readFrom over another realm's buffer. */
-export type WorldValue = {  };
 export const World = {
-    size: 1096,
-    align: 4,
-    /** byte offset of each field, for hot paths that read the views directly. */
-    offset: {
-    },
-    createValue(): WorldValue {
-        return {  };
-    },
-    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
-    writeTo(view: DataView, offset: number, value: WorldValue): void {
-    },
-    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
-    readFrom(out: WorldValue, view: DataView, offset: number): WorldValue {
-        return out;
-    },
-
     create(settings: WorldSettings): World {
         const r = wasm.exports.tumble_world_create(settings);
         wasm.grew();
@@ -1743,46 +2431,41 @@ export const World = {
 };
 
 export type Shape = Handle<'Shape'>;
-/** Shape's fields as a plain object, for Shape.writeTo / readFrom over another realm's buffer. */
-export type ShapeValue = {  };
 export const Shape = {
-    size: 80,
-    align: 4,
-    /** byte offset of each field, for hot paths that read the views directly. */
-    offset: {
+    getType(shape: Shape): number {
+        const r = wasm.exports.tumble_shape_get_type(shape);
+        return r >>> 0;
     },
-    createValue(): ShapeValue {
-        return {  };
+
+    getLocalBounds(out: Box3, shape: Shape): Box3 {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_shape_get_local_bounds(scratch + 0, shape);
+        Box3.read(out, scratch + 0);
+        return out;
     },
-    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
-    writeTo(view: DataView, offset: number, value: ShapeValue): void {
+
+    getCenterOfMass(out: Vec3, shape: Shape): Vec3 {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_shape_get_center_of_mass(scratch + 0, shape);
+        Vec3.read(out, scratch + 0);
+        return out;
     },
-    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
-    readFrom(out: ShapeValue, view: DataView, offset: number): ShapeValue {
+
+    getVolume(shape: Shape): number {
+        const r = wasm.exports.tumble_shape_get_volume(shape);
+        return r;
+    },
+
+    getMassProperties(out: MassProperties, shape: Shape): MassProperties {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_shape_get_mass_properties(scratch + 0, shape);
+        MassProperties.read(out, scratch + 0);
         return out;
     },
 };
 
 export type Poses = Handle<'Poses'>;
-/** Poses's fields as a plain object, for Poses.writeTo / readFrom over another realm's buffer. */
-export type PosesValue = {  };
 export const Poses = {
-    size: 76,
-    align: 4,
-    /** byte offset of each field, for hot paths that read the views directly. */
-    offset: {
-    },
-    createValue(): PosesValue {
-        return {  };
-    },
-    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
-    writeTo(view: DataView, offset: number, value: PosesValue): void {
-    },
-    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
-    readFrom(out: PosesValue, view: DataView, offset: number): PosesValue {
-        return out;
-    },
-
     create(world: World): Poses {
         const r = wasm.exports.tumble_poses_create(world);
         wasm.grew();
@@ -1834,6 +2517,52 @@ export const Poses = {
     changed(poses: Poses): Pointer<'u32'> {
         const r = wasm.exports.tumble_poses_changed(poses);
         return r as Pointer<'u32'>;
+    },
+};
+
+export type ConvexHullData = Handle<'ConvexHullData'>;
+export const ConvexHullData = {
+    defaultSettings(out: ConvexHullBuildSettings): ConvexHullBuildSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_convex_hull_data_default_settings(scratch + 0);
+        ConvexHullBuildSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    build(out: ConvexHullBuild, settings: ConvexHullBuildSettings): boolean {
+        const scratch = wasm.scratch;
+        ConvexHullBuildSettings.write(scratch + 16, settings);
+        const r = wasm.exports.tumble_convex_hull_data_build(scratch + 0, scratch + 16);
+        wasm.grew();
+        ConvexHullBuild.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    release(data: ConvexHullData): void {
+        wasm.exports.tumble_convex_hull_data_release(data);
+    },
+};
+
+export type TriangleMeshData = Handle<'TriangleMeshData'>;
+export const TriangleMeshData = {
+    defaultSettings(out: TriangleMeshBuildSettings): TriangleMeshBuildSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_triangle_mesh_data_default_settings(scratch + 0);
+        TriangleMeshBuildSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    build(settings: TriangleMeshBuildSettings): TriangleMeshData {
+        const scratch = wasm.scratch;
+        TriangleMeshBuildSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_triangle_mesh_data_build(scratch + 0);
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as TriangleMeshData;
+    },
+
+    release(data: TriangleMeshData): void {
+        wasm.exports.tumble_triangle_mesh_data_release(data);
     },
 };
 
@@ -2242,6 +2971,13 @@ export const RigidBody = {
 };
 
 export const Box = {
+    defaultSettings(out: BoxSettings): BoxSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_box_default_settings(scratch + 0);
+        BoxSettings.read(out, scratch + 0);
+        return out;
+    },
+
     create(settings: BoxSettings): Shape {
         const scratch = wasm.scratch;
         BoxSettings.write(scratch + 0, settings);
@@ -2257,6 +2993,13 @@ export const Box = {
 };
 
 export const Sphere = {
+    defaultSettings(out: SphereSettings): SphereSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_sphere_default_settings(scratch + 0);
+        SphereSettings.read(out, scratch + 0);
+        return out;
+    },
+
     create(settings: SphereSettings): Shape {
         const scratch = wasm.scratch;
         SphereSettings.write(scratch + 0, settings);
@@ -2268,6 +3011,226 @@ export const Sphere = {
 
     destroy(shape: Shape): void {
         wasm.exports.tumble_sphere_destroy(shape);
+    },
+};
+
+export const Capsule = {
+    defaultSettings(out: CapsuleSettings): CapsuleSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_capsule_default_settings(scratch + 0);
+        CapsuleSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(settings: CapsuleSettings): Shape {
+        const scratch = wasm.scratch;
+        CapsuleSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_capsule_create(scratch + 0);
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as Shape;
+    },
+
+    destroy(shape: Shape): void {
+        wasm.exports.tumble_capsule_destroy(shape);
+    },
+};
+
+export const Cylinder = {
+    defaultSettings(out: CylinderSettings): CylinderSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_cylinder_default_settings(scratch + 0);
+        CylinderSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(settings: CylinderSettings): Shape {
+        const scratch = wasm.scratch;
+        CylinderSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_cylinder_create(scratch + 0);
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as Shape;
+    },
+
+    destroy(shape: Shape): void {
+        wasm.exports.tumble_cylinder_destroy(shape);
+    },
+};
+
+export const Plane = {
+    defaultSettings(out: PlaneSettings): PlaneSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_plane_default_settings(scratch + 0);
+        PlaneSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(settings: PlaneSettings): Shape {
+        const scratch = wasm.scratch;
+        PlaneSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_plane_create(scratch + 0);
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as Shape;
+    },
+
+    destroy(shape: Shape): void {
+        wasm.exports.tumble_plane_destroy(shape);
+    },
+};
+
+export const Empty = {
+    create(): Shape {
+        const r = wasm.exports.tumble_empty_create();
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as Shape;
+    },
+
+    destroy(shape: Shape): void {
+        wasm.exports.tumble_empty_destroy(shape);
+    },
+};
+
+export const ConvexHull = {
+    defaultSettings(out: ConvexHullSettings): ConvexHullSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_convex_hull_default_settings(scratch + 0);
+        ConvexHullSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(settings: ConvexHullSettings): Shape {
+        const scratch = wasm.scratch;
+        ConvexHullSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_convex_hull_create(scratch + 0);
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as Shape;
+    },
+
+    destroy(shape: Shape): void {
+        wasm.exports.tumble_convex_hull_destroy(shape);
+    },
+};
+
+export const TriangleMesh = {
+    defaultSettings(out: TriangleMeshSettings): TriangleMeshSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_triangle_mesh_default_settings(scratch + 0);
+        TriangleMeshSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(settings: TriangleMeshSettings): Shape {
+        const scratch = wasm.scratch;
+        TriangleMeshSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_triangle_mesh_create(scratch + 0);
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as Shape;
+    },
+
+    destroy(shape: Shape): void {
+        wasm.exports.tumble_triangle_mesh_destroy(shape);
+    },
+};
+
+export const Compound = {
+    create(children: Pointer<'u8'>, count: number): Shape {
+        const r = wasm.exports.tumble_compound_create(children, count);
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as Shape;
+    },
+
+    destroy(shape: Shape): void {
+        wasm.exports.tumble_compound_destroy(shape);
+    },
+};
+
+export const StaticCompound = {
+    defaultBvhMaxLeafChildren(): number {
+        const r = wasm.exports.tumble_static_compound_default_bvh_max_leaf_children();
+        return r >>> 0;
+    },
+
+    create(children: Pointer<'u8'>, count: number, bvhMaxLeafChildren: number): Shape {
+        const r = wasm.exports.tumble_static_compound_create(children, count, bvhMaxLeafChildren);
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as Shape;
+    },
+
+    destroy(shape: Shape): void {
+        wasm.exports.tumble_static_compound_destroy(shape);
+    },
+};
+
+export const Transformed = {
+    defaultSettings(out: TransformedSettings): TransformedSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_transformed_default_settings(scratch + 0);
+        TransformedSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(settings: TransformedSettings): Shape {
+        const scratch = wasm.scratch;
+        TransformedSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_transformed_create(scratch + 0);
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as Shape;
+    },
+
+    destroy(shape: Shape): void {
+        wasm.exports.tumble_transformed_destroy(shape);
+    },
+};
+
+export const Scaled = {
+    defaultSettings(out: ScaledSettings): ScaledSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_scaled_default_settings(scratch + 0);
+        ScaledSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(settings: ScaledSettings): Shape {
+        const scratch = wasm.scratch;
+        ScaledSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_scaled_create(scratch + 0);
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as Shape;
+    },
+
+    destroy(shape: Shape): void {
+        wasm.exports.tumble_scaled_destroy(shape);
+    },
+};
+
+export const OffsetCenterOfMass = {
+    defaultSettings(out: OffsetCenterOfMassSettings): OffsetCenterOfMassSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_offset_center_of_mass_default_settings(scratch + 0);
+        OffsetCenterOfMassSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(settings: OffsetCenterOfMassSettings): Shape {
+        const scratch = wasm.scratch;
+        OffsetCenterOfMassSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_offset_center_of_mass_create(scratch + 0);
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as Shape;
+    },
+
+    destroy(shape: Shape): void {
+        wasm.exports.tumble_offset_center_of_mass_destroy(shape);
     },
 };
 
@@ -2369,8 +3332,52 @@ export type WasmExports = {
     tumble_rigid_body_set_user_data(world: number, body: number, low: number, high: number): number;
     tumble_rigid_body_set_friction(world: number, body: number, friction: number): number;
     tumble_rigid_body_set_restitution(world: number, body: number, restitution: number): number;
+    tumble_shape_get_type(shape: number): number;
+    tumble_shape_get_local_bounds(out: number, shape: number): void;
+    tumble_shape_get_center_of_mass(out: number, shape: number): void;
+    tumble_shape_get_volume(shape: number): number;
+    tumble_shape_get_mass_properties(out: number, shape: number): void;
+    tumble_box_default_settings(out: number): void;
     tumble_box_create(settings: number): number;
     tumble_box_destroy(shape: number): void;
+    tumble_sphere_default_settings(out: number): void;
     tumble_sphere_create(settings: number): number;
     tumble_sphere_destroy(shape: number): void;
+    tumble_capsule_default_settings(out: number): void;
+    tumble_capsule_create(settings: number): number;
+    tumble_capsule_destroy(shape: number): void;
+    tumble_cylinder_default_settings(out: number): void;
+    tumble_cylinder_create(settings: number): number;
+    tumble_cylinder_destroy(shape: number): void;
+    tumble_plane_default_settings(out: number): void;
+    tumble_plane_create(settings: number): number;
+    tumble_plane_destroy(shape: number): void;
+    tumble_empty_create(): number;
+    tumble_empty_destroy(shape: number): void;
+    tumble_convex_hull_data_default_settings(out: number): void;
+    tumble_convex_hull_data_build(out: number, settings: number): number;
+    tumble_convex_hull_data_release(data: number): void;
+    tumble_convex_hull_default_settings(out: number): void;
+    tumble_convex_hull_create(settings: number): number;
+    tumble_convex_hull_destroy(shape: number): void;
+    tumble_triangle_mesh_data_default_settings(out: number): void;
+    tumble_triangle_mesh_data_build(settings: number): number;
+    tumble_triangle_mesh_data_release(data: number): void;
+    tumble_triangle_mesh_default_settings(out: number): void;
+    tumble_triangle_mesh_create(settings: number): number;
+    tumble_triangle_mesh_destroy(shape: number): void;
+    tumble_compound_create(children: number, count: number): number;
+    tumble_compound_destroy(shape: number): void;
+    tumble_static_compound_default_bvh_max_leaf_children(): number;
+    tumble_static_compound_create(children: number, count: number, bvhMaxLeafChildren: number): number;
+    tumble_static_compound_destroy(shape: number): void;
+    tumble_transformed_default_settings(out: number): void;
+    tumble_transformed_create(settings: number): number;
+    tumble_transformed_destroy(shape: number): void;
+    tumble_scaled_default_settings(out: number): void;
+    tumble_scaled_create(settings: number): number;
+    tumble_scaled_destroy(shape: number): void;
+    tumble_offset_center_of_mass_default_settings(out: number): void;
+    tumble_offset_center_of_mass_create(settings: number): number;
+    tumble_offset_center_of_mass_destroy(shape: number): void;
 };

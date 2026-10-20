@@ -4,5 +4,5 @@
 #include <stdint.h>
 
 namespace tumble::runtime {
-constexpr uint32_t SCHEMA_HASH = 0xa1a1057fu;
+constexpr uint32_t SCHEMA_HASH = 0x21c46301u;
 }

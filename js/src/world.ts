@@ -1,4 +1,4 @@
-import { withFloats } from './arrays';
+import { withCopies } from './arrays';
 import * as Low from './generated/tumble';
 import type { Vec3 } from './math';
 
@@ -145,9 +145,7 @@ export const World = {
         const values: number[] = [];
         for (const material of materials) values.push(material.friction, material.restitution);
         Low.errorClear();
-        const ok = withFloats(values, (address) =>
-            Low.World.setMaterials(world, address as Low.Pointer<'f32'>, materials.length),
-        );
+        const ok = withCopies((copy) => Low.World.setMaterials(world, copy.f32(values), materials.length));
         if (!ok) Low.getWasm().check();
     },
 };

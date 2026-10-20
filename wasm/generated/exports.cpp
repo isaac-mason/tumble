@@ -98,9 +98,53 @@ WASM_EXPORT bool tumble_rigid_body_wake(world::World * world, uint32_t body) { r
 WASM_EXPORT bool tumble_rigid_body_set_user_data(world::World * world, uint32_t body, uint32_t low, uint32_t high) { return adapters::rigid_body::set_user_data(world, body, low, high); }
 WASM_EXPORT bool tumble_rigid_body_set_friction(world::World * world, uint32_t body, float friction) { return adapters::rigid_body::set_friction(world, body, friction); }
 WASM_EXPORT bool tumble_rigid_body_set_restitution(world::World * world, uint32_t body, float restitution) { return adapters::rigid_body::set_restitution(world, body, restitution); }
+WASM_EXPORT uint32_t tumble_shape_get_type(const shapes::Shape * shape) { return adapters::shape::get_type(shape); }
+WASM_EXPORT void tumble_shape_get_local_bounds(Box3f * out, const shapes::Shape * shape) { adapters::shape::get_local_bounds(*out, shape); }
+WASM_EXPORT void tumble_shape_get_center_of_mass(Float3 * out, const shapes::Shape * shape) { adapters::shape::get_center_of_mass(*out, shape); }
+WASM_EXPORT float tumble_shape_get_volume(const shapes::Shape * shape) { return adapters::shape::get_volume(shape); }
+WASM_EXPORT void tumble_shape_get_mass_properties(mass_properties::MassProperties * out, const shapes::Shape * shape) { adapters::shape::get_mass_properties(*out, shape); }
+WASM_EXPORT void tumble_box_default_settings(box::BoxShapeSettings * out) { adapters::box::default_settings(*out); }
 WASM_EXPORT shapes::Shape * tumble_box_create(const box::BoxShapeSettings * settings) { return adapters::box::create(*settings); }
 WASM_EXPORT void tumble_box_destroy(shapes::Shape * shape) { adapters::box::destroy(shape); }
+WASM_EXPORT void tumble_sphere_default_settings(sphere::SphereShapeSettings * out) { adapters::sphere::default_settings(*out); }
 WASM_EXPORT shapes::Shape * tumble_sphere_create(const sphere::SphereShapeSettings * settings) { return adapters::sphere::create(*settings); }
 WASM_EXPORT void tumble_sphere_destroy(shapes::Shape * shape) { adapters::sphere::destroy(shape); }
+WASM_EXPORT void tumble_capsule_default_settings(capsule::CapsuleShapeSettings * out) { adapters::capsule::default_settings(*out); }
+WASM_EXPORT shapes::Shape * tumble_capsule_create(const capsule::CapsuleShapeSettings * settings) { return adapters::capsule::create(*settings); }
+WASM_EXPORT void tumble_capsule_destroy(shapes::Shape * shape) { adapters::capsule::destroy(shape); }
+WASM_EXPORT void tumble_cylinder_default_settings(cylinder::CylinderShapeSettings * out) { adapters::cylinder::default_settings(*out); }
+WASM_EXPORT shapes::Shape * tumble_cylinder_create(const cylinder::CylinderShapeSettings * settings) { return adapters::cylinder::create(*settings); }
+WASM_EXPORT void tumble_cylinder_destroy(shapes::Shape * shape) { adapters::cylinder::destroy(shape); }
+WASM_EXPORT void tumble_plane_default_settings(plane::PlaneShapeSettings * out) { adapters::plane::default_settings(*out); }
+WASM_EXPORT shapes::Shape * tumble_plane_create(const plane::PlaneShapeSettings * settings) { return adapters::plane::create(*settings); }
+WASM_EXPORT void tumble_plane_destroy(shapes::Shape * shape) { adapters::plane::destroy(shape); }
+WASM_EXPORT shapes::Shape * tumble_empty_create() { return adapters::empty::create(); }
+WASM_EXPORT void tumble_empty_destroy(shapes::Shape * shape) { adapters::empty::destroy(shape); }
+WASM_EXPORT void tumble_convex_hull_data_default_settings(convex_hull::ConvexHullBuildSettings * out) { adapters::convex_hull_data::default_settings(*out); }
+WASM_EXPORT bool tumble_convex_hull_data_build(adapters::ConvexHullBuild * out, const convex_hull::ConvexHullBuildSettings * settings) { return adapters::convex_hull_data::build(*out, *settings); }
+WASM_EXPORT void tumble_convex_hull_data_release(convex_hull::ConvexHullData * data) { adapters::convex_hull_data::release(data); }
+WASM_EXPORT void tumble_convex_hull_default_settings(convex_hull::ConvexHullShapeSettings * out) { adapters::convex_hull::default_settings(*out); }
+WASM_EXPORT shapes::Shape * tumble_convex_hull_create(const convex_hull::ConvexHullShapeSettings * settings) { return adapters::convex_hull::create(*settings); }
+WASM_EXPORT void tumble_convex_hull_destroy(shapes::Shape * shape) { adapters::convex_hull::destroy(shape); }
+WASM_EXPORT void tumble_triangle_mesh_data_default_settings(triangle_mesh_builder::TriangleMeshBuilderSettings * out) { adapters::triangle_mesh_data::default_settings(*out); }
+WASM_EXPORT triangle_mesh_data::TriangleMeshData * tumble_triangle_mesh_data_build(const triangle_mesh_builder::TriangleMeshBuilderSettings * settings) { return adapters::triangle_mesh_data::build(*settings); }
+WASM_EXPORT void tumble_triangle_mesh_data_release(triangle_mesh_data::TriangleMeshData * data) { adapters::triangle_mesh_data::release(data); }
+WASM_EXPORT void tumble_triangle_mesh_default_settings(triangle_mesh::TriangleMeshShapeSettings * out) { adapters::triangle_mesh::default_settings(*out); }
+WASM_EXPORT shapes::Shape * tumble_triangle_mesh_create(const triangle_mesh::TriangleMeshShapeSettings * settings) { return adapters::triangle_mesh::create(*settings); }
+WASM_EXPORT void tumble_triangle_mesh_destroy(shapes::Shape * shape) { adapters::triangle_mesh::destroy(shape); }
+WASM_EXPORT shapes::Shape * tumble_compound_create(const uint8_t * children, uint32_t count) { return adapters::compound::create(children, count); }
+WASM_EXPORT void tumble_compound_destroy(shapes::Shape * shape) { adapters::compound::destroy(shape); }
+WASM_EXPORT uint32_t tumble_static_compound_default_bvh_max_leaf_children() { return adapters::static_compound::default_bvh_max_leaf_children(); }
+WASM_EXPORT shapes::Shape * tumble_static_compound_create(const uint8_t * children, uint32_t count, uint32_t bvhMaxLeafChildren) { return adapters::static_compound::create(children, count, bvhMaxLeafChildren); }
+WASM_EXPORT void tumble_static_compound_destroy(shapes::Shape * shape) { adapters::static_compound::destroy(shape); }
+WASM_EXPORT void tumble_transformed_default_settings(transformed::TransformedShapeSettings * out) { adapters::transformed::default_settings(*out); }
+WASM_EXPORT shapes::Shape * tumble_transformed_create(const transformed::TransformedShapeSettings * settings) { return adapters::transformed::create(*settings); }
+WASM_EXPORT void tumble_transformed_destroy(shapes::Shape * shape) { adapters::transformed::destroy(shape); }
+WASM_EXPORT void tumble_scaled_default_settings(scaled::ScaledShapeSettings * out) { adapters::scaled::default_settings(*out); }
+WASM_EXPORT shapes::Shape * tumble_scaled_create(const scaled::ScaledShapeSettings * settings) { return adapters::scaled::create(*settings); }
+WASM_EXPORT void tumble_scaled_destroy(shapes::Shape * shape) { adapters::scaled::destroy(shape); }
+WASM_EXPORT void tumble_offset_center_of_mass_default_settings(offset_center_of_mass::OffsetCenterOfMassShapeSettings * out) { adapters::offset_center_of_mass::default_settings(*out); }
+WASM_EXPORT shapes::Shape * tumble_offset_center_of_mass_create(const offset_center_of_mass::OffsetCenterOfMassShapeSettings * settings) { return adapters::offset_center_of_mass::create(*settings); }
+WASM_EXPORT void tumble_offset_center_of_mass_destroy(shapes::Shape * shape) { adapters::offset_center_of_mass::destroy(shape); }
 
 #endif
