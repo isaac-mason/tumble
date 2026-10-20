@@ -12,7 +12,6 @@ Broadphase init(const layers::Layers &layers) {
     const uint32_t num_broadphase_layers = layers.broadphase_layers;
     Broadphase broadphase = {};
 
-    // one tree per broadphase layer
     broadphase.trees.reserve(num_broadphase_layers);
     for (uint32_t i = 0; i < num_broadphase_layers; i++) broadphase.trees.push(quad_tree::create());
 
@@ -29,14 +28,13 @@ void release(Broadphase &broadphase) {
 void add_body(Broadphase &broadphase, rigid_body::RigidBody *body, const layers::Layers &layers) {
     const uint32_t object_layer = body->object_layer;
 
-    // map object layer to broadphase layer
     if (object_layer >= layers.object_layers) {
         TUMBLE_ASSERT(false);
         return;
     }
     const uint32_t broadphase_layer = layers.object_layer_to_broadphase_layer[object_layer];
 
-    // insert into this broadphase layer's tree, which sets the body's broadphase_node
+    // sets the body's broadphase_node
     quad_tree::add(broadphase.trees[broadphase_layer], body);
     body->broadphase_layer = (int32_t)broadphase_layer;
 }
@@ -85,7 +83,6 @@ void intersect_fat_leaves(Broadphase &broadphase, const bodies::Bodies &bodies, 
 
 void cast_ray(Broadphase &broadphase, const bodies::Bodies &bodies, const cast_ray::Rayf &ray, const filter::Filter &query_filter,
               BodyVisitor &visitor) {
-    // query each broadphase layer that passes the filter
     for (uint32_t broadphase_layer = 0; broadphase_layer < broadphase.trees.length; broadphase_layer++) {
         if (!filter::filter_broadphase_layer(query_filter, broadphase_layer)) continue;
 

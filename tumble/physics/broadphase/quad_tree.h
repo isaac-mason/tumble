@@ -1,14 +1,5 @@
 #pragma once
 
-// jolt's QuadTree.h: a quad aabb tree, four children per node with their bounds stored per axis, so a box or ray test
-// against all four is one 4-wide compare per bound and a mask. modifying a body widens its ancestors to fit and marks
-// the path changed; a rebuild then re-partitions the changed part and grafts the unchanged subtrees in whole. one root:
-// jolt double-buffers it for queries running alongside a background rebuild, and nothing runs alongside one here.
-//
-// the leaf boxes are crashcat's fat leaves: a body's box grown by the expansion margin, replaced when the body escapes
-// it, so the persistent pairs (pairs.cpp) can key on them. a body's place in the tree is packed into its
-// broadphase_node as jolt's body location: node index in the low 30 bits, child index in the top 2.
-
 #include <stdint.h>
 
 #include "tumble/math/simd.h"
@@ -41,10 +32,13 @@ inline NodeId from_node_index(uint32_t index) { return index | IS_NODE; }
 /** the bounds of an empty child: no test ever reaches it */
 constexpr float LARGE_FLOAT = 1.0e30f;
 
-/** the levels of a freshly built tree born changed, so they are rebuilt every time (jolt's cMaxDepthMarkChanged) */
+/** the levels of a freshly built tree born changed, so they are rebuilt every time */
 constexpr uint32_t MAX_DEPTH_MARK_CHANGED = 5;
 
-/** 124 bytes of fields, aligned to 16 so every node's bounds load as whole lanes: 128 apart, as jolt's allocator places them */
+/**
+ * four children, their bounds per axis so a test against all four is one 4-wide compare per bound. 124 bytes of
+ * fields, aligned to 16 so every node's bounds load as whole lanes
+ */
 struct alignas(16) Node {
     /** bounds of the four children, per axis; an empty child is inverted at LARGE_FLOAT */
     float bounds_min_x[4];
@@ -71,11 +65,16 @@ struct BuildEntry {
     Vec3f node_bounds_max;
 };
 
+/**
+ * leaves are fat boxes, a body's box grown by the expansion margin and replaced only when the body escapes it, which the
+ * persistent pairs key on. a changed body widens its ancestors and marks the path; a rebuild re-partitions the marked
+ * part and keeps the unmarked subtrees whole
+ */
 struct QuadTree {
     /** the node pool; free slots are on free_nodes */
     collections::Vec<Node> nodes;
     collections::Vec<uint32_t> free_nodes;
-    /** the nodes a rebuild replaces, freed once the new tree is in (jolt's mFreeNodeBatch) */
+    /** the nodes a rebuild replaces, freed once the new tree is in */
     collections::Vec<uint32_t> free_node_batch;
     uint32_t root_node;
     uint32_t num_bodies;
@@ -107,7 +106,7 @@ void remove(QuadTree &tree, rigid_body::RigidBody *body);
  */
 bool update(QuadTree &tree, const rigid_body::RigidBody *body);
 
-/** jolt's UpdatePrepare and UpdateFinalize in one: the changed part rebuilt, then the nodes it replaced freed */
+/** the changed part rebuilt, then the nodes it replaced freed */
 void rebuild(QuadTree &tree, const bodies::Bodies &bodies);
 
 /** the bounds of every body's fat box; empty when there are none */

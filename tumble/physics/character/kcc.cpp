@@ -46,7 +46,7 @@ static constexpr float IMPULSE_PENETRATION_RESOLUTION_FACTOR = 0.4f;
 /** the most steep slope normals walk_stairs keeps */
 static constexpr uint32_t WALK_STAIRS_MAX_STEEP_SLOPE_NORMALS = 16;
 
-/* world level body calls on the inner body: the body, the broadphase and the pairs together */
+// world level calls on the inner body: the body, the broadphase and the pairs together
 
 static RigidBody *add_world_body(World &world, const rigid_body::RigidBodySettings &settings) {
     RigidBody *body = rigid_body::create(world.bodies, world.settings.layers, settings);
@@ -69,7 +69,6 @@ static void notify_body_bounds_changed(World &world, RigidBody *body) {
     if (broadphase::update_body(world.broadphase, body)) pairs::mark_moved(world.pairs, *body);
 }
 
-/* the body filter that skips the character's inner body, then asks the caller's */
 
 struct IgnoreSingleBodyChainedBodyFilter {
     body_id::BodyId body_id;
@@ -79,11 +78,8 @@ struct IgnoreSingleBodyChainedBodyFilter {
 
 static bool ignore_single_body_chained_body_filter(const RigidBody *body, void *context) {
     const IgnoreSingleBodyChainedBodyFilter &state = *static_cast<const IgnoreSingleBodyChainedBodyFilter *>(context);
-    // first check if this is the body we want to ignore
     if (body->id == state.body_id) return false;
-    // then call the original filter if it exists
     if (state.inner_body_filter != nullptr) return state.inner_body_filter(body, state.inner_body_filter_context);
-    // no original filter, accept the body
     return true;
 }
 
@@ -98,7 +94,6 @@ static filter::Filter chain_ignore_single_body(const filter::Filter &filter, Ign
     return chained;
 }
 
-/* contacts */
 
 static void reset_contact(CharacterContact &contact) {
     contact.position = vec3f::make(0.0f, 0.0f, 0.0f);
@@ -125,7 +120,6 @@ static CharacterContact *acquire_contact(collections::Vec<CharacterContact> &con
     return &contacts[contacts.length - 1];
 }
 
-/* listener contact tracking */
 
 static ListenerContactValue *acquire_listener_contact(KCC &character, body_id::BodyId id, sub_shape::SubShapeId sub_shape_id) {
     const ListenerContactValue value = {id, sub_shape_id, 0, {true, true}};
@@ -142,7 +136,6 @@ static ListenerContactValue *find_listener_contact(KCC &character, body_id::Body
     return nullptr;
 }
 
-/* create, destroy, add, remove */
 
 KCC *create(const KCCSettings &settings, Vec3f position, Quatf quaternion) {
     KCC *character = util::create<KCC>();
@@ -228,10 +221,8 @@ static Transformf shape_transform_at(const KCC &character, Vec3f position) {
 }
 
 void add(KCC &character, World &world) {
-    // don't create if already exists
     if (character.inner_rigid_body_id != body_id::INVALID_BODY_ID) return;
 
-    // can't add without inner body configuration
     if (character.inner_rigid_body_shape == nullptr) return;
 
     rigid_body::RigidBodySettings settings;
@@ -258,7 +249,6 @@ void remove(KCC &character, World &world) {
     character.inner_rigid_body_id = body_id::INVALID_BODY_ID;
 }
 
-/* queries on the character */
 
 bool is_slope_too_steep(const KCC &character, Vec3f normal) {
     // if slope checking is disabled, no slope is too steep
@@ -283,7 +273,6 @@ static Vec3f calculate_character_ground_velocity(const KCC &character, Vec3f bod
                                                   Vec3f angular_velocity, float delta_time) {
     const float angular_velocity_len_sq = vec3f::squared_length(angular_velocity);
     if (angular_velocity_len_sq < 1e-12f) {
-        // no significant rotation - just return linear velocity
         return linear_velocity;
     }
 
@@ -291,7 +280,6 @@ static Vec3f calculate_character_ground_velocity(const KCC &character, Vec3f bod
 
     const Vec3f axis = vec3f::scale(angular_velocity, 1.0f / angular_velocity_len);
 
-    // rotation over this time step
     const Quatf rotation = quatf::set_axis_angle(axis, angular_velocity_len * delta_time);
 
     // rotate the character position around the body centre of mass
@@ -356,7 +344,6 @@ static void fill_contact_properties(CharacterContact &contact, const KCC &charac
     contact.linear_velocity = vec3f::add(linear_velocity, angular_component);
 }
 
-/* listener calls */
 
 /** true if the contact should be processed, false to discard */
 static bool validate_contact(World &world, const KCC &character, const CharacterContact &contact, const CharacterListener *listener) {
@@ -408,7 +395,7 @@ static void contact_added(World &world, KCC &character, const CharacterContact &
     }
 }
 
-/* the collide collector: every hit at a position into a contact list */
+// the collide collector: every hit at a position into a contact list
 
 struct CollideCollectorContext {
     World *world;
@@ -530,7 +517,7 @@ static void get_contacts_at_position(KCC &character, World &world, Vec3f positio
     for (uint32_t i = 0; i < contacts.length; i++) contacts[i].distance -= character.character_padding;
 }
 
-/* the cast collector: the earliest accepted hit along a sweep */
+// the cast collector: the earliest accepted hit along a sweep
 
 struct CastCollectorContext {
     World *world;
@@ -595,7 +582,7 @@ static bool character_cast_should_early_out(const cast_shape::CastShapeCollector
     return collector.early_out_fraction <= -scalar::FLOAT_MAX;
 }
 
-/** jolt's default collision tolerance, which its padding correction casts with */
+/** what the padding correction casts with */
 constexpr float PADDING_CORRECTION_TOLERANCE = 1e-4f;
 
 /**
@@ -657,7 +644,6 @@ static bool correct_fraction_for_character_padding(support::Support &character_s
 static bool get_first_contact_for_sweep(CharacterContact &out, KCC &character, World &world, Vec3f position, Vec3f displacement,
                                         const filter::Filter &filter, const CharacterListener *listener,
                                         const collections::Vec<IgnoredContact> *ignored_contacts) {
-    // too small displacement, skip checking
     const float displacement_len_sq = vec3f::squared_length(displacement);
     if (displacement_len_sq < 1.0e-8f) return false;
 
@@ -723,7 +709,6 @@ static bool get_first_contact_for_sweep(CharacterContact &out, KCC &character, W
     // fallback: move the fraction back by the padding
     if (!corrected) out.fraction = scalar::max(0.0f, out.fraction - character_padding_fraction);
 
-    // ensure fraction never exceeds 1
     out.fraction = scalar::min(out.fraction, 1.0f);
 
     return true;
@@ -927,7 +912,6 @@ static float solve_constraints(KCC &character, World &world, Vec3f &velocity, fl
     out_displacement = vec3f::make(0.0f, 0.0f, 0.0f);
 
     if (constraints.length == 0) {
-        // no constraints - move freely
         out_displacement = vec3f::scale_and_add(out_displacement, velocity, time_remaining);
         return time_remaining;
     }
@@ -996,7 +980,6 @@ static float solve_constraints(KCC &character, World &world, Vec3f &velocity, fl
             break;
         }
 
-        // move to constraint
         const float move_time = scalar::max(0.0f, active_constraint->toi);
         out_displacement = vec3f::scale_and_add(out_displacement, velocity, move_time);
         time_remaining -= move_time;
@@ -1026,7 +1009,6 @@ static float solve_constraints(KCC &character, World &world, Vec3f &velocity, fl
             }
         }
 
-        // slide along the plane
         Vec3f new_velocity;
         new_velocity = character_constraints::slide_velocity_along_plane(velocity, *active_constraint);
 
@@ -1560,11 +1542,9 @@ bool stick_to_floor(KCC &character, World &world, Vec3f step_down, const filter:
 
 bool walk_stairs(KCC &character, World &world, float delta_time, Vec3f step_up, Vec3f step_forward, Vec3f step_forward_test,
                  Vec3f step_down_extra, const filter::Filter &filter, const CharacterListener *listener) {
-    // move up
     Vec3f up = step_up;
     CharacterContact contact;
     if (get_first_contact_for_sweep(contact, character, world, character.position, up, filter, listener, nullptr)) {
-        // no movement possible, cancel
         if (contact.fraction < 1e-6f) return false;
         // limit up movement to first contact
         up = vec3f::scale(up, contact.fraction);
@@ -1590,7 +1570,6 @@ bool walk_stairs(KCC &character, World &world, float delta_time, Vec3f step_up, 
         }
     }
 
-    // no steep slopes to walk, cancel
     if (steep_slope_normals_count == 0) return false;
 
     // horizontal movement at the elevated position. a probe: its contacts go to scratch, so on any early return the
@@ -1601,7 +1580,6 @@ bool walk_stairs(KCC &character, World &world, float delta_time, Vec3f step_up, 
 
     Vec3f horizontal_movement = vec3f::subtract(new_position, up_position);
     const float horizontal_movement_sq = vec3f::squared_length(horizontal_movement);
-    // no horizontal movement, cancel
     if (horizontal_movement_sq < 1e-8f) return false;
 
     // we need to have moved at least 5% of the step forward against a steep slope, else we're just sliding along it
@@ -1619,7 +1597,6 @@ bool walk_stairs(KCC &character, World &world, float delta_time, Vec3f step_up, 
     Vec3f down = vec3f::negate(up);
     down = vec3f::add(down, step_down_extra);
 
-    // no floor found, we're in mid air, cancel
     if (!get_first_contact_for_sweep(contact, character, world, new_position, down, filter, listener, nullptr)) return false;
 
     // the floor must be walkable
@@ -1633,19 +1610,15 @@ bool walk_stairs(KCC &character, World &world, float delta_time, Vec3f step_up, 
         move_shape(character, world, test_position, character_velocity, delta_time, filter, listener, character.walk_stairs_probe_contacts);
         character.walk_stairs_probe_contacts.length = 0;
 
-        // didn't move further, cancel
         horizontal_movement = vec3f::subtract(test_position, up_position);
         if (vec3f::squared_length(horizontal_movement) <= horizontal_movement_sq + 1e-8f) return false;
 
-        // no floor at the test position, cancel
         CharacterContact test_contact;
         if (!get_first_contact_for_sweep(test_contact, character, world, test_position, down, filter, listener, nullptr)) return false;
 
-        // test floor also too steep, cancel
         if (is_slope_too_steep(character, test_contact.surface_normal)) return false;
     }
 
-    // the final position
     new_position = vec3f::scale_and_add(new_position, down, contact.fraction);
     move_to_contact(character, world, new_position, contact, filter, listener);
 

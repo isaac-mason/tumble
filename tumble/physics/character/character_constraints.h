@@ -1,15 +1,13 @@
 #pragma once
 
-// the pure parts of jolt's CharacterVirtual solver, used by the kcc (CharacterConstraint) and written over any
-// constraint type with the same fields: a constraint is a plane with a velocity, and each has plane_normal,
-// plane_distance, linear_velocity, projected_velocity, toi and contact->motion_type.
-
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/tumble.h"
 
 TUMBLE_NAMESPACE_BEGIN
 
+// the character solver's planes, over any constraint type with plane_normal, plane_distance, linear_velocity,
+// projected_velocity, toi and contact->motion_type
 namespace character_constraints {
 
 /**

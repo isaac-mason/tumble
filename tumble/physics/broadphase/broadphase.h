@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's broadphase.ts: one tree per broadphase layer, and the queries that walk the trees a
-// filter enables. the tree is jolt's quad tree.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -25,30 +22,20 @@ namespace broadphase {
 
 using body_visitor::BodyVisitor;
 
-/** broadphase state for a physics world */
 struct Broadphase {
-    /** one tree per broadphase layer */
+    /** one per broadphase layer */
     collections::Vec<quad_tree::QuadTree> trees;
-    /** round-robin cursor for the dirty-gated rebuild: which tree to check next */
+    /** the round-robin cursor of optimize */
     uint32_t next_tree_to_optimize;
 };
 
-/** initializes broadphase state */
 Broadphase init(const layers::Layers &layers);
 void release(Broadphase &broadphase);
 
-/** adds a body to the broadphase */
 void add_body(Broadphase &broadphase, rigid_body::RigidBody *body, const layers::Layers &layers);
-
-/** removes a body from the broadphase */
 void remove_body(Broadphase &broadphase, rigid_body::RigidBody *body);
 
-/**
- * dirty-gated balanced rebuild. called once per step by the world update, before pair finding.
- * scans layers from the round-robin cursor and rebuilds the first dirty tree found: at most one
- * rebuild per step to cap worst-frame cost. a clean tree (e.g. a settled static field) costs a
- * single boolean check and is never touched.
- */
+/** rebuilds the first dirty tree from the cursor on, at most one a step; a clean tree costs one check */
 void optimize(Broadphase &broadphase, const bodies::Bodies &bodies);
 
 /** updates a body's aabb in the broadphase; returns true iff the body escaped its fat leaf aabb */

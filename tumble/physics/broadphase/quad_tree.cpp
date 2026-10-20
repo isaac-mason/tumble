@@ -12,7 +12,6 @@ namespace quad_tree {
 
 using rigid_body::RigidBody;
 
-// ---- nodes ----
 
 static void init_node(Node &node, bool is_changed) {
     for (uint32_t i = 0; i < 4; i++) {
@@ -106,7 +105,7 @@ static uint32_t allocate_node(QuadTree &tree, bool is_changed) {
     return index;
 }
 
-// ---- body locations ----
+// a body's place in the tree, in its broadphase_node: node index in the low 30 bits, child index in the top 2
 
 static void get_body_location(const RigidBody &body, uint32_t &node_index, uint32_t &child_index) {
     const uint32_t location = (uint32_t)body.broadphase_node;
@@ -119,7 +118,6 @@ static void set_body_location(RigidBody &body, uint32_t node_index, uint32_t chi
     body.broadphase_node = (int32_t)(node_index | (child_index << 30));
 }
 
-// ---- tree ----
 
 QuadTree create() {
     QuadTree tree = {};
@@ -220,8 +218,7 @@ static void create_new_root(QuadTree &tree, RigidBody *body, const AABox &leaf_b
     Node &root = tree.nodes[root_index];
     Node &new_root = tree.nodes[new_root_index];
 
-    // the old root as the first child. jolt gives it an infinite box, as another thread may be widening the old root
-    // meanwhile; nothing runs alongside here, so it gets the old root's own bounds
+    // the old root as the first child, with its own bounds: nothing widens it concurrently
     new_root.child_node_id[0] = from_node_index(root_index);
     set_child_bounds(new_root, 0, get_node_bounds(root));
 
@@ -276,7 +273,6 @@ bool update(QuadTree &tree, const RigidBody *body) {
     return true;
 }
 
-// ---- rebuild ----
 
 /**
  * a node's bounds, or a body's fat box. a body's is read from its slot in the tree being replaced: the rebuild frees
@@ -446,7 +442,7 @@ static NodeId build_tree(QuadTree &tree, const bodies::Bodies &bodies, int32_t n
     return from_node_index(stack[0].node_index);
 }
 
-/** jolt's UpdatePrepare: the new root, built from the bodies and the unchanged subtrees */
+/** the new root, built from the bodies and the unchanged subtrees */
 static NodeId update_prepare(QuadTree &tree, const bodies::Bodies &bodies, bool full_rebuild) {
     TUMBLE_ASSERT(tree.free_node_batch.length == 0);
     tree.dirty = false;
@@ -494,7 +490,7 @@ static NodeId update_prepare(QuadTree &tree, const bodies::Bodies &bodies, bool 
     return root_id;
 }
 
-/** jolt's UpdateFinalize: the new tree becomes the current one, and the nodes it replaced are free */
+/** the new tree becomes the current one, and the nodes it replaced are free */
 static void update_finalize(QuadTree &tree, NodeId root_id) {
     tree.root_node = node_index(root_id);
     for (uint32_t i = 0; i < tree.free_node_batch.length; i++) tree.free_nodes.push(tree.free_node_batch[i]);
@@ -503,7 +499,6 @@ static void update_finalize(QuadTree &tree, NodeId root_id) {
 
 void rebuild(QuadTree &tree, const bodies::Bodies &bodies) { update_finalize(tree, update_prepare(tree, bodies, false)); }
 
-// ---- walks ----
 
 /** grows a walk's stack keeping what it holds: walks index past length */
 template <typename T>
@@ -696,10 +691,9 @@ static inline v128_t slab_entry4(const SlabRay &ray, v128_t expand, const Node &
 }
 
 /**
- * the closest-first walk the two casts share (jolt's ray visitor over WalkTree): a node's children sorted furthest
- * first onto the stack with their entry fractions, so the closest pops first, and any entry at or past the closest hit
- * so far is culled. children are grown by expand (a cast shape's half extents, zero for a ray), and the body's own box
- * is tested at the leaf.
+ * closest first: a node's children pushed furthest first with their entry fractions, and any entry at or past the best
+ * hit so far culled. children are grown by expand (a cast shape's half extents, zero for a ray); the body's own box is
+ * tested at the leaf
  */
 static void cast_walk(const bodies::Bodies &bodies, QuadTree &tree, const SlabRay &ray, v128_t expand, const filter::Filter &query_filter,
                       BodyVisitor &visitor) {

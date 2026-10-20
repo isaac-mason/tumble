@@ -31,8 +31,6 @@ static constexpr float MIN_DISTANCE_SQ = 1.0e-6f;
 
 void prune_contact_points(ContactManifold &m, Vec3f penetration_axis) {
     TUMBLE_ASSERT(m.num_contact_points > MAX_CONTACT_POINTS);
-
-    // early exit if already <= 4 points (safety fallback)
     if (m.num_contact_points <= MAX_CONTACT_POINTS) return;
 
     TUMBLE_ASSERT(scalar::abs(vec3f::squared_length(penetration_axis) - 1.0f) <= 1.0e-6f);
@@ -136,7 +134,6 @@ void manifold_between_two_faces(ContactManifold &out, Vec3f contact_point_1, Vec
                                 const face::Face &shape_2_face) {
     TUMBLE_ASSERT(max_contact_distance > 0.0f);
 
-    // reset output
     out.num_contact_points = 0;
 
     // both faces need at least 2 vertices or else there can never be more than 1 contact point.

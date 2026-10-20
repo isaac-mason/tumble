@@ -1,7 +1,5 @@
 #pragma once
 
-// crashcat's body-visitor.ts: what a broadphase traversal calls for each body it reaches.
-
 #include <stdint.h>
 
 #include "tumble/math/scalar.h"

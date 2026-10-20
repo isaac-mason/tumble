@@ -1,7 +1,5 @@
 #pragma once
 
-// crashcat's face.ts as jolt keeps its Face: a supporting face of up to FACE_MAX_VERTICES vertices.
-
 #include <stdint.h>
 
 #include "tumble/math/mat4f.h"

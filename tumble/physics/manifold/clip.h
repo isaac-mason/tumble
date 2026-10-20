@@ -1,14 +1,12 @@
 #pragma once
 
-// crashcat's manifold/clip.ts: polygon clipping for manifold building, sutherland-hodgman over the
-// fixed-capacity face. the clipping is clip.cpp.
-
 #include "tumble/math/types.h"
 #include "tumble/physics/utils/face.h"
 #include "tumble/tumble.h"
 
 TUMBLE_NAMESPACE_BEGIN
 
+// sutherland-hodgman
 namespace clip {
 
 /** keeps the part of the polygon in front of the plane (on the normal's side) */

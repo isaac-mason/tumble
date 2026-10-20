@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's manifold/manifold.ts, the types: the contact manifold between two shapes, points relative
-// to a base offset. clipping fills it with up to MAX_CLIPPING_CONTACT_POINTS and pruning cuts it to
-// MAX_CONTACT_POINTS in place; both are manifold.cpp.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
