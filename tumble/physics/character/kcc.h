@@ -274,8 +274,8 @@ KCC *create(const KCCSettings &settings, Vec3f position, Quatf quaternion);
 void destroy(KCC *character);
 
 /** the kinematic inner body into the world: visible to queries, contacts, ccd and sensors; nothing without one */
-void add(KCC &character, world::World &world);
-void remove(KCC &character, world::World &world);
+void add(world::World &world, KCC &character);
+void remove(world::World &world, KCC &character);
 
 bool is_slope_too_steep(const KCC &character, Vec3f normal);
 /** position plus the rotated shape offset */
@@ -284,15 +284,15 @@ void get_center_of_mass_transform(const KCC &character, Vec3f &out_position, Qua
 bool is_supported(const KCC &character);
 
 /** the inner body follows */
-void set_position(KCC &character, world::World &world, Vec3f position);
+void set_position(world::World &world, KCC &character, Vec3f position);
 /** the inner body follows */
-void set_quaternion(KCC &character, world::World &world, Quatf quaternion);
+void set_quaternion(world::World &world, KCC &character, Quatf quaternion);
 
 /** from the ground body, its rotation and the listener's adjustment included */
-void update_ground_velocity(KCC &character, world::World &world, const CharacterListener *listener);
+void update_ground_velocity(world::World &world, KCC &character, const CharacterListener *listener);
 
 /** the contacts and the ground state where the character is now; for after a teleport */
-void refresh_contacts(KCC &character, world::World &world, const filter::Filter &filter, const CharacterListener *listener);
+void refresh_contacts(world::World &world, KCC &character, const filter::Filter &filter, const CharacterListener *listener);
 
 /** this frame */
 bool has_collided_with(const KCC &character, body_id::BodyId body_id);
@@ -301,27 +301,27 @@ bool has_collided_with(const KCC &character, body_id::BodyId body_id);
 bool can_walk_stairs(const KCC &character, Vec3f linear_velocity);
 
 /** refused, false, when the new shape would penetrate deeper than max_penetration_depth; FLT_MAX skips the test */
-bool set_shape(KCC &character, world::World &world, shapes::Shape *new_shape, const filter::Filter &filter, const CharacterListener *listener,
+bool set_shape(world::World &world, KCC &character, shapes::Shape *new_shape, const filter::Filter &filter, const CharacterListener *listener,
                float max_penetration_depth);
 
 /**
  * by the velocity, with collision resolution; the ground state and the inner body follow, and a dynamic ground body is
  * pushed by the character's weight. without update's contact tracking, stairs and floor sticking
  */
-void move(KCC &character, world::World &world, float delta_time, Vec3f gravity, const CharacterListener *listener,
+void move(world::World &world, KCC &character, float delta_time, Vec3f gravity, const CharacterListener *listener,
           const filter::Filter &filter);
 
 /** sweeps down by step_down onto a floor; true if one was found */
-bool stick_to_floor(KCC &character, world::World &world, Vec3f step_down, const filter::Filter &filter,
+bool stick_to_floor(world::World &world, KCC &character, Vec3f step_down, const filter::Filter &filter,
                     const CharacterListener *listener);
 
 /** up, forward and down onto a walkable floor; true if the step succeeded */
-bool walk_stairs(KCC &character, world::World &world, float delta_time, Vec3f step_up, Vec3f step_forward,
+bool walk_stairs(world::World &world, KCC &character, float delta_time, Vec3f step_up, Vec3f step_forward,
                  Vec3f step_forward_test, Vec3f step_down_extra, const filter::Filter &filter,
                  const CharacterListener *listener);
 
 /** move with contact tracking, velocity cancelled toward steep slopes, floor sticking and stair walking */
-void update(KCC &character, world::World &world, float delta_time, Vec3f gravity, const UpdateSettings &settings,
+void update(world::World &world, KCC &character, float delta_time, Vec3f gravity, const UpdateSettings &settings,
             const CharacterListener *listener, const filter::Filter &filter);
 
 }  // namespace kcc

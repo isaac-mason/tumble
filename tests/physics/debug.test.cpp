@@ -525,7 +525,7 @@ void test_debug_character_contacts_cross_and_normal_per_contact(TestCtx &ctx) {
     kcc::KCC *character = kcc::create(settings, vec3f::make(0.0f, 0.8f, 0.0f), quatf::identity());
     filter::Filter filter = filter::create(scene.world->settings.layers);
     step_world(*scene.world);
-    kcc::refresh_contacts(*character, *scene.world, filter, nullptr);
+    kcc::refresh_contacts(*scene.world, *character, filter, nullptr);
     CHECK(ctx, character->contacts.length > 0);
 
     debug::DebugBuffers *buffers = debug::create();

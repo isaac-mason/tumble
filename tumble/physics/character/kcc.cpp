@@ -198,7 +198,7 @@ static Transformf shape_transform_at(const KCC &character, Vec3f position) {
     return transform;
 }
 
-void add(KCC &character, World &world) {
+void add(World &world, KCC &character) {
     if (character.inner_rigid_body_id != body_id::INVALID_BODY_ID) return;
 
     if (character.inner_rigid_body_shape == nullptr) return;
@@ -219,7 +219,7 @@ void add(KCC &character, World &world) {
     character.inner_rigid_body_id = inner_rigid_body->id;
 }
 
-void remove(KCC &character, World &world) {
+void remove(World &world, KCC &character) {
     if (character.inner_rigid_body_id == body_id::INVALID_BODY_ID) return;
 
     RigidBody *inner_rigid_body = rigid_body::get(world, character.inner_rigid_body_id);
@@ -1344,17 +1344,17 @@ static void update_inner_body_transform(KCC &character, World &world) {
     rigid_body::set_transform(world, inner_rigid_body, get_inner_body_position(character), character.quaternion, false);
 }
 
-void set_position(KCC &character, World &world, Vec3f position) {
+void set_position(World &world, KCC &character, Vec3f position) {
     character.position = position;
     update_inner_body_transform(character, world);
 }
 
-void set_quaternion(KCC &character, World &world, Quatf quaternion) {
+void set_quaternion(World &world, KCC &character, Quatf quaternion) {
     character.quaternion = quaternion;
     update_inner_body_transform(character, world);
 }
 
-void update_ground_velocity(KCC &character, World &world, const CharacterListener *listener) {
+void update_ground_velocity(World &world, KCC &character, const CharacterListener *listener) {
     if (character.ground.body_id == body_id::INVALID_BODY_ID) return;
 
     const RigidBody *ground_body = rigid_body::get(world, character.ground.body_id);
@@ -1379,7 +1379,7 @@ static Vec3f movement_direction_of(Vec3f velocity) {
     return direction;
 }
 
-void refresh_contacts(KCC &character, World &world, const filter::Filter &filter, const CharacterListener *listener) {
+void refresh_contacts(World &world, KCC &character, const filter::Filter &filter, const CharacterListener *listener) {
     reset_contact_tracking(character);
 
     get_contacts_at_position(character, world, character.position, movement_direction_of(character.linear_velocity), filter, listener,
@@ -1400,7 +1400,7 @@ bool has_collided_with(const KCC &character, body_id::BodyId id) {
 
 bool can_walk_stairs(const KCC &character, Vec3f linear_velocity) { return has_steep_slopes_to_walk(character, linear_velocity); }
 
-bool set_shape(KCC &character, World &world, shapes::Shape *new_shape, const filter::Filter &filter, const CharacterListener *listener,
+bool set_shape(World &world, KCC &character, shapes::Shape *new_shape, const filter::Filter &filter, const CharacterListener *listener,
                float max_penetration_depth) {
     if (character.shape == new_shape) return true;
 
@@ -1444,7 +1444,7 @@ bool set_shape(KCC &character, World &world, shapes::Shape *new_shape, const fil
     return true;
 }
 
-void move(KCC &character, World &world, float delta_time, Vec3f gravity, const CharacterListener *listener, const filter::Filter &filter) {
+void move(World &world, KCC &character, float delta_time, Vec3f gravity, const CharacterListener *listener, const filter::Filter &filter) {
     if (delta_time <= 0.0f) return;
 
     // for the supporting contact velocity check
@@ -1472,7 +1472,7 @@ void move(KCC &character, World &world, float delta_time, Vec3f gravity, const C
 /** moves to the position of a sweep contact: the contact reported, the contacts there with it marked colliding, the ground state */
 static void move_to_contact(KCC &character, World &world, Vec3f position, const CharacterContact &contact, const filter::Filter &filter,
                             const CharacterListener *listener) {
-    set_position(character, world, position);
+    set_position(world, character, position);
 
     CharacterContactSettings settings = {true, true};
     contact_added(world, character, contact, listener, settings);
@@ -1503,7 +1503,7 @@ static void move_to_contact(KCC &character, World &world, Vec3f position, const 
     update_inner_body_transform(character, world);
 }
 
-bool stick_to_floor(KCC &character, World &world, Vec3f step_down, const filter::Filter &filter, const CharacterListener *listener) {
+bool stick_to_floor(World &world, KCC &character, Vec3f step_down, const filter::Filter &filter, const CharacterListener *listener) {
     CharacterContact contact;
     if (!get_first_contact_for_sweep(contact, character, world, character.position, step_down, filter, listener, nullptr)) return false;
 
@@ -1513,7 +1513,7 @@ bool stick_to_floor(KCC &character, World &world, Vec3f step_down, const filter:
     return true;
 }
 
-bool walk_stairs(KCC &character, World &world, float delta_time, Vec3f step_up, Vec3f step_forward, Vec3f step_forward_test,
+bool walk_stairs(World &world, KCC &character, float delta_time, Vec3f step_up, Vec3f step_forward, Vec3f step_forward_test,
                  Vec3f step_down_extra, const filter::Filter &filter, const CharacterListener *listener) {
     Vec3f up = step_up;
     CharacterContact contact;
@@ -1601,7 +1601,7 @@ bool walk_stairs(KCC &character, World &world, float delta_time, Vec3f step_up, 
     return true;
 }
 
-void update(KCC &character, World &world, float delta_time, Vec3f gravity, const UpdateSettings &settings, const CharacterListener *listener,
+void update(World &world, KCC &character, float delta_time, Vec3f gravity, const UpdateSettings &settings, const CharacterListener *listener,
             const filter::Filter &filter) {
     reset_contact_tracking(character);
 
@@ -1614,7 +1614,7 @@ void update(KCC &character, World &world, float delta_time, Vec3f gravity, const
     // on ground before the update
     bool ground_to_air = is_supported(character);
 
-    move(character, world, delta_time, gravity, listener, filter);
+    move(world, character, delta_time, gravity, listener, filter);
 
     // ... and in the air after
     if (is_supported(character)) ground_to_air = false;
@@ -1623,7 +1623,7 @@ void update(KCC &character, World &world, float delta_time, Vec3f gravity, const
     if (ground_to_air && vec3f::squared_length(vec3f::load(settings.stick_to_floor_step_down)) > 1e-12f) {
         const Vec3f step = vec3f::subtract(character.position, old_position);
         const float velocity_up = vec3f::dot(step, character.up) / delta_time;
-        if (velocity_up <= 1e-6f) stick_to_floor(character, world, vec3f::load(settings.stick_to_floor_step_down), filter, listener);
+        if (velocity_up <= 1e-6f) stick_to_floor(world, character, vec3f::load(settings.stick_to_floor_step_down), filter, listener);
     }
 
     if (vec3f::squared_length(vec3f::load(settings.walk_stairs_step_up)) > 1e-12f) {
@@ -1663,7 +1663,7 @@ void update(KCC &character, World &world, float delta_time, Vec3f gravity, const
                 }
                 step_forward_test = vec3f::scale(step_forward_test, settings.walk_stairs_step_forward_test);
 
-                walk_stairs(character, world, delta_time, vec3f::load(settings.walk_stairs_step_up), step_forward, step_forward_test,
+                walk_stairs(world, character, delta_time, vec3f::load(settings.walk_stairs_step_up), step_forward, step_forward_test,
                             vec3f::load(settings.walk_stairs_step_down_extra), filter, listener);
             }
         }

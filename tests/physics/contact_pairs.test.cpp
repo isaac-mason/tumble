@@ -201,14 +201,14 @@ kcc::KCC *add_character(GroundScene &s, float x, bool inner, bool observes) {
         settings.inner_rigid_body_object_layer = s.scene.moving;
     }
     kcc::KCC *character = kcc::create(settings, vec3f::make(x, 1.8f, 0.0f), quatf::identity());
-    kcc::add(*character, *s.scene.world);
+    kcc::add(*s.scene.world, *character);
     return character;
 }
 
 /** a frame of the character alone: its contacts refreshed and recorded */
 void character_frame(world::World &world, kcc::KCC &character, const filter::Filter &filter) {
     contact_pairs::begin(world);
-    kcc::refresh_contacts(character, world, filter, nullptr);
+    kcc::refresh_contacts(world, character, filter, nullptr);
     contact_pairs::record_character_contacts(world, character);
     contact_pairs::end(world);
 }
@@ -252,14 +252,14 @@ void test_contact_pairs_a_character_records_through_its_inner_body(TestCtx &ctx)
     CHECK(ctx, with_wall != nullptr && !with_wall->added && (uint32_t)(with_wall - pairs.pairs.data) == wall_handle);
 
     // stepped away from the wall: its pair is removed, the ground's stays
-    kcc::set_position(*character, world, vec3f::make(-3.0f, 1.8f, 0.0f));
+    kcc::set_position(world, *character, vec3f::make(-3.0f, 1.8f, 0.0f));
     character_frame(world, *character, filter);
     CHECK(ctx, pair_of(pairs, character->inner_rigid_body_id, wall->id) == nullptr);
     CHECK(ctx, pairs.removed.length == 1 && pairs.removed[0] == wall_handle);
     CHECK(ctx, pair_of(pairs, character->inner_rigid_body_id, s.ground->id) != nullptr);
 
     filter::release(filter);
-    kcc::remove(*character, world);
+    kcc::remove(world, *character);
     kcc::destroy(character);
     release_scene(s);
 }
@@ -275,8 +275,8 @@ void test_contact_pairs_a_character_records_only_when_a_side_observes(TestCtx &c
     kcc::KCC *unobserved = add_character(s, 0.0f, true, false);
     step_world(world);
     contact_pairs::begin(world);
-    kcc::refresh_contacts(*bodiless, world, filter, nullptr);
-    kcc::refresh_contacts(*unobserved, world, filter, nullptr);
+    kcc::refresh_contacts(world, *bodiless, filter, nullptr);
+    kcc::refresh_contacts(world, *unobserved, filter, nullptr);
     CHECK(ctx, bodiless->contacts.length > 0 && unobserved->contacts.length > 0);
     contact_pairs::record_character_contacts(world, *bodiless);
     contact_pairs::record_character_contacts(world, *unobserved);
@@ -287,7 +287,7 @@ void test_contact_pairs_a_character_records_only_when_a_side_observes(TestCtx &c
     RigidBody *crate = add_box(s, 0.5f, {0.8f, 1.5f, 0.0f}, 7, true);
     step_world(world);
     contact_pairs::begin(world);
-    kcc::refresh_contacts(*unobserved, world, filter, nullptr);
+    kcc::refresh_contacts(world, *unobserved, filter, nullptr);
     contact_pairs::record_character_contacts(world, *unobserved);
     contact_pairs::end(world);
     const ContactPair *with_crate = pair_of(world.contact_pairs, unobserved->inner_rigid_body_id, crate->id);
@@ -295,7 +295,7 @@ void test_contact_pairs_a_character_records_only_when_a_side_observes(TestCtx &c
     CHECK(ctx, pair_of(world.contact_pairs, unobserved->inner_rigid_body_id, s.ground->id) == nullptr);
 
     filter::release(filter);
-    kcc::remove(*unobserved, world);
+    kcc::remove(world, *unobserved);
     kcc::destroy(unobserved);
     kcc::destroy(bodiless);
     release_scene(s);

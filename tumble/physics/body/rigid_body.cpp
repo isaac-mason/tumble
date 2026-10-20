@@ -451,7 +451,7 @@ void clear_forces(RigidBody *body) {
     body->motion_properties.torque = {0.0f, 0.0f, 0.0f};
 }
 
-void move_kinematic(RigidBody *body, Vec3f target_position, Quatf target_quaternion, float delta_time) {
+void move_kinematic(world::World &world, RigidBody *body, Vec3f target_position, Quatf target_quaternion, float delta_time) {
     // calculate center of mass at target situation
     const Quatf target_rotation = target_quaternion;
     const Vec3f new_com = vec3f::add(target_position, vec3f::transform_quat(vec3f::load(body->shape->center_of_mass), target_rotation));
@@ -463,6 +463,7 @@ void move_kinematic(RigidBody *body, Vec3f target_position, Quatf target_quatern
     const Quatf delta_rotation = quatf::multiply(target_rotation, quatf::conjugate(quatf::load(body->quaternion)));
 
     motion_properties::move_kinematic(body->motion_properties, delta_position, delta_rotation, delta_time);
+    sleep::wake(world.bodies, body);
 }
 
 Vec3f get_world_space_surface_normal(const RigidBody *body, sub_shape::SubShapeId sub_shape_id, Vec3f world_position) {

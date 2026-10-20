@@ -54,7 +54,7 @@ kcc::UpdateSettings no_stairs_no_stick() {
 void step_falling(world::World &world, kcc::KCC &character, const kcc::UpdateSettings &settings, const filter::Filter &filter,
                   const kcc::CharacterListener *listener = nullptr) {
     character.linear_velocity = vec3f::scale_and_add(character.linear_velocity, vec3f::load(GRAVITY), DT);
-    kcc::update(character, world, DT, vec3f::load(GRAVITY), settings, listener, filter);
+    kcc::update(world, character, DT, vec3f::load(GRAVITY), settings, listener, filter);
     step_world(world, DT);
 }
 
@@ -69,7 +69,7 @@ void step_walking(world::World &world, kcc::KCC &character, const Float3 &input,
                          : vec3f::scale(character.up, vec3f::dot(character.linear_velocity, character.up));
     velocity = vec3f::scale_and_add(velocity, vec3f::load(GRAVITY), DT);
     character.linear_velocity = vec3f::add(velocity, vec3f::load(input));
-    kcc::update(character, world, DT, vec3f::load(GRAVITY), settings, listener, filter);
+    kcc::update(world, character, DT, vec3f::load(GRAVITY), settings, listener, filter);
     step_world(world, DT);
 }
 
@@ -277,7 +277,7 @@ uint32_t contacts_with_down_facing_quad(TestCtx &ctx, kcc::BackFaceMode back_fac
 
     kcc::KCC *character = make_capsule_character({0.0f, 0.75f, 0.0f}, back_face_mode);
     filter::Filter filter = filter::create(world.settings.layers);
-    kcc::refresh_contacts(*character, world, filter, nullptr);
+    kcc::refresh_contacts(world, *character, filter, nullptr);
     const uint32_t count = contacts_with(*character, quad->id);
 
     kcc::destroy(character);
@@ -611,7 +611,7 @@ void test_kcc_inner_body_follows_and_is_ignored_by_its_own_queries(TestCtx &ctx)
     character_settings.inner_rigid_body_object_layer = scene.moving;
     kcc::KCC *character = kcc::create(character_settings, vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY));
 
-    kcc::add(*character, world);
+    kcc::add(world, *character);
     RigidBody *inner = rigid_body::get(world, character->inner_rigid_body_id);
     CHECK(ctx, inner != nullptr);
     if (inner == nullptr) return;
@@ -619,7 +619,7 @@ void test_kcc_inner_body_follows_and_is_ignored_by_its_own_queries(TestCtx &ctx)
     CHECK(ctx, inner->user_data == 42);
     // add again is a no-op
     const body_id::BodyId inner_id = character->inner_rigid_body_id;
-    kcc::add(*character, world);
+    kcc::add(world, *character);
     CHECK(ctx, character->inner_rigid_body_id == inner_id);
 
     filter::Filter filter = filter::create(world.settings.layers);
@@ -640,7 +640,7 @@ void test_kcc_inner_body_follows_and_is_ignored_by_its_own_queries(TestCtx &ctx)
     CHECK(ctx, rays.has_hit && rays.hits[0].body_id_b == inner_id);
     cast_ray::release(rays);
 
-    kcc::remove(*character, world);
+    kcc::remove(world, *character);
     CHECK(ctx, character->inner_rigid_body_id == body_id::INVALID_BODY_ID);
     CHECK(ctx, rigid_body::get(world, inner_id) == nullptr);
 
@@ -665,15 +665,15 @@ void test_kcc_set_shape_refuses_a_shape_that_would_penetrate(TestCtx &ctx) {
     kcc::KCC *character = kcc::create(character_settings, vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY));
     filter::Filter filter = filter::create(world.settings.layers);
 
-    kcc::refresh_contacts(*character, world, filter, nullptr);
+    kcc::refresh_contacts(world, *character, filter, nullptr);
     CHECK(ctx, character->ground.state == kcc::ON_GROUND);
 
     // standing up penetrates the ceiling by 0.3
-    CHECK(ctx, !kcc::set_shape(*character, world, standing, filter, nullptr, 0.1f));
+    CHECK(ctx, !kcc::set_shape(world, *character, standing, filter, nullptr, 0.1f));
     CHECK(ctx, character->shape == crouched);
     // the same shape is always fine, and with no penetration test any shape goes
-    CHECK(ctx, kcc::set_shape(*character, world, crouched, filter, nullptr, 0.1f));
-    CHECK(ctx, kcc::set_shape(*character, world, standing, filter, nullptr, __FLT_MAX__));
+    CHECK(ctx, kcc::set_shape(world, *character, crouched, filter, nullptr, 0.1f));
+    CHECK(ctx, kcc::set_shape(world, *character, standing, filter, nullptr, __FLT_MAX__));
     CHECK(ctx, character->shape == standing);
 
     kcc::destroy(character);
@@ -737,7 +737,7 @@ void test_kcc_sweep_onto_a_floor_stops_one_padding_from_its_face(TestCtx &ctx) {
 
     kcc::KCC *character = make_sphere_character({0.0f, 1.0f, 0.0f}, 0.5f, 256, 0.1f);
     filter::Filter filter = filter::create(world.settings.layers);
-    CHECK(ctx, kcc::stick_to_floor(*character, world, vec3f::make(0.0f, -2.0f, 0.0f), filter, nullptr));
+    CHECK(ctx, kcc::stick_to_floor(world, *character, vec3f::make(0.0f, -2.0f, 0.0f), filter, nullptr));
     CHECK_NEAR(ctx, vec3f::y(character->position), 0.5f, 1e-4f);
 
     kcc::destroy(character);
@@ -756,7 +756,7 @@ void test_kcc_padding_correction_casts_at_its_own_tolerance(TestCtx &ctx) {
 
     kcc::KCC *character = make_sphere_character({5.3f, 1.0f, 0.0f}, 0.5f, 256, 0.1f);
     filter::Filter filter = filter::create(world.settings.layers);
-    CHECK(ctx, kcc::stick_to_floor(*character, world, vec3f::make(0.0f, -2.0f, 0.0f), filter, nullptr));
+    CHECK(ctx, kcc::stick_to_floor(world, *character, vec3f::make(0.0f, -2.0f, 0.0f), filter, nullptr));
     // the shape sits one padding above the position
     CHECK_NEAR(ctx, vec3f::y(character->position), scalar::sqrt(0.6f * 0.6f - 0.3f * 0.3f) - 0.1f, 1e-4f);
 
@@ -779,7 +779,7 @@ void test_kcc_hit_reduction_keeps_the_deepest_contact_on_one_body(TestCtx &ctx) 
     // sphere bottom at 0.03: 0.02 into the upper triangle, 0.03 above the lower two
     kcc::KCC *character = make_sphere_character({0.0f, 0.51f, 0.0f}, 0.5f, 2);
     filter::Filter filter = filter::create(world.settings.layers);
-    kcc::refresh_contacts(*character, world, filter, nullptr);
+    kcc::refresh_contacts(world, *character, filter, nullptr);
 
     CHECK(ctx, character->contacts.length == 2);
     float deepest = __FLT_MAX__;
@@ -807,7 +807,7 @@ void test_kcc_hit_reduction_makes_a_full_pass(TestCtx &ctx) {
 
     kcc::KCC *character = make_sphere_character({0.0f, 0.47f, 0.0f}, 0.5f, 3);
     filter::Filter filter = filter::create(world.settings.layers);
-    kcc::refresh_contacts(*character, world, filter, nullptr);
+    kcc::refresh_contacts(world, *character, filter, nullptr);
 
     CHECK(ctx, character->contacts.length == 2);
 
@@ -831,7 +831,7 @@ void test_kcc_max_hits_does_not_stop_the_query_while_reduction_can_free_a_slot(T
     // sphere bottom at 0.03: 0.02 into the box, 0.03 above the triangles
     kcc::KCC *character = make_sphere_character({0.0f, 0.51f, 0.0f}, 0.5f, 2);
     filter::Filter filter = filter::create(world.settings.layers);
-    kcc::refresh_contacts(*character, world, filter, nullptr);
+    kcc::refresh_contacts(world, *character, filter, nullptr);
 
     CHECK(ctx, character->contacts.length == 2);
     CHECK(ctx, contacts_with(*character, mesh->id) == 1);

@@ -6,6 +6,7 @@
 #include "tumble/math/types.h"
 #include "tumble/physics/body/bodies.h"
 #include "tumble/physics/body/body_id.h"
+#include "tumble/physics/body/dof.h"
 #include "tumble/physics/body/mass_properties.h"
 #include "tumble/physics/body/motion_properties.h"
 #include "tumble/physics/body/motion_type.h"
@@ -55,8 +56,8 @@ struct RigidBodySettings {
 
     motion_properties::MotionQuality motion_quality = motion_properties::MOTION_QUALITY_DISCRETE;
 
-    /** a dof mask */
-    uint32_t allowed_degrees_of_freedom = 0b111111;
+    /** a dof:: mask: dof::DOF_ALL, or the axes it may move and turn about */
+    uint32_t allowed_degrees_of_freedom = dof::DOF_ALL;
 
     /** scales gravity */
     float gravity_factor = 1.0f;
@@ -279,8 +280,8 @@ void add_angular_velocity(world::World &world, RigidBody *body, Vec3f velocity_d
 
 void clear_forces(RigidBody *body);
 
-/** the velocities that bring a kinematic body to the target in `delta_time` */
-void move_kinematic(RigidBody *body, Vec3f target_position, Quatf target_quaternion, float delta_time);
+/** the velocities that bring a kinematic body to the target in `delta_time`, and the body woken so the next step moves it */
+void move_kinematic(world::World &world, RigidBody *body, Vec3f target_position, Quatf target_quaternion, float delta_time);
 
 /** world space */
 Vec3f get_world_space_surface_normal(const RigidBody *body, sub_shape::SubShapeId sub_shape_id, Vec3f world_position);

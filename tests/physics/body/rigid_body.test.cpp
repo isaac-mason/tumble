@@ -445,7 +445,11 @@ void test_rigid_body_move_kinematic(TestCtx &ctx) {
     const float dt = 0.5f;
     const Float3 target_position = {1.0f, 2.0f, 3.0f};
     const Float4 target_quaternion = stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), scalar::PI * 0.5f);
-    rigid_body::move_kinematic(body, vec3f::load(target_position), quatf::load(target_quaternion), dt);
+    // asleep: the move wakes it, or the next step would leave it where it is
+    rigid_body::sleep(*f.world, body);
+    CHECK(ctx, body->sleeping);
+    rigid_body::move_kinematic(*f.world, body, vec3f::load(target_position), quatf::load(target_quaternion), dt);
+    CHECK(ctx, !body->sleeping);
     // the offset (1, 0, 0) turned a quarter about y is (0, 0, -1): the com goes (1, 0, 0) -> (1, 2, 2)
     CHECK(ctx, near_point(body->motion_properties.linear_velocity, 0.0f, 4.0f, 4.0f, 1e-4f));
     CHECK(ctx, near_point(body->motion_properties.angular_velocity, 0.0f, scalar::PI, 0.0f, 1e-4f));
