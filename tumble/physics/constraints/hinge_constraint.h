@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's hinge-constraint.ts: removes 5 DOF (3 translation + 2 rotation), allowing rotation only about the
-// hinge axis, like a door hinge or a wheel. optional angle limits, friction and a velocity or position motor.
-
 #include <stdint.h>
 
 #include "tumble/math/scalar.h"
@@ -23,6 +20,8 @@ namespace rigid_body {
 struct RigidBody;
 }
 
+// rotation only about the hinge axis (3 translational and 2 rotational degrees of freedom removed), with optional angle
+// limits, friction and a velocity or position motor
 namespace hinge_constraint {
 
 struct HingeConstraint {

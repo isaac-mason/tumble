@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's swing-twist-constraint.ts: a humanoid ragdoll joint. holds a point on each body together and limits
-// the rotation separately in swing (about y and z, a cone or a pyramid) and twist (about x, the twist axis), with
-// optional friction and swing and twist motors.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -22,6 +18,8 @@ namespace rigid_body {
 struct RigidBody;
 }
 
+// a point on each body held together, the rotation limited apart in swing (about y and z, a cone or a pyramid) and
+// twist (about x), with optional friction and swing and twist motors: a ragdoll joint
 namespace swing_twist_constraint {
 
 struct SwingTwistConstraint {

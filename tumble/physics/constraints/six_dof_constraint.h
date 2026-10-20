@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's six-dof-constraint.ts: per-axis control over all six degrees of freedom. each axis is free, fixed or
-// limited, with optional friction and a velocity or position motor.
-
 #include <stdint.h>
 
 #include "tumble/math/scalar.h"
@@ -25,6 +22,7 @@ namespace rigid_body {
 struct RigidBody;
 }
 
+// each of the six axes free, fixed or limited, with optional friction and a velocity or position motor
 namespace six_dof_constraint {
 
 enum SixDOFAxis : uint32_t {

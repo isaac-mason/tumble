@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's fixed-constraint.ts: welds two bodies together so they move as one rigid body, removing all
-// six degrees of freedom.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -19,6 +16,7 @@ namespace rigid_body {
 struct RigidBody;
 }
 
+// two bodies welded to move as one: all six degrees of freedom
 namespace fixed_constraint {
 
 /** fixed constraint removes 6 DOF (3 translation + 3 rotation) */

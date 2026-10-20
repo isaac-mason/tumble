@@ -1,7 +1,5 @@
 #pragma once
 
-// crashcat's swing-twist-constraint-part.ts: decomposes a rotation into swing and twist and keeps both within limits.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -14,6 +12,7 @@ namespace rigid_body {
 struct RigidBody;
 }
 
+// a rotation split into swing and twist, each kept within its limits
 namespace swing_twist_constraint_part {
 
 /** how the swing limit behaves */

@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's point-constraint-part.ts: removes the three translational degrees of freedom between two
-// points, the 3-axis version of the axis part with a 3x3 effective mass. used by the point and hinge
-// constraints for the attachment.
-
 #include <stdint.h>
 
 #include "tumble/math/mat4f.h"
@@ -17,6 +13,8 @@ namespace rigid_body {
 struct RigidBody;
 }
 
+// the three translational degrees of freedom between two points: the axis part in three dimensions, with a 3x3
+// effective mass
 namespace point_constraint_part {
 
 struct PointConstraintPart {

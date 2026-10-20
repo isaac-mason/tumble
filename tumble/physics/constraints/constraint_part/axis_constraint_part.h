@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's axis-constraint-part.ts, the record: a one-dimensional constraint along an axis (a slider, a
-// distance, a six dof translation), with its jacobian terms and accumulated impulse. the setup and
-// solve are axis_constraint_part.cpp, which declares its functions here.
-
 #include "tumble/math/types.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/constraints/constraint_part/spring_part.h"
@@ -16,6 +12,7 @@ namespace rigid_body {
 struct RigidBody;
 }
 
+// one dimension along an axis (a slider, a distance, a six dof translation): its jacobian terms and accumulated impulse
 namespace axis_constraint_part {
 
 struct AxisConstraintPart {

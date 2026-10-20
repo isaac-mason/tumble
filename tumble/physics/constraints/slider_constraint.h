@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's slider-constraint.ts: a prismatic joint. removes 5 DOF (2 translation perpendicular to the slider
-// axis + 3 rotation), allowing movement only along one axis, like a piston or a rail. optional position
-// limits, friction and a velocity or position motor.
-
 #include <stdint.h>
 
 #include "tumble/math/scalar.h"
@@ -24,6 +20,8 @@ namespace rigid_body {
 struct RigidBody;
 }
 
+// movement only along one axis (2 translational and 3 rotational degrees of freedom removed), with optional position
+// limits, friction and a velocity or position motor
 namespace slider_constraint {
 
 struct SliderConstraint {

@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's distance-constraint.ts: keeps the distance between a point on each body within [min, max],
-// removing one translational degree of freedom.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -20,6 +17,7 @@ namespace rigid_body {
 struct RigidBody;
 }
 
+// the distance between a point on each body kept within [min, max]: one translational degree of freedom
 namespace distance_constraint {
 
 /** distance constraint removes 1 translational DOF (distance between two points) */

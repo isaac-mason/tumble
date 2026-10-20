@@ -1,7 +1,5 @@
 #pragma once
 
-// crashcat's combine-material.ts: how two bodies' friction or restitution become one value.
-
 #include <stdint.h>
 
 #include "tumble/math/scalar.h"
@@ -9,6 +7,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// how two bodies' friction or restitution become one value
 namespace combine_material {
 
 enum MaterialCombineMode : uint32_t {

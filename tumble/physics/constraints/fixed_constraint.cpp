@@ -218,7 +218,7 @@ bool solve_position(FixedConstraint &constraint, bodies::Bodies &bodies, float d
 }
 
 void notify_shape_changed(FixedConstraint &constraint, body_id::BodyId body_id, Vec3f delta_com) {
-    // separate tests, not jolt's else-if: a constraint between a body and itself moves both points
+    // separate tests, not an else-if: a constraint between a body and itself moves both points
     const uint32_t body_index = body_id::index(body_id);
     if (constraint.base.body_index_a == body_index)
         constraint.local_space_position1 = vec3f::subtract(constraint.local_space_position1, delta_com);

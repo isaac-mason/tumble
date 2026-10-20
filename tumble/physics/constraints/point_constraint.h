@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's point-constraint.ts: holds a point on each body together, removing the three translational
-// degrees of freedom.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -19,6 +16,7 @@ namespace rigid_body {
 struct RigidBody;
 }
 
+// a point on each body held together: the three translational degrees of freedom
 namespace point_constraint {
 
 /** point constraint removes 3 translational DOF */

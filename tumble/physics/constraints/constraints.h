@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's constraints.ts, the types: the user constraints of a world in one pool per type. the ts's
-// registry of constraint defs is a fixed ConstraintType enum and a switch in constraints.cpp, which
-// knows every type's record and stride; this header knows only the base every record starts with.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -14,6 +10,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// a world's user constraints, a pool per type; every record starts with the base
 namespace constraints {
 
 using constraint_id::ConstraintId;
@@ -113,7 +110,7 @@ void destroy_body_constraints(Constraints &constraints, bodies::Bodies &bodies, 
 
 void get_constraint_iteration_overrides(ConstraintIterationOverrides &out, const Constraints &constraints, ConstraintId id);
 void get_constraint_sort_fields(ConstraintSortFields &out, const Constraints &constraints, ConstraintId id);
-/** by priority ascending, then index, as jolt's sSortConstraints */
+/** by priority ascending, then index */
 void sort_constraint_ids(const Constraints &constraints, collections::Vec<ConstraintId> &ids);
 
 /** marks each constraint sleeping when both its bodies are */

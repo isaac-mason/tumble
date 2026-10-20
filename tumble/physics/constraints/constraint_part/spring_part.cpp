@@ -16,46 +16,14 @@ namespace spring_part {
  */
 static float calculate_spring_properties_helper(SpringPart &part, float delta_time, float inv_effective_mass, float bias,
                                                 float c, float stiffness, float damping) {
-    // calculate softness (gamma in the slides)
-    // see page 34 and note that the gamma needs to be divided by delta time
-    // since we're working with impulses rather than forces:
-    // softness = 1 / (dt * (c + dt * k))
-    // note that the spring stiffness is k and the spring damping is c
+    // softness = 1 / (dt * (c + dt * k)), stiffness k and damping c: gamma divided by dt, as this works in impulses
     part.softness = 1.0f / (delta_time * (damping + delta_time * stiffness));
 
-    // calculate bias factor (baumgarte stabilization):
-    // beta = dt * k / (c + dt * k) = dt * k^2 * softness
-    // b = beta / dt * C = dt * k * softness * C
+    // baumgarte: beta = dt * k / (c + dt * k) = dt * k^2 * softness, so b = beta / dt * C = dt * k * softness * C
     part.bias = bias + delta_time * stiffness * part.softness * c;
 
-    // update the effective mass
-    // see post by erin catto: http://www.bulletphysics.org/Bullet/phpBB3/viewtopic.php?f=4&t=1354
-    //
-    // newton's law:
-    // M * (v2 - v1) = J^T * lambda
-    //
-    // velocity constraint with softness and baumgarte:
-    // J * v2 + softness * lambda + b = 0
-    //
-    // where b = beta * C / dt
-    //
-    // first solve newton's law for v2 in terms of lambda:
-    //
-    // v2 = v1 + M^-1 * J^T * lambda
-    //
-    // substitute this expression into the velocity constraint:
-    //
-    // J * (v1 + M^-1 * J^T * lambda) + softness * lambda + b = 0
-    //
-    // now collect coefficients of lambda:
-    //
-    // (J * M^-1 * J^T + softness) * lambda = - J * v1 - b
-    //
-    // now we define:
-    //
-    // K = J * M^-1 * J^T + softness
-    //
-    // so our new effective mass is K^-1
+    // M (v2 - v1) = J^T lambda with J v2 + softness lambda + b = 0 gives (J M^-1 J^T + softness) lambda = -J v1 - b,
+    // so the effective mass is (J M^-1 J^T + softness)^-1
     return 1.0f / (inv_effective_mass + part.softness);
 }
 

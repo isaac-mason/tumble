@@ -1,7 +1,5 @@
 #pragma once
 
-// crashcat's spring-settings.ts: how a soft constraint's spring is specified.
-
 #include <stdint.h>
 #include "tumble/tumble.h"
 

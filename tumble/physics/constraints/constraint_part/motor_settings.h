@@ -1,7 +1,5 @@
 #pragma once
 
-// crashcat's motor-settings.ts: a constraint motor's drive and limits.
-
 #include <stdint.h>
 
 #include "tumble/math/scalar.h"

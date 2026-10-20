@@ -1,11 +1,5 @@
 #pragma once
 
-// crashcat's contact-constraints.ts, the types: the solver's contact constraints, one per manifold,
-// rebuilt every step from the narrowphase or the pair cache, with four axis parts for the points and a
-// friction pair plus a twist part for the manifold. the setup, warm start and solve are
-// contact_constraints.cpp. the listener's settings hooks became the contact_override answers, applied
-// before the solve (update.cpp).
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -25,6 +19,8 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// the solver's contact constraints, one per manifold, rebuilt every step from the narrowphase or the pair cache: an
+// axis part per point, and a friction pair and a twist part per manifold
 namespace contact_constraints {
 
 struct WorldContactPoint {
@@ -85,7 +81,7 @@ void release(ContactConstraints &contact_constraints);
 
 /**
  * the combined friction and restitution of a contact, each side's from its material when the table holds the id,
- * else from its body; the bodies' combine modes decide how they combine (jolt's mCombineFriction / mCombineRestitution)
+ * else from its body; the bodies' combine modes decide how they combine
  */
 void combine_materials(ContactSettings &io_settings, const ContactConstraints &contact_constraints, const rigid_body::RigidBody &body_a,
                        int32_t material_id_a, const rigid_body::RigidBody &body_b, int32_t material_id_b);
@@ -104,19 +100,18 @@ bool add_contact_constraint_from_cache(ContactConstraints &contact_constraints, 
                                        rigid_body::RigidBody &body_b, contacts::Contact &contact, const world_settings::WorldSettings &settings,
                                        events::PhysicsEvents &events, float delta_time, uint32_t step_stamp);
 /**
- * rebuilds a constraint's friction, restitution, masses and surface velocities from js's answer, before the solve, keeping
- * its warm start impulses; friction the build left off starts from the contact's cached friction impulses, as jolt's listener
- * would have had them. the settings must still make a constraint (not a sensor, some dynamic mass); the normal bias is
+ * rebuilds a constraint's friction, restitution, masses and surface velocities from the caller's answer, before the solve,
+ * keeping its warm start impulses; friction the build left off starts from the contact's cached friction impulses. the settings must still make a constraint (not a sensor, some dynamic mass); the normal bias is
  * rebuilt for the new restitution, which is why it takes the world settings and the step's delta time.
  */
 void apply_contact_override(ContactConstraints &contact_constraints, uint32_t constraint_index, contacts::Contacts &contacts,
                             bodies::Bodies &bodies, const ContactSettings &settings, const world_settings::WorldSettings &world_settings,
                             float delta_time);
 /**
- * every written contact_override, before the solve: by its event's contact, a reject, a sensor or no dynamic mass left
- * (jolt: a dynamic body with a nonzero inverse mass scale) drops the contact's constraint and zeroes the impulses its contact
- * caches for the next step; any other answer goes through apply_contact_override. a contact that made no constraint cannot
- * gain one (jolt: a sensor cannot become a body by callback). the dropped constraints are compacted out, keeping order.
+ * every written contact_override, before the solve: by its event's contact, a reject, a sensor or no dynamic mass left (no
+ * dynamic body with a nonzero inverse mass scale) drops the contact's constraint and zeroes the impulses its contact caches
+ * for the next step; any other answer goes through apply_contact_override. a contact that made no constraint cannot gain
+ * one: a sensor cannot become a body by override. the dropped constraints are compacted out, keeping order.
  */
 void apply_contact_overrides(ContactConstraints &contact_constraints, contacts::Contacts &contacts, bodies::Bodies &bodies,
                              const events::PhysicsEvents &events, const events::PhysicsAnswers &answers,
@@ -135,7 +130,7 @@ bool solve_position_constraints_for_island(ContactConstraints &contact_constrain
                                            float max_penetration_distance);
 /**
  * the contact's sort key: the 64 bit fnv-1a hash of body id a, sub shape id a, body id b, sub shape id b, each id as
- * its little endian bytes (a body id as 8: index then sequence) (jolt: SubShapeIDPair::GetHash, over 4 byte body ids)
+ * its little endian bytes (a body id as 8: index then sequence)
  */
 uint64_t compute_contact_sort_key(body_id::BodyId body_id_a, sub_shape::SubShapeId sub_shape_id_a, body_id::BodyId body_id_b,
                                   sub_shape::SubShapeId sub_shape_id_b);

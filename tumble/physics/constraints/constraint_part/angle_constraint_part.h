@@ -1,7 +1,5 @@
 #pragma once
 
-// crashcat's angle-constraint-part.ts: constrains rotation along 1 axis (hinge limits and motors, angular friction).
-
 #include "tumble/math/types.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/constraints/constraint_part/spring_part.h"
@@ -14,6 +12,7 @@ namespace rigid_body {
 struct RigidBody;
 }
 
+// rotation about one axis: hinge limits and motors, angular friction
 namespace angle_constraint_part {
 
 /**

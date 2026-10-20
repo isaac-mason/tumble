@@ -1,16 +1,12 @@
 #pragma once
 
-// a constraint's index, type and sequence packed in one u32, shaped as body_id's BodyId:
-//   bits 0-19: index within the pool of that type
-//   bits 20-23: constraint type
-//   bits 24-31: sequence number, which catches an id kept after its constraint was removed
-// the invalid id is all ones; type 15 is no constraint type, so it is never a constraint's id.
-
 #include <stdint.h>
 #include "tumble/tumble.h"
 
 TUMBLE_NAMESPACE_BEGIN
 
+// bits 0-19 the index in its type's pool, 20-23 the type, 24-31 a sequence that catches an id kept after its constraint
+// was removed. the invalid id is all ones: type 15 is no type, so it is never a constraint's
 namespace constraint_id {
 
 typedef uint32_t ConstraintId;
@@ -30,7 +26,7 @@ constexpr uint32_t MAX_CONSTRAINT_INDEX = CONSTRAINT_INDEX_MASK;
 constexpr uint32_t MAX_CONSTRAINT_TYPE = CONSTRAINT_TYPE_MASK;
 constexpr uint32_t MAX_SEQUENCE = SEQUENCE_MASK;
 
-/** encoded in the id; crashcat's numbering, the user slots kept so ids stay comparable */
+/** encoded in the id */
 enum ConstraintType : uint32_t {
     POINT = 0,
     DISTANCE = 1,

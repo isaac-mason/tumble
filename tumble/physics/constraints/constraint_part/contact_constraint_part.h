@@ -1,9 +1,5 @@
 #pragma once
 
-// the axis part specialised for contacts (jolt's ContactConstraintPart): a hard constraint along a contact normal or
-// friction tangent, solved over velocities the caller loads once per constraint, with the bodies' motion types as
-// template arguments so a static or kinematic side costs nothing.
-
 #include "tumble/math/mat4f.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/types.h"
@@ -15,6 +11,8 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// the axis part for contacts: hard, along a contact normal or friction tangent, over velocities the caller loads once
+// per constraint, with the bodies' motion types as template arguments so a static or kinematic side costs nothing
 namespace contact_constraint_part {
 
 struct ContactConstraintPart {

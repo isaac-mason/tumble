@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's cone-constraint.ts: holds a point on each body together and keeps the angle between the two
-// twist axes within a cone, t1 . t2 >= cos(half cone angle). twist about the axis stays free (unlike the
-// swing twist constraint).
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -21,6 +17,8 @@ namespace rigid_body {
 struct RigidBody;
 }
 
+// a point on each body held together, and the angle between the two twist axes kept within a cone (t1 . t2 >= cos(half
+// cone angle)); twist about the axis stays free
 namespace cone_constraint {
 
 /** removes 3 translation DOF (point constraint) and limits rotation to a cone (1 DOF limit) */

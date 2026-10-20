@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's ContactSettings (contact-constraints.ts): what a contact's constraint is built from, the
-// combined material plus the per-contact knobs js may override between the narrowphase and the solve.
-
 #include "tumble/math/types.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/tumble.h"

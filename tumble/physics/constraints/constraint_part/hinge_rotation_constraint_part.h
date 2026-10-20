@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's hinge-rotation-constraint-part.ts: constrains rotation around 2 axes so only rotation around the
-// hinge axis remains.
-
 #include <stdint.h>
 
 #include "tumble/math/mat4f.h"
@@ -15,6 +12,7 @@ namespace rigid_body {
 struct RigidBody;
 }
 
+// rotation about the two axes that leave only rotation about the hinge axis
 namespace hinge_rotation_constraint_part {
 
 /**

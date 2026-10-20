@@ -1,13 +1,11 @@
 #pragma once
 
-// crashcat's spring-part.ts, the record: the softness and bias a soft constraint adds to its effective
-// mass and target. the spring maths is spring_part.cpp, which declares its functions here.
-
 #include "tumble/physics/constraints/constraint_part/spring_settings.h"
 #include "tumble/tumble.h"
 
 TUMBLE_NAMESPACE_BEGIN
 
+// the softness and bias a soft constraint adds to its effective mass and target
 namespace spring_part {
 
 struct SpringPart {

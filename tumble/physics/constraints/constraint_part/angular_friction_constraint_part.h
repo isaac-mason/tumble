@@ -1,8 +1,5 @@
 #pragma once
 
-// the twist friction of a contact manifold about its normal (jolt's AngularFrictionConstraintPart), solved over the
-// angular velocities the caller loads once per constraint, templated on the bodies' motion types.
-
 #include "tumble/math/mat4f.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/types.h"
@@ -12,9 +9,10 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// a contact manifold's twist friction about its normal, over angular velocities the caller loads once per constraint,
+// templated on the bodies' motion types
 namespace angular_friction_constraint_part {
 
-/** the smallest normal f32, jolt's FLT_MIN */
 static constexpr float FLOAT_MIN_NORMAL = 1.17549435e-38f;
 
 struct AngularFrictionConstraintPart {

@@ -249,7 +249,7 @@ uint64_t compute_contact_sort_key(body_id::BodyId body_id_a, sub_shape::SubShape
 
 /**
  * the next constraint slot with the manifold-level fields both the narrowphase and the cache paths share: body and
- * sub-shape ids, sort key, normal and tangent basis, combined materials and scaled masses (jolt: CreateConstraint).
+ * sub-shape ids, sort key, normal and tangent basis, combined materials and scaled masses.
  * null (error set) when the pool cannot grow.
  */
 static ContactConstraint *begin_contact_constraint(ContactConstraints &contact_constraints, RigidBody &body_a, RigidBody &body_b,
@@ -284,7 +284,6 @@ static ContactConstraint *begin_contact_constraint(ContactConstraints &contact_c
 /**
  * finish contact point i of a constraint whose local positions and warm start lambda are set: its restitution /
  * speculative bias and non-penetration part, r_a / r_b from each body's centre of mass to that body's own contact point
- * (jolt: WorldContactPoint::CalculateNonPenetrationConstraintProperties)
  */
 template <motion_type::MotionType TYPE_A, motion_type::MotionType TYPE_B>
 static void setup_contact_point(ContactConstraint &constraint, uint32_t i, const RigidBody &body_a, const RigidBody &body_b,
@@ -309,7 +308,7 @@ static Vec3f to_body_space(const Mat4f &rotation, Vec3f point, Vec3f com_minus_b
 
 /**
  * the cached body-local points of a constraint relative to each body's centre of mass under the current rotations, and
- * their penetration along the normal (jolt: GetContactsFromCache)
+ * their penetration along the normal
  */
 static void cached_moment_arms(Vec3f &out_r_a, Vec3f &out_r_b, float &out_penetration, const Mat4f &rotation_a, const Mat4f &rotation_b,
                                Vec3f delta_com, Vec3f local_a, Vec3f local_b, Vec3f normal) {
@@ -465,7 +464,7 @@ bool add_contact_constraint(ContactConstraints &contact_constraints, contacts::C
     // stamp contact as processed this frame (for stale contact cleanup)
     contact->last_processed_frame = contacts.frame_stamp;
 
-    // double-buffered cache: read the step before's data, write this step's (jolt: mReadCache->Find, mWriteCache->Create)
+    // double-buffered cache: read the step before's data, write this step's
     const contacts::CachedManifold &read = contacts::get_read_manifold(*contact, contacts);
     contacts::CachedManifold &write = contacts::get_write_manifold(*contact, contacts);
 
@@ -499,7 +498,7 @@ bool add_contact_constraint(ContactConstraints &contact_constraints, contacts::C
     const ContactSettings contact_settings =
         make_contact_settings(contact_constraints, body_a, contact_manifold.material_id_a, body_b, contact_manifold.material_id_b);
 
-    // the listener's call, which js answers through contact_override before the solve
+    // the event the caller may answer through contact_override before the solve
     if (persisted) write.flags |= contacts::MANIFOLD_FLAG_CONTACT_PERSISTED;
     append_contact_event(events, persisted, contact->contact_index, body_a, body_b, contact_manifold.sub_shape_id_a,
                          contact_manifold.sub_shape_id_b, contact_manifold.material_id_a, contact_manifold.material_id_b,
@@ -786,7 +785,7 @@ struct Velocities {
     Vec3f angular_b;
 };
 
-/** jolt's sGetVelocities: a static body's velocities are never read */
+/** a static body's velocities are never read */
 template <motion_type::MotionType TYPE_A, motion_type::MotionType TYPE_B>
 inline void get_velocities(Velocities &out, const MotionProperties &motion_properties_a, const MotionProperties &motion_properties_b) {
     if constexpr (TYPE_A != motion_type::MOTION_STATIC) {
@@ -805,7 +804,7 @@ inline void get_velocities(Velocities &out, const MotionProperties &motion_prope
     }
 }
 
-/** jolt's sSetVelocities: dynamic bodies only, with the locked translation axes zeroed */
+/** dynamic bodies only, with the locked translation axes zeroed */
 template <motion_type::MotionType TYPE_A, motion_type::MotionType TYPE_B>
 inline void set_velocities(MotionProperties &motion_properties_a, MotionProperties &motion_properties_b, const Velocities &velocities) {
     if constexpr (TYPE_A == motion_type::MOTION_DYNAMIC) {

@@ -1,7 +1,5 @@
 #pragma once
 
-// crashcat's dual-axis-constraint-part.ts: constrains movement on 2 axes perpendicular to a sliding axis.
-
 #include <stdint.h>
 
 #include "tumble/math/mat2f.h"
@@ -16,6 +14,7 @@ namespace rigid_body {
 struct RigidBody;
 }
 
+// movement on the two axes perpendicular to a sliding axis
 namespace dual_axis_constraint_part {
 
 /**
