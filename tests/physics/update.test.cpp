@@ -66,11 +66,8 @@ void step_answering_contacts(world::World &world, void (*answer)(events::Contact
     update::step_begin(world, WORLD_TEST_DELTA_TIME);
     update::find_pairs(world);
     update::narrowphase(world);
-    const uint32_t num_added = world.events.contacts_added.length;
     for (uint32_t i = 0; i < world.answers.contact_override.length; i++) {
-        const events::ContactEvent &event =
-            i < num_added ? world.events.contacts_added[i] : world.events.contacts_persisted[i - num_added];
-        answer(world.answers.contact_override[i], event);
+        answer(world.answers.contact_override[i], events::contact_event(world.events, i));
     }
     update::solve(world);
     update::step_end(world);
@@ -538,7 +535,7 @@ void check_rejected_pair_never_contacts(TestCtx &ctx, WorldScene &scene) {
     update::find_pairs(*scene.world);
     CHECK(ctx, scene.world->events.pairs.length == 1);
     CHECK(ctx, scene.world->answers.pair_reject.length == 1 && scene.world->answers.pair_reject[0] == 0);
-    scene.world->answers.pair_reject[0] = 1;
+    events::reject_pair(scene.world->answers, 0);
     update::narrowphase(*scene.world);
     CHECK(ctx, scene.world->events.contacts_added.length == 0);
     CHECK(ctx, scene.world->contact_constraints.count == 0);

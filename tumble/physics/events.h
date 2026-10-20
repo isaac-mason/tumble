@@ -116,6 +116,26 @@ inline void release(PhysicsAnswers &a) {
     a.contact_override.release();
 }
 
+/** no narrowphase for pairs entry `pair` this step, and the contacts the pair had are gone */
+inline void reject_pair(PhysicsAnswers &a, uint32_t pair) { a.pair_reject[pair >> 5] |= 1u << (pair & 31); }
+
+/** the event an override index answers: contacts_added's, then contacts_persisted's */
+inline const ContactEvent &contact_event(const PhysicsEvents &e, uint32_t index) {
+    const uint32_t added = e.contacts_added.length;
+    return index < added ? e.contacts_added[index] : e.contacts_persisted[index - added];
+}
+
+/** the answer to contact event `index`, written, its settings the event's until the caller changes them */
+inline ContactOverride &override_contact(PhysicsAnswers &a, const PhysicsEvents &e, uint32_t index) {
+    ContactOverride &answer = a.contact_override[index];
+    if (!answer.written) {
+        answer.written = true;
+        answer.reject = false;
+        answer.settings = contact_event(e, index).settings;
+    }
+    return answer;
+}
+
 inline bool pair_rejected(const PhysicsAnswers &a, uint32_t pair) {
     const uint32_t word = pair >> 5;
     return word < a.pair_reject.length && (a.pair_reject[word] >> (pair & 31)) & 1u;

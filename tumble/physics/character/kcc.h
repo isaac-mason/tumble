@@ -143,7 +143,7 @@ struct KCCSettings {
     /** borrowed */
     shapes::Shape *shape = nullptr;
     /** local, from the character's position */
-    Vec3f shape_offset = vec3f::make(0.0f, 0.0f, 0.0f);
+    Float3 shape_offset = {0.0f, 0.0f, 0.0f};
 
     /** kg */
     float mass = 70.0f;
@@ -151,7 +151,7 @@ struct KCCSettings {
     float max_strength = 100.0f;
 
     /** normalised by create */
-    Vec3f up = vec3f::make(0.0f, 1.0f, 0.0f);
+    Float3 up = {0.0f, 1.0f, 0.0f};
     /** radians */
     float max_slope_angle = 50.0f * 3.14159265358979323846f / 180.0f;
     /** the look-ahead for predictive contacts */
@@ -178,10 +178,11 @@ struct KCCSettings {
     bool enhanced_internal_edge_removal = false;
 
     /**
-     * what can support the character (normal.xyz, constant.w), null for [up, -1e10], which accepts any contact. a
-     * capsule might use [0, 1, 0, -radius] for stricter filtering. copied, not referenced
+     * with has_supporting_volume_plane, what can support the character, in its own space: a capsule might use
+     * {{0, 1, 0}, -radius} for stricter filtering. without, the plane is up at -1e10, which accepts any contact
      */
-    const Vec4f *supporting_volume_plane = nullptr;
+    bool has_supporting_volume_plane = false;
+    Plane3f supporting_volume_plane = {{0.0f, 1.0f, 0.0f}, 0.0f};
 
     /** carried by the inner body */
     uint64_t user_data = 0;
@@ -255,8 +256,8 @@ struct KCC {
 
 struct UpdateSettings {
     /** floor sticking's step down */
-    Vec3f stick_to_floor_step_down = vec3f::make(0.0f, -0.5f, 0.0f);
-    Vec3f walk_stairs_step_up = vec3f::make(0.0f, 0.4f, 0.0f);
+    Float3 stick_to_floor_step_down = {0.0f, -0.5f, 0.0f};
+    Float3 walk_stairs_step_up = {0.0f, 0.4f, 0.0f};
     /** the least forward movement that counts as a stair */
     float walk_stairs_min_step_forward = 0.02f;
     /** how far ahead the floor is tested */
@@ -264,7 +265,7 @@ struct UpdateSettings {
     /** a forward contact is within this cosine, cos(75 degrees) */
     float walk_stairs_cos_angle_forward_contact = 0.25881904510f;
     /** stepped down after a stair walk */
-    Vec3f walk_stairs_step_down_extra = vec3f::make(0.0f, 0.0f, 0.0f);
+    Float3 walk_stairs_step_down_extra = {0.0f, 0.0f, 0.0f};
 };
 
 /** null when the allocator fails; with an inner body, the world sees it only once added */

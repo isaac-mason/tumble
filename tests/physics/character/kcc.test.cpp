@@ -38,15 +38,15 @@ kcc::KCC *make_capsule_character(const Float3 &position, kcc::BackFaceMode back_
 kcc::KCC *make_footed_character(const Float3 &position, float max_slope_angle = 50.0f * scalar::DEGREES_TO_RADIANS) {
     kcc::KCCSettings settings;
     settings.shape = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
-    settings.shape_offset = vec3f::make(0.0f, 0.8f, 0.0f);
+    settings.shape_offset = {0.0f, 0.8f, 0.0f};
     settings.max_slope_angle = max_slope_angle;
     return kcc::create(settings, vec3f::load(position), quatf::load(IDENTITY));
 }
 
 kcc::UpdateSettings no_stairs_no_stick() {
     kcc::UpdateSettings settings;
-    settings.stick_to_floor_step_down = vec3f::make(0.0f, 0.0f, 0.0f);
-    settings.walk_stairs_step_up = vec3f::make(0.0f, 0.0f, 0.0f);
+    settings.stick_to_floor_step_down = {0.0f, 0.0f, 0.0f};
+    settings.walk_stairs_step_up = {0.0f, 0.0f, 0.0f};
     return settings;
 }
 
@@ -296,7 +296,7 @@ void test_kcc_back_face_ignore_does_not(TestCtx &ctx) { CHECK(ctx, contacts_with
 void test_kcc_defaults_and_slope_test(TestCtx &ctx) {
     kcc::KCCSettings settings;
     settings.shape = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
-    settings.up = vec3f::make(0.0f, 2.0f, 0.0f);
+    settings.up = {0.0f, 2.0f, 0.0f};
     kcc::KCC *character = kcc::create(settings, vec3f::make(1.0f, 2.0f, 3.0f), quatf::load(IDENTITY));
 
     // up normalised, the supporting plane below everything, in the air
@@ -605,7 +605,7 @@ void test_kcc_inner_body_follows_and_is_ignored_by_its_own_queries(TestCtx &ctx)
 
     kcc::KCCSettings character_settings;
     character_settings.shape = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
-    character_settings.shape_offset = vec3f::make(0.0f, 0.8f, 0.0f);
+    character_settings.shape_offset = {0.0f, 0.8f, 0.0f};
     character_settings.user_data = 42;
     character_settings.inner_rigid_body_shape = character_settings.shape;
     character_settings.inner_rigid_body_object_layer = scene.moving;
@@ -661,7 +661,7 @@ void test_kcc_set_shape_refuses_a_shape_that_would_penetrate(TestCtx &ctx) {
     shapes::Shape *crouched = capsule::create({.half_height_of_cylinder = 0.2f, .radius = 0.3f});
     shapes::Shape *standing = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
     character_settings.shape = crouched;
-    character_settings.shape_offset = vec3f::make(0.0f, 0.5f, 0.0f);
+    character_settings.shape_offset = {0.0f, 0.5f, 0.0f};
     kcc::KCC *character = kcc::create(character_settings, vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY));
     filter::Filter filter = filter::create(world.settings.layers);
 

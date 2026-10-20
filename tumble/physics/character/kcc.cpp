@@ -117,7 +117,7 @@ KCC *create(const KCCSettings &settings, Vec3f position, Quatf quaternion) {
     KCC *character = util::create<KCC>();
     if (character == nullptr) return nullptr;
 
-    character->up = vec3f::normalize(settings.up);
+    character->up = vec3f::normalize(vec3f::load(settings.up));
     const Vec3f up = character->up;
 
     character->position = position;
@@ -125,7 +125,7 @@ KCC *create(const KCCSettings &settings, Vec3f position, Quatf quaternion) {
     character->linear_velocity = vec3f::make(0.0f, 0.0f, 0.0f);
 
     character->shape = settings.shape;
-    character->shape_offset = settings.shape_offset;
+    character->shape_offset = vec3f::load(settings.shape_offset);
 
     character->mass = settings.mass;
     character->max_strength = settings.max_strength;
@@ -143,8 +143,9 @@ KCC *create(const KCCSettings &settings, Vec3f position, Quatf quaternion) {
     character->back_face_mode = settings.back_face_mode;
     character->enhanced_internal_edge_removal = settings.enhanced_internal_edge_removal;
 
-    if (settings.supporting_volume_plane != nullptr) {
-        character->supporting_volume_plane = *settings.supporting_volume_plane;
+    if (settings.has_supporting_volume_plane) {
+        const Float3 &normal = settings.supporting_volume_plane.normal;
+        character->supporting_volume_plane = vec4f::make(normal.x, normal.y, normal.z, settings.supporting_volume_plane.constant);
     } else {
         // default: infinite plane below character, which accepts any contact as potentially supporting
         character->supporting_volume_plane = vec4f::make(vec3f::x(up), vec3f::y(up), vec3f::z(up), -1.0e10f);
@@ -1619,13 +1620,13 @@ void update(KCC &character, World &world, float delta_time, Vec3f gravity, const
     if (is_supported(character)) ground_to_air = false;
 
     // stick to floor going from ground to air, unless moving up
-    if (ground_to_air && vec3f::squared_length(settings.stick_to_floor_step_down) > 1e-12f) {
+    if (ground_to_air && vec3f::squared_length(vec3f::load(settings.stick_to_floor_step_down)) > 1e-12f) {
         const Vec3f step = vec3f::subtract(character.position, old_position);
         const float velocity_up = vec3f::dot(step, character.up) / delta_time;
-        if (velocity_up <= 1e-6f) stick_to_floor(character, world, settings.stick_to_floor_step_down, filter, listener);
+        if (velocity_up <= 1e-6f) stick_to_floor(character, world, vec3f::load(settings.stick_to_floor_step_down), filter, listener);
     }
 
-    if (vec3f::squared_length(settings.walk_stairs_step_up) > 1e-12f) {
+    if (vec3f::squared_length(vec3f::load(settings.walk_stairs_step_up)) > 1e-12f) {
         // how much we wanted to move horizontally
         Vec3f desired_horizontal_step = vec3f::scale(desired_velocity, delta_time);
         desired_horizontal_step = vec3f::scale_and_add(desired_horizontal_step, character.up, -vec3f::dot(desired_horizontal_step, character.up));
@@ -1662,8 +1663,8 @@ void update(KCC &character, World &world, float delta_time, Vec3f gravity, const
                 }
                 step_forward_test = vec3f::scale(step_forward_test, settings.walk_stairs_step_forward_test);
 
-                walk_stairs(character, world, delta_time, settings.walk_stairs_step_up, step_forward, step_forward_test,
-                            settings.walk_stairs_step_down_extra, filter, listener);
+                walk_stairs(character, world, delta_time, vec3f::load(settings.walk_stairs_step_up), step_forward, step_forward_test,
+                            vec3f::load(settings.walk_stairs_step_down_extra), filter, listener);
             }
         }
     }

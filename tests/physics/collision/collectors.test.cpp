@@ -313,8 +313,18 @@ void test_world_tier_types(TestCtx &ctx) {
     CHECK(ctx, events::reset_pair_answers(an, ev, 0) && events::reset_contact_answers(an, ev, 0));
     CHECK(ctx, an.pair_reject.length == 2 && an.contact_override.length == 3 && !an.contact_override[2].written);
     CHECK(ctx, !events::pair_rejected(an, 39) && !events::pair_rejected(an, 1000));
-    an.pair_reject[1] |= 1u << 7;
+    events::reject_pair(an, 39);
     CHECK(ctx, events::pair_rejected(an, 39) && !events::pair_rejected(an, 38));
+
+    // an override index names the added events, then the persisted; an override starts as its event's settings
+    ev.contacts_added[0].settings.combined_friction = 0.3f;
+    ev.contacts_persisted[1].settings.combined_friction = 0.7f;
+    CHECK(ctx, &events::contact_event(ev, 0) == &ev.contacts_added[0] && &events::contact_event(ev, 2) == &ev.contacts_persisted[1]);
+    events::ContactOverride &answer = events::override_contact(an, ev, 2);
+    CHECK(ctx, answer.written && !answer.reject && answer.settings.combined_friction == 0.7f);
+    answer.settings.combined_friction = 0.1f;
+    CHECK(ctx, events::override_contact(an, ev, 2).settings.combined_friction == 0.1f);
+    an.contact_override[2].written = false;
 
     // a later find_pairs and narrowphase of the step size the answers for what they appended, the earlier left as they are
     an.contact_override[0].written = true;
