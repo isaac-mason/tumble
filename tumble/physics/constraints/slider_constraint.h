@@ -6,16 +6,19 @@
 
 #include <stdint.h>
 
-#include "math/scalar.h"
-#include "math/types.h"
-#include "physics/body/bodies.h"
-#include "physics/body/body_id.h"
-#include "physics/constraints/constraint_part/axis_constraint_part.h"
-#include "physics/constraints/constraint_part/dual_axis_constraint_part.h"
-#include "physics/constraints/constraint_part/motor_settings.h"
-#include "physics/constraints/constraint_part/rotation_euler_constraint_part.h"
-#include "physics/constraints/constraint_part/spring_settings.h"
-#include "physics/constraints/constraints.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/body/body_id.h"
+#include "tumble/physics/constraints/constraint_part/axis_constraint_part.h"
+#include "tumble/physics/constraints/constraint_part/dual_axis_constraint_part.h"
+#include "tumble/physics/constraints/constraint_part/motor_settings.h"
+#include "tumble/physics/constraints/constraint_part/rotation_euler_constraint_part.h"
+#include "tumble/physics/constraints/constraint_part/spring_settings.h"
+#include "tumble/physics/constraints/constraints.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 struct RigidBody;
@@ -146,3 +149,5 @@ Vec3f get_total_lambda_rotation(const SliderConstraint &constraint);
 float get_total_lambda_motor(const SliderConstraint &constraint);
 
 }  // namespace slider_constraint
+
+TUMBLE_NAMESPACE_END

@@ -1,4 +1,6 @@
-#include "physics/layers.h"
+#include "tumble/physics/layers.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace layers {
 
@@ -96,3 +98,5 @@ bool object_layer_collides_with_object_layer(const Layers &layers, uint32_t obje
 }
 
 }  // namespace layers
+
+TUMBLE_NAMESPACE_END

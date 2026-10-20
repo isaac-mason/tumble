@@ -2,8 +2,10 @@
 
 // a bare body for the constraint part tests: no shape and no world, only what a part reads
 
-#include "physics/body/motion_properties.h"
-#include "physics/body/rigid_body.h"
+#include "tumble/physics/body/motion_properties.h"
+#include "tumble/physics/body/rigid_body.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 /** a body of this motion type, inverse mass and inverse inertia diagonal, its center of mass at com, unrotated */
 inline rigid_body::RigidBody make_body(motion_type::MotionType motion_type, float inv_mass, const Float3 &inv_inertia_diagonal,
@@ -17,3 +19,5 @@ inline rigid_body::RigidBody make_body(motion_type::MotionType motion_type, floa
     body.motion_properties.inv_inertia_diagonal = inv_inertia_diagonal;
     return body;
 }
+
+TUMBLE_NAMESPACE_END

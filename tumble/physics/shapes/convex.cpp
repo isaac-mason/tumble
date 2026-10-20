@@ -1,15 +1,17 @@
-#include "physics/shapes/convex.h"
+#include "tumble/physics/shapes/convex.h"
 
-#include "math/aabox.h"
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/collision/gjk.h"
-#include "physics/collision/penetration.h"
-#include "physics/collision/simplex.h"
-#include "physics/collision/support.h"
-#include "util/assert.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/collision/gjk.h"
+#include "tumble/physics/collision/penetration.h"
+#include "tumble/physics/collision/simplex.h"
+#include "tumble/physics/collision/support.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace convex {
 
@@ -425,3 +427,5 @@ void cast_convex_vs_convex_local(cast_shape::CastShapeCollector &collector, cons
 }
 
 }  // namespace convex
+
+TUMBLE_NAMESPACE_END

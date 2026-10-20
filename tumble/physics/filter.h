@@ -4,9 +4,12 @@
 
 #include <stdint.h>
 
-#include "physics/body/body_id.h"
-#include "physics/layers.h"
-#include "util/collections.h"
+#include "tumble/physics/body/body_id.h"
+#include "tumble/physics/layers.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 struct RigidBody;
@@ -60,3 +63,5 @@ inline bool should_pair_collide(uint32_t group_a, uint32_t mask_a, uint32_t grou
 }
 
 }  // namespace filter
+
+TUMBLE_NAMESPACE_END

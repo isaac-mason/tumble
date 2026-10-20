@@ -4,8 +4,11 @@
 
 #include <stdint.h>
 
-#include "math/scalar.h"
-#include "physics/constraints/constraint_part/spring_settings.h"
+#include "tumble/math/scalar.h"
+#include "tumble/physics/constraints/constraint_part/spring_settings.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace motor_settings {
 
@@ -45,3 +48,5 @@ inline bool is_valid(const MotorSettings &settings) {
 }
 
 }  // namespace motor_settings
+
+TUMBLE_NAMESPACE_END

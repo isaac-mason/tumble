@@ -3,7 +3,10 @@
 // crashcat's spring-part.ts, the record: the softness and bias a soft constraint adds to its effective
 // mass and target. the spring maths is spring_part.cpp, which declares its functions here.
 
-#include "physics/constraints/constraint_part/spring_settings.h"
+#include "tumble/physics/constraints/constraint_part/spring_settings.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace spring_part {
 
@@ -51,3 +54,5 @@ bool is_spring_active(const SpringPart &part);
 float get_spring_bias(const SpringPart &part, float total_lambda);
 
 }  // namespace spring_part
+
+TUMBLE_NAMESPACE_END

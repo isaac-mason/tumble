@@ -1,8 +1,8 @@
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/collision/active_edges.h"
-#include "physics/collision/gjk.h"
-#include "physics/collision/support.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/collision/active_edges.h"
+#include "tumble/physics/collision/gjk.h"
+#include "tumble/physics/collision/support.h"
 #include "test.h"
 #include "test_math.h"
 

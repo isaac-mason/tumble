@@ -1,11 +1,13 @@
 // (C) Sebastian Aaltonen 2023
 // MIT License (see file: OFFSET_ALLOCATOR_LICENSE)
 
-#include "util/offset_allocator.h"
+#include "tumble/util/offset_allocator.h"
 
-#include "util/assert.h"
-#include "util/mem.h"
-#include "util/object.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/mem.h"
+#include "tumble/util/object.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 #define ASSERT(x) CC_ASSERT(x)
 
@@ -424,3 +426,5 @@ StorageReportFull Allocator::storageReportFull() const {
     return report;
 }
 }  // namespace OffsetAllocator
+
+TUMBLE_NAMESPACE_END

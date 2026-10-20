@@ -4,8 +4,11 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "math/vec3f.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace triangle {
 
@@ -46,3 +49,5 @@ inline ClosestPointOnTriangleResult create_closest_point_on_triangle_result() { 
 void get_closest_point_on_triangle(ClosestPointOnTriangleResult &out, Vec3f a, Vec3f b, Vec3f c);
 
 }  // namespace triangle
+
+TUMBLE_NAMESPACE_END

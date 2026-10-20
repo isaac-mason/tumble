@@ -5,17 +5,20 @@
 
 #include <stdint.h>
 
-#include "physics/body/bodies.h"
-#include "physics/body/rigid_body.h"
-#include "physics/broadphase/broadphase.h"
-#include "physics/constraints/constraint_id.h"
-#include "physics/constraints/constraints.h"
-#include "physics/constraints/contact_constraints.h"
-#include "physics/contacts.h"
-#include "physics/events.h"
-#include "physics/pairs.h"
-#include "physics/world_settings.h"
-#include "util/collections.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/broadphase/broadphase.h"
+#include "tumble/physics/constraints/constraint_id.h"
+#include "tumble/physics/constraints/constraints.h"
+#include "tumble/physics/constraints/contact_constraints.h"
+#include "tumble/physics/contacts.h"
+#include "tumble/physics/events.h"
+#include "tumble/physics/pairs.h"
+#include "tumble/physics/world_settings.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace islands {
 
@@ -71,3 +74,5 @@ void finish_island_step(const Island &island, bodies::Bodies &bodies, broadphase
                         const world_settings::WorldSettings &settings, float delta_time, events::PhysicsEvents &events);
 
 }  // namespace islands
+
+TUMBLE_NAMESPACE_END

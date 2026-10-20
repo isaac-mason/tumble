@@ -1,8 +1,10 @@
-#include "physics/body/mass_properties.h"
+#include "tumble/physics/body/mass_properties.h"
 
-#include "math/scalar.h"
-#include "math/mat4f.h"
-#include "math/vec3f.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/vec3f.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace mass_properties {
 
@@ -124,3 +126,5 @@ MassProperties &scale_to_mass(MassProperties &out, float new_mass) {
 }
 
 }  // namespace mass_properties
+
+TUMBLE_NAMESPACE_END

@@ -1,8 +1,8 @@
-#include "physics/bitmask.h"
-#include "physics/body/body_id.h"
-#include "physics/body/dof.h"
-#include "physics/body/sub_shape.h"
-#include "physics/constraints/constraint_id.h"
+#include "tumble/physics/bitmask.h"
+#include "tumble/physics/body/body_id.h"
+#include "tumble/physics/body/dof.h"
+#include "tumble/physics/body/sub_shape.h"
+#include "tumble/physics/constraints/constraint_id.h"
 #include "test.h"
 #include "test_math.h"
 

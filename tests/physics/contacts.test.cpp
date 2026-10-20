@@ -1,9 +1,9 @@
-#include "physics/contacts.h"
+#include "tumble/physics/contacts.h"
 
-#include "instance.h"
-#include "physics/shapes/box.h"
-#include "physics/shapes/dispatch.h"
-#include "physics/shapes/sphere.h"
+#include "tumble/instance.h"
+#include "tumble/physics/shapes/box.h"
+#include "tumble/physics/shapes/dispatch.h"
+#include "tumble/physics/shapes/sphere.h"
 #include "test.h"
 #include "test_math.h"
 

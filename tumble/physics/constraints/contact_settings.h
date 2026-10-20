@@ -3,8 +3,11 @@
 // crashcat's ContactSettings (contact-constraints.ts): what a contact's constraint is built from, the
 // combined material plus the per-contact knobs js may override between the narrowphase and the solve.
 
-#include "math/types.h"
-#include "math/vec3f.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace contact_constraints {
 
@@ -24,3 +27,5 @@ struct ContactSettings {
 };
 
 }  // namespace contact_constraints
+
+TUMBLE_NAMESPACE_END

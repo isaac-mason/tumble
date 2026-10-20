@@ -3,7 +3,9 @@
 // the scalar functions over the storage types, retired from src when the register types took over: the reference the
 // register functions are checked against, bit for bit.
 
-#include "math/vec3f.h"
+#include "tumble/math/vec3f.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace vec3f {
 
@@ -268,3 +270,5 @@ inline float len(const Float3 &a) { return length(a); }
 inline float sqr_len(const Float3 &a) { return squared_length(a); }
 
 }  // namespace vec3f
+
+TUMBLE_NAMESPACE_END

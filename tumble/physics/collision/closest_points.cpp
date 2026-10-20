@@ -1,7 +1,9 @@
-#include "physics/collision/closest_points.h"
+#include "tumble/physics/collision/closest_points.h"
 
-#include "math/scalar.h"
-#include "math/vec3f.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace closest_points {
 
@@ -105,3 +107,5 @@ void compute_barycentric_coordinates_3d(BarycentricCoordinatesResult &out, Vec3f
 }
 
 }  // namespace closest_points
+
+TUMBLE_NAMESPACE_END

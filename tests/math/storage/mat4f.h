@@ -3,10 +3,12 @@
 // the scalar functions over the storage types, retired from src when the register types took over: the reference the
 // register functions are checked against, bit for bit.
 
-#include "math/mat4f.h"
+#include "tumble/math/mat4f.h"
 #include "math/storage/vec3f.h"
 #include "math/storage/vec4f.h"
 #include "math/storage/quatf.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace mat4f {
 
@@ -589,3 +591,5 @@ inline Float4x4 &mul(Float4x4 &out, const Float4x4 &a, const Float4x4 &b) { retu
 inline Float4x4 &sub(Float4x4 &out, const Float4x4 &a, const Float4x4 &b) { return subtract(out, a, b); }
 
 }  // namespace mat4f
+
+TUMBLE_NAMESPACE_END

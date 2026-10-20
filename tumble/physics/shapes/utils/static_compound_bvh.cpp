@@ -1,12 +1,14 @@
-#include "physics/shapes/utils/static_compound_bvh.h"
+#include "tumble/physics/shapes/utils/static_compound_bvh.h"
 
-#include "math/aabox.h"
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "util/alloc.h"
-#include "util/assert.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/util/alloc.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace static_compound_bvh {
 
@@ -260,3 +262,5 @@ StaticCompoundBvhStats stats(const bvh::Node *nodes, uint32_t node_count) {
 }
 
 }  // namespace static_compound_bvh
+
+TUMBLE_NAMESPACE_END

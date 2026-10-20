@@ -3,8 +3,11 @@
 // the math package's mat3.ts over Mat3f, column-major. `invert` and `normal_from_mat4` return
 // false where the js returns null (a singular matrix leaves out untouched).
 
-#include "math/scalar.h"
-#include "math/types.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/types.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace mat3f {
 
@@ -249,3 +252,5 @@ inline bool equals(const Mat3f &a, const Mat3f &b) {
 inline Mat3f &mul(Mat3f &out, const Mat3f &a, const Mat3f &b) { return multiply(out, a, b); }
 
 }  // namespace mat3f
+
+TUMBLE_NAMESPACE_END

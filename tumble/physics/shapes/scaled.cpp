@@ -1,9 +1,11 @@
-#include "physics/shapes/scaled.h"
+#include "tumble/physics/shapes/scaled.h"
 
-#include "math/aabox.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "util/assert.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace scaled {
 
@@ -183,3 +185,5 @@ shapes::ShapeDef def() {
 }
 
 }  // namespace scaled
+
+TUMBLE_NAMESPACE_END

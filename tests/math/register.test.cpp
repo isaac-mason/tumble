@@ -2,7 +2,7 @@
 // every magnitude and the special values (signed zeros, infinities, nan, denormals), and over well-behaved ones
 // (unit vectors and quaternions, rotation matrices) where the specials alone would leave a branch unexercised.
 
-#include "math/aabox.h"
+#include "tumble/math/aabox.h"
 #include "math/storage/box3f.h"
 #include "math/storage/mat4f.h"
 #include "math/storage/plane3f.h"

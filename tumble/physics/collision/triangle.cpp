@@ -1,7 +1,9 @@
-#include "physics/collision/triangle.h"
+#include "tumble/physics/collision/triangle.h"
 
-#include "math/scalar.h"
-#include "math/vec3f.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace triangle {
 
@@ -176,3 +178,5 @@ void get_closest_point_on_triangle(ClosestPointOnTriangleResult &out, Vec3f a, V
 }
 
 }  // namespace triangle
+
+TUMBLE_NAMESPACE_END

@@ -1,11 +1,13 @@
-#include "physics/shapes/utils/triangle_mesh_builder.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_builder.h"
 
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/collision/active_edges.h"
-#include "util/assert.h"
-#include "util/collections.h"
-#include "util/mem.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/collision/active_edges.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/collections.h"
+#include "tumble/util/mem.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace triangle_mesh_builder {
 
@@ -332,3 +334,5 @@ TriangleMeshData *build(const TriangleMeshBuilderSettings &settings) {
 }
 
 }  // namespace triangle_mesh_builder
+
+TUMBLE_NAMESPACE_END

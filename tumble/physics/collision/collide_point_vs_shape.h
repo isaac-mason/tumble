@@ -5,10 +5,13 @@
 
 #include <stdint.h>
 
-#include "physics/body/body_id.h"
-#include "physics/body/sub_shape.h"
-#include "physics/collision/collector.h"
-#include "util/collections.h"
+#include "tumble/physics/body/body_id.h"
+#include "tumble/physics/body/sub_shape.h"
+#include "tumble/physics/collision/collector.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace collide_point {
 
@@ -106,3 +109,5 @@ inline bool should_early_out(const CollidePointCollector &c) {
 }
 
 }  // namespace collide_point
+
+TUMBLE_NAMESPACE_END

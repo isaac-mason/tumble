@@ -8,10 +8,13 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/body/sub_shape.h"
-#include "physics/collision/collide_shape_vs_shape.h"
-#include "util/collections.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/sub_shape.h"
+#include "tumble/physics/collision/collide_shape_vs_shape.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace internal_edge_removing {
 
@@ -47,3 +50,5 @@ void flush(InternalEdgeRemovingCollector &wrapper);
 void reset(InternalEdgeRemovingCollector &wrapper);
 
 }  // namespace internal_edge_removing
+
+TUMBLE_NAMESPACE_END

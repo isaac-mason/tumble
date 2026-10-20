@@ -1,7 +1,7 @@
-#include "physics/shapes/shapes.h"
+#include "tumble/physics/shapes/shapes.h"
 
-#include "math/quatf.h"
-#include "math/scalar.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
 #include "test.h"
 #include "test_math.h"
 

@@ -5,7 +5,10 @@
 
 #include <stdint.h>
 
-#include "physics/shapes/shapes.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace plane {
 
@@ -53,3 +56,5 @@ void cast_convex_vs_plane(cast_shape::CastShapeCollector &collector, const cast_
 shapes::ShapeDef def();
 
 }  // namespace plane
+
+TUMBLE_NAMESPACE_END

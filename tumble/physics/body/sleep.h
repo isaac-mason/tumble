@@ -5,9 +5,12 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/body/bodies.h"
-#include "physics/body/motion_properties.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/body/motion_properties.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 struct RigidBody;
@@ -48,3 +51,5 @@ void sleep(bodies::Bodies &bodies, rigid_body::RigidBody *body);
 void wake(bodies::Bodies &bodies, rigid_body::RigidBody *body);
 
 }  // namespace sleep
+
+TUMBLE_NAMESPACE_END

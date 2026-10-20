@@ -1,6 +1,6 @@
-#include "instance.h"
+#include "tumble/instance.h"
 #include "test.h"
-#include "util/offset_allocator.h"
+#include "tumble/util/offset_allocator.h"
 
 using OffsetAllocator::Allocation;
 using OffsetAllocator::Allocator;

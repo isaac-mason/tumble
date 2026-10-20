@@ -4,7 +4,10 @@
 
 #include <stdint.h>
 
-#include "physics/shapes/shapes.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace sphere {
 
@@ -41,3 +44,5 @@ void collide_sphere_vs_sphere(collide_shape::CollideShapeCollector &collector, c
 shapes::ShapeDef def();
 
 }  // namespace sphere
+
+TUMBLE_NAMESPACE_END

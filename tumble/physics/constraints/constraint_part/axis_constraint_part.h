@@ -4,10 +4,13 @@
 // distance, a six dof translation), with its jacobian terms and accumulated impulse. the setup and
 // solve are axis_constraint_part.cpp, which declares its functions here.
 
-#include "math/types.h"
-#include "math/vec3f.h"
-#include "physics/constraints/constraint_part/spring_part.h"
-#include "physics/constraints/constraint_part/spring_settings.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/constraints/constraint_part/spring_part.h"
+#include "tumble/physics/constraints/constraint_part/spring_settings.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 struct RigidBody;
@@ -118,3 +121,5 @@ bool solve_position_constraint(AxisConstraintPart &part, rigid_body::RigidBody &
                                Vec3f axis, float c, float baumgarte);
 
 }  // namespace axis_constraint_part
+
+TUMBLE_NAMESPACE_END

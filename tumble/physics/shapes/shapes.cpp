@@ -1,10 +1,12 @@
-#include "physics/shapes/shapes.h"
+#include "tumble/physics/shapes/shapes.h"
 
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/vec3f.h"
-#include "util/assert.h"
-#include "util/object.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/object.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace shapes {
 
@@ -124,3 +126,5 @@ void get_sub_shape_transformed_shape(GetSubShapeTransformedShapeResult &out, con
 }
 
 }  // namespace shapes
+
+TUMBLE_NAMESPACE_END

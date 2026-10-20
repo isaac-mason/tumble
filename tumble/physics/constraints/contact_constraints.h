@@ -8,19 +8,22 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/body/bodies.h"
-#include "physics/body/rigid_body.h"
-#include "physics/body/sub_shape.h"
-#include "physics/constraints/constraint_part/angular_friction_constraint_part.h"
-#include "physics/constraints/constraint_part/contact_constraint_part.h"
-#include "physics/constraints/contact_settings.h"
-#include "physics/contacts.h"
-#include "physics/events.h"
-#include "physics/manifold/manifold.h"
-#include "physics/pairs.h"
-#include "physics/world_settings.h"
-#include "util/collections.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/body/sub_shape.h"
+#include "tumble/physics/constraints/constraint_part/angular_friction_constraint_part.h"
+#include "tumble/physics/constraints/constraint_part/contact_constraint_part.h"
+#include "tumble/physics/constraints/contact_settings.h"
+#include "tumble/physics/contacts.h"
+#include "tumble/physics/events.h"
+#include "tumble/physics/manifold/manifold.h"
+#include "tumble/physics/pairs.h"
+#include "tumble/physics/world_settings.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace contact_constraints {
 
@@ -140,3 +143,5 @@ uint64_t compute_contact_sort_key(body_id::BodyId body_id_a, sub_shape::SubShape
 void sort_contact_indices(const ContactConstraints &contact_constraints, const bodies::Bodies &bodies, collections::Vec<uint32_t> &contact_indices);
 
 }  // namespace contact_constraints
+
+TUMBLE_NAMESPACE_END

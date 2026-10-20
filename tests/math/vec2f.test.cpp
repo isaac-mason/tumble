@@ -1,5 +1,5 @@
-#include "math/mat2f.h"
-#include "math/vec2f.h"
+#include "tumble/math/mat2f.h"
+#include "tumble/math/vec2f.h"
 #include "test.h"
 
 static bool near2(const Vec2f &a, float x, float y, float eps = 1e-6f) {

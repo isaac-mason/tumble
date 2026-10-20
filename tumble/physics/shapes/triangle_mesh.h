@@ -6,8 +6,11 @@
 
 #include <stdint.h>
 
-#include "physics/shapes/shapes.h"
-#include "physics/shapes/utils/triangle_mesh_data.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_data.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace triangle_mesh {
 
@@ -69,3 +72,5 @@ void cast_sphere_vs_triangle_mesh(cast_shape::CastShapeCollector &collector, con
 shapes::ShapeDef def();
 
 }  // namespace triangle_mesh
+
+TUMBLE_NAMESPACE_END

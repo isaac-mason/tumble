@@ -1,22 +1,24 @@
-#include "physics/shapes/triangle_mesh.h"
+#include "tumble/physics/shapes/triangle_mesh.h"
 
-#include "math/aabox.h"
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/collision/active_edges.h"
-#include "physics/collision/cast_utils.h"
-#include "physics/collision/closest_points.h"
-#include "physics/collision/gjk.h"
-#include "physics/collision/penetration.h"
-#include "physics/collision/simplex.h"
-#include "physics/collision/sphere_triangle.h"
-#include "physics/collision/support.h"
-#include "physics/collision/triangle.h"
-#include "physics/shapes/utils/bvh.h"
-#include "physics/shapes/utils/triangle_mesh_bvh.h"
-#include "util/assert.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/collision/active_edges.h"
+#include "tumble/physics/collision/cast_utils.h"
+#include "tumble/physics/collision/closest_points.h"
+#include "tumble/physics/collision/gjk.h"
+#include "tumble/physics/collision/penetration.h"
+#include "tumble/physics/collision/simplex.h"
+#include "tumble/physics/collision/sphere_triangle.h"
+#include "tumble/physics/collision/support.h"
+#include "tumble/physics/collision/triangle.h"
+#include "tumble/physics/shapes/utils/bvh.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_bvh.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace triangle_mesh {
 
@@ -1225,3 +1227,5 @@ shapes::ShapeDef def() {
 }
 
 }  // namespace triangle_mesh
+
+TUMBLE_NAMESPACE_END

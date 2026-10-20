@@ -2,10 +2,13 @@
 
 // crashcat's angle-constraint-part.ts: constrains rotation along 1 axis (hinge limits and motors, angular friction).
 
-#include "math/types.h"
-#include "math/vec3f.h"
-#include "physics/constraints/constraint_part/spring_part.h"
-#include "physics/constraints/constraint_part/spring_settings.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/constraints/constraint_part/spring_part.h"
+#include "tumble/physics/constraints/constraint_part/spring_settings.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 struct RigidBody;
@@ -95,3 +98,5 @@ float get_total_lambda(const AngleConstraintPart &part);
 void set_total_lambda(AngleConstraintPart &part, float lambda);
 
 }  // namespace angle_constraint_part
+
+TUMBLE_NAMESPACE_END

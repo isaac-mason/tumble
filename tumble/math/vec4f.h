@@ -4,9 +4,12 @@
 // the bits of its scalar reference over Float4 (test/math/storage/vec4f.h); the dot is (x + z) + (y + w), as
 // v4f::dot4 sums.
 
-#include "math/scalar.h"
-#include "math/simd.h"
-#include "math/types.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/simd.h"
+#include "tumble/math/types.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace vec4f {
 
@@ -66,3 +69,5 @@ inline float len(Vec4f a) { return length(a); }
 inline float sqr_len(Vec4f a) { return squared_length(a); }
 
 }  // namespace vec4f
+
+TUMBLE_NAMESPACE_END

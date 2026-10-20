@@ -1,6 +1,6 @@
-#include "instance.h"
+#include "tumble/instance.h"
 #include "test.h"
-#include "util/mem.h"
+#include "tumble/util/mem.h"
 
 void test_instance(TestCtx &ctx) {
     // a heap that cannot fit its tables below the top of memory is refused, and the error says so

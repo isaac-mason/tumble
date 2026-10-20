@@ -1,9 +1,9 @@
 #pragma once
 
-// the core's test harness: CHECK records a failure into a fixed table that run.mjs reads back.
-// no registration machinery; main.cpp lists every test function by hand.
-
 #include <stdint.h>
+
+namespace tumble {}
+using namespace tumble;
 
 struct TestFailure {
     const char *file;

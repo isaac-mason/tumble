@@ -1,6 +1,8 @@
-#include "physics/collision/cast_shape_vs_shape.h"
+#include "tumble/physics/collision/cast_shape_vs_shape.h"
 
-#include "math/vec3f.h"
+#include "tumble/math/vec3f.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace cast_shape {
 
@@ -41,3 +43,5 @@ void inverted_add_miss(CastShapeCollector &c) { add_miss(*static_cast<InvertedCo
 bool inverted_should_early_out(const CastShapeCollector &c) { return should_early_out(*static_cast<const InvertedContext *>(c.context)->base); }
 
 }  // namespace cast_shape
+
+TUMBLE_NAMESPACE_END

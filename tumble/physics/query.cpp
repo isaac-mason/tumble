@@ -1,12 +1,14 @@
-#include "physics/query.h"
+#include "tumble/physics/query.h"
 
-#include "math/aabox.h"
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "physics/body/rigid_body.h"
-#include "physics/broadphase/broadphase.h"
-#include "physics/collision/narrowphase.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/broadphase/broadphase.h"
+#include "tumble/physics/collision/narrowphase.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace query {
 
@@ -160,3 +162,5 @@ void collide_point(world::World &world, collide_point::CollidePointCollector &co
 }
 
 }  // namespace query
+
+TUMBLE_NAMESPACE_END

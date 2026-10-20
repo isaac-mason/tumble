@@ -1,7 +1,9 @@
-#include "physics/collision/active_edges.h"
+#include "tumble/physics/collision/active_edges.h"
 
-#include "math/vec3f.h"
-#include "physics/collision/closest_points.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/collision/closest_points.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace active_edges {
 
@@ -86,3 +88,5 @@ Vec3f fix_normal(Vec3f v0, Vec3f v1, Vec3f v2, Vec3f triangle_normal, uint32_t a
 }
 
 }  // namespace active_edges
+
+TUMBLE_NAMESPACE_END

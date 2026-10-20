@@ -1,7 +1,9 @@
-#include "physics/contacts.h"
+#include "tumble/physics/contacts.h"
 
-#include "math/vec3f.h"
-#include "util/mem.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/util/mem.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace contacts {
 
@@ -185,3 +187,5 @@ Contact *find_contact_in_pair(Contacts &contacts, const pairs::Pairs &pairs, int
 }
 
 }  // namespace contacts
+
+TUMBLE_NAMESPACE_END

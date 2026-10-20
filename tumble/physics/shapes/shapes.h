@@ -14,15 +14,18 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/body/mass_properties.h"
-#include "physics/body/sub_shape.h"
-#include "physics/collision/cast_ray_vs_shape.h"
-#include "physics/collision/cast_shape_vs_shape.h"
-#include "physics/collision/collide_point_vs_shape.h"
-#include "physics/collision/collide_shape_vs_shape.h"
-#include "physics/collision/support.h"
-#include "physics/utils/face.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/mass_properties.h"
+#include "tumble/physics/body/sub_shape.h"
+#include "tumble/physics/collision/cast_ray_vs_shape.h"
+#include "tumble/physics/collision/cast_shape_vs_shape.h"
+#include "tumble/physics/collision/collide_point_vs_shape.h"
+#include "tumble/physics/collision/collide_shape_vs_shape.h"
+#include "tumble/physics/collision/support.h"
+#include "tumble/physics/utils/face.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 // the heavy data the per-type payloads point at, each defined by its shape's own header.
 namespace convex_hull {
@@ -284,3 +287,5 @@ void get_leaf_shape(GetLeafShapeResult &out, const Shape *shape, sub_shape::SubS
 void get_sub_shape_transformed_shape(GetSubShapeTransformedShapeResult &out, const Shape *shape, sub_shape::SubShapeId sub_shape_id);
 
 }  // namespace shapes
+
+TUMBLE_NAMESPACE_END

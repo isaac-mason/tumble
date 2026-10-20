@@ -6,13 +6,16 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "math/vec3f.h"
-#include "physics/body/bodies.h"
-#include "physics/body/body_id.h"
-#include "physics/constraints/constraint_part/angle_constraint_part.h"
-#include "physics/constraints/constraint_part/point_constraint_part.h"
-#include "physics/constraints/constraints.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/body/body_id.h"
+#include "tumble/physics/constraints/constraint_part/angle_constraint_part.h"
+#include "tumble/physics/constraints/constraint_part/point_constraint_part.h"
+#include "tumble/physics/constraints/constraints.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 struct RigidBody;
@@ -91,3 +94,5 @@ Vec3f get_total_lambda_position(const ConeConstraint &constraint);
 float get_total_lambda_rotation(const ConeConstraint &constraint);
 
 }  // namespace cone_constraint
+
+TUMBLE_NAMESPACE_END

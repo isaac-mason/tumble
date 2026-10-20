@@ -1,7 +1,7 @@
-#include "physics/world.h"
+#include "tumble/physics/world.h"
 
-#include "util/alloc.h"
-#include "util/object.h"
+#include "tumble/util/alloc.h"
+#include "tumble/util/object.h"
 #include "world_test_scene.h"
 #include "test_math.h"
 

@@ -1,12 +1,14 @@
-#include "physics/body/bodies.h"
+#include "tumble/physics/body/bodies.h"
 
-#include "instance.h"
+#include "tumble/instance.h"
 
-#include "physics/body/rigid_body.h"
-#include "physics/shapes/empty.h"
-#include "util/assert.h"
-#include "util/mem.h"
-#include "util/object.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/shapes/empty.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/mem.h"
+#include "tumble/util/object.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace bodies {
 
@@ -89,3 +91,5 @@ rigid_body::RigidBody *get(const Bodies &bodies, body_id::BodyId id) {
 }
 
 }  // namespace bodies
+
+TUMBLE_NAMESPACE_END

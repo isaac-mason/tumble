@@ -5,8 +5,11 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/shapes/shapes.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace convex {
 
@@ -47,3 +50,5 @@ void cast_convex_vs_convex_local(cast_shape::CastShapeCollector &collector, cons
                                  Vec3f displacement_in_b, Vec3f scale_b, const Mat4f &target_transform);
 
 }  // namespace convex
+
+TUMBLE_NAMESPACE_END

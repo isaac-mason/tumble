@@ -1,8 +1,10 @@
-#include "physics/shapes/offset_center_of_mass.h"
+#include "tumble/physics/shapes/offset_center_of_mass.h"
 
-#include "math/aabox.h"
-#include "math/vec3f.h"
-#include "util/assert.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace offset_center_of_mass {
 
@@ -165,3 +167,5 @@ shapes::ShapeDef def() {
 }
 
 }  // namespace offset_center_of_mass
+
+TUMBLE_NAMESPACE_END

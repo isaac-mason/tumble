@@ -5,16 +5,19 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "math/vec3f.h"
-#include "math/vec4f.h"
-#include "physics/body/body_id.h"
-#include "physics/body/motion_type.h"
-#include "physics/body/sub_shape.h"
-#include "physics/filter.h"
-#include "physics/shapes/shapes.h"
-#include "physics/world.h"
-#include "util/collections.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/math/vec4f.h"
+#include "tumble/physics/body/body_id.h"
+#include "tumble/physics/body/motion_type.h"
+#include "tumble/physics/body/sub_shape.h"
+#include "tumble/physics/filter.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/physics/world.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 struct RigidBody;
@@ -389,3 +392,5 @@ void update(KCC &character, world::World &world, float delta_time, Vec3f gravity
             const CharacterListener *listener, const filter::Filter &filter);
 
 }  // namespace kcc
+
+TUMBLE_NAMESPACE_END

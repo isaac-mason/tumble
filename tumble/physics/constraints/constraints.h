@@ -6,10 +6,13 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/body/bodies.h"
-#include "physics/constraints/constraint_id.h"
-#include "util/collections.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/constraints/constraint_id.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace constraints {
 
@@ -131,3 +134,5 @@ void notify_shape_changed(Constraints &constraints, const rigid_body::RigidBody 
 void remove_constraint_id_from_body(rigid_body::RigidBody &body, ConstraintId id);
 
 }  // namespace constraints
+
+TUMBLE_NAMESPACE_END

@@ -6,10 +6,13 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "math/vec3f.h"
-#include "physics/collision/simplex.h"
-#include "physics/collision/support.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/collision/simplex.h"
+#include "tumble/physics/collision/support.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace gjk {
 
@@ -108,3 +111,5 @@ void closest_points(GjkClosestPoints &out, support::Support &support_a, support:
                     Vec3f direction, float max_distance_squared);
 
 }  // namespace gjk
+
+TUMBLE_NAMESPACE_END

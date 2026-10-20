@@ -5,14 +5,17 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/body/bodies.h"
-#include "physics/broadphase/body_visitor.h"
-#include "physics/broadphase/quad_tree.h"
-#include "physics/collision/cast_ray_vs_shape.h"
-#include "physics/filter.h"
-#include "physics/layers.h"
-#include "util/collections.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/broadphase/body_visitor.h"
+#include "tumble/physics/broadphase/quad_tree.h"
+#include "tumble/physics/collision/cast_ray_vs_shape.h"
+#include "tumble/physics/filter.h"
+#include "tumble/physics/layers.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 struct RigidBody;
@@ -80,3 +83,5 @@ void cast_aabb(Broadphase &broadphase, const bodies::Bodies &bodies, const Box3f
 Box3f &bounds(Box3f &out, const Broadphase &broadphase);
 
 }  // namespace broadphase
+
+TUMBLE_NAMESPACE_END

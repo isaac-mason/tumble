@@ -1,10 +1,10 @@
-#include "physics/shapes/utils/triangle_mesh_builder.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_builder.h"
 
-#include "instance.h"
-#include "math/scalar.h"
+#include "tumble/instance.h"
+#include "tumble/math/scalar.h"
 #include "test.h"
 #include "test_math.h"
-#include "util/alloc.h"
+#include "tumble/util/alloc.h"
 
 using triangle_mesh_data::TriangleMeshData;
 using triangle_mesh_data::get_active_edges;

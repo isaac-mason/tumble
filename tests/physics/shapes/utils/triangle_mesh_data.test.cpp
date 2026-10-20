@@ -1,10 +1,10 @@
-#include "physics/shapes/utils/triangle_mesh_data.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_data.h"
 
-#include "instance.h"
+#include "tumble/instance.h"
 #include "test.h"
 #include "test_math.h"
-#include "util/alloc.h"
-#include "util/mem.h"
+#include "tumble/util/alloc.h"
+#include "tumble/util/mem.h"
 
 using triangle_mesh_data::TriangleMeshData;
 using triangle_mesh_data::Triangle;

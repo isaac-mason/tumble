@@ -1,9 +1,9 @@
-#include "physics/update.h"
+#include "tumble/physics/update.h"
 
-#include "physics/body/sleep.h"
-#include "physics/constraints/distance_constraint.h"
-#include "physics/shapes/triangle_mesh.h"
-#include "physics/shapes/utils/triangle_mesh_builder.h"
+#include "tumble/physics/body/sleep.h"
+#include "tumble/physics/constraints/distance_constraint.h"
+#include "tumble/physics/shapes/triangle_mesh.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_builder.h"
 #include "world_test_scene.h"
 #include "test_math.h"
 

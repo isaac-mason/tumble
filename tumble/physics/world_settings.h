@@ -4,8 +4,11 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/layers.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/layers.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace world_settings {
 
@@ -104,3 +107,5 @@ inline void disable_collision(WorldSettings &settings, uint32_t object_layer_a, 
 }
 
 }  // namespace world_settings
+
+TUMBLE_NAMESPACE_END

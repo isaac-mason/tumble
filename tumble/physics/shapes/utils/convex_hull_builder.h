@@ -5,9 +5,12 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "math/vec3f.h"
-#include "util/collections.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace convex_hull_builder {
 
@@ -122,3 +125,5 @@ void get_center_of_mass_and_volume(const ConvexHullBuilder &builder, Vec3f &out_
 MaxError &determine_max_error(MaxError &out, const ConvexHullBuilder &builder);
 
 }  // namespace convex_hull_builder
+
+TUMBLE_NAMESPACE_END

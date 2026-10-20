@@ -1,13 +1,15 @@
-#include "physics/shapes/box.h"
+#include "tumble/physics/shapes/box.h"
 
-#include "math/aabox.h"
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec4f.h"
-#include "math/vec3f.h"
-#include "physics/shapes/convex.h"
-#include "util/assert.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec4f.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/shapes/convex.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace box {
 
@@ -452,3 +454,5 @@ void collide_point_vs_box(collide_point::CollidePointCollector &collector, const
 }
 
 }  // namespace box
+
+TUMBLE_NAMESPACE_END

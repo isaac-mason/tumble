@@ -12,8 +12,11 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "util/collections.h"
+#include "tumble/math/types.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace support {
 
@@ -116,3 +119,5 @@ void compute_scaled_shrunk_hull_points(float *dst, uint32_t num_points, const fl
 float scale_convex_radius(float radius, Vec3f scale);
 
 }  // namespace support
+
+TUMBLE_NAMESPACE_END

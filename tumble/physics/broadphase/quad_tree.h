@@ -11,13 +11,16 @@
 
 #include <stdint.h>
 
-#include "math/simd.h"
-#include "math/types.h"
-#include "physics/body/bodies.h"
-#include "physics/broadphase/body_visitor.h"
-#include "physics/collision/cast_ray_vs_shape.h"
-#include "physics/filter.h"
-#include "util/collections.h"
+#include "tumble/math/simd.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/broadphase/body_visitor.h"
+#include "tumble/physics/collision/cast_ray_vs_shape.h"
+#include "tumble/physics/filter.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace quad_tree {
 
@@ -129,3 +132,5 @@ void cast_aabb(const bodies::Bodies &bodies, QuadTree &tree, const Box3f &cast_b
                BodyVisitor &visitor);
 
 }  // namespace quad_tree
+
+TUMBLE_NAMESPACE_END

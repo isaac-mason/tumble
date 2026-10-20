@@ -3,7 +3,10 @@
 // crashcat's rigid-body-step.ts: the position solver's steps on a body's centre of mass and
 // rotation, and re-deriving the body's position and aabb from them.
 
-#include "math/types.h"
+#include "tumble/math/types.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 struct RigidBody;
@@ -47,3 +50,5 @@ void sub_rotation_step(rigid_body::RigidBody *body, Vec3f angular_velocity_times
 void derive_transform(rigid_body::RigidBody *body);
 
 }  // namespace rigid_body_step
+
+TUMBLE_NAMESPACE_END

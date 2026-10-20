@@ -1,7 +1,7 @@
-#include "math/scalar.h"
-#include "math/vec3f.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
 #include "physics/constraints/constraint_test_scene.h"
-#include "physics/constraints/distance_constraint.h"
+#include "tumble/physics/constraints/distance_constraint.h"
 #include "test.h"
 
 using distance_constraint::DistanceConstraint;

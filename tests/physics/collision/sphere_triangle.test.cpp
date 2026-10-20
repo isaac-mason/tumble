@@ -1,7 +1,7 @@
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/collision/sphere_triangle.h"
-#include "physics/collision/triangle.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/collision/sphere_triangle.h"
+#include "tumble/physics/collision/triangle.h"
 #include "test.h"
 #include "test_math.h"
 

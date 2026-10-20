@@ -4,7 +4,10 @@
 
 #include <stdint.h>
 
-#include "math/scalar.h"
+#include "tumble/math/scalar.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 struct RigidBody;
@@ -34,3 +37,5 @@ struct BodyVisitor {
 inline BodyVisitor create(Visit visit, void *context) { return {false, scalar::INF, visit, context}; }
 
 }  // namespace body_visitor
+
+TUMBLE_NAMESPACE_END

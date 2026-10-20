@@ -1,8 +1,10 @@
-#include "physics/shapes/utils/triangle_mesh_data.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_data.h"
 
-#include "util/alloc.h"
-#include "util/assert.h"
-#include "util/mem.h"
+#include "tumble/util/alloc.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/mem.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace triangle_mesh_data {
 
@@ -130,3 +132,5 @@ void swap_triangles(TriangleMeshData &data, uint32_t index_a, uint32_t index_b) 
 }
 
 }  // namespace triangle_mesh_data
+
+TUMBLE_NAMESPACE_END

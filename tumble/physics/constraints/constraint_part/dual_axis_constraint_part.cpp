@@ -1,14 +1,16 @@
-#include "physics/constraints/constraint_part/dual_axis_constraint_part.h"
+#include "tumble/physics/constraints/constraint_part/dual_axis_constraint_part.h"
 
-#include "math/mat2f.h"
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/vec2f.h"
-#include "math/vec3f.h"
-#include "physics/body/motion_properties.h"
-#include "physics/body/motion_type.h"
-#include "physics/body/rigid_body.h"
-#include "physics/body/rigid_body_step.h"
+#include "tumble/math/mat2f.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/vec2f.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/motion_properties.h"
+#include "tumble/physics/body/motion_type.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/body/rigid_body_step.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace dual_axis_constraint_part {
 
@@ -192,3 +194,5 @@ bool solve_position_constraint(DualAxisConstraintPart &part, rigid_body::RigidBo
 }
 
 }  // namespace dual_axis_constraint_part
+
+TUMBLE_NAMESPACE_END

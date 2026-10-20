@@ -1,8 +1,10 @@
-#include "physics/contact_pairs.h"
+#include "tumble/physics/contact_pairs.h"
 
-#include "physics/body/rigid_body.h"
-#include "physics/events.h"
-#include "physics/world.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/events.h"
+#include "tumble/physics/world.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace contact_pairs {
 
@@ -161,3 +163,5 @@ void record_world_contacts(world::World &world, uint32_t first_added, uint32_t f
 }
 
 }  // namespace contact_pairs
+
+TUMBLE_NAMESPACE_END

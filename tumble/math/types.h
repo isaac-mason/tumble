@@ -9,6 +9,9 @@
 
 #include <stdint.h>
 #include <wasm_simd128.h>
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 struct Vec2f {
     float x, y;
@@ -121,3 +124,5 @@ static_assert(sizeof(Float3) == 12, "Float3 packs like a js tuple of three");
 static_assert(sizeof(Float4) == 16, "Float4 loads as one lane");
 static_assert(sizeof(Float4x4) == 64, "Float4x4 is four lanes");
 static_assert(alignof(Vec3f) == 16 && alignof(Mat4f) == 16, "register types are whole lanes");
+
+TUMBLE_NAMESPACE_END

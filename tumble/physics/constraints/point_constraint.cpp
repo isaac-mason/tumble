@@ -1,11 +1,13 @@
-#include "physics/constraints/point_constraint.h"
+#include "tumble/physics/constraints/point_constraint.h"
 
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/vec3f.h"
-#include "physics/body/motion_properties.h"
-#include "physics/body/rigid_body.h"
-#include "util/assert.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/motion_properties.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace point_constraint {
 
@@ -175,3 +177,5 @@ void get_sort_fields(constraints::ConstraintSortFields &out, const PointConstrai
 Vec3f get_total_lambda(const PointConstraint &constraint) { return constraint.point_constraint_part.total_lambda; }
 
 }  // namespace point_constraint
+
+TUMBLE_NAMESPACE_END

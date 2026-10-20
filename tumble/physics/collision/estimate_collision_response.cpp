@@ -1,11 +1,13 @@
-#include "physics/collision/estimate_collision_response.h"
+#include "tumble/physics/collision/estimate_collision_response.h"
 
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/body/motion_properties.h"
-#include "physics/body/motion_type.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/motion_properties.h"
+#include "tumble/physics/body/motion_type.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace estimate_collision_response {
 
@@ -297,3 +299,5 @@ void estimate_collision_response(CollisionEstimationResult &result, const rigid_
 }
 
 }  // namespace estimate_collision_response
+
+TUMBLE_NAMESPACE_END

@@ -1,13 +1,15 @@
-#include "physics/constraints/constraint_part/swing_twist_constraint_part.h"
+#include "tumble/physics/constraints/constraint_part/swing_twist_constraint_part.h"
 
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec2f.h"
-#include "math/vec3f.h"
-#include "physics/body/motion_properties.h"
-#include "physics/body/rigid_body.h"
-#include "physics/constraints/constraint_part/rotation_euler_constraint_part.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec2f.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/motion_properties.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/constraints/constraint_part/rotation_euler_constraint_part.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace swing_twist_constraint_part {
 
@@ -486,3 +488,5 @@ float get_total_swing_z_lambda(const SwingTwistConstraintPart &part) { return pa
 float get_total_twist_lambda(const SwingTwistConstraintPart &part) { return part.twist_limit_constraint_part.total_lambda; }
 
 }  // namespace swing_twist_constraint_part
+
+TUMBLE_NAMESPACE_END

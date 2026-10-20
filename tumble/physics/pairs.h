@@ -6,13 +6,16 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/body/bodies.h"
-#include "physics/body/rigid_body.h"
-#include "physics/broadphase/broadphase.h"
-#include "physics/events.h"
-#include "physics/layers.h"
-#include "util/collections.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/broadphase/broadphase.h"
+#include "tumble/physics/events.h"
+#include "tumble/physics/layers.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace contacts {
 struct Contacts;
@@ -110,3 +113,5 @@ void find_woken_body_pairs(Pairs &pairs, broadphase::Broadphase &broadphase, con
                            float speculative_contact_distance, events::PhysicsEvents &events);
 
 }  // namespace pairs
+
+TUMBLE_NAMESPACE_END

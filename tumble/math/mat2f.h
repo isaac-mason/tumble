@@ -3,8 +3,11 @@
 // the math package's mat2.ts over Mat2f, column-major. `invert` returns false where the js returns
 // null, leaving out untouched.
 
-#include "math/scalar.h"
-#include "math/types.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/types.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace mat2f {
 
@@ -119,3 +122,5 @@ inline bool equals(const Mat2f &a, const Mat2f &b) {
 inline Mat2f &mul(Mat2f &out, const Mat2f &a, const Mat2f &b) { return multiply(out, a, b); }
 
 }  // namespace mat2f
+
+TUMBLE_NAMESPACE_END

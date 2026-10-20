@@ -1,10 +1,12 @@
-#include "physics/broadphase/quad_tree.h"
+#include "tumble/physics/broadphase/quad_tree.h"
 
-#include "math/aabox.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/body/rigid_body.h"
-#include "util/assert.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace quad_tree {
 
@@ -785,3 +787,5 @@ void cast_aabb(const bodies::Bodies &bodies, QuadTree &tree, const Box3f &cast_b
 }
 
 }  // namespace quad_tree
+
+TUMBLE_NAMESPACE_END

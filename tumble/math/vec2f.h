@@ -2,8 +2,11 @@
 
 // the math package's vec2.ts over Vec2f. two lanes don't earn a v128, so this one is scalar.
 
-#include "math/scalar.h"
-#include "math/types.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/types.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace vec2f {
 
@@ -88,3 +91,5 @@ inline float len(const Vec2f &a) { return length(a); }
 inline float sqr_len(const Vec2f &a) { return squared_length(a); }
 
 }  // namespace vec2f
+
+TUMBLE_NAMESPACE_END

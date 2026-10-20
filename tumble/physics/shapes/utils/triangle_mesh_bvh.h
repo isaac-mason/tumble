@@ -5,9 +5,12 @@
 
 #include <stdint.h>
 
-#include "physics/shapes/utils/bvh.h"
-#include "physics/shapes/utils/triangle_mesh_data.h"
-#include "util/collections.h"
+#include "tumble/physics/shapes/utils/bvh.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_data.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace triangle_mesh_bvh {
 
@@ -80,3 +83,5 @@ struct TriangleMeshBvhStats {
 TriangleMeshBvhStats stats(const bvh::Node *nodes, uint32_t node_count);
 
 }  // namespace triangle_mesh_bvh
+
+TUMBLE_NAMESPACE_END

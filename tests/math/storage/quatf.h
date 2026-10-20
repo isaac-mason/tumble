@@ -3,9 +3,11 @@
 // the scalar functions over the storage types, retired from src when the register types took over: the reference the
 // register functions are checked against, bit for bit.
 
-#include "math/quatf.h"
+#include "tumble/math/quatf.h"
 #include "math/storage/vec3f.h"
 #include "math/storage/vec4f.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace quatf {
 
@@ -372,3 +374,5 @@ inline float len(const Float4 &a) { return length(a); }
 inline float sqr_len(const Float4 &a) { return squared_length(a); }
 
 }  // namespace quatf
+
+TUMBLE_NAMESPACE_END

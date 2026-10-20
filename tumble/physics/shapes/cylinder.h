@@ -4,7 +4,10 @@
 
 #include <stdint.h>
 
-#include "physics/shapes/shapes.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace cylinder {
 
@@ -35,3 +38,5 @@ void set_support(support::Support &out, const Shape *shape, support::SupportFunc
 shapes::ShapeDef def();
 
 }  // namespace cylinder
+
+TUMBLE_NAMESPACE_END

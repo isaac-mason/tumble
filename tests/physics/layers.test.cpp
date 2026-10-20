@@ -1,6 +1,6 @@
-#include "instance.h"
-#include "physics/filter.h"
-#include "physics/layers.h"
+#include "tumble/instance.h"
+#include "tumble/physics/filter.h"
+#include "tumble/physics/layers.h"
 #include "test.h"
 #include "test_math.h"
 

@@ -3,8 +3,11 @@
 // crashcat's manifold/clip.ts: polygon clipping for manifold building, sutherland-hodgman over the
 // fixed-capacity face. the clipping is clip.cpp.
 
-#include "math/types.h"
-#include "physics/utils/face.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/utils/face.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace clip {
 
@@ -20,3 +23,5 @@ void clip_poly_vs_edge(face::Face &out, const face::Face &polygon, Vec3f edge_ve
                        Vec3f clipping_edge_normal);
 
 }  // namespace clip
+
+TUMBLE_NAMESPACE_END

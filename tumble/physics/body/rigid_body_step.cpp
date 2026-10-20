@@ -1,8 +1,10 @@
-#include "physics/body/rigid_body_step.h"
+#include "tumble/physics/body/rigid_body_step.h"
 
-#include "math/quatf.h"
-#include "math/vec3f.h"
-#include "physics/body/rigid_body.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/rigid_body.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body_step {
 
@@ -61,3 +63,5 @@ void derive_transform(rigid_body::RigidBody *body) {
 }
 
 }  // namespace rigid_body_step
+
+TUMBLE_NAMESPACE_END

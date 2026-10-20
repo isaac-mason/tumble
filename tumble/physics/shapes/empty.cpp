@@ -1,8 +1,10 @@
-#include "physics/shapes/empty.h"
+#include "tumble/physics/shapes/empty.h"
 
-#include "math/aabox.h"
-#include "math/mat4f.h"
-#include "math/vec3f.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/vec3f.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace empty {
 
@@ -57,3 +59,5 @@ shapes::ShapeDef def() {
 }
 
 }  // namespace empty
+
+TUMBLE_NAMESPACE_END

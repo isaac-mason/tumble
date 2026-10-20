@@ -6,11 +6,14 @@
 
 #include <stdint.h>
 
-#include "physics/shapes/compound.h"
-#include "physics/shapes/shapes.h"
-#include "physics/shapes/utils/bvh.h"
-#include "physics/shapes/utils/static_compound_bvh.h"
-#include "util/collections.h"
+#include "tumble/physics/shapes/compound.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/physics/shapes/utils/bvh.h"
+#include "tumble/physics/shapes/utils/static_compound_bvh.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace static_compound {
 
@@ -72,3 +75,5 @@ void cast_shape_vs_static_compound(cast_shape::CastShapeCollector &collector, co
 shapes::ShapeDef def();
 
 }  // namespace static_compound
+
+TUMBLE_NAMESPACE_END

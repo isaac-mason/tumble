@@ -4,6 +4,9 @@
 // lane 3 of a three-wide value is whatever the load left there; nothing may read it as data.
 
 #include <wasm_simd128.h>
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace v4f {
 
@@ -124,3 +127,5 @@ inline bool any_true(v128_t mask) { return wasm_v128_any_true(mask); }
 inline uint32_t bitmask(v128_t mask) { return wasm_i32x4_bitmask(mask); }
 
 }  // namespace v4f
+
+TUMBLE_NAMESPACE_END

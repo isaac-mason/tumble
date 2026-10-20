@@ -1,10 +1,10 @@
-#include "instance.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/collision/epa_convex_hull_builder.h"
+#include "tumble/instance.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/collision/epa_convex_hull_builder.h"
 #include "test.h"
 #include "test_math.h"
-#include "util/collections.h"
+#include "tumble/util/collections.h"
 
 namespace hull = epa_convex_hull_builder;
 

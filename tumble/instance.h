@@ -3,6 +3,9 @@
 // the instance: init, the error word, and what js asks the wasm about itself.
 
 #include <stdint.h>
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace util {
 
@@ -39,3 +42,5 @@ inline void error_clear() { instance().error = ERROR_NONE; }
 float simd_check();
 
 }  // namespace util
+
+TUMBLE_NAMESPACE_END

@@ -1,6 +1,6 @@
-#include "physics/contact_pairs.h"
+#include "tumble/physics/contact_pairs.h"
 
-#include "physics/shapes/box.h"
+#include "tumble/physics/shapes/box.h"
 #include "world_test_scene.h"
 
 using contact_pairs::ContactPair;

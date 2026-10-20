@@ -1,16 +1,16 @@
-#include "physics/broadphase/broadphase.h"
+#include "tumble/physics/broadphase/broadphase.h"
 
-#include "instance.h"
-#include "math/vec3f.h"
-#include "physics/body/bodies.h"
-#include "physics/body/rigid_body.h"
-#include "physics/filter.h"
-#include "physics/layers.h"
-#include "physics/shapes/box.h"
-#include "physics/shapes/dispatch.h"
+#include "tumble/instance.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/filter.h"
+#include "tumble/physics/layers.h"
+#include "tumble/physics/shapes/box.h"
+#include "tumble/physics/shapes/dispatch.h"
 #include "test.h"
 #include "test_math.h"
-#include "util/mem.h"
+#include "tumble/util/mem.h"
 
 using rigid_body::RigidBody;
 

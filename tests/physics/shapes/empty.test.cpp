@@ -1,9 +1,9 @@
-#include "physics/shapes/empty.h"
+#include "tumble/physics/shapes/empty.h"
 
-#include "instance.h"
-#include "math/mat4f.h"
-#include "math/vec3f.h"
-#include "physics/shapes/dispatch.h"
+#include "tumble/instance.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/shapes/dispatch.h"
 #include "test.h"
 #include "test_math.h"
 

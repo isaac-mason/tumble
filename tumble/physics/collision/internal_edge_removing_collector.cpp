@@ -1,9 +1,11 @@
-#include "physics/collision/internal_edge_removing_collector.h"
+#include "tumble/physics/collision/internal_edge_removing_collector.h"
 
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "util/assert.h"
-#include "util/sort.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/sort.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace internal_edge_removing {
 
@@ -248,3 +250,5 @@ void reset(InternalEdgeRemovingCollector &wrapper) {
 }
 
 }  // namespace internal_edge_removing
+
+TUMBLE_NAMESPACE_END

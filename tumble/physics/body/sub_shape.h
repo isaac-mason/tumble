@@ -7,7 +7,10 @@
 
 #include <stdint.h>
 
-#include "util/assert.h"
+#include "tumble/tumble.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace sub_shape {
 
@@ -75,3 +78,5 @@ inline void push_index(SubShapeIdBuilder &out, const SubShapeIdBuilder &source, 
 inline void pop_index(PopResult &out, SubShapeId id, uint32_t count) { pop(out, id, bits_for_count(count)); }
 
 }  // namespace sub_shape
+
+TUMBLE_NAMESPACE_END

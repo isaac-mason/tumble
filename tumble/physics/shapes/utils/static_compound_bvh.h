@@ -6,9 +6,12 @@
 
 #include <stdint.h>
 
-#include "physics/shapes/compound.h"
-#include "physics/shapes/utils/bvh.h"
-#include "util/collections.h"
+#include "tumble/physics/shapes/compound.h"
+#include "tumble/physics/shapes/utils/bvh.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace static_compound_bvh {
 
@@ -51,3 +54,5 @@ struct StaticCompoundBvhStats {
 StaticCompoundBvhStats stats(const bvh::Node *nodes, uint32_t node_count);
 
 }  // namespace static_compound_bvh
+
+TUMBLE_NAMESPACE_END

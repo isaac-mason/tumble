@@ -1,10 +1,10 @@
-#include "physics/constraints/contact_constraints.h"
+#include "tumble/physics/constraints/contact_constraints.h"
 
 #include "../contact_test_scene.h"
-#include "math/scalar.h"
-#include "physics/collision/narrowphase.h"
-#include "physics/shapes/triangle_mesh.h"
-#include "physics/shapes/utils/triangle_mesh_builder.h"
+#include "tumble/math/scalar.h"
+#include "tumble/physics/collision/narrowphase.h"
+#include "tumble/physics/shapes/triangle_mesh.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_builder.h"
 #include "test_math.h"
 
 using rigid_body::RigidBody;

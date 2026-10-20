@@ -5,13 +5,16 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "math/vec3f.h"
-#include "physics/body/bodies.h"
-#include "physics/body/body_id.h"
-#include "physics/constraints/constraint_part/axis_constraint_part.h"
-#include "physics/constraints/constraint_part/spring_settings.h"
-#include "physics/constraints/constraints.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/body/body_id.h"
+#include "tumble/physics/constraints/constraint_part/axis_constraint_part.h"
+#include "tumble/physics/constraints/constraint_part/spring_settings.h"
+#include "tumble/physics/constraints/constraints.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 struct RigidBody;
@@ -83,3 +86,5 @@ float get_total_lambda(const DistanceConstraint &constraint);
 void set_distance(DistanceConstraint &constraint, float min_distance, float max_distance);
 
 }  // namespace distance_constraint
+
+TUMBLE_NAMESPACE_END

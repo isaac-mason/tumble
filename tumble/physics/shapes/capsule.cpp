@@ -1,11 +1,13 @@
-#include "physics/shapes/capsule.h"
+#include "tumble/physics/shapes/capsule.h"
 
-#include "math/aabox.h"
-#include "math/mat4f.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/shapes/convex.h"
-#include "util/assert.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/shapes/convex.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace capsule {
 
@@ -196,3 +198,5 @@ shapes::ShapeDef def() {
 }
 
 }  // namespace capsule
+
+TUMBLE_NAMESPACE_END

@@ -2,9 +2,12 @@
 
 // the math package's euler.ts over Eulerf. the order is an enum where the js has a string.
 
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/types.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/types.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace eulerf {
 
@@ -128,3 +131,5 @@ inline bool equals(const Eulerf &a, const Eulerf &b) {
 }
 
 }  // namespace eulerf
+
+TUMBLE_NAMESPACE_END

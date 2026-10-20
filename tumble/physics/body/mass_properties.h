@@ -3,8 +3,11 @@
 // crashcat's mass-properties.ts: the struct and the trivial functions; the solid-shape inertia
 // builders and the scale, rotate and translate operations are mass_properties.cpp.
 
-#include "math/mat4f.h"
-#include "math/types.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/types.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace mass_properties {
 
@@ -46,3 +49,5 @@ MassProperties &rotate(MassProperties &out, const MassProperties &source, const 
 MassProperties &translate(MassProperties &out, const MassProperties &source, Vec3f translation);
 
 }  // namespace mass_properties
+
+TUMBLE_NAMESPACE_END

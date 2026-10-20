@@ -6,9 +6,12 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/body/rigid_body.h"
-#include "physics/manifold/manifold.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/manifold/manifold.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace estimate_collision_response {
 
@@ -43,3 +46,5 @@ void estimate_collision_response(CollisionEstimationResult &result, const rigid_
                                  float min_velocity_for_restitution, uint32_t num_iterations);
 
 }  // namespace estimate_collision_response
+
+TUMBLE_NAMESPACE_END

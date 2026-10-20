@@ -1,5 +1,5 @@
-#include "math/vec3f.h"
-#include "physics/collision/triangle.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/collision/triangle.h"
 #include "test.h"
 #include "test_math.h"
 

@@ -5,7 +5,10 @@
 
 #include <stdint.h>
 
-#include "physics/shapes/shapes.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace capsule {
 
@@ -38,3 +41,5 @@ float get_inner_radius(const Shape *shape);
 shapes::ShapeDef def();
 
 }  // namespace capsule
+
+TUMBLE_NAMESPACE_END

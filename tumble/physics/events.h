@@ -8,12 +8,15 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/body/body_id.h"
-#include "physics/body/sub_shape.h"
-#include "physics/constraints/contact_settings.h"
-#include "physics/manifold/manifold.h"
-#include "util/collections.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/body_id.h"
+#include "tumble/physics/body/sub_shape.h"
+#include "tumble/physics/constraints/contact_settings.h"
+#include "tumble/physics/manifold/manifold.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace events {
 
@@ -148,3 +151,5 @@ inline bool reset_contact_answers(PhysicsAnswers &a, const PhysicsEvents &e, uin
 }
 
 }  // namespace events
+
+TUMBLE_NAMESPACE_END

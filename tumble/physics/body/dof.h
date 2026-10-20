@@ -3,6 +3,9 @@
 // crashcat's dof.ts: degrees of freedom as a 6-bit mask, translation in the low three bits.
 
 #include <stdint.h>
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace dof {
 
@@ -29,3 +32,5 @@ constexpr uint32_t DOF_TRANSLATION_ONLY = 0x07;
 constexpr uint32_t DOF_ROTATION_ONLY = 0x38;
 
 }  // namespace dof
+
+TUMBLE_NAMESPACE_END

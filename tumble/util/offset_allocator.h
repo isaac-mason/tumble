@@ -8,6 +8,10 @@
 
 #pragma once
 
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
+
 namespace OffsetAllocator {
 typedef unsigned char uint8;
 typedef unsigned short uint16;
@@ -106,3 +110,5 @@ private:
     bool m_ownsTables = false;
 };
 }  // namespace OffsetAllocator
+
+TUMBLE_NAMESPACE_END

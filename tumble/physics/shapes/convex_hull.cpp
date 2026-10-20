@@ -1,14 +1,16 @@
-#include "physics/shapes/convex_hull.h"
+#include "tumble/physics/shapes/convex_hull.h"
 
-#include "math/aabox.h"
-#include "math/mat4f.h"
-#include "math/scalar.h"
-#include "math/vec4f.h"
-#include "math/vec3f.h"
-#include "physics/shapes/convex.h"
-#include "util/alloc.h"
-#include "util/assert.h"
-#include "util/mem.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec4f.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/shapes/convex.h"
+#include "tumble/util/alloc.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/mem.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace convex_hull {
 
@@ -679,3 +681,5 @@ shapes::ShapeDef def() {
 }
 
 }  // namespace convex_hull
+
+TUMBLE_NAMESPACE_END

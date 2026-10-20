@@ -10,7 +10,10 @@
 
 #include <stdint.h>
 
-#include "physics/shapes/shapes.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace scaled {
 
@@ -63,3 +66,5 @@ void cast_shape_vs_scaled(cast_shape::CastShapeCollector &collector, const cast_
 shapes::ShapeDef def();
 
 }  // namespace scaled
+
+TUMBLE_NAMESPACE_END

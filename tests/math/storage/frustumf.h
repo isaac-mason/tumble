@@ -7,10 +7,12 @@
 
 #include "math/storage/mat4f.h"
 #include "math/storage/plane3f.h"
-#include "math/scalar.h"
-#include "math/simd.h"
-#include "math/types.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/simd.h"
+#include "tumble/math/types.h"
 #include "math/storage/vec3f.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace frustumf {
 
@@ -168,3 +170,5 @@ inline void corners(Float3 *out, const Frustumf &f) {
 }
 
 }  // namespace frustumf
+
+TUMBLE_NAMESPACE_END

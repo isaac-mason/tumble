@@ -1,25 +1,27 @@
-#include "physics/character/kcc.h"
+#include "tumble/physics/character/kcc.h"
 
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "math/vec4f.h"
-#include "physics/body/motion_properties.h"
-#include "physics/body/rigid_body.h"
-#include "physics/body/sleep.h"
-#include "physics/broadphase/broadphase.h"
-#include "physics/character/character_constraints.h"
-#include "physics/collision/cast_shape_vs_shape.h"
-#include "physics/collision/collide_shape_vs_shape.h"
-#include "physics/collision/gjk.h"
-#include "physics/collision/support.h"
-#include "physics/constraints/constraints.h"
-#include "physics/pairs.h"
-#include "physics/query.h"
-#include "physics/shapes/compound.h"
-#include "util/object.h"
-#include "util/sort.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/math/vec4f.h"
+#include "tumble/physics/body/motion_properties.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/body/sleep.h"
+#include "tumble/physics/broadphase/broadphase.h"
+#include "tumble/physics/character/character_constraints.h"
+#include "tumble/physics/collision/cast_shape_vs_shape.h"
+#include "tumble/physics/collision/collide_shape_vs_shape.h"
+#include "tumble/physics/collision/gjk.h"
+#include "tumble/physics/collision/support.h"
+#include "tumble/physics/constraints/constraints.h"
+#include "tumble/physics/pairs.h"
+#include "tumble/physics/query.h"
+#include "tumble/physics/shapes/compound.h"
+#include "tumble/util/object.h"
+#include "tumble/util/sort.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace kcc {
 
@@ -1725,3 +1727,5 @@ void update(KCC &character, World &world, float delta_time, Vec3f gravity, const
 }
 
 }  // namespace kcc
+
+TUMBLE_NAMESPACE_END

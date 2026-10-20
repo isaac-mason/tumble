@@ -5,8 +5,11 @@
 
 #include <stdint.h>
 
-#include "physics/body/body_id.h"
-#include "util/collections.h"
+#include "tumble/physics/body/body_id.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 struct RigidBody;
@@ -67,3 +70,5 @@ bool is_valid(const Bodies &bodies, body_id::BodyId id);
 rigid_body::RigidBody *get(const Bodies &bodies, body_id::BodyId id);
 
 }  // namespace bodies
+
+TUMBLE_NAMESPACE_END

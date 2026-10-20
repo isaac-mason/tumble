@@ -1,9 +1,11 @@
-#include "physics/shapes/utils/convex_hull_builder_2d.h"
+#include "tumble/physics/shapes/utils/convex_hull_builder_2d.h"
 
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "util/assert.h"
-#include "util/mem.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/mem.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace convex_hull_builder_2d {
 
@@ -298,3 +300,5 @@ bool validate_edges(const ConvexHullBuilder2D &builder) {
 }
 
 }  // namespace convex_hull_builder_2d
+
+TUMBLE_NAMESPACE_END

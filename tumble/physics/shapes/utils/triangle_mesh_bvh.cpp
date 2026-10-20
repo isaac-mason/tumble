@@ -1,11 +1,13 @@
-#include "physics/shapes/utils/triangle_mesh_bvh.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_bvh.h"
 
-#include "math/aabox.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "util/alloc.h"
-#include "util/assert.h"
-#include "util/sort.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/util/alloc.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/sort.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace triangle_mesh_bvh {
 
@@ -518,3 +520,5 @@ TriangleMeshBvhStats stats(const bvh::Node *nodes, uint32_t node_count) {
 }
 
 }  // namespace triangle_mesh_bvh
+
+TUMBLE_NAMESPACE_END

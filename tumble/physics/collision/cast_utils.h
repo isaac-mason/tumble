@@ -5,9 +5,12 @@
 
 #include <stdint.h>
 
-#include "math/aabox.h"
-#include "math/types.h"
-#include "physics/collision/cast_ray_vs_shape.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/collision/cast_ray_vs_shape.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace cast_utils {
 
@@ -46,3 +49,5 @@ float ray_distance_to_box3(const cast_ray::Rayf &ray, const AABox &box);
 bool ray_hits_box3(const cast_ray::Rayf &ray, const AABox &box);
 
 }  // namespace cast_utils
+
+TUMBLE_NAMESPACE_END

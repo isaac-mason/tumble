@@ -1,10 +1,12 @@
-#include "physics/islands.h"
+#include "tumble/physics/islands.h"
 
-#include "physics/body/motion_type.h"
-#include "physics/body/rigid_body_step.h"
-#include "physics/body/sleep.h"
-#include "util/assert.h"
-#include "util/sort.h"
+#include "tumble/physics/body/motion_type.h"
+#include "tumble/physics/body/rigid_body_step.h"
+#include "tumble/physics/body/sleep.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/sort.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace islands {
 
@@ -303,3 +305,5 @@ void finish_island_step(const Island &island, bodies::Bodies &bodies, broadphase
 }
 
 }  // namespace islands
+
+TUMBLE_NAMESPACE_END

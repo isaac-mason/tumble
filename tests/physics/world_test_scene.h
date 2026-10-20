@@ -4,19 +4,19 @@
 // facade will make (create into the broadphase, remove with its constraints and pairs, teleport), and the step as js
 // drives it, the five phases in order.
 
-#include "instance.h"
-#include "math/quatf.h"
-#include "math/vec3f.h"
-#include "physics/body/rigid_body.h"
-#include "physics/broadphase/broadphase.h"
-#include "physics/constraints/constraints.h"
-#include "physics/pairs.h"
-#include "physics/shapes/box.h"
-#include "physics/shapes/capsule.h"
-#include "physics/shapes/dispatch.h"
-#include "physics/shapes/sphere.h"
-#include "physics/update.h"
-#include "physics/world.h"
+#include "tumble/instance.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/broadphase/broadphase.h"
+#include "tumble/physics/constraints/constraints.h"
+#include "tumble/physics/pairs.h"
+#include "tumble/physics/shapes/box.h"
+#include "tumble/physics/shapes/capsule.h"
+#include "tumble/physics/shapes/dispatch.h"
+#include "tumble/physics/shapes/sphere.h"
+#include "tumble/physics/update.h"
+#include "tumble/physics/world.h"
 #include "test.h"
 
 constexpr float WORLD_TEST_DELTA_TIME = 1.0f / 60.0f;

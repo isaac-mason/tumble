@@ -2,10 +2,12 @@
 
 // the math package's triangle3.ts: functions over three points, no Triangle3f record needed to call them.
 
-#include "math/scalar.h"
-#include "math/simd.h"
-#include "math/types.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/simd.h"
+#include "tumble/math/types.h"
 #include "math/storage/vec3f.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace triangle3f {
 
@@ -31,3 +33,5 @@ inline Float3 &centroid(Float3 &out, const Float3 &a, const Float3 &b, const Flo
 }
 
 }  // namespace triangle3f
+
+TUMBLE_NAMESPACE_END

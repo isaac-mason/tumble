@@ -7,10 +7,13 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/body/body_id.h"
-#include "physics/body/sub_shape.h"
-#include "util/collections.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/body_id.h"
+#include "tumble/physics/body/sub_shape.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace world {
 struct World;
@@ -104,3 +107,5 @@ void record_world_contacts(world::World &world, uint32_t first_added, uint32_t f
 void end(world::World &world);
 
 }  // namespace contact_pairs
+
+TUMBLE_NAMESPACE_END

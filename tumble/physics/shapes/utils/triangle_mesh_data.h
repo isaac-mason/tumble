@@ -11,9 +11,12 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "math/vec3f.h"
-#include "physics/shapes/utils/bvh.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/shapes/utils/bvh.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace triangle_mesh_data {
 
@@ -114,3 +117,5 @@ Vec3f calculate_triangle_centroid(const TriangleMeshData &data, uint32_t tri_idx
 void swap_triangles(TriangleMeshData &data, uint32_t index_a, uint32_t index_b);
 
 }  // namespace triangle_mesh_data
+
+TUMBLE_NAMESPACE_END

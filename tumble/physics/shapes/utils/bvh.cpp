@@ -1,4 +1,6 @@
-#include "physics/shapes/utils/bvh.h"
+#include "tumble/physics/shapes/utils/bvh.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace bvh {
 
@@ -51,3 +53,5 @@ bool node_intersects_ray(const Node *nodes, int32_t node, Vec3f origin, Vec3f di
 }
 
 }  // namespace bvh
+
+TUMBLE_NAMESPACE_END

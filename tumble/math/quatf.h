@@ -3,12 +3,15 @@
 // the math package's quat.ts on Quatf, whole, by value. a quaternion's storage is a Float4. each function gives
 // the bits of its scalar reference (test/math/storage/quatf.h); the vec4 arithmetic is vec4f's.
 
-#include "math/mat3f.h"
-#include "math/scalar.h"
-#include "math/simd.h"
-#include "math/types.h"
-#include "math/vec3f.h"
-#include "math/vec4f.h"
+#include "tumble/math/mat3f.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/simd.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/math/vec4f.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace quatf {
 
@@ -342,3 +345,5 @@ inline float len(Quatf a) { return length(a); }
 inline float sqr_len(Quatf a) { return squared_length(a); }
 
 }  // namespace quatf
+
+TUMBLE_NAMESPACE_END

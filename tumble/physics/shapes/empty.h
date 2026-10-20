@@ -3,7 +3,10 @@
 // crashcat's empty-shape.ts: no volume, no collision geometry. an anchor for constraints or a
 // placeholder; it is in the broadphase but its dispatch entries do nothing.
 
-#include "physics/shapes/shapes.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace empty {
 
@@ -29,3 +32,5 @@ void collide_point(collide_point::CollidePointCollector &collector, const collid
 shapes::ShapeDef def();
 
 }  // namespace empty
+
+TUMBLE_NAMESPACE_END

@@ -1,7 +1,9 @@
-#include "physics/collision/cast_utils.h"
+#include "tumble/physics/collision/cast_utils.h"
 
-#include "math/scalar.h"
-#include "math/vec3f.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace cast_utils {
 
@@ -180,3 +182,5 @@ bool ray_hits_box3(const cast_ray::Rayf &ray, const AABox &box) {
 }
 
 }  // namespace cast_utils
+
+TUMBLE_NAMESPACE_END

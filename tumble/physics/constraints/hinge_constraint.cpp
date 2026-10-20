@@ -1,13 +1,15 @@
-#include "physics/constraints/hinge_constraint.h"
+#include "tumble/physics/constraints/hinge_constraint.h"
 
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "math/vec4f.h"
-#include "physics/body/motion_properties.h"
-#include "physics/body/rigid_body.h"
-#include "util/assert.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/math/vec4f.h"
+#include "tumble/physics/body/motion_properties.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace hinge_constraint {
 
@@ -440,3 +442,5 @@ void get_sort_fields(constraints::ConstraintSortFields &out, const HingeConstrai
 }
 
 }  // namespace hinge_constraint
+
+TUMBLE_NAMESPACE_END

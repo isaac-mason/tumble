@@ -1,6 +1,6 @@
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "physics/body/mass_properties.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/physics/body/mass_properties.h"
 #include "test.h"
 #include "test_math.h"
 

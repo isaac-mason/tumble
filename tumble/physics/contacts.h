@@ -6,14 +6,17 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/body/body_id.h"
-#include "physics/body/rigid_body.h"
-#include "physics/body/sub_shape.h"
-#include "physics/events.h"
-#include "physics/manifold/manifold.h"
-#include "physics/pairs.h"
-#include "util/collections.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/body_id.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/body/sub_shape.h"
+#include "tumble/physics/events.h"
+#include "tumble/physics/manifold/manifold.h"
+#include "tumble/physics/pairs.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace contacts {
 
@@ -114,3 +117,5 @@ Contact *find_contact_in_pair(Contacts &contacts, const pairs::Pairs &pairs, int
                               sub_shape::SubShapeId sub_shape_id_b);
 
 }  // namespace contacts
+
+TUMBLE_NAMESPACE_END

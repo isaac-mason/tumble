@@ -6,10 +6,13 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "math/vec3f.h"
-#include "physics/body/sub_shape.h"
-#include "physics/utils/face.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/sub_shape.h"
+#include "tumble/physics/utils/face.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace manifold {
 
@@ -77,3 +80,5 @@ void manifold_between_two_faces(ContactManifold &out, Vec3f contact_point_1, Vec
                                 const face::Face &shape_2_face);
 
 }  // namespace manifold
+
+TUMBLE_NAMESPACE_END

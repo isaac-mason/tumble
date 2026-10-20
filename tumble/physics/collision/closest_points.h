@@ -3,8 +3,11 @@
 // crashcat's closest-points.ts: barycentric coordinates of the point on a segment or triangle
 // closest to the origin.
 
-#include "math/types.h"
-#include "math/vec3f.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace closest_points {
 
@@ -31,3 +34,5 @@ void compute_barycentric_coordinates_3d(BarycentricCoordinatesResult &out, Vec3f
                                         float squared_tolerance);
 
 }  // namespace closest_points
+
+TUMBLE_NAMESPACE_END

@@ -5,7 +5,10 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
+#include "tumble/math/types.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace sphere_triangle {
 
@@ -43,3 +46,5 @@ inline constexpr uint32_t FEATURE_TO_ACTIVE_EDGES[8] = {
 };
 
 }  // namespace sphere_triangle
+
+TUMBLE_NAMESPACE_END

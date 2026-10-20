@@ -6,14 +6,17 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/body/bodies.h"
-#include "physics/body/body_id.h"
-#include "physics/constraints/constraint_part/angle_constraint_part.h"
-#include "physics/constraints/constraint_part/motor_settings.h"
-#include "physics/constraints/constraint_part/point_constraint_part.h"
-#include "physics/constraints/constraint_part/swing_twist_constraint_part.h"
-#include "physics/constraints/constraints.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/body/body_id.h"
+#include "tumble/physics/constraints/constraint_part/angle_constraint_part.h"
+#include "tumble/physics/constraints/constraint_part/motor_settings.h"
+#include "tumble/physics/constraints/constraint_part/point_constraint_part.h"
+#include "tumble/physics/constraints/constraint_part/swing_twist_constraint_part.h"
+#include "tumble/physics/constraints/constraints.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 struct RigidBody;
@@ -136,3 +139,5 @@ float get_total_lambda_swing_z(const SwingTwistConstraint &constraint);
 Vec3f get_total_lambda_motor(const SwingTwistConstraint &constraint);
 
 }  // namespace swing_twist_constraint
+
+TUMBLE_NAMESPACE_END

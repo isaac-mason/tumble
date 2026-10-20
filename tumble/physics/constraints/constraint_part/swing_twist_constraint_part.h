@@ -4,8 +4,11 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/constraints/constraint_part/angle_constraint_part.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/constraints/constraint_part/angle_constraint_part.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 struct RigidBody;
@@ -148,3 +151,5 @@ float get_total_swing_z_lambda(const SwingTwistConstraintPart &part);
 float get_total_twist_lambda(const SwingTwistConstraintPart &part);
 
 }  // namespace swing_twist_constraint_part
+
+TUMBLE_NAMESPACE_END

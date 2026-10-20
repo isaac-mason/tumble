@@ -1,15 +1,17 @@
-#include "physics/constraints/contact_constraints.h"
+#include "tumble/physics/constraints/contact_constraints.h"
 
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/body/motion_properties.h"
-#include "physics/body/motion_type.h"
-#include "physics/constraints/combine_material.h"
-#include "physics/shapes/shapes.h"
-#include "util/assert.h"
-#include "util/sort.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/motion_properties.h"
+#include "tumble/physics/body/motion_type.h"
+#include "tumble/physics/constraints/combine_material.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/sort.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace contact_constraints {
 
@@ -1120,3 +1122,5 @@ void sort_contact_indices(const ContactConstraints &contact_constraints, const b
 }
 
 }  // namespace contact_constraints
+
+TUMBLE_NAMESPACE_END

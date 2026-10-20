@@ -1,10 +1,12 @@
-#include "physics/shapes/utils/convex_hull_builder.h"
+#include "tumble/physics/shapes/utils/convex_hull_builder.h"
 
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/shapes/utils/convex_hull_builder_2d.h"
-#include "util/assert.h"
-#include "util/mem.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/shapes/utils/convex_hull_builder_2d.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/mem.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace convex_hull_builder {
 
@@ -1279,3 +1281,5 @@ MaxError &determine_max_error(MaxError &out, const ConvexHullBuilder &builder) {
 }
 
 }  // namespace convex_hull_builder
+
+TUMBLE_NAMESPACE_END

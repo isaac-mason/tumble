@@ -3,9 +3,12 @@
 // the math functions bound to js, storage in and out: each loads, runs the register function and stores. included by
 // the bindings alone, so nothing else sees storage-typed overloads.
 
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/vec3f.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace vec3f {
 
@@ -26,3 +29,5 @@ inline Float4 &decompose(Float4 &out_rotation, Float3 &out_translation, Float3 &
 }
 
 }  // namespace mat4f
+
+TUMBLE_NAMESPACE_END

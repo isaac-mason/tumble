@@ -4,12 +4,15 @@
 // or a point goes to the shape's own def; a pair of shapes goes to the pair's entry in the collide or
 // cast table, and a pair with no entry is no collision. the types are the collision headers'.
 
-#include "math/types.h"
-#include "physics/body/sub_shape.h"
-#include "physics/collision/cast_ray_vs_shape.h"
-#include "physics/collision/cast_shape_vs_shape.h"
-#include "physics/collision/collide_point_vs_shape.h"
-#include "physics/collision/collide_shape_vs_shape.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/sub_shape.h"
+#include "tumble/physics/collision/cast_ray_vs_shape.h"
+#include "tumble/physics/collision/cast_shape_vs_shape.h"
+#include "tumble/physics/collision/collide_point_vs_shape.h"
+#include "tumble/physics/collision/collide_shape_vs_shape.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace shapes {
 struct Shape;
@@ -46,3 +49,5 @@ void collide_point_vs_shape(collide_point::CollidePointCollector &collector, con
                             const Transformf &transform_b);
 
 }  // namespace narrowphase
+
+TUMBLE_NAMESPACE_END

@@ -1,6 +1,6 @@
-#include "instance.h"
+#include "tumble/instance.h"
 #include "test.h"
-#include "util/collections.h"
+#include "tumble/util/collections.h"
 
 struct Key3 {
     int32_t x, y, z;

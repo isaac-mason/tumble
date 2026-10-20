@@ -9,7 +9,10 @@
 
 #include <stdint.h>
 
-#include "math/scalar.h"
+#include "tumble/math/scalar.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace collector {
 
@@ -33,3 +36,5 @@ constexpr float SHOULD_EARLY_OUT_FRACTION = 0.0f;
 constexpr float UNBOUNDED = scalar::FLOAT_MAX;
 
 }  // namespace collector
+
+TUMBLE_NAMESPACE_END

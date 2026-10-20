@@ -1,12 +1,14 @@
-#include "physics/constraints/constraint_part/angle_constraint_part.h"
+#include "tumble/physics/constraints/constraint_part/angle_constraint_part.h"
 
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/body/motion_properties.h"
-#include "physics/body/motion_type.h"
-#include "physics/body/rigid_body.h"
-#include "physics/body/rigid_body_step.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/motion_properties.h"
+#include "tumble/physics/body/motion_type.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/body/rigid_body_step.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace angle_constraint_part {
 
@@ -167,3 +169,5 @@ float get_total_lambda(const AngleConstraintPart &part) { return part.total_lamb
 void set_total_lambda(AngleConstraintPart &part, float lambda) { part.total_lambda = lambda; }
 
 }  // namespace angle_constraint_part
+
+TUMBLE_NAMESPACE_END

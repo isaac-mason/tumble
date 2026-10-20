@@ -1,6 +1,9 @@
 #pragma once
 
 #include <stdint.h>
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 // seeded generators for test data, so the random cases are the same every run
 
@@ -31,3 +34,5 @@ inline float unit24(uint32_t bits) { return (float)(bits >> 8) * (1.0f / 1677721
 inline float mulberry32_unit(uint32_t &state) { return unit24(mulberry32(state)); }
 inline float xorshift32_unit(uint32_t &state) { return unit24(xorshift32(state)); }
 inline float lcg32_unit(uint32_t &state) { return unit24(lcg32(state)); }
+
+TUMBLE_NAMESPACE_END

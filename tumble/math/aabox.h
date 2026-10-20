@@ -3,10 +3,13 @@
 // the register box's functions (AABox in types.h). load and store cross to and from a record's Box3f; each
 // function gives the bits of its scalar reference (test/math/storage/box3f.h). an empty box is +inf min, -inf max.
 
-#include "math/mat4f.h"
-#include "math/simd.h"
-#include "math/types.h"
-#include "math/vec3f.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/simd.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace aabox {
 
@@ -92,3 +95,5 @@ inline bool intersects(const AABox &a, const AABox &b) {
 }
 
 }  // namespace aabox
+
+TUMBLE_NAMESPACE_END

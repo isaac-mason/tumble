@@ -1,8 +1,10 @@
-#include "physics/body/sleep.h"
+#include "tumble/physics/body/sleep.h"
 
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/body/rigid_body.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/rigid_body.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace sleep {
 
@@ -188,3 +190,5 @@ void wake(bodies::Bodies &bodies, rigid_body::RigidBody *body) {
 }
 
 }  // namespace sleep
+
+TUMBLE_NAMESPACE_END

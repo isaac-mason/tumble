@@ -1,4 +1,6 @@
-#include "physics/filter.h"
+#include "tumble/physics/filter.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace filter {
 
@@ -100,3 +102,5 @@ void copy(Filter &out, const Filter &source) {
 }
 
 }  // namespace filter
+
+TUMBLE_NAMESPACE_END

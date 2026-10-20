@@ -1,7 +1,7 @@
-#include "math/quatf.h"
-#include "math/vec3f.h"
-#include "physics/body/rigid_body.h"
-#include "physics/body/sleep.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/body/sleep.h"
 #include "test.h"
 #include "test_math.h"
 

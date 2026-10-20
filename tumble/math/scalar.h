@@ -4,6 +4,9 @@
 // builtins, and musl's single-precision routines (src/math/musl) for the rest.
 
 #include <stdint.h>
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 extern "C" {
 float sinf(float x);
@@ -133,3 +136,5 @@ inline double min64(double a, double b) { return __builtin_wasm_min_f64(a, b); }
 inline double max64(double a, double b) { return __builtin_wasm_max_f64(a, b); }
 
 }  // namespace scalar
+
+TUMBLE_NAMESPACE_END

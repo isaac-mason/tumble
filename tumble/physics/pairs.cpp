@@ -1,11 +1,13 @@
-#include "physics/pairs.h"
+#include "tumble/physics/pairs.h"
 
-#include "math/aabox.h"
-#include "math/quatf.h"
-#include "math/vec3f.h"
-#include "physics/body/sleep.h"
-#include "physics/contacts.h"
-#include "physics/filter.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/sleep.h"
+#include "tumble/physics/contacts.h"
+#include "tumble/physics/filter.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace pairs {
 
@@ -409,3 +411,5 @@ void find_woken_body_pairs(Pairs &pairs, broadphase::Broadphase &broadphase, con
 }
 
 }  // namespace pairs
+
+TUMBLE_NAMESPACE_END

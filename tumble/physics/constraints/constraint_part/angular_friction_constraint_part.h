@@ -3,11 +3,14 @@
 // the twist friction of a contact manifold about its normal (jolt's AngularFrictionConstraintPart), solved over the
 // angular velocities the caller loads once per constraint, templated on the bodies' motion types.
 
-#include "math/mat4f.h"
-#include "math/scalar.h"
-#include "math/types.h"
-#include "math/vec3f.h"
-#include "physics/body/motion_type.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/motion_type.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace angular_friction_constraint_part {
 
@@ -105,3 +108,5 @@ inline bool solve_velocity_constraint(AngularFrictionConstraintPart &part, Vec3f
 }
 
 }  // namespace angular_friction_constraint_part
+
+TUMBLE_NAMESPACE_END

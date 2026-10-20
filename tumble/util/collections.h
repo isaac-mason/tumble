@@ -8,9 +8,12 @@
 
 #include <stdint.h>
 
-#include "util/alloc.h"
-#include "util/assert.h"
-#include "util/mem.h"
+#include "tumble/tumble.h"
+#include "tumble/util/alloc.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/mem.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace collections {
 
@@ -176,3 +179,5 @@ private:
 };
 
 }  // namespace collections
+
+TUMBLE_NAMESPACE_END

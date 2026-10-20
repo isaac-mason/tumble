@@ -1,8 +1,8 @@
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/vec3f.h"
-#include "physics/body/motion_properties.h"
-#include "physics/constraints/constraint_part/angular_friction_constraint_part.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/motion_properties.h"
+#include "tumble/physics/constraints/constraint_part/angular_friction_constraint_part.h"
 #include "test.h"
 #include "test_math.h"
 

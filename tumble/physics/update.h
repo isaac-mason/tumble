@@ -4,7 +4,10 @@
 // calling js is free; here js calls the phases in order every tick and, between them, reads the
 // world's event buffers and writes its answer buffers (events.h). update.cpp.
 
-#include "physics/world.h"
+#include "tumble/physics/world.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace update {
 
@@ -40,3 +43,5 @@ void solve(world::World &world);
 void step_end(world::World &world);
 
 }  // namespace update
+
+TUMBLE_NAMESPACE_END

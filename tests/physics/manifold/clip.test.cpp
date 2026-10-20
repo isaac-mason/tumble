@@ -1,6 +1,6 @@
-#include "physics/manifold/clip.h"
+#include "tumble/physics/manifold/clip.h"
 
-#include "math/scalar.h"
+#include "tumble/math/scalar.h"
 #include "test.h"
 #include "test_math.h"
 

@@ -4,8 +4,11 @@
 // constraint type with the same fields: a constraint is a plane with a velocity, and each has plane_normal,
 // plane_distance, linear_velocity, projected_velocity, toi and contact->motion_type.
 
-#include "math/scalar.h"
-#include "math/vec3f.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace character_constraints {
 
@@ -67,3 +70,5 @@ inline Vec3f slide_along_edge(Vec3f velocity, const Constraint &constraint1, con
 }
 
 }  // namespace character_constraints
+
+TUMBLE_NAMESPACE_END

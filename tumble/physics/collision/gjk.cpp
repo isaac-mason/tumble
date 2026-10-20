@@ -1,10 +1,12 @@
-#include "physics/collision/gjk.h"
+#include "tumble/physics/collision/gjk.h"
 
-#include "math/scalar.h"
-#include "math/simd.h"
-#include "math/vec3f.h"
-#include "physics/collision/closest_points.h"
-#include "util/assert.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/simd.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/collision/closest_points.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace gjk {
 
@@ -858,3 +860,5 @@ void closest_points(GjkClosestPoints &out, support::Support &support_a, support:
 }
 
 }  // namespace gjk
+
+TUMBLE_NAMESPACE_END

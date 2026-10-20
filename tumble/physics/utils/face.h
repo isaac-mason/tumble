@@ -4,9 +4,12 @@
 
 #include <stdint.h>
 
-#include "math/mat4f.h"
-#include "math/types.h"
-#include "math/vec3f.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace face {
 
@@ -46,3 +49,5 @@ inline void transform_with_mat4_scale(Face &face, const Mat4f &matrix, Vec3f sca
 inline bool is_scale_inside_out(Vec3f scale) { return vec3f::x(scale) * vec3f::y(scale) * vec3f::z(scale) < 0.0f; }
 
 }  // namespace face
+
+TUMBLE_NAMESPACE_END

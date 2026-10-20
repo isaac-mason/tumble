@@ -1,19 +1,21 @@
-#include "physics/update.h"
+#include "tumble/physics/update.h"
 
-#include "math/aabox.h"
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/body/motion_properties.h"
-#include "physics/body/rigid_body_step.h"
-#include "physics/body/sleep.h"
-#include "physics/collision/cast_utils.h"
-#include "physics/collision/narrowphase.h"
-#include "physics/constraints/constraint_part/contact_constraint_part.h"
-#include "physics/manifold/manifold.h"
-#include "physics/shapes/shapes.h"
-#include "util/sort.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/motion_properties.h"
+#include "tumble/physics/body/rigid_body_step.h"
+#include "tumble/physics/body/sleep.h"
+#include "tumble/physics/collision/cast_utils.h"
+#include "tumble/physics/collision/narrowphase.h"
+#include "tumble/physics/constraints/constraint_part/contact_constraint_part.h"
+#include "tumble/physics/manifold/manifold.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/util/sort.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace update {
 
@@ -1059,3 +1061,5 @@ void step_end(World &world) {
 }
 
 }  // namespace update
+
+TUMBLE_NAMESPACE_END

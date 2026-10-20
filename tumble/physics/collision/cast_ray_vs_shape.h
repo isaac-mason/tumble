@@ -5,13 +5,16 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "math/vec3f.h"
-#include "physics/body/body_id.h"
-#include "physics/body/sub_shape.h"
-#include "physics/collision/collector.h"
-#include "util/collections.h"
-#include "util/sort.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/body_id.h"
+#include "tumble/physics/body/sub_shape.h"
+#include "tumble/physics/collision/collector.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+#include "tumble/util/sort.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace cast_ray {
 
@@ -142,3 +145,5 @@ inline void sort(CastRayCollector &c) {
 }
 
 }  // namespace cast_ray
+
+TUMBLE_NAMESPACE_END

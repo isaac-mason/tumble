@@ -6,11 +6,14 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/collision/epa_convex_hull_builder.h"
-#include "physics/collision/gjk.h"
-#include "physics/collision/simplex.h"
-#include "physics/collision/support.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/collision/epa_convex_hull_builder.h"
+#include "tumble/physics/collision/gjk.h"
+#include "tumble/physics/collision/simplex.h"
+#include "tumble/physics/collision/support.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace penetration {
 
@@ -79,3 +82,5 @@ void cast_shape(gjk::GjkCastShapeResult &out, const Mat4f &transform_a_to_b, sup
                 float convex_radius_a, float convex_radius_b, float max_lambda, bool return_deepest_point);
 
 }  // namespace penetration
+
+TUMBLE_NAMESPACE_END

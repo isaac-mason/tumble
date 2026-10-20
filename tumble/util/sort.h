@@ -6,8 +6,11 @@
 
 #include <stdint.h>
 
-#include "util/alloc.h"
-#include "util/mem.h"
+#include "tumble/tumble.h"
+#include "tumble/util/alloc.h"
+#include "tumble/util/mem.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace sort {
 
@@ -121,3 +124,5 @@ inline uint64_t *radix_sort(uint64_t *keys, uint64_t *scratch, uint32_t count) {
 }
 
 }  // namespace sort
+
+TUMBLE_NAMESPACE_END

@@ -1,19 +1,21 @@
-#include "physics/constraints/constraints.h"
+#include "tumble/physics/constraints/constraints.h"
 
-#include "instance.h"
-#include "physics/body/motion_type.h"
-#include "physics/body/rigid_body.h"
-#include "physics/constraints/cone_constraint.h"
-#include "physics/constraints/distance_constraint.h"
-#include "physics/constraints/fixed_constraint.h"
-#include "physics/constraints/hinge_constraint.h"
-#include "physics/constraints/point_constraint.h"
-#include "physics/constraints/six_dof_constraint.h"
-#include "physics/constraints/slider_constraint.h"
-#include "physics/constraints/swing_twist_constraint.h"
-#include "util/assert.h"
-#include "util/mem.h"
-#include "util/sort.h"
+#include "tumble/instance.h"
+#include "tumble/physics/body/motion_type.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/constraints/cone_constraint.h"
+#include "tumble/physics/constraints/distance_constraint.h"
+#include "tumble/physics/constraints/fixed_constraint.h"
+#include "tumble/physics/constraints/hinge_constraint.h"
+#include "tumble/physics/constraints/point_constraint.h"
+#include "tumble/physics/constraints/six_dof_constraint.h"
+#include "tumble/physics/constraints/slider_constraint.h"
+#include "tumble/physics/constraints/swing_twist_constraint.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/mem.h"
+#include "tumble/util/sort.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace constraints {
 
@@ -503,3 +505,5 @@ uint32_t allocate_index(ConstraintPool &pool) {
 }
 
 }  // namespace constraints
+
+TUMBLE_NAMESPACE_END

@@ -6,9 +6,12 @@
 
 #include <stdint.h>
 
-#include "math/mat4f.h"
-#include "math/types.h"
-#include "math/vec3f.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 struct RigidBody;
@@ -78,3 +81,5 @@ bool solve_position_constraint(PointConstraintPart &part, rigid_body::RigidBody 
                                float baumgarte);
 
 }  // namespace point_constraint_part
+
+TUMBLE_NAMESPACE_END

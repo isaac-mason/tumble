@@ -3,6 +3,9 @@
 // byte-level helpers over the one linear memory. the builtins lower to memory.copy / memory.fill.
 
 #include <stdint.h>
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace util {
 
@@ -38,3 +41,5 @@ inline void copy(void *dst, const void *src, uint32_t bytes) { __builtin_memcpy(
 inline uint32_t align_up(uint32_t value, uint32_t alignment) { return (value + alignment - 1) & ~(alignment - 1); }
 
 }  // namespace util
+
+TUMBLE_NAMESPACE_END

@@ -3,14 +3,14 @@
 // the constraint tests' world without a world: bodies, layers and constraints, and a step that runs the
 // solver phases by hand (gravity, setup, warm start, velocity iterations, integration, position iterations).
 
-#include "instance.h"
-#include "math/quatf.h"
-#include "math/vec3f.h"
-#include "physics/body/rigid_body.h"
-#include "physics/body/rigid_body_step.h"
-#include "physics/constraints/constraints.h"
-#include "physics/shapes/dispatch.h"
-#include "physics/shapes/sphere.h"
+#include "tumble/instance.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/body/rigid_body_step.h"
+#include "tumble/physics/constraints/constraints.h"
+#include "tumble/physics/shapes/dispatch.h"
+#include "tumble/physics/shapes/sphere.h"
 #include "test.h"
 #include "test_math.h"
 

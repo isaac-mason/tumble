@@ -1,10 +1,10 @@
-#include "physics/shapes/sphere.h"
+#include "tumble/physics/shapes/sphere.h"
 
-#include "instance.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/shapes/convex.h"
-#include "physics/shapes/dispatch.h"
+#include "tumble/instance.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/shapes/convex.h"
+#include "tumble/physics/shapes/dispatch.h"
 #include "test.h"
 #include "test_math.h"
 

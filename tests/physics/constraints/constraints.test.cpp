@@ -1,11 +1,11 @@
-#include "instance.h"
-#include "math/scalar.h"
-#include "physics/constraints/cone_constraint.h"
+#include "tumble/instance.h"
+#include "tumble/math/scalar.h"
+#include "tumble/physics/constraints/cone_constraint.h"
 #include "physics/constraints/constraint_test_scene.h"
-#include "physics/constraints/constraints.h"
-#include "physics/constraints/distance_constraint.h"
-#include "physics/constraints/fixed_constraint.h"
-#include "physics/constraints/point_constraint.h"
+#include "tumble/physics/constraints/constraints.h"
+#include "tumble/physics/constraints/distance_constraint.h"
+#include "tumble/physics/constraints/fixed_constraint.h"
+#include "tumble/physics/constraints/point_constraint.h"
 #include "test.h"
 
 using constraint_id::ConstraintId;

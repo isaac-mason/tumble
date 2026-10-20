@@ -1,4 +1,4 @@
-#include "math/simd.h"
+#include "tumble/math/simd.h"
 #include "test.h"
 
 void test_simd(TestCtx &ctx) {

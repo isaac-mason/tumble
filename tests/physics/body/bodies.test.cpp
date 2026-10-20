@@ -1,9 +1,9 @@
-#include "physics/body/bodies.h"
-#include "physics/body/rigid_body.h"
-#include "util/object.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/util/object.h"
 #include "test.h"
 #include "test_math.h"
-#include "instance.h"
+#include "tumble/instance.h"
 
 void test_bodies_slots(TestCtx &ctx) {
     CHECK(ctx, util::init(test_heap_begin()));

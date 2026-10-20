@@ -7,7 +7,10 @@
 
 #include <stdint.h>
 
-#include "physics/shapes/shapes.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace offset_center_of_mass {
 
@@ -65,3 +68,5 @@ void cast_shape_vs_offset_center_of_mass(cast_shape::CastShapeCollector &collect
 shapes::ShapeDef def();
 
 }  // namespace offset_center_of_mass
+
+TUMBLE_NAMESPACE_END

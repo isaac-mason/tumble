@@ -5,14 +5,17 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "math/vec3f.h"
-#include "physics/body/body_id.h"
-#include "physics/body/sub_shape.h"
-#include "physics/collision/collector.h"
-#include "physics/utils/face.h"
-#include "util/collections.h"
-#include "util/sort.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/body_id.h"
+#include "tumble/physics/body/sub_shape.h"
+#include "tumble/physics/collision/collector.h"
+#include "tumble/physics/utils/face.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+#include "tumble/util/sort.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace shapes {
 struct Shape;
@@ -235,3 +238,5 @@ void reversed_cast_shape_vs_shape(CastShapeCollector &collector, const CastShape
 }
 
 }  // namespace cast_shape
+
+TUMBLE_NAMESPACE_END

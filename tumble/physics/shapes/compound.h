@@ -6,8 +6,11 @@
 
 #include <stdint.h>
 
-#include "physics/shapes/shapes.h"
-#include "util/collections.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace compound {
 
@@ -81,3 +84,5 @@ void cast_shape_vs_compound(cast_shape::CastShapeCollector &collector, const cas
 shapes::ShapeDef def();
 
 }  // namespace compound
+
+TUMBLE_NAMESPACE_END

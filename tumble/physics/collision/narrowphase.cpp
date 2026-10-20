@@ -1,8 +1,10 @@
-#include "physics/collision/narrowphase.h"
+#include "tumble/physics/collision/narrowphase.h"
 
-#include "physics/collision/internal_edge_removing_collector.h"
-#include "physics/shapes/shapes.h"
-#include "util/assert.h"
+#include "tumble/physics/collision/internal_edge_removing_collector.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace narrowphase {
 
@@ -59,3 +61,5 @@ void collide_point_vs_shape(collide_point::CollidePointCollector &collector, con
 }
 
 }  // namespace narrowphase
+
+TUMBLE_NAMESPACE_END

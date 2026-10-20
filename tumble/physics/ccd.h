@@ -5,13 +5,16 @@
 
 #include <stdint.h>
 
-#include "math/aabox.h"
-#include "math/types.h"
-#include "physics/body/bodies.h"
-#include "physics/body/rigid_body.h"
-#include "physics/body/sub_shape.h"
-#include "physics/constraints/contact_settings.h"
-#include "util/collections.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/body/sub_shape.h"
+#include "tumble/physics/constraints/contact_settings.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace ccd {
 
@@ -57,3 +60,5 @@ void clear(CCD &ccd, bodies::Bodies &bodies);
 AABox compute_swept_aabb(const rigid_body::RigidBody &body, Vec3f displacement);
 
 }  // namespace ccd
+
+TUMBLE_NAMESPACE_END

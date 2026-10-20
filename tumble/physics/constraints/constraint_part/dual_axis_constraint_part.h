@@ -4,10 +4,13 @@
 
 #include <stdint.h>
 
-#include "math/mat2f.h"
-#include "math/types.h"
-#include "math/vec3f.h"
-#include "math/vec2f.h"
+#include "tumble/math/mat2f.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/math/vec2f.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 struct RigidBody;
@@ -100,3 +103,5 @@ bool solve_position_constraint(DualAxisConstraintPart &part, rigid_body::RigidBo
                                Vec3f u, Vec3f n1, Vec3f n2, float baumgarte);
 
 }  // namespace dual_axis_constraint_part
+
+TUMBLE_NAMESPACE_END

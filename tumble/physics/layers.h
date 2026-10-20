@@ -5,7 +5,10 @@
 
 #include <stdint.h>
 
-#include "util/collections.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace layers {
 
@@ -40,3 +43,5 @@ bool broadphase_layer_collides_with_broadphase_layer(const Layers &layers, uint3
 bool object_layer_collides_with_object_layer(const Layers &layers, uint32_t object_layer_a, uint32_t object_layer_b);
 
 }  // namespace layers
+
+TUMBLE_NAMESPACE_END

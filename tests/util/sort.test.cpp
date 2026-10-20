@@ -1,8 +1,8 @@
-#include "instance.h"
+#include "tumble/instance.h"
 #include "test.h"
 #include "test_rng.h"
-#include "util/alloc.h"
-#include "util/sort.h"
+#include "tumble/util/alloc.h"
+#include "tumble/util/sort.h"
 
 namespace {
 

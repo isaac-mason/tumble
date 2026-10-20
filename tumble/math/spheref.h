@@ -4,8 +4,11 @@
 
 #include <stdint.h>
 
-#include "math/scalar.h"
-#include "math/types.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/types.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace spheref {
 
@@ -57,3 +60,5 @@ inline bool contains_point(const Spheref &sphere, const Float3 &point) {
 }
 
 }  // namespace spheref
+
+TUMBLE_NAMESPACE_END

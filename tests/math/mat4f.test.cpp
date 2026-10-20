@@ -1,4 +1,4 @@
-#include "math/eulerf.h"
+#include "tumble/math/eulerf.h"
 #include "math/storage/mat4f.h"
 #include "math/storage/quatf.h"
 #include "math/storage/vec3f.h"

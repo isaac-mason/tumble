@@ -1,7 +1,9 @@
-#include "physics/ccd.h"
+#include "tumble/physics/ccd.h"
 
-#include "math/aabox.h"
-#include "math/vec3f.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/vec3f.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace ccd {
 
@@ -38,3 +40,5 @@ AABox compute_swept_aabb(const rigid_body::RigidBody &body, Vec3f displacement) 
 }
 
 }  // namespace ccd
+
+TUMBLE_NAMESPACE_END

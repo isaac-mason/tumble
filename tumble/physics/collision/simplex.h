@@ -5,7 +5,10 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
+#include "tumble/math/types.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace simplex {
 
@@ -31,3 +34,5 @@ inline Simplex &copy(Simplex &out, const Simplex &input) {
 }
 
 }  // namespace simplex
+
+TUMBLE_NAMESPACE_END

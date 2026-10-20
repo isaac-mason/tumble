@@ -1,10 +1,12 @@
-#include "physics/collision/support.h"
+#include "tumble/physics/collision/support.h"
 
-#include "math/mat4f.h"
-#include "math/scalar.h"
-#include "math/simd.h"
-#include "math/vec3f.h"
-#include "util/mem.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/simd.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/util/mem.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace support {
 
@@ -379,3 +381,5 @@ void compute_scaled_shrunk_hull_points(float *dst, uint32_t num_points, const fl
 }
 
 }  // namespace support
+
+TUMBLE_NAMESPACE_END

@@ -1,13 +1,15 @@
-#include "physics/constraints/slider_constraint.h"
+#include "tumble/physics/constraints/slider_constraint.h"
 
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec2f.h"
-#include "math/vec3f.h"
-#include "physics/body/motion_properties.h"
-#include "physics/body/rigid_body.h"
-#include "util/assert.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec2f.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/motion_properties.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace slider_constraint {
 
@@ -533,3 +535,5 @@ float get_total_lambda_motor(const SliderConstraint &constraint) {
 }
 
 }  // namespace slider_constraint
+
+TUMBLE_NAMESPACE_END

@@ -1,9 +1,11 @@
-#include "physics/collision/epa_convex_hull_builder.h"
+#include "tumble/physics/collision/epa_convex_hull_builder.h"
 
-#include "math/scalar.h"
-#include "math/simd.h"
-#include "math/vec3f.h"
-#include "util/assert.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/simd.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace epa_convex_hull_builder {
 
@@ -480,3 +482,5 @@ bool validate_triangles(const EpaConvexHullBuilderState &state) {
 }
 
 }  // namespace epa_convex_hull_builder
+
+TUMBLE_NAMESPACE_END

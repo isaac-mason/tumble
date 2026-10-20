@@ -10,6 +10,9 @@
 // js re-derives its views after any call that can allocate.
 
 #include <stdint.h>
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace util {
 
@@ -46,3 +49,5 @@ inline T *alloc(uint32_t count = 1) {
 }
 
 }  // namespace util
+
+TUMBLE_NAMESPACE_END

@@ -44,7 +44,7 @@ COMMON="--target=wasm32 $OPT $FEATURES -nostdlib -nostdlibinc -ffreestanding -fv
 # ours: every warning is an error.
 # -Wglobal-constructors: a static needing a constructor would put a constructor list in the
 # module, and with no entry point the linker then runs that list on every export call.
-CXXFLAGS="$COMMON -std=c++23 -Wall -Wextra -Werror -Wglobal-constructors -I$SRC"
+CXXFLAGS="$COMMON -std=c++23 -Wall -Wextra -Werror -Wglobal-constructors -I$ROOT"
 # musl's: compiled quiet, as C.
 CFLAGS="$COMMON -std=c11 -w -I$SRC/math/musl"
 

@@ -1,13 +1,13 @@
-#include "physics/shapes/utils/triangle_mesh_bvh.h"
-#include "math/aabox.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_bvh.h"
+#include "tumble/math/aabox.h"
 
-#include "instance.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
+#include "tumble/instance.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
 #include "test.h"
 #include "test_math.h"
-#include "util/alloc.h"
-#include "util/collections.h"
+#include "tumble/util/alloc.h"
+#include "tumble/util/collections.h"
 
 using triangle_mesh_data::TriangleMeshData;
 using triangle_mesh_data::Triangle;

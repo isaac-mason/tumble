@@ -3,6 +3,9 @@
 // crashcat's spring-settings.ts: how a soft constraint's spring is specified.
 
 #include <stdint.h>
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace spring_settings {
 
@@ -32,3 +35,5 @@ inline bool has_stiffness_or_damping(const SpringSettings &settings) {
 }
 
 }  // namespace spring_settings
+
+TUMBLE_NAMESPACE_END

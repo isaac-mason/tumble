@@ -4,8 +4,11 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/body/mass_properties.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/mass_properties.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace motion_properties {
 
@@ -184,3 +187,5 @@ Vec3f multiply_world_space_inverse_inertia_by_vector(const MotionProperties &mot
 void apply_gyroscopic_force(MotionProperties &motion_properties, Quatf body_quaternion, float delta_time);
 
 }  // namespace motion_properties
+
+TUMBLE_NAMESPACE_END

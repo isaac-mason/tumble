@@ -1,13 +1,15 @@
-#include "physics/constraints/constraint_part/hinge_rotation_constraint_part.h"
+#include "tumble/physics/constraints/constraint_part/hinge_rotation_constraint_part.h"
 
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/body/motion_properties.h"
-#include "physics/body/motion_type.h"
-#include "physics/body/rigid_body.h"
-#include "physics/body/rigid_body_step.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/motion_properties.h"
+#include "tumble/physics/body/motion_type.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/body/rigid_body_step.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace hinge_rotation_constraint_part {
 
@@ -156,3 +158,5 @@ bool solve_position_constraint(HingeRotationConstraintPart &part, rigid_body::Ri
 }
 
 }  // namespace hinge_rotation_constraint_part
+
+TUMBLE_NAMESPACE_END

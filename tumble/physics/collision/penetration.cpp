@@ -1,9 +1,11 @@
-#include "physics/collision/penetration.h"
+#include "tumble/physics/collision/penetration.h"
 
-#include "math/scalar.h"
-#include "math/simd.h"
-#include "math/vec3f.h"
-#include "util/assert.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/simd.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace penetration {
 
@@ -417,3 +419,5 @@ void cast_shape(gjk::GjkCastShapeResult &out, const Mat4f &transform_a_to_b, sup
 }
 
 }  // namespace penetration
+
+TUMBLE_NAMESPACE_END

@@ -7,10 +7,13 @@
 // out and keep the scalar expressions. `invert`, `invert3x3`, `rotate` and `from_rotation` return false where the js
 // returns null, leaving out untouched.
 
-#include "math/scalar.h"
-#include "math/simd.h"
-#include "math/types.h"
-#include "math/vec3f.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/simd.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace mat4f {
 
@@ -501,3 +504,5 @@ inline bool equals(const Mat4f &a, const Mat4f &b) {
 }
 
 }  // namespace mat4f
+
+TUMBLE_NAMESPACE_END

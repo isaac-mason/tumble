@@ -1,7 +1,7 @@
 #include "math/storage/box3f.h"
 #include "math/storage/plane3f.h"
 #include "math/storage/quatf.h"
-#include "math/spheref.h"
+#include "tumble/math/spheref.h"
 #include "math/storage/triangle3f.h"
 #include "test.h"
 #include "test_math.h"

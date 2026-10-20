@@ -10,7 +10,10 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
+#include "tumble/math/types.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace active_edges {
 
@@ -39,3 +42,5 @@ Vec3f fix_normal(Vec3f v0, Vec3f v1, Vec3f v2, Vec3f triangle_normal, uint32_t a
                   Vec3f point, Vec3f normal, Vec3f movement_direction);
 
 }  // namespace active_edges
+
+TUMBLE_NAMESPACE_END

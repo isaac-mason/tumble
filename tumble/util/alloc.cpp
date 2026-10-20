@@ -1,9 +1,11 @@
-#include "util/alloc.h"
+#include "tumble/util/alloc.h"
 
-#include "instance.h"
-#include "util/assert.h"
-#include "util/mem.h"
-#include "util/offset_allocator.h"
+#include "tumble/instance.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/mem.h"
+#include "tumble/util/offset_allocator.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace util {
 
@@ -191,3 +193,5 @@ void heap_stats(HeapStats *out) {
 }
 
 }  // namespace util
+
+TUMBLE_NAMESPACE_END

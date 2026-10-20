@@ -1,14 +1,16 @@
-#include "physics/shapes/static_compound.h"
+#include "tumble/physics/shapes/static_compound.h"
 
-#include "math/aabox.h"
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/collision/cast_utils.h"
-#include "util/alloc.h"
-#include "util/assert.h"
-#include "util/mem.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/collision/cast_utils.h"
+#include "tumble/util/alloc.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/mem.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace static_compound {
 
@@ -509,3 +511,5 @@ shapes::ShapeDef def() {
 }
 
 }  // namespace static_compound
+
+TUMBLE_NAMESPACE_END

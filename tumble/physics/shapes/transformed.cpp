@@ -1,10 +1,12 @@
-#include "physics/shapes/transformed.h"
+#include "tumble/physics/shapes/transformed.h"
 
-#include "math/aabox.h"
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/vec3f.h"
-#include "util/assert.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace transformed {
 
@@ -246,3 +248,5 @@ shapes::ShapeDef def() {
 }
 
 }  // namespace transformed
+
+TUMBLE_NAMESPACE_END

@@ -1,6 +1,8 @@
-#include "physics/manifold/clip.h"
+#include "tumble/physics/manifold/clip.h"
 
-#include "math/vec3f.h"
+#include "tumble/math/vec3f.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace clip {
 
@@ -147,3 +149,5 @@ void clip_poly_vs_edge(face::Face &out, const face::Face &polygon, Vec3f edge_ve
 }
 
 }  // namespace clip
+
+TUMBLE_NAMESPACE_END

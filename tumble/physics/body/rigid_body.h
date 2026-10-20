@@ -6,21 +6,24 @@
 
 #include <stdint.h>
 
-#include "math/scalar.h"
-#include "math/types.h"
-#include "physics/body/bodies.h"
-#include "physics/body/body_id.h"
-#include "physics/body/mass_properties.h"
-#include "physics/body/motion_properties.h"
-#include "physics/body/motion_type.h"
-#include "physics/body/sleep.h"
-#include "physics/body/sub_shape.h"
-#include "physics/constraints/combine_material.h"
-#include "physics/constraints/constraint_id.h"
-#include "physics/filter.h"
-#include "physics/layers.h"
-#include "physics/shapes/shapes.h"
-#include "util/collections.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/body/body_id.h"
+#include "tumble/physics/body/mass_properties.h"
+#include "tumble/physics/body/motion_properties.h"
+#include "tumble/physics/body/motion_type.h"
+#include "tumble/physics/body/sleep.h"
+#include "tumble/physics/body/sub_shape.h"
+#include "tumble/physics/constraints/combine_material.h"
+#include "tumble/physics/constraints/constraint_id.h"
+#include "tumble/physics/filter.h"
+#include "tumble/physics/layers.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 
@@ -364,3 +367,5 @@ inline void set_from_body(Filter &filter, const layers::Layers &layers, const ri
 }
 
 }  // namespace filter
+
+TUMBLE_NAMESPACE_END

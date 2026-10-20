@@ -5,17 +5,20 @@
 
 #include <stdint.h>
 
-#include "physics/body/bodies.h"
-#include "physics/broadphase/broadphase.h"
-#include "physics/ccd.h"
-#include "physics/constraints/constraints.h"
-#include "physics/constraints/contact_constraints.h"
-#include "physics/contact_pairs.h"
-#include "physics/contacts.h"
-#include "physics/events.h"
-#include "physics/islands.h"
-#include "physics/pairs.h"
-#include "physics/world_settings.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/broadphase/broadphase.h"
+#include "tumble/physics/ccd.h"
+#include "tumble/physics/constraints/constraints.h"
+#include "tumble/physics/constraints/contact_constraints.h"
+#include "tumble/physics/contact_pairs.h"
+#include "tumble/physics/contacts.h"
+#include "tumble/physics/events.h"
+#include "tumble/physics/islands.h"
+#include "tumble/physics/pairs.h"
+#include "tumble/physics/world_settings.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace world {
 
@@ -50,3 +53,5 @@ World *create(const world_settings::WorldSettings &settings);
 void destroy(World *world);
 
 }  // namespace world
+
+TUMBLE_NAMESPACE_END

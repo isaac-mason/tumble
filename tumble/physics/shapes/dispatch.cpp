@@ -1,22 +1,24 @@
-#include "physics/shapes/dispatch.h"
+#include "tumble/physics/shapes/dispatch.h"
 
-#include "physics/collision/collide_shape_vs_shape.h"
-#include "physics/shapes/box.h"
-#include "physics/shapes/capsule.h"
-#include "physics/shapes/compound.h"
-#include "physics/shapes/convex.h"
-#include "physics/shapes/convex_hull.h"
-#include "physics/shapes/cylinder.h"
-#include "physics/shapes/empty.h"
-#include "physics/shapes/offset_center_of_mass.h"
-#include "physics/shapes/plane.h"
-#include "physics/shapes/scaled.h"
-#include "physics/shapes/shapes.h"
-#include "physics/shapes/sphere.h"
-#include "physics/shapes/static_compound.h"
-#include "physics/shapes/transformed.h"
-#include "physics/shapes/triangle_mesh.h"
-#include "util/mem.h"
+#include "tumble/physics/collision/collide_shape_vs_shape.h"
+#include "tumble/physics/shapes/box.h"
+#include "tumble/physics/shapes/capsule.h"
+#include "tumble/physics/shapes/compound.h"
+#include "tumble/physics/shapes/convex.h"
+#include "tumble/physics/shapes/convex_hull.h"
+#include "tumble/physics/shapes/cylinder.h"
+#include "tumble/physics/shapes/empty.h"
+#include "tumble/physics/shapes/offset_center_of_mass.h"
+#include "tumble/physics/shapes/plane.h"
+#include "tumble/physics/shapes/scaled.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/physics/shapes/sphere.h"
+#include "tumble/physics/shapes/static_compound.h"
+#include "tumble/physics/shapes/transformed.h"
+#include "tumble/physics/shapes/triangle_mesh.h"
+#include "tumble/util/mem.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace dispatch {
 
@@ -145,3 +147,5 @@ void init() {
 }
 
 }  // namespace dispatch
+
+TUMBLE_NAMESPACE_END

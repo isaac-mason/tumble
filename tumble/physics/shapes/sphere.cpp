@@ -1,10 +1,12 @@
-#include "physics/shapes/sphere.h"
+#include "tumble/physics/shapes/sphere.h"
 
-#include "math/aabox.h"
-#include "math/mat4f.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/shapes/convex.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/shapes/convex.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace sphere {
 
@@ -166,3 +168,5 @@ void collide_sphere_vs_sphere(collide_shape::CollideShapeCollector &collector, c
 }
 
 }  // namespace sphere
+
+TUMBLE_NAMESPACE_END

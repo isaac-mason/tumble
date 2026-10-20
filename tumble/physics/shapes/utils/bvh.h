@@ -18,8 +18,11 @@
 
 #include <stdint.h>
 
-#include "math/aabox.h"
-#include "math/types.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/types.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace bvh {
 
@@ -79,3 +82,5 @@ bool node_intersects_ray(const Node *nodes, int32_t node, Vec3f origin, Vec3f di
 inline bool node_intersects_box(const Node *nodes, int32_t node, const AABox &box) { return aabox::intersects(aabox::load(nodes[node].bounds), box); }
 
 }  // namespace bvh
+
+TUMBLE_NAMESPACE_END

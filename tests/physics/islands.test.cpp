@@ -1,9 +1,9 @@
-#include "physics/islands.h"
+#include "tumble/physics/islands.h"
 
 #include "contact_test_scene.h"
 #include "test_math.h"
-#include "physics/body/sleep.h"
-#include "physics/constraints/point_constraint.h"
+#include "tumble/physics/body/sleep.h"
+#include "tumble/physics/constraints/point_constraint.h"
 
 using rigid_body::RigidBody;
 

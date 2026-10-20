@@ -1,12 +1,14 @@
-#include "physics/body/motion_properties.h"
+#include "tumble/physics/body/motion_properties.h"
 
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "math/vec4f.h"
-#include "physics/body/dof.h"
-#include "util/assert.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/math/vec4f.h"
+#include "tumble/physics/body/dof.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace motion_properties {
 
@@ -524,3 +526,5 @@ void apply_gyroscopic_force(MotionProperties &motion_properties, Quatf body_quat
 }
 
 }  // namespace motion_properties
+
+TUMBLE_NAMESPACE_END

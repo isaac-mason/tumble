@@ -4,10 +4,12 @@
 // max lanes make expand, union, scale and the overlap tests one op each.
 
 #include "math/storage/mat4f.h"
-#include "math/scalar.h"
-#include "math/simd.h"
-#include "math/types.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/simd.h"
+#include "tumble/math/types.h"
 #include "math/storage/vec3f.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace box3f {
 
@@ -206,3 +208,5 @@ inline bool intersects_plane3(const Box3f &box, const Plane3f &plane) {
 }
 
 }  // namespace box3f
+
+TUMBLE_NAMESPACE_END

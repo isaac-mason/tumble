@@ -5,8 +5,11 @@
 
 #include <stdint.h>
 
-#include "util/alloc.h"
-#include "util/mem.h"
+#include "tumble/tumble.h"
+#include "tumble/util/alloc.h"
+#include "tumble/util/mem.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace util {
 
@@ -25,6 +28,8 @@ inline void destroy(T *object) {
 }
 
 }  // namespace util
+
+TUMBLE_NAMESPACE_END
 
 // the C++ allocation operators over the heap (defined in object.cpp). `new T[n]` works because
 // clang keeps the count in front of the block when a type needs destroying, and nothing here does.

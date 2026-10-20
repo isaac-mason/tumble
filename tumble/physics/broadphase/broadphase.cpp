@@ -1,8 +1,10 @@
-#include "physics/broadphase/broadphase.h"
+#include "tumble/physics/broadphase/broadphase.h"
 
-#include "math/aabox.h"
-#include "physics/body/rigid_body.h"
-#include "util/assert.h"
+#include "tumble/math/aabox.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace broadphase {
 
@@ -136,3 +138,5 @@ Box3f &bounds(Box3f &out, const Broadphase &broadphase) {
 }
 
 }  // namespace broadphase
+
+TUMBLE_NAMESPACE_END

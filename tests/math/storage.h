@@ -8,3 +8,8 @@
 #include "math/storage/quatf.h"
 #include "math/storage/vec3f.h"
 #include "math/storage/vec4f.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
+
+TUMBLE_NAMESPACE_END

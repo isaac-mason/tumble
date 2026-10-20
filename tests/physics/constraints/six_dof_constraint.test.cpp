@@ -1,10 +1,10 @@
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
 #include "physics/constraints/constraint_test_scene.h"
-#include "physics/constraints/fixed_constraint.h"
-#include "physics/constraints/point_constraint.h"
-#include "physics/constraints/six_dof_constraint.h"
+#include "tumble/physics/constraints/fixed_constraint.h"
+#include "tumble/physics/constraints/point_constraint.h"
+#include "tumble/physics/constraints/six_dof_constraint.h"
 #include "test.h"
 
 using rigid_body::RigidBody;

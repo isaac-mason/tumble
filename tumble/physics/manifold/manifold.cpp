@@ -1,8 +1,10 @@
-#include "physics/manifold/manifold.h"
+#include "tumble/physics/manifold/manifold.h"
 
-#include "math/scalar.h"
-#include "physics/manifold/clip.h"
-#include "util/assert.h"
+#include "tumble/math/scalar.h"
+#include "tumble/physics/manifold/clip.h"
+#include "tumble/util/assert.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace manifold {
 
@@ -208,3 +210,5 @@ void manifold_between_two_faces(ContactManifold &out, Vec3f contact_point_1, Vec
 }
 
 }  // namespace manifold
+
+TUMBLE_NAMESPACE_END

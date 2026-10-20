@@ -1,5 +1,5 @@
-#include "physics/ccd.h"
-#include "math/aabox.h"
+#include "tumble/physics/ccd.h"
+#include "tumble/math/aabox.h"
 
 #include "world_test_scene.h"
 #include "test_math.h"

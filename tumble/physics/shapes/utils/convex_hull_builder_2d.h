@@ -5,9 +5,12 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "math/vec3f.h"
-#include "util/collections.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace convex_hull_builder_2d {
 
@@ -56,3 +59,5 @@ EResult initialize(ConvexHullBuilder2D &builder, int32_t idx1, int32_t idx2, int
 bool validate_edges(const ConvexHullBuilder2D &builder);
 
 }  // namespace convex_hull_builder_2d
+
+TUMBLE_NAMESPACE_END

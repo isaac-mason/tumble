@@ -1,12 +1,14 @@
-#include "physics/body/rigid_body.h"
+#include "tumble/physics/body/rigid_body.h"
 
-#include "math/aabox.h"
-#include "math/mat4f.h"
-#include "math/quatf.h"
-#include "math/vec3f.h"
-#include "physics/shapes/empty.h"
-#include "util/assert.h"
-#include "util/object.h"
+#include "tumble/math/aabox.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/shapes/empty.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/object.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace rigid_body {
 
@@ -523,3 +525,5 @@ bool bodies_share_constraint(const RigidBody *body_a, const RigidBody *body_b) {
 }
 
 }  // namespace rigid_body
+
+TUMBLE_NAMESPACE_END

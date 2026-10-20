@@ -8,6 +8,9 @@
 // body was destroyed.
 
 #include <stdint.h>
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace body_id {
 
@@ -32,3 +35,5 @@ inline uint32_t index(BodyId id) { return id & BODY_INDEX_MASK; }
 inline uint32_t sequence(BodyId id) { return (id >> SEQUENCE_SHIFT) & SEQUENCE_MASK; }
 
 }  // namespace body_id
+
+TUMBLE_NAMESPACE_END

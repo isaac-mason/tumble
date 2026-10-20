@@ -5,7 +5,10 @@
 
 #include <stdint.h>
 
-#include "physics/shapes/shapes.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace transformed {
 
@@ -58,3 +61,5 @@ void cast_shape_vs_transformed(cast_shape::CastShapeCollector &collector, const 
 shapes::ShapeDef def();
 
 }  // namespace transformed
+
+TUMBLE_NAMESPACE_END

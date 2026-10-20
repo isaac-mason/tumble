@@ -1,6 +1,9 @@
 #pragma once
 
 #include <stdint.h>
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace motion_type {
 
@@ -12,3 +15,5 @@ enum MotionType : uint32_t {
 };
 
 }  // namespace motion_type
+
+TUMBLE_NAMESPACE_END

@@ -1,11 +1,11 @@
-#include "physics/character/kcc.h"
+#include "tumble/physics/character/kcc.h"
 
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/query.h"
-#include "physics/shapes/triangle_mesh.h"
-#include "physics/shapes/utils/triangle_mesh_builder.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/query.h"
+#include "tumble/physics/shapes/triangle_mesh.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_builder.h"
 #include "../world_test_scene.h"
 #include "test_math.h"
 

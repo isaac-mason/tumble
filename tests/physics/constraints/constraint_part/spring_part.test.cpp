@@ -1,6 +1,6 @@
-#include "math/scalar.h"
-#include "physics/constraints/constraint_part/spring_part.h"
-#include "physics/constraints/constraint_part/spring_settings.h"
+#include "tumble/math/scalar.h"
+#include "tumble/physics/constraints/constraint_part/spring_part.h"
+#include "tumble/physics/constraints/constraint_part/spring_settings.h"
 #include "test.h"
 #include "test_math.h"
 

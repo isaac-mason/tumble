@@ -1,8 +1,8 @@
-#include "instance.h"
+#include "tumble/instance.h"
 #include "test.h"
-#include "util/alloc.h"
-#include "util/mem.h"
-#include "util/object.h"
+#include "tumble/util/alloc.h"
+#include "tumble/util/mem.h"
+#include "tumble/util/object.h"
 
 static util::HeapStats stats() {
     util::HeapStats s;

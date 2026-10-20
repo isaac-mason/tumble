@@ -7,6 +7,9 @@
 // the invalid id is all ones; type 15 is no constraint type, so it is never a constraint's id.
 
 #include <stdint.h>
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace constraint_id {
 
@@ -55,3 +58,5 @@ inline ConstraintType type(ConstraintId id) { return (ConstraintType)((id >> TYP
 inline uint32_t sequence(ConstraintId id) { return (id >> SEQUENCE_SHIFT) & SEQUENCE_MASK; }
 
 }  // namespace constraint_id
+
+TUMBLE_NAMESPACE_END

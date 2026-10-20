@@ -1,7 +1,9 @@
-#include "instance.h"
+#include "tumble/instance.h"
 
-#include "math/simd.h"
-#include "util/alloc.h"
+#include "tumble/math/simd.h"
+#include "tumble/util/alloc.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace util {
 
@@ -27,3 +29,5 @@ float simd_check() {
 }
 
 }  // namespace util
+
+TUMBLE_NAMESPACE_END

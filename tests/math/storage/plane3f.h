@@ -3,9 +3,11 @@
 // the scalar functions over the storage types, retired from src when the register types took over: the reference the
 // register functions are checked against, bit for bit.
 
-#include "math/plane3f.h"
+#include "tumble/math/plane3f.h"
 #include "math/storage/vec3f.h"
 #include "math/storage/mat4f.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace plane3f {
 
@@ -134,3 +136,5 @@ inline bool equals(const Plane3f &a, const Plane3f &b) {
 }
 
 }  // namespace plane3f
+
+TUMBLE_NAMESPACE_END

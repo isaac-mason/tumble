@@ -1,10 +1,12 @@
-#include "physics/constraints/constraint_part/axis_constraint_part.h"
+#include "tumble/physics/constraints/constraint_part/axis_constraint_part.h"
 
-#include "math/mat4f.h"
-#include "math/scalar.h"
-#include "physics/body/motion_properties.h"
-#include "physics/body/rigid_body.h"
-#include "physics/body/rigid_body_step.h"
+#include "tumble/math/mat4f.h"
+#include "tumble/math/scalar.h"
+#include "tumble/physics/body/motion_properties.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/body/rigid_body_step.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace axis_constraint_part {
 
@@ -224,3 +226,5 @@ bool solve_position_constraint(AxisConstraintPart &part, rigid_body::RigidBody &
 }
 
 }  // namespace axis_constraint_part
+
+TUMBLE_NAMESPACE_END

@@ -5,9 +5,12 @@
 
 #include <stdint.h>
 
-#include "physics/shapes/shapes.h"
-#include "physics/shapes/utils/convex_hull_builder.h"
-#include "util/collections.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/physics/shapes/utils/convex_hull_builder.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace convex_hull {
 
@@ -135,3 +138,5 @@ void set_support(support::Support &out, const Shape *shape, support::SupportFunc
 shapes::ShapeDef def();
 
 }  // namespace convex_hull
+
+TUMBLE_NAMESPACE_END

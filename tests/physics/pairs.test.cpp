@@ -1,10 +1,10 @@
-#include "physics/pairs.h"
+#include "tumble/physics/pairs.h"
 
-#include "instance.h"
-#include "physics/body/sleep.h"
-#include "physics/contacts.h"
-#include "physics/shapes/box.h"
-#include "physics/shapes/dispatch.h"
+#include "tumble/instance.h"
+#include "tumble/physics/body/sleep.h"
+#include "tumble/physics/contacts.h"
+#include "tumble/physics/shapes/box.h"
+#include "tumble/physics/shapes/dispatch.h"
 #include "test.h"
 #include "test_math.h"
 

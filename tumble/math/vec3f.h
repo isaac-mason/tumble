@@ -4,9 +4,12 @@
 // Float3. each function gives the bits of its scalar reference over Float3 (test/math/storage/vec3f.h):
 // component-wise ops are lane ops, horizontal ones keep the scalar order (the dot is (x + y) + z).
 
-#include "math/scalar.h"
-#include "math/simd.h"
-#include "math/types.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/simd.h"
+#include "tumble/math/types.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace vec3f {
 
@@ -277,3 +280,5 @@ inline float len(Vec3f a) { return length(a); }
 inline float sqr_len(Vec3f a) { return squared_length(a); }
 
 }  // namespace vec3f
+
+TUMBLE_NAMESPACE_END

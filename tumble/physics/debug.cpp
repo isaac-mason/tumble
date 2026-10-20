@@ -1,32 +1,34 @@
-#include "physics/debug.h"
+#include "tumble/physics/debug.h"
 
-#include "math/quatf.h"
-#include "math/scalar.h"
-#include "math/vec3f.h"
-#include "physics/body/bodies.h"
-#include "physics/body/motion_type.h"
-#include "physics/constraints/cone_constraint.h"
-#include "physics/constraints/constraints.h"
-#include "physics/constraints/distance_constraint.h"
-#include "physics/constraints/fixed_constraint.h"
-#include "physics/constraints/hinge_constraint.h"
-#include "physics/constraints/point_constraint.h"
-#include "physics/constraints/six_dof_constraint.h"
-#include "physics/constraints/slider_constraint.h"
-#include "physics/constraints/swing_twist_constraint.h"
-#include "physics/shapes/compound.h"
-#include "physics/shapes/convex_hull.h"
-#include "physics/shapes/utils/triangle_mesh_data.h"
-#include "util/object.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/body/bodies.h"
+#include "tumble/physics/body/motion_type.h"
+#include "tumble/physics/constraints/cone_constraint.h"
+#include "tumble/physics/constraints/constraints.h"
+#include "tumble/physics/constraints/distance_constraint.h"
+#include "tumble/physics/constraints/fixed_constraint.h"
+#include "tumble/physics/constraints/hinge_constraint.h"
+#include "tumble/physics/constraints/point_constraint.h"
+#include "tumble/physics/constraints/six_dof_constraint.h"
+#include "tumble/physics/constraints/slider_constraint.h"
+#include "tumble/physics/constraints/swing_twist_constraint.h"
+#include "tumble/physics/shapes/compound.h"
+#include "tumble/physics/shapes/convex_hull.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_data.h"
+#include "tumble/util/object.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace debug {
 
 using rigid_body::RigidBody;
 using shapes::Shape;
-using ::bodies::Bodies;
-using ::contact_constraints::ContactConstraint;
-using ::contact_constraints::ContactConstraints;
-using ::contact_constraints::WorldContactPoint;
+using tumble::bodies::Bodies;
+using tumble::contact_constraints::ContactConstraint;
+using tumble::contact_constraints::ContactConstraints;
+using tumble::contact_constraints::WorldContactPoint;
 
 DebugBuffers *create() { return util::create<DebugBuffers>(); }
 
@@ -415,7 +417,7 @@ static void draw_body_lines(DebugBuffers &out, const RigidBody &body, Vec3f colo
 
 /** the body in a live slot, or null */
 static const RigidBody *live_body(const Bodies &pool, uint32_t index) {
-    if (index >= pool.pool.length || pool.sequences[index] == ::bodies::SLOT_FREE) return nullptr;
+    if (index >= pool.pool.length || pool.sequences[index] == tumble::bodies::SLOT_FREE) return nullptr;
     return pool.pool[index];
 }
 
@@ -769,3 +771,5 @@ void joints(DebugBuffers &out, const world::World &world, const JointsOptions &o
 }
 
 }  // namespace debug
+
+TUMBLE_NAMESPACE_END

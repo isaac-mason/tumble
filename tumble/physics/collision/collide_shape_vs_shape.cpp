@@ -1,6 +1,8 @@
-#include "physics/collision/collide_shape_vs_shape.h"
+#include "tumble/physics/collision/collide_shape_vs_shape.h"
 
-#include "math/vec3f.h"
+#include "tumble/math/vec3f.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace collide_shape {
 
@@ -29,3 +31,5 @@ bool inverted_should_early_out(const CollideShapeCollector &c) {
 }
 
 }  // namespace collide_shape
+
+TUMBLE_NAMESPACE_END

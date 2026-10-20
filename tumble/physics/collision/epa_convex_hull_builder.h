@@ -6,7 +6,10 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
+#include "tumble/math/types.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace epa_convex_hull_builder {
 
@@ -119,3 +122,5 @@ bool validate_triangle(const EpaConvexHullBuilderState &state, int32_t tri);
 bool validate_triangles(const EpaConvexHullBuilderState &state);
 
 }  // namespace epa_convex_hull_builder
+
+TUMBLE_NAMESPACE_END

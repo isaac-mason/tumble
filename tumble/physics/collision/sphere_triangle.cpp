@@ -1,7 +1,9 @@
-#include "physics/collision/sphere_triangle.h"
+#include "tumble/physics/collision/sphere_triangle.h"
 
-#include "math/scalar.h"
-#include "math/vec3f.h"
+#include "tumble/math/scalar.h"
+#include "tumble/math/vec3f.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace sphere_triangle {
 
@@ -126,3 +128,5 @@ float ray_sphere_from_origin(Vec3f direction, Vec3f sphere_center, float sphere_
 }
 
 }  // namespace sphere_triangle
+
+TUMBLE_NAMESPACE_END

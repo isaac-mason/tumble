@@ -1,7 +1,9 @@
-#include "physics/world.h"
+#include "tumble/physics/world.h"
 
-#include "util/assert.h"
-#include "util/object.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/object.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace world {
 
@@ -48,3 +50,5 @@ void destroy(World *world) {
 }
 
 }  // namespace world
+
+TUMBLE_NAMESPACE_END

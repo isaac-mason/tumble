@@ -4,7 +4,10 @@
 
 #include <stdint.h>
 
-#include "physics/shapes/shapes.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace box {
 
@@ -53,3 +56,5 @@ void collide_point_vs_box(collide_point::CollidePointCollector &collector, const
 shapes::ShapeDef def();
 
 }  // namespace box
+
+TUMBLE_NAMESPACE_END

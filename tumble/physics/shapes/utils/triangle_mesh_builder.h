@@ -6,8 +6,11 @@
 
 #include <stdint.h>
 
-#include "physics/shapes/utils/triangle_mesh_bvh.h"
-#include "physics/shapes/utils/triangle_mesh_data.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_bvh.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_data.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace triangle_mesh_builder {
 
@@ -40,3 +43,5 @@ struct TriangleMeshBuilderSettings {
 TriangleMeshData *build(const TriangleMeshBuilderSettings &settings);
 
 }  // namespace triangle_mesh_builder
+
+TUMBLE_NAMESPACE_END

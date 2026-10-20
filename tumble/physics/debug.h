@@ -5,11 +5,14 @@
 
 #include <stdint.h>
 
-#include "math/types.h"
-#include "physics/body/rigid_body.h"
-#include "physics/shapes/shapes.h"
-#include "physics/world.h"
-#include "util/collections.h"
+#include "tumble/math/types.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/shapes/shapes.h"
+#include "tumble/physics/world.h"
+#include "tumble/tumble.h"
+#include "tumble/util/collections.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace debug {
 
@@ -89,3 +92,5 @@ void contact_constraints(DebugBuffers &out, const world::World &world);
 void joints(DebugBuffers &out, const world::World &world, const JointsOptions &options);
 
 }  // namespace debug
+
+TUMBLE_NAMESPACE_END

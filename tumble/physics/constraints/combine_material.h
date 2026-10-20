@@ -4,7 +4,10 @@
 
 #include <stdint.h>
 
-#include "math/scalar.h"
+#include "tumble/math/scalar.h"
+#include "tumble/tumble.h"
+
+TUMBLE_NAMESPACE_BEGIN
 
 namespace combine_material {
 
@@ -49,3 +52,5 @@ inline float combine(float value_a, float value_b, MaterialCombineMode mode_a, M
 }
 
 }  // namespace combine_material
+
+TUMBLE_NAMESPACE_END
