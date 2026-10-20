@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's convex-hull-builder-2d.ts: quickhull in the xy plane, after jolt's ConvexHullBuilder2D.
-// the 3d builder uses it when every point lies in one plane.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -12,6 +9,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// quickhull in the xy plane, for the 3d builder when every point lies in one plane
 namespace convex_hull_builder_2d {
 
 enum EResult : int32_t {

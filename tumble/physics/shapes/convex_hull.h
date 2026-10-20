@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's convex-hull.ts: a convex hull built from a point cloud by the quickhull builder, its
-// faces polygons with outward planes, rounded by a convex radius.
-
 #include <stdint.h>
 
 #include "tumble/physics/shapes/shapes.h"
@@ -12,6 +9,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// a hull built from a point cloud by quickhull, its faces polygons with outward planes, rounded by a convex radius
 namespace convex_hull {
 
 using shapes::Shape;
@@ -54,8 +52,8 @@ struct ConvexHullFace {
 };
 
 /**
- * the built hull: the heavy part of a hull shape, js-owned and borrowed by any number of shapes (box3d's model: the
- * shape def is cloned, the data is not). built by convex_hull::build, freed by convex_hull::release after every
+ * the built hull: the heavy part of a hull shape, the caller's and borrowed by any number of shapes (a shape is copied,
+ * its data is not). built by convex_hull::build, freed by convex_hull::release after every
  * shape over it is destroyed.
  */
 struct ConvexHullData {
@@ -132,7 +130,6 @@ void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub
 void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, const Shape *shape, sub_shape::SubShapeId sub_shape_id);
 /** the distance from the centre of mass to the nearest plane, at least 0 */
 float get_inner_radius(const Shape *shape);
-/** crashcat's setHullSupport */
 void set_support(support::Support &out, const Shape *shape, support::SupportFunctionMode mode, Vec3f scale);
 
 shapes::ShapeDef def();

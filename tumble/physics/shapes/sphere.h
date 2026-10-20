@@ -1,7 +1,5 @@
 #pragma once
 
-// crashcat's sphere.ts: a sphere centred at the origin.
-
 #include <stdint.h>
 
 #include "tumble/physics/shapes/shapes.h"
@@ -9,6 +7,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// centred at the origin
 namespace sphere {
 
 using shapes::Shape;

@@ -1,21 +1,5 @@
 #pragma once
 
-// crashcat's bvh.ts: common bvh node utilities for binary tree structures, shared between the
-// triangle mesh bvh and the static compound bvh.
-//
-// node layout (NODE_STRIDE words per node):
-// [min_x, min_y, min_z, max_x, max_y, max_z, right_or_start, axis_or_count]
-//
-// internal nodes:
-// - right_or_start: index of the right child
-// - axis_or_count: split axis (0-2)
-//
-// leaf nodes:
-// - right_or_start: start index of primitives
-// - axis_or_count: -(count + 1) to encode leaf + count
-//
-// nodes are addressed by index; the left child always follows its parent.
-
 #include <stdint.h>
 
 #include "tumble/math/aabox.h"
@@ -24,6 +8,9 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// binary bvh nodes, NODE_STRIDE words each: [min_x, min_y, min_z, max_x, max_y, max_z, right_or_start, axis_or_count].
+// an internal node holds its right child's index and the split axis (0 to 2), a leaf its first primitive and -(count +
+// 1). nodes are addressed by index and a left child always follows its parent
 namespace bvh {
 
 /** number of 32-bit words per node */

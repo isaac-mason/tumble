@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's static-compound-bvh.ts: a binary bvh over a static compound's children, split at the
-// spatial median of the child centres. building it reorders the children so that every leaf holds a
-// contiguous range of them.
-
 #include <stdint.h>
 
 #include "tumble/physics/shapes/compound.h"
@@ -13,6 +9,8 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// a binary bvh over a static compound's children, split at the spatial median of their centres; building it reorders
+// the children so every leaf holds a contiguous range
 namespace static_compound_bvh {
 
 /**

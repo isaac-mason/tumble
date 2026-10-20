@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's triangle-mesh.ts: a static triangle mesh over a built TriangleMeshData (its triangles,
-// active edges and bvh). the mesh handles its scale itself: queries come into its unscaled space
-// for the bvh and scale the triangles they test.
-
 #include <stdint.h>
 
 #include "tumble/physics/shapes/shapes.h"
@@ -12,6 +8,8 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// a static mesh over a built TriangleMeshData; queries come into its unscaled space for the bvh and scale the triangles
+// they test
 namespace triangle_mesh {
 
 using shapes::Shape;

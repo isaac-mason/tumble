@@ -108,7 +108,7 @@ void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub
 }
 
 void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, const Shape *shape, sub_shape::SubShapeId) {
-    // the scaled cylinder, as jolt: |scale| sizes it, so a mirrored scale changes nothing and the cap keeps
+    // the scaled cylinder: |scale| sizes it, so a mirrored scale changes nothing and the cap keeps
     // its winding; the transform then carries rotation and translation only
     face::Face &face = io.face;
     const float half_height = scalar::abs(vec3f::y(io.scale)) * shape->cylinder.half_height;

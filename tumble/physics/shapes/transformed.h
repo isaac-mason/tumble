@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's transformed.ts: an inner shape placed by a rotation and a translation. the inner shape is
-// borrowed; the transformed shape consumes no sub shape id bits.
-
 #include <stdint.h>
 
 #include "tumble/physics/shapes/shapes.h"
@@ -10,12 +7,13 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// an inner shape placed by a rotation and a translation; borrowed, taking no sub shape id bits
 namespace transformed {
 
 using shapes::Shape;
 
 struct TransformedShapeSettings {
-    /** js-owned; outlives every transformed shape over it */
+    /** the caller's; outlives every transformed shape over it */
     Shape *shape = nullptr;
     Float3 position = {0.0f, 0.0f, 0.0f};
     Float4 quaternion = {0.0f, 0.0f, 0.0f, 1.0f};

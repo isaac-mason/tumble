@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's convex.ts: the narrowphase entry points every convex shape uses, gjk and epa over the
-// shapes' supports.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -11,6 +8,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// the narrowphase entry points every convex shape uses: gjk and epa over the shapes' supports
 namespace convex {
 
 using shapes::Shape;

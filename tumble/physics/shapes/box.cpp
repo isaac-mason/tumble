@@ -99,7 +99,7 @@ static void set_face(face::Face &face, float x0, float y0, float z0, float x1, f
 }
 
 void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, const Shape *shape, sub_shape::SubShapeId) {
-    // the face of the scaled box, as jolt: |scale| sizes it, so a mirrored scale changes nothing (the box
+    // the face of the scaled box: |scale| sizes it, so a mirrored scale changes nothing (the box
     // is symmetric) and the winding stays outward; the transform then carries rotation and translation only
     const Vec3f half_extents = vec3f::multiply(vec3f::abs(io.scale), vec3f::load(shape->box.half_extents));
     const float hx = vec3f::x(half_extents);

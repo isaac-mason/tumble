@@ -94,7 +94,7 @@ void compute_mass_properties(mass_properties::MassProperties &out, const Shape *
     const float inertia_y = radius_sq * cylinder_mass * 0.5f;
     const float inertia_xz = cylinder_mass * ((1.0f / 12.0f) * height_sq + (1.0f / 4.0f) * radius_sq);
 
-    // from both hemispheres, as jolt: their own inertia about the capsule's axis, then the
+    // from both hemispheres: their own inertia about the capsule's axis, then the
     // parallel axis terms for their centres sitting h + 3r/8 from the middle
     const float hemispheres_own = hemisphere_mass * 4.0f * radius_sq / 5.0f;
     const float i_yy = inertia_y + hemispheres_own;
@@ -129,7 +129,7 @@ void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub
 }
 
 void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, const Shape *shape, sub_shape::SubShapeId) {
-    // the scaled capsule, as jolt: |vec3f::x(scale)| sizes it (the scale is uniform), so a mirrored scale changes
+    // the scaled capsule: |vec3f::x(scale)| sizes it (the scale is uniform), so a mirrored scale changes
     // nothing; the transform then carries rotation and translation only
     face::Face &face = io.face;
     const float abs_scale = scalar::abs(vec3f::x(io.scale));
@@ -166,7 +166,6 @@ void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, cons
     const float proj_top = support_top_x * vec3f::x(direction) + support_top_y * vec3f::y(direction) + support_top_z * vec3f::z(direction);
     const float proj_bottom = support_bottom_x * vec3f::x(direction) + support_bottom_y * vec3f::y(direction) + support_bottom_z * vec3f::z(direction);
 
-    // jolt's cCapsuleProjectionSlop
     const float capsule_projection_slop = 0.02f;
     const float direction_length = scalar::sqrt(vec3f::x(direction) * vec3f::x(direction) + vec3f::y(direction) * vec3f::y(direction) + vec3f::z(direction) * vec3f::z(direction));
 

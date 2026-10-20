@@ -1,17 +1,5 @@
 #pragma once
 
-// crashcat's shapes.ts: the shape struct, the per-type function table and the collide/cast
-// dispatch tables. a shape is a heap object js holds by pointer, laid out as box3d lays out
-// its b3Shape: the fields every shape has, then a union of the per-type payloads. the small
-// shapes live inline; the heavy ones (hull, mesh, compound) point at data many shapes can
-// share; the wrappers (transformed, scaled, offset centre of mass) hold the shape they wrap.
-// a function reads `shape->sphere.radius` once `shape->type` says so.
-//
-// the per-type functions live in the namespace named after the file (`sphere::`,
-// `compound::`), and each type's `def()` hands them to `shape_defs` through `dispatch.cpp`,
-// which also fills the collide and cast tables in crashcat's registration order. nothing
-// registers itself.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -40,9 +28,12 @@ struct CompoundData;
 namespace static_compound {
 struct StaticCompoundData;
 }
+// a shape is the fields every shape has, then a union of the per-type payloads: small shapes inline, the heavy ones
+// (hull, mesh, compound) pointing at data many shapes can share, the wrappers holding the shape they wrap. read a
+// payload once `type` says which. each type's functions live in the namespace named after its file, and dispatch.cpp
+// gathers every def() into shape_defs and fills the collide and cast tables
 namespace shapes {
 
-/** crashcat's numbering. */
 enum ShapeType : uint32_t {
     SHAPE_SPHERE = 0,
     SHAPE_BOX = 1,
@@ -103,7 +94,7 @@ struct PlaneShape {
 };
 
 struct ConvexHullShape {
-    /** js-owned, shared by any number of shapes; the shape never frees it */
+    /** the caller's, shared by any number of shapes; the shape never frees it */
     convex_hull::ConvexHullData *data;
     float density;
 };
@@ -233,7 +224,7 @@ struct ShapeDef {
     CollidePointFn collide_point;
 };
 
-/** the defaults crashcat's defineShape fills in: unit mass, zero inner radius, a leaf that is itself. */
+/** what a def leaves null filled in: unit mass, zero inner radius, a leaf that is itself */
 void default_compute_mass_properties(mass_properties::MassProperties &out, const Shape *shape);
 float default_get_inner_radius(const Shape *shape);
 void default_get_leaf_shape(GetLeafShapeResult &out, const Shape *shape, sub_shape::SubShapeId sub_shape_id);
@@ -251,7 +242,7 @@ inline const ShapeDef &def_of(const Shape *shape) { return shape_defs[shape_type
 inline bool is_convex(const Shape *shape) { return def_of(shape).set_support != nullptr; }
 
 void set_shape_def(const ShapeDef &def);
-/** a handler for the pair; a later set for the same pair replaces an earlier one, as crashcat's registration does */
+/** a handler for the pair; a later set for the same pair replaces an earlier one */
 void set_collide_shape_fn(ShapeType type_a, ShapeType type_b, CollideShapeVsShapeFn fn);
 void set_cast_shape_fn(ShapeType type_a, ShapeType type_b, CastShapeVsShapeFn fn);
 inline CollideShapeVsShapeFn collide_fn(ShapeType a, ShapeType b) { return collide_table[shape_type_index(a)][shape_type_index(b)]; }
@@ -276,7 +267,7 @@ void get_shape_supporting_face(face::Face &out, const Shape *shape, sub_shape::S
                                const Mat4f &transform, Vec3f scale);
 float get_shape_inner_radius(const Shape *shape);
 /**
- * a scale in a parent's space as a child rotated by `rotation` sees it (jolt's TransformScale): the diagonal of
+ * a scale in a parent's space as a child rotated by `rotation` sees it: the diagonal of
  * R^T S R. a uniform scale or an identity rotation (q or -q) passes through unchanged; a non-uniform scale is only
  * exact when the rotation keeps the axes aligned.
  */

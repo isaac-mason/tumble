@@ -1,13 +1,12 @@
 #pragma once
 
-// crashcat's empty-shape.ts: no volume, no collision geometry. an anchor for constraints or a
-// placeholder; it is in the broadphase but its dispatch entries do nothing.
-
 #include "tumble/physics/shapes/shapes.h"
 #include "tumble/tumble.h"
 
 TUMBLE_NAMESPACE_BEGIN
 
+// no volume and no collision geometry: an anchor for constraints, or a placeholder. it is in the broadphase but its
+// dispatch entries do nothing
 namespace empty {
 
 using shapes::Shape;

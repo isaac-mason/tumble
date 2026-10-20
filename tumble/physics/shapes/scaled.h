@@ -1,13 +1,5 @@
 #pragma once
 
-// crashcat's scaled.ts: an inner shape scaled per axis. the inner shape is borrowed; the scaled shape
-// consumes no sub shape id bits.
-//
-// some shapes only support uniform scaling (the sphere). a compound scales its children's offsets as
-// well as the children, and under a non-uniform scale its children must not be rotated; a transformed
-// shape passes a non-uniform scale on rotated into its inner shape's frame, exact for rotations that
-// keep the axes aligned. non-uniform scaling of a convex hull is supported but slower than uniform.
-
 #include <stdint.h>
 
 #include "tumble/physics/shapes/shapes.h"
@@ -15,12 +7,16 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// an inner shape scaled per axis, borrowed, taking no sub shape id bits. a sphere supports only uniform scaling; a
+// compound scales its children's offsets too and under a non-uniform scale its children must not be rotated; a
+// transformed shape passes a non-uniform scale into its inner shape's frame, exact for rotations that keep the axes
+// aligned; a convex hull's non-uniform scale is slower than a uniform one
 namespace scaled {
 
 using shapes::Shape;
 
 struct ScaledShapeSettings {
-    /** js-owned; outlives every scaled shape over it */
+    /** the caller's; outlives every scaled shape over it */
     Shape *shape = nullptr;
     Float3 scale = {1.0f, 1.0f, 1.0f};
 };

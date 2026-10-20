@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's plane.ts: an infinite plane with a bounded representation for the broadphase. the negative
-// half space (signed distance < 0) is solid. a plane has no mass and belongs on static bodies.
-
 #include <stdint.h>
 
 #include "tumble/physics/shapes/shapes.h"
@@ -10,6 +7,8 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// infinite, with a bounded box for the broadphase; the negative half space (signed distance < 0) is solid. it has no
+// mass and belongs on static bodies
 namespace plane {
 
 using shapes::Shape;

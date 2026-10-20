@@ -1,14 +1,5 @@
 #pragma once
 
-// crashcat's triangle-mesh-data.ts: a triangle mesh's vertices, triangles and bvh, in one block.
-//
-// `create` makes one allocation: the header, then the arrays back to back, each 16-aligned, so js
-// can size a mesh, create it and write the arrays at the addresses the header holds:
-// - positions: f32, 3 per vertex [x, y, z], deduplicated
-// - triangles: TRIANGLE_STRIDE words per triangle (see Triangle), in bvh order
-// - triangle_aabbs: f32, 6 per triangle [min_x, min_y, min_z, max_x, max_y, max_z]
-// - nodes: bvh::NODE_STRIDE words per node, pre-order, the root at 0
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -18,6 +9,9 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// one allocation: the header, then each array 16-aligned at the address the header holds. positions are 3 f32 per
+// vertex, deduplicated; triangles TRIANGLE_STRIDE words each, in bvh order; triangle_aabbs 6 f32 each [min_x, min_y,
+// min_z, max_x, max_y, max_z]; nodes bvh::NODE_STRIDE words each, pre-order, the root at 0
 namespace triangle_mesh_data {
 
 /** triangle buffer stride, in 32-bit words */

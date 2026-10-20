@@ -4,10 +4,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
-// crashcat's register.ts, register-all.ts and every shape's register(): fills shape_defs and lays
-// out the collide and cast tables in full, one place for every pair. each further type (plane,
-// triangle mesh, the compounds, the wrappers) adds its def and its rows to init.
-
+// every shape type's def and every pair's collide and cast entries, in one place
 namespace dispatch {
 
 /**

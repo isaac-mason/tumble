@@ -1,10 +1,5 @@
 #pragma once
 
-// crashcat's offset-center-of-mass.ts: shifts an inner shape's centre of mass without moving its
-// collision geometry, to steady a car or a boat by lowering it. shapes here are placed by their origin,
-// not their centre of mass, so every query passes straight through; only the centre of mass and the
-// inertia change. the inner shape is borrowed; the wrapper consumes no sub shape id bits.
-
 #include <stdint.h>
 
 #include "tumble/physics/shapes/shapes.h"
@@ -12,12 +7,15 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// an inner shape's centre of mass moved without moving its geometry, to steady a car or a boat by lowering it. shapes
+// are placed by their origin, so every query passes straight through and only the centre of mass and inertia change.
+// the inner shape is borrowed; the wrapper takes no sub shape id bits
 namespace offset_center_of_mass {
 
 using shapes::Shape;
 
 struct OffsetCenterOfMassShapeSettings {
-    /** js-owned; outlives every offset shape over it */
+    /** the caller's; outlives every offset shape over it */
     Shape *shape = nullptr;
     Float3 offset = {0.0f, 0.0f, 0.0f};
 };

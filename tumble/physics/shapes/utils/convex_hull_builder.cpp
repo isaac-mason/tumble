@@ -218,7 +218,7 @@ static float get_distance_to_edge_sq(const ConvexHullBuilder &builder, Vec3f poi
             // it is outside
             all_inside = false;
 
-            // measure distance to this edge as jolt's GetClosestPointOnLine does
+            // the distance to this edge's line
             Vec3f a = vec3f::subtract(*p1, point);
             Vec3f b = vec3f::subtract(p2, point);
             const Vec3f ab = vec3f::subtract(b, a);

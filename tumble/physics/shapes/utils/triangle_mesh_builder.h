@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's triangle-mesh-builder.ts: a triangle mesh from positions and indices. welds
-// coincident vertices, drops degenerate and duplicate triangles, marks the active edges, builds
-// the bvh (which reorders the triangles) and precomputes the triangle aabbs.
-
 #include <stdint.h>
 
 #include "tumble/physics/shapes/utils/triangle_mesh_bvh.h"
@@ -12,6 +8,8 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// a mesh from positions and indices: coincident vertices welded, degenerate and duplicate triangles dropped, active
+// edges marked, the bvh built (reordering the triangles) and the triangle boxes precomputed
 namespace triangle_mesh_builder {
 
 using triangle_mesh_data::TriangleMeshData;

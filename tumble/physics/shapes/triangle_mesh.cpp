@@ -24,7 +24,7 @@ namespace triangle_mesh {
 
 using triangle_mesh_data::TriangleMeshData;
 
-/** the walks' stacks, fixed as jolt's mesh walks: each pop pushes at most two, so this holds any tree up to this deep */
+/** the walks' fixed stacks: each pop pushes at most two, so this holds any tree up to this deep */
 static constexpr int32_t STACK_SIZE = 128;
 
 static inline void push_node(int32_t *stack_nodes, int32_t &stack_size, int32_t node) {
@@ -129,7 +129,7 @@ void cast_ray_vs_triangle_mesh(cast_ray::CastRayCollector &collector, const cast
     // transform the ray into the mesh's unscaled local space: rigid inverse, then divide origin and
     // direction by the scale. the bvh and the vertices are unscaled, so nothing is scaled per
     // triangle; the hit parameter t is unchanged by rescaling origin and direction together, so the
-    // fraction needs no correction either (jolt: ScaledShape::CastRay)
+    // fraction needs no correction either
     const Quatf inv_quat = quatf::conjugate(quatf::load(transform.quaternion));
 
     Vec3f ray_origin_local = vec3f::subtract(ray.origin, vec3f::load(transform.position));
@@ -150,7 +150,6 @@ void cast_ray_vs_triangle_mesh(cast_ray::CastRayCollector &collector, const cast
 
     // a mirrored scale needs no winding fix-up: the ray was mirrored into local space with the
     // mesh, so the local front-face test already answers for the world-space surface side
-    // (jolt: ScaledShape::CastRay rescales the ray and casts against the inner shape as is)
     const bool backface_culling = !settings.collide_with_backfaces_triangles;
 
     // the collector's early-out fraction, refreshed after each hit. the triangle test gets the same
@@ -344,7 +343,7 @@ void cast_convex_vs_triangle_mesh(cast_shape::CastShapeCollector &collector, con
     const Vec3f scale_b = vec3f::load(transform_b.scale);
 
     // transform a into b's local space (as cast_convex_vs_convex): rotation and translation only, a's
-    // scale goes to its support (jolt: the shape cast's start transform and its separate scale)
+    // scale goes to its support
     const Mat4f transform_a_mat = mat4f::from_rotation_translation(quatf::load(transform_a.quaternion), vec3f::load(transform_a.position));
     const Mat4f target_transform = mat4f::from_rotation_translation(quatf::load(transform_b.quaternion), vec3f::load(transform_b.position));
     Mat4f inv_target_transform, cast_transform;
@@ -582,7 +581,7 @@ void collide_convex_vs_triangle_mesh(collide_shape::CollideShapeCollector &colle
     const Mat4f a_to_world = mat4f::from_rotation_translation(quatf::load(transform_a.quaternion), vec3f::load(transform_a.position));
 
     // b to a with the mesh scale folded in (scale first, then rotation and translation), so each
-    // vertex is one affine transform (jolt: mTransform2To1 * (mScale2 * v))
+    // vertex is one affine transform
     const Mat4f b_to_a = mat4f::from_rotation_translation_scale(transform_2_to_1_quat, transform_2_to_1_pos, scale_b);
 
     // determine if mesh is inside-out
@@ -978,8 +977,8 @@ static void cast_sphere_vs_triangle_mesh_add_hit(const CastSphereContext &contex
     local_point = vec3f::add(context.start, contact_point_b);
     hit.point_b = vec3f::transform_mat4(local_point, context.mesh_to_world);
 
-    // the contact normal points from the sphere towards the triangle, a to b: the penetration axis (jolt's
-    // CastSphereVsTriangles::AddHit), and the normal its negated unit as every other cast reports
+    // the contact normal points from the sphere towards the triangle, a to b: the penetration axis, and the normal its
+    // negated unit as every other cast reports
     hit.penetration_axis = mat4f::multiply3x3_vec(context.mesh_to_world, final_contact_normal);
     hit.normal = vec3f::normalize(hit.penetration_axis);
     hit.normal = vec3f::negate(hit.normal);

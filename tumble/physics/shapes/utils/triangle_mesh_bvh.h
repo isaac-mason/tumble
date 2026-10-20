@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's triangle-mesh-bvh.ts: a binary bvh over a mesh's triangles. building it reorders the
-// triangles so that every leaf holds a contiguous range of them.
-
 #include <stdint.h>
 
 #include "tumble/physics/shapes/utils/bvh.h"
@@ -12,6 +9,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// a binary bvh over a mesh's triangles; building it reorders them so every leaf holds a contiguous range
 namespace triangle_mesh_bvh {
 
 using triangle_mesh_data::TriangleMeshData;

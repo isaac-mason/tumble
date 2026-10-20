@@ -58,7 +58,7 @@ struct EdgeKey {
 static inline uint32_t hash_of(const EdgeKey &key) { return combine(mix(key.lo), key.hi); }
 
 /**
- * edge reference storage matching jolt's approach: up to 2 triangle references inline. when a 3rd
+ * an edge's triangle references: up to 2 inline. when a 3rd
  * triangle uses the edge, it is marked non-manifold immediately without storing more references.
  */
 struct EdgeRefs {

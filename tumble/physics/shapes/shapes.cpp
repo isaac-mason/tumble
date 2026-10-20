@@ -58,7 +58,6 @@ void set_cast_shape_fn(ShapeType type_a, ShapeType type_b, CastShapeVsShapeFn fn
     cast_table[shape_type_index(type_a)][shape_type_index(type_b)] = fn;
 }
 
-// jolt's ScaleHelpers tolerances
 static constexpr float SCALE_TOLERANCE_SQ = 1.0e-8f;
 static constexpr float ROTATION_IDENTITY_TOLERANCE_SQ = 1.0e-12f;
 

@@ -42,9 +42,7 @@ void init() {
     shapes::set_shape_def(transformed::def());
     shapes::set_shape_def(triangle_mesh::def());
 
-    // the pair tables, laid out here in full rather than registered shape by shape (crashcat's register() per shape
-    // only gives the right table because js visits integer keys in order). the generic rule first, then every
-    // specialised pair over it; a later shape adds its rows below, no order to get right.
+    // the pair tables in full: the generic rule first, then every specialised pair over it
 
     // any two convex shapes: gjk and epa
     for (uint32_t i = 0; i < shapes::SHAPE_TYPE_COUNT; i++) {
@@ -94,9 +92,8 @@ void init() {
     }
 
     // compound vs anything, both ways: walk the compound's children. compound vs compound walks b's
-    // children first, and the static compound's rows lie over the compound's where both meet, as
-    // crashcat's registration order leaves them. the empty shape keeps no pairs: every child against
-    // it would find none
+    // children first, and the static compound's rows lie over the compound's where both meet. the empty shape keeps no
+    // pairs: every child against it would find none
     for (uint32_t i = 0; i < shapes::SHAPE_TYPE_COUNT; i++) {
         const shapes::ShapeDef &other = shapes::shape_defs[i];
         if (other.get_surface_normal == nullptr || other.type == shapes::SHAPE_EMPTY) continue;
@@ -107,8 +104,8 @@ void init() {
     }
 
     // the wrappers (transformed, scaled, offset centre of mass) vs anything, both ways: peel the wrapper and
-    // dispatch its inner shape. as crashcat's registration order leaves them, these lie over the compound's
-    // rows and under the static compound's, and where two wrappers meet the later one here peels first
+    // dispatch its inner shape. these lie over the compound's rows and under the static compound's, and where two
+    // wrappers meet the later one here peels first
     for (uint32_t i = 0; i < shapes::SHAPE_TYPE_COUNT; i++) {
         const shapes::ShapeDef &other = shapes::shape_defs[i];
         if (other.get_surface_normal == nullptr || other.type == shapes::SHAPE_EMPTY) continue;

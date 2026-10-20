@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's convex-hull-builder.ts: quickhull in 3d, after jolt's ConvexHullBuilder. merges
-// coplanar and degenerate faces as it goes, so a face is a polygon, not just a triangle.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -12,6 +9,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// quickhull in 3d, merging coplanar and degenerate faces as it goes, so a face is a polygon, not only a triangle
 namespace convex_hull_builder {
 
 /** minimum triangle area squared */

@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's static-compound.ts: a compound whose children never change after create, walked through
-// a bvh over the children rather than one by one. building the bvh reorders the children, and a sub
-// shape id indexes them in that order. the functions that only walk the child list are compound's.
-
 #include <stdint.h>
 
 #include "tumble/physics/shapes/compound.h"
@@ -15,6 +11,8 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// a compound whose children never change after create, walked through a bvh over them; building the bvh reorders the
+// children, and a sub shape id indexes them in that order
 namespace static_compound {
 
 using compound::CompoundShapeChild;

@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's compound.ts: a shape made of child shapes, each placed by a position and rotation. a sub
-// shape id's level indexes the children. the static compound shares the functions that only walk the
-// child list (jolt's StaticCompoundShape inherits them from CompoundShape).
-
 #include <stdint.h>
 
 #include "tumble/physics/shapes/shapes.h"
@@ -12,6 +8,8 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// child shapes, each placed by a position and rotation; a sub shape id's level indexes the children. the static
+// compound shares the functions that only walk the child list
 namespace compound {
 
 using shapes::Shape;
@@ -19,7 +17,7 @@ using shapes::Shape;
 struct CompoundShapeChild {
     Float3 position;
     Float4 quaternion;
-    /** js-owned; outlives every compound it is a child of */
+    /** the caller's; outlives every compound it is a child of */
     Shape *shape;
 };
 

@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's capsule.ts: a segment along local y from -half_height_of_cylinder to
-// +half_height_of_cylinder, rounded by radius.
-
 #include <stdint.h>
 
 #include "tumble/physics/shapes/shapes.h"
@@ -10,6 +7,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// a segment along local y from -half_height_of_cylinder to +half_height_of_cylinder, rounded by radius
 namespace capsule {
 
 using shapes::Shape;

@@ -1,7 +1,5 @@
 #pragma once
 
-// crashcat's cylinder.ts: a cylinder about the y axis, rounded by a convex radius.
-
 #include <stdint.h>
 
 #include "tumble/physics/shapes/shapes.h"
@@ -9,6 +7,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// about the y axis, rounded by a convex radius
 namespace cylinder {
 
 using shapes::Shape;
@@ -32,7 +31,7 @@ void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub
 /** a vertical edge of the side when `direction` is mostly horizontal, else the opposing cap as an octagon */
 void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, const Shape *shape, sub_shape::SubShapeId sub_shape_id);
 float get_inner_radius(const Shape *shape);
-/** crashcat's setCylinderSupport; uniform scale only */
+/** uniform scale only */
 void set_support(support::Support &out, const Shape *shape, support::SupportFunctionMode mode, Vec3f scale);
 
 shapes::ShapeDef def();
