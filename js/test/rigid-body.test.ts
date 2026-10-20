@@ -22,7 +22,7 @@ describe('rigid bodies', () => {
         expect(RigidBody.getMass(world, body)).toBeCloseTo(12, 4);
         expect(RigidBody.getShape(world, body)).toBe(crate);
         const bounds: Box3 = { min: [0, 0, 0], max: [0, 0, 0] };
-        expect(RigidBody.getBounds(bounds, world, body)).toBe(true);
+        expect(RigidBody.getBounds(world, bounds, body)).toBe(true);
         expect(bounds.min[1]).toBeCloseTo(1.5, 1);
         expect(bounds.max[1]).toBeCloseTo(2.5, 1);
         RigidBody.setUserData(world, body, 9);
@@ -47,16 +47,16 @@ describe('rigid bodies', () => {
         const velocity: Vec3 = [0, 0, 0];
         RigidBody.setLinearVelocity(world, body, [1, 0, 0]);
         RigidBody.addImpulse(world, body, [0, 0, RigidBody.getMass(world, body) * 2]);
-        RigidBody.getLinearVelocity(velocity, world, body);
+        RigidBody.getLinearVelocity(world, velocity, body);
         expect(velocity[0]).toBeCloseTo(1, 5);
         expect(velocity[2]).toBeCloseTo(2, 4);
         RigidBody.setAngularVelocity(world, body, [0, 3, 0]);
-        RigidBody.getAngularVelocity(velocity, world, body);
+        RigidBody.getAngularVelocity(world, velocity, body);
         expect(velocity[1]).toBeCloseTo(3, 4);
 
-        RigidBody.setPosition(world, body, [10, 5, 0]);
+        RigidBody.setPosition(world, body, [10, 5, 0], true);
         const position: Vec3 = [0, 0, 0];
-        RigidBody.getPosition(position, world, body);
+        RigidBody.getPosition(world, position, body);
         expect(position).toEqual([10, 5, 0]);
         releaseScene(scene);
         Sphere.destroy(ball);
@@ -75,7 +75,7 @@ describe('rigid bodies', () => {
         RigidBody.moveKinematic(world, body, [2, 3, 0], [0, 0, 0, 1], 1 / 60);
         World.step(world, 1 / 60);
         const position: Vec3 = [0, 0, 0];
-        RigidBody.getPosition(position, world, body);
+        RigidBody.getPosition(world, position, body);
         expect(position[0]).toBeCloseTo(2, 4);
         releaseScene(scene);
         Box.destroy(crate);
@@ -95,7 +95,7 @@ describe('rigid bodies', () => {
         RigidBody.addImpulse(world, body, [50, 0, 50]);
         steps(world, 30);
         const position: Vec3 = [0, 0, 0];
-        RigidBody.getPosition(position, world, body);
+        RigidBody.getPosition(world, position, body);
         expect(position[0]).toBe(0);
         expect(position[2]).toBe(0);
         expect(position[1]).toBeLessThan(5);
@@ -133,7 +133,7 @@ describe('rigid bodies', () => {
         });
         const position: Vec3 = [0, 0, 0];
         const quaternion: Quat = [0, 0, 0, 0];
-        expect(RigidBody.getTransform(position, quaternion, scene.world, body)).toBe(true);
+        expect(RigidBody.getTransform(scene.world, position, quaternion, body)).toBe(true);
         expect(position).toEqual([1, 2, 3]);
         expect(quaternion).toEqual([0, 1, 0, 0]);
         releaseScene(scene);
@@ -149,7 +149,7 @@ describe('rigid bodies', () => {
         expect(RigidBody.exists(world, body)).toBe(false);
         expect(RigidBody.remove(world, body)).toBe(false);
         expect(RigidBody.setLinearVelocity(world, body, [1, 0, 0])).toBe(false);
-        expect(RigidBody.addForce(world, body, [1, 0, 0])).toBe(false);
+        expect(RigidBody.addForce(world, body, [1, 0, 0], true)).toBe(false);
         expect(RigidBody.getMass(world, body)).toBe(0);
         expect(RigidBody.getShape(world, body)).toBe(null);
         // a new body in the freed slot has a new id; the old one still names nothing

@@ -115,36 +115,36 @@ export const RigidBody = {
         return Low.RigidBody.exists(world, body);
     },
 
-    // readers: out-first, false (out as it was) when the id names no body
+    // readers: the world, then out, then the body; false (out as it was) when the id names no body
 
     /** the shape's origin, world space */
-    getPosition(out: Vec3, world: World, body: BodyId): boolean {
+    getPosition(world: World, out: Vec3, body: BodyId): boolean {
         return copied(out, vec3, Low.RigidBody.getPosition(vec3, world, body));
     },
-    getQuaternion(out: Quat, world: World, body: BodyId): boolean {
+    getQuaternion(world: World, out: Quat, body: BodyId): boolean {
         return copied(out, quat, Low.RigidBody.getQuaternion(quat, world, body));
     },
-    getTransform(outPosition: Vec3, outQuaternion: Quat, world: World, body: BodyId): boolean {
+    getTransform(world: World, outPosition: Vec3, outQuaternion: Quat, body: BodyId): boolean {
         if (!Low.RigidBody.getTransform(vec3, quat, world, body)) return false;
         copied(outPosition, vec3, true);
         copied(outQuaternion, quat, true);
         return true;
     },
-    getCenterOfMassPosition(out: Vec3, world: World, body: BodyId): boolean {
+    getCenterOfMassPosition(world: World, out: Vec3, body: BodyId): boolean {
         return copied(out, vec3, Low.RigidBody.getCenterOfMassPosition(vec3, world, body));
     },
-    getLinearVelocity(out: Vec3, world: World, body: BodyId): boolean {
+    getLinearVelocity(world: World, out: Vec3, body: BodyId): boolean {
         return copied(out, vec3, Low.RigidBody.getLinearVelocity(vec3, world, body));
     },
-    getAngularVelocity(out: Vec3, world: World, body: BodyId): boolean {
+    getAngularVelocity(world: World, out: Vec3, body: BodyId): boolean {
         return copied(out, vec3, Low.RigidBody.getAngularVelocity(vec3, world, body));
     },
     /** the velocity of a world point carried with the body */
-    getVelocityAtPoint(out: Vec3, world: World, body: BodyId, point: Vec3): boolean {
+    getVelocityAtPoint(world: World, out: Vec3, body: BodyId, point: Vec3): boolean {
         return copied(out, vec3, Low.RigidBody.getVelocityAtPoint(vec3, world, body, point));
     },
     /** world space bounds */
-    getBounds(out: Box3, world: World, body: BodyId): boolean {
+    getBounds(world: World, out: Box3, body: BodyId): boolean {
         if (!Low.RigidBody.getAabb(box3, world, body)) return false;
         copied(out.min, box3.min, true);
         copied(out.max, box3.max, true);
@@ -174,13 +174,13 @@ export const RigidBody = {
     // writers: false when the id names no body
 
     /** a teleport: the broadphase and the pairs follow; nothing between here and there stops it */
-    setPosition(world: World, body: BodyId, position: Vec3, wake = true): boolean {
+    setPosition(world: World, body: BodyId, position: Vec3, wake: boolean): boolean {
         return Low.RigidBody.setPosition(world, body, position, wake);
     },
-    setQuaternion(world: World, body: BodyId, quaternion: Quat, wake = true): boolean {
+    setQuaternion(world: World, body: BodyId, quaternion: Quat, wake: boolean): boolean {
         return Low.RigidBody.setQuaternion(world, body, quaternion, wake);
     },
-    setTransform(world: World, body: BodyId, position: Vec3, quaternion: Quat, wake = true): boolean {
+    setTransform(world: World, body: BodyId, position: Vec3, quaternion: Quat, wake: boolean): boolean {
         return Low.RigidBody.setTransform(world, body, position, quaternion, wake);
     },
     /** m/s, world space; wakes the body */
@@ -198,14 +198,14 @@ export const RigidBody = {
         return Low.RigidBody.addAngularVelocity(world, body, velocity);
     },
     /** N at the centre of mass over the next step, then cleared; dynamic bodies only */
-    addForce(world: World, body: BodyId, force: Vec3, wake = true): boolean {
+    addForce(world: World, body: BodyId, force: Vec3, wake: boolean): boolean {
         return Low.RigidBody.addForce(world, body, force, wake);
     },
-    addTorque(world: World, body: BodyId, torque: Vec3, wake = true): boolean {
+    addTorque(world: World, body: BodyId, torque: Vec3, wake: boolean): boolean {
         return Low.RigidBody.addTorque(world, body, torque, wake);
     },
     /** the force, and the torque it makes about the centre of mass */
-    addForceAtPosition(world: World, body: BodyId, force: Vec3, position: Vec3, wake = true): boolean {
+    addForceAtPosition(world: World, body: BodyId, force: Vec3, position: Vec3, wake: boolean): boolean {
         return Low.RigidBody.addForceAtPosition(world, body, force, position, wake);
     },
     /** N s at the centre of mass, the velocity changed at once; dynamic bodies only, always wakes */
@@ -219,7 +219,7 @@ export const RigidBody = {
         return Low.RigidBody.addAngularImpulse(world, body, impulse);
     },
     /** the active list follows; `wake` wakes one that keeps moving */
-    setMotionType(world: World, body: BodyId, motionType: MotionType, wake = true): boolean {
+    setMotionType(world: World, body: BodyId, motionType: MotionType, wake: boolean): boolean {
         return Low.RigidBody.setMotionType(world, body, motionType, wake);
     },
     /** into another object layer's broadphase tree, finding its pairs again */

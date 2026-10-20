@@ -18,7 +18,7 @@ export const PairEvent = {
         return { bodyA: 0, bodyB: 0, userDataA: 0, userDataB: 0 };
     },
     /** pairs entry `index` into out; false past World.pairs */
-    read(out: PairEvent, world: World, index: number): boolean {
+    read(world: World, out: PairEvent, index: number): boolean {
         if (!Low.Events.readPair(pair, world, index)) return false;
         out.bodyA = pair.bodyA;
         out.bodyB = pair.bodyB;
@@ -111,13 +111,13 @@ export const ContactEvent = {
         };
     },
     /** contacts added entry `index` into out; false past World.contactsAdded */
-    readAdded(out: ContactEvent, world: World, index: number): boolean {
+    readAdded(world: World, out: ContactEvent, index: number): boolean {
         if (!Low.Events.readContactAdded(contact, world, index)) return false;
         copyContact(out);
         return true;
     },
     /** contacts persisted entry `index` into out; false past World.contactsPersisted */
-    readPersisted(out: ContactEvent, world: World, index: number): boolean {
+    readPersisted(world: World, out: ContactEvent, index: number): boolean {
         if (!Low.Events.readContactPersisted(contact, world, index)) return false;
         copyContact(out);
         return true;
@@ -133,7 +133,7 @@ export const ContactRemovedEvent = {
     create(): ContactRemovedEvent {
         return { bodyA: 0, bodyB: 0, subShapeA: 0, subShapeB: 0 };
     },
-    read(out: ContactRemovedEvent, world: World, index: number): boolean {
+    read(world: World, out: ContactRemovedEvent, index: number): boolean {
         if (!Low.Events.readContactRemoved(removed, world, index)) return false;
         Object.assign(out, removed);
         return true;

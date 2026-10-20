@@ -30,15 +30,15 @@ describe('a world from js', () => {
         for (let i = 0; i < 120; i++) World.step(world, 1 / 60);
 
         const position: Vec3 = [0, 0, 0];
-        expect(RigidBody.getPosition(position, world, box)).toBe(true);
+        expect(RigidBody.getPosition(world, position, box)).toBe(true);
         expect(position[1]).toBeCloseTo(0.48, 1);
-        RigidBody.getPosition(position, world, sphere);
+        RigidBody.getPosition(world, position, sphere);
         expect(position[1]).toBeCloseTo(0.48, 1);
 
         // a removed body's id names nothing
         expect(RigidBody.remove(world, box)).toBe(true);
         position[1] = 123;
-        expect(RigidBody.getPosition(position, world, box)).toBe(false);
+        expect(RigidBody.getPosition(world, position, box)).toBe(false);
         expect(position[1]).toBe(123);
         World.destroy(world);
         Box.destroy(floor);

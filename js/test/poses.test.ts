@@ -37,7 +37,7 @@ describe('poses', () => {
         expect(Array.from(views.changed)).toEqual([fallingSlot]);
         const y: [number] = [0];
         const position: [number, number, number] = [0, 0, 0];
-        RigidBody.getPosition(position, world, falling);
+        RigidBody.getPosition(world, position, falling);
         y[0] = views.positions[fallingSlot * 3 + 1]!;
         expect(y[0]).toBe(Math.fround(position[1]));
 
@@ -45,7 +45,7 @@ describe('poses', () => {
         expect(Poses.read(poses).changed.length).toBe(0);
 
         // a teleport with no step between is seen
-        RigidBody.setPosition(world, resting, [6, 0.5, 0]);
+        RigidBody.setPosition(world, resting, [6, 0.5, 0], true);
         views = Poses.read(poses);
         expect(Array.from(views.changed)).toEqual([restingSlot]);
         expect(views.positions[restingSlot * 3]).toBe(6);
