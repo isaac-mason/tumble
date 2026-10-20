@@ -4,6 +4,7 @@
 #include "tumble/physics/shapes/box.h"
 #include "tumble/physics/shapes/dispatch.h"
 #include "tumble/physics/shapes/sphere.h"
+#include "tumble/physics/world.h"
 #include "test.h"
 #include "test_math.h"
 
@@ -11,8 +12,7 @@ using estimate_collision_response::CollisionEstimationResult;
 using rigid_body::RigidBody;
 
 struct Scene {
-    bodies::Bodies bodies;
-    layers::Layers layers;
+    world::World *world;
     shapes::Shape *ball_shape;
     shapes::Shape *ground_shape;
     RigidBody *ball;
@@ -26,17 +26,16 @@ static constexpr float RADIUS = 0.5f;
 /** a dynamic ball of radius 0.5 resting its lowest point on a static box's top face at y = 0, the contact at the origin */
 static void make_scene(Scene &scene, const Float3 &velocity) {
     dispatch::init();
-    scene.bodies = bodies::init();
-    scene.layers = layers::create();
-    const uint32_t broadphase_layer = layers::add_broadphase_layer(scene.layers);
-    const uint32_t object_layer = layers::add_object_layer(scene.layers, broadphase_layer);
-    layers::enable_collision(scene.layers, object_layer, object_layer);
+    world_settings::WorldSettings settings = world_settings::create();
+    const uint32_t object_layer = world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
+    world_settings::enable_collision(settings, object_layer, object_layer);
+    scene.world = world::create(settings);
 
     scene.ball_shape = sphere::create({.radius = RADIUS, .density = 1000.0f});
     scene.ground_shape = box::create({.half_extents = {5, 1, 5}});
-    scene.ball = rigid_body::create(scene.bodies, scene.layers,
+    scene.ball = rigid_body::create(*scene.world,
                                     {.shape = scene.ball_shape, .object_layer = object_layer, .motion_type = motion_type::MOTION_DYNAMIC, .position = {0, RADIUS, 0}});
-    scene.ground = rigid_body::create(scene.bodies, scene.layers,
+    scene.ground = rigid_body::create(*scene.world,
                                       {.shape = scene.ground_shape, .object_layer = object_layer, .motion_type = motion_type::MOTION_STATIC, .position = {0, -1, 0}});
     scene.ball->motion_properties.linear_velocity = velocity;
     scene.mass = 4.0f / 3.0f * scalar::PI * RADIUS * RADIUS * RADIUS * 1000.0f;
@@ -48,8 +47,7 @@ static void make_scene(Scene &scene, const Float3 &velocity) {
 }
 
 static void release_scene(Scene &scene) {
-    bodies::release(scene.bodies);
-    layers::release(scene.layers);
+    world::destroy(scene.world);
     sphere::destroy(scene.ball_shape);
     box::destroy(scene.ground_shape);
 }

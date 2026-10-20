@@ -65,8 +65,8 @@ contact_constraints::ContactSettings default_override() {
 
 /** answers sized to the events, the first contact event answered with `settings` */
 void answer_first(ContactScene &scene, const contact_constraints::ContactSettings &settings, bool reject = false) {
-    events::reset_contact_answers(scene.answers, scene.events, 0);
-    events::ContactOverride &answer = scene.answers.contact_override[0];
+    events::reset_contact_answers(scene.world->answers, scene.world->events, 0);
+    events::ContactOverride &answer = scene.world->answers.contact_override[0];
     answer.written = true;
     answer.reject = reject;
     answer.settings = settings;
@@ -85,8 +85,8 @@ uint64_t fnv1a_64(const uint32_t (&words)[4]) {
 }
 
 void apply_answers(ContactScene &scene) {
-    contact_constraints::apply_contact_overrides(scene.contact_constraints, scene.contacts, scene.bodies, scene.events, scene.answers,
-                                                 scene.settings, CONTACT_SCENE_DELTA_TIME);
+    contact_constraints::apply_contact_overrides(scene.world->contact_constraints, scene.world->contacts, scene.world->bodies, scene.world->events, scene.world->answers,
+                                                 scene.world->settings, CONTACT_SCENE_DELTA_TIME);
 }
 
 }  // namespace
@@ -102,11 +102,11 @@ void test_contact_constraints_box_resting_removes_approach_and_warm_starts(TestC
     begin_contact_step(scene);
     box->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
     CHECK(ctx, add_contact(scene, scenario.ground, box, scenario.manifold));
-    CHECK(ctx, scene.contact_constraints.count == 1);
-    CHECK(ctx, scene.events.contacts_added.length == 1 && scene.events.contacts_persisted.length == 0);
+    CHECK(ctx, scene.world->contact_constraints.count == 1);
+    CHECK(ctx, scene.world->events.contacts_added.length == 1 && scene.world->events.contacts_persisted.length == 0);
 
     // the ground was made first, so it is a and the normal points from it to the box
-    const contact_constraints::ContactConstraint &constraint = scene.contact_constraints.pool[0];
+    const contact_constraints::ContactConstraint &constraint = scene.world->contact_constraints.pool[0];
     CHECK(ctx, constraint.body_index_a == scenario.ground->index && constraint.body_index_b == box->index);
     CHECK(ctx, constraint.num_contact_points == 4);
     CHECK_NEAR(ctx, vec3f::dot(vec3f::load(constraint.tangent_1), vec3f::load(constraint.normal)), 0.0f, 1e-6f);
@@ -139,15 +139,15 @@ void test_contact_constraints_box_resting_removes_approach_and_warm_starts(TestC
     box->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
     box->motion_properties.angular_velocity = {0.0f, 0.0f, 0.0f};
     CHECK(ctx, add_contact(scene, scenario.ground, box, scenario.manifold));
-    CHECK(ctx, scene.events.contacts_added.length == 0 && scene.events.contacts_persisted.length == 1);
-    CHECK_NEAR(ctx, sum_normal_lambdas(scene.contact_constraints.pool[0]), lambda_step_1, 1e-3f);
+    CHECK(ctx, scene.world->events.contacts_added.length == 0 && scene.world->events.contacts_persisted.length == 1);
+    CHECK_NEAR(ctx, sum_normal_lambdas(scene.world->contact_constraints.pool[0]), lambda_step_1, 1e-3f);
 
-    contact_constraints::warm_start_velocity_constraints(scene.contact_constraints, scene.bodies, all_contact_indices(scene), 1.0f);
+    contact_constraints::warm_start_velocity_constraints(scene.world->contact_constraints, scene.world->bodies, all_contact_indices(scene), 1.0f);
     CHECK_NEAR(ctx, box->motion_properties.linear_velocity.y, 0.0f, 1e-3f);
-    contact_constraints::solve_velocity_constraints_for_island(scene.contact_constraints, scene.bodies, all_contact_indices(scene));
+    contact_constraints::solve_velocity_constraints_for_island(scene.world->contact_constraints, scene.world->bodies, all_contact_indices(scene));
     CHECK_NEAR(ctx, box->motion_properties.linear_velocity.y, 0.0f, 1e-3f);
     CHECK_NEAR(ctx, vec3f::length(vec3f::load(box->motion_properties.angular_velocity)), 0.0f, 1e-3f);
-    CHECK_NEAR(ctx, sum_normal_lambdas(scene.contact_constraints.pool[0]), lambda_step_1, 1.0f);
+    CHECK_NEAR(ctx, sum_normal_lambdas(scene.world->contact_constraints.pool[0]), lambda_step_1, 1.0f);
 
     release_contact_scene(scene);
 }
@@ -165,8 +165,8 @@ void test_contact_constraints_event_carries_the_manifold(TestCtx &ctx) {
     manifold::swap_shapes(reversed);
     CHECK(ctx, add_contact(scene, scenario.box, scenario.ground, reversed));
 
-    CHECK(ctx, scene.events.contacts_added.length == 1);
-    const events::ContactEvent &event = scene.events.contacts_added[0];
+    CHECK(ctx, scene.world->events.contacts_added.length == 1);
+    const events::ContactEvent &event = scene.world->events.contacts_added[0];
     CHECK(ctx, event.body_id_a == scenario.ground->id && event.body_id_b == scenario.box->id);
     CHECK(ctx, event.body_index_a == scenario.ground->index && event.body_index_b == scenario.box->index);
     CHECK(ctx, event.material_id_a == 3 && event.material_id_b == 7);
@@ -177,7 +177,7 @@ void test_contact_constraints_event_carries_the_manifold(TestCtx &ctx) {
         CHECK(ctx, vec3f::exact_equals(vec3f::load(event.points_a[i]), scenario.manifold.relative_contact_points_on_a[i]));
         CHECK(ctx, vec3f::exact_equals(vec3f::load(event.points_b[i]), scenario.manifold.relative_contact_points_on_b[i]));
     }
-    CHECK(ctx, event.contact_index == scene.contact_constraints.pool[0].contact_index);
+    CHECK(ctx, event.contact_index == scene.world->contact_constraints.pool[0].contact_index);
 
     release_contact_scene(scene);
 }
@@ -191,10 +191,10 @@ void test_contact_constraints_restitution_bounces_less_gravity(TestCtx &ctx) {
     begin_contact_step(scene);
     ball->motion_properties.linear_velocity = {0.0f, -5.0f, 0.0f};
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
-    CHECK_NEAR(ctx, scene.contact_constraints.pool[0].restitution, 0.5f, 1e-7f);
+    CHECK_NEAR(ctx, scene.world->contact_constraints.pool[0].restitution, 0.5f, 1e-7f);
     solve_contact_velocities(scene, 10);
     CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.y, 0.5f * (5.0f - 9.81f * CONTACT_SCENE_DELTA_TIME), 1e-4f);
-    CHECK_NEAR(ctx, scene.contact_constraints.pool[0].contact_points[0].normal_constraint.total_lambda,
+    CHECK_NEAR(ctx, scene.world->contact_constraints.pool[0].contact_points[0].normal_constraint.total_lambda,
                ball_mass(ball) * (5.0f + 0.5f * (5.0f - 9.81f * CONTACT_SCENE_DELTA_TIME)), 0.1f);
 
     // below min_velocity_for_restitution (1 m/s) there is no bounce
@@ -244,7 +244,7 @@ void test_contact_constraints_friction_slides_at_the_cone(TestCtx &ctx) {
     begin_contact_step(scene);
     ball->motion_properties.linear_velocity = {2.0f, -1.0f, 0.0f};
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
-    CHECK_NEAR(ctx, scene.contact_constraints.pool[0].friction, 0.5f, 1e-6f);
+    CHECK_NEAR(ctx, scene.world->contact_constraints.pool[0].friction, 0.5f, 1e-6f);
     solve_contact_velocities(scene, 10);
 
     CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.y, 0.0f, 1e-5f);
@@ -281,20 +281,20 @@ void test_contact_constraints_sensor_reports_without_impulse(TestCtx &ctx) {
     begin_contact_step(scene);
     ball->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
     CHECK(ctx, !add_contact(scene, ground, ball, ball_manifold()));
-    CHECK(ctx, scene.contact_constraints.count == 0);
-    CHECK(ctx, scene.events.contacts_added.length == 1);
-    CHECK(ctx, scene.events.contacts_added[0].body_id_b == ball->id);
+    CHECK(ctx, scene.world->contact_constraints.count == 0);
+    CHECK(ctx, scene.world->events.contacts_added.length == 1);
+    CHECK(ctx, scene.world->events.contacts_added[0].body_id_b == ball->id);
     solve_contact_velocities(scene, 10);
     CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.y, -1.0f, 0.0f);
 
     // the contact is cached with no impulse, so the next step reports it persisted
-    contacts::Contact &contact = scene.contacts.contacts[(uint32_t)scene.events.contacts_added[0].contact_index];
-    const contacts::CachedManifold &write = contacts::get_write_manifold(contact, scene.contacts);
+    contacts::Contact &contact = scene.world->contacts.contacts[(uint32_t)scene.world->events.contacts_added[0].contact_index];
+    const contacts::CachedManifold &write = contacts::get_write_manifold(contact, scene.world->contacts);
     CHECK(ctx, write.num_contact_points == 1 && write.contact_points[0].normal_lambda == 0.0f);
     end_contact_step(scene);
     begin_contact_step(scene);
     CHECK(ctx, !add_contact(scene, ground, ball, ball_manifold()));
-    CHECK(ctx, scene.events.contacts_added.length == 0 && scene.events.contacts_persisted.length == 1);
+    CHECK(ctx, scene.world->events.contacts_added.length == 0 && scene.world->events.contacts_persisted.length == 1);
 
     release_contact_scene(scene);
 }
@@ -316,7 +316,7 @@ void test_contact_constraints_kinematic_pushes_dynamic(TestCtx &ctx) {
     RigidBody *wall = add_contact_body(scene, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}), motion_type::MOTION_STATIC, {0.0f, 0.0f, 4.0f});
     begin_contact_step(scene);
     CHECK(ctx, !add_contact(scene, platform, wall, ball_manifold()));
-    CHECK(ctx, scene.contact_constraints.count == 0 && scene.events.contacts_added.length == 1);
+    CHECK(ctx, scene.world->contact_constraints.count == 0 && scene.world->events.contacts_added.length == 1);
 
     release_contact_scene(scene);
 }
@@ -337,8 +337,8 @@ void test_contact_constraints_position_solve_pushes_out_by_baumgarte(TestCtx &ct
     begin_contact_step(scene);
     CHECK(ctx, add_contact(scene, ground, ball, sunk));
     const float before = ball->center_of_mass_position.y;
-    const world_settings::SolverSettings &solver = scene.settings.solver;
-    CHECK(ctx, contact_constraints::solve_position_constraints_for_island(scene.contact_constraints, scene.bodies, all_contact_indices(scene),
+    const world_settings::SolverSettings &solver = scene.world->settings.solver;
+    CHECK(ctx, contact_constraints::solve_position_constraints_for_island(scene.world->contact_constraints, scene.world->bodies, all_contact_indices(scene),
                                                                           solver.penetration_slop, solver.baumgarte_factor,
                                                                           solver.max_penetration_distance));
     CHECK_NEAR(ctx, ball->center_of_mass_position.y - before, solver.baumgarte_factor * (0.1f - solver.penetration_slop), 1e-5f);
@@ -348,7 +348,7 @@ void test_contact_constraints_position_solve_pushes_out_by_baumgarte(TestCtx &ct
     sunk.relative_contact_points_on_b[0] = vec3f::make(0.0f, -0.01f, 0.0f);
     ball->center_of_mass_position.y = SPHERE_RADIUS;
     CHECK(ctx, add_contact(scene, ground, ball, sunk));
-    CHECK(ctx, !contact_constraints::solve_position_constraints_for_island(scene.contact_constraints, scene.bodies,
+    CHECK(ctx, !contact_constraints::solve_position_constraints_for_island(scene.world->contact_constraints, scene.world->bodies,
                                                                            all_contact_indices(scene), solver.penetration_slop,
                                                                            solver.baumgarte_factor, solver.max_penetration_distance));
 
@@ -364,30 +364,30 @@ void test_contact_constraints_from_cache_carries_the_manifold(TestCtx &ctx) {
     box->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
     CHECK(ctx, add_contact(scene, scenario.ground, box, scenario.manifold));
     solve_contact_velocities(scene, 10);
-    const float lambda_step_1 = sum_normal_lambdas(scene.contact_constraints.pool[0]);
-    const int32_t contact_index = scene.contact_constraints.pool[0].contact_index;
+    const float lambda_step_1 = sum_normal_lambdas(scene.world->contact_constraints.pool[0]);
+    const int32_t contact_index = scene.world->contact_constraints.pool[0].contact_index;
     end_contact_step(scene);
 
     // the pair barely moved: the cached manifold builds the constraint, warm started, with no narrowphase
     begin_contact_step(scene);
     box->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
     box->motion_properties.angular_velocity = {0.0f, 0.0f, 0.0f};
-    contacts::Contact &contact = scene.contacts.contacts[(uint32_t)contact_index];
-    CHECK(ctx, contact_constraints::add_contact_constraint_from_cache(scene.contact_constraints, scene.contacts, *scenario.ground, *box,
-                                                                      contact, scene.settings, scene.events, CONTACT_SCENE_DELTA_TIME,
-                                                                      scene.bodies.step_stamp));
-    CHECK(ctx, contact.last_processed_frame == scene.contacts.frame_stamp);
-    CHECK(ctx, scene.events.contacts_persisted.length == 1 && scene.events.contacts_added.length == 0);
-    const events::ContactEvent &event = scene.events.contacts_persisted[0];
+    contacts::Contact &contact = scene.world->contacts.contacts[(uint32_t)contact_index];
+    CHECK(ctx, contact_constraints::add_contact_constraint_from_cache(scene.world->contact_constraints, scene.world->contacts, *scenario.ground, *box,
+                                                                      contact, scene.world->settings, scene.world->events, CONTACT_SCENE_DELTA_TIME,
+                                                                      scene.world->bodies.step_stamp));
+    CHECK(ctx, contact.last_processed_frame == scene.world->contacts.frame_stamp);
+    CHECK(ctx, scene.world->events.contacts_persisted.length == 1 && scene.world->events.contacts_added.length == 0);
+    const events::ContactEvent &event = scene.world->events.contacts_persisted[0];
     CHECK(ctx, event.num_points == 4 && event.material_id_a == -1 && event.material_id_b == -1);
     CHECK_NEAR(ctx, event.normal.y, 1.0f, 1e-6f);
     CHECK_NEAR(ctx, event.penetration, 0.0f, 1e-6f);
     for (uint32_t i = 0; i < 4; i++) {
         CHECK_NEAR(ctx, vec3f::distance(vec3f::load(event.points_a[i]), scenario.manifold.relative_contact_points_on_a[i]), 0.0f, 1e-6f);
     }
-    CHECK_NEAR(ctx, sum_normal_lambdas(scene.contact_constraints.pool[0]), lambda_step_1, 1e-3f);
+    CHECK_NEAR(ctx, sum_normal_lambdas(scene.world->contact_constraints.pool[0]), lambda_step_1, 1e-3f);
 
-    contact_constraints::warm_start_velocity_constraints(scene.contact_constraints, scene.bodies, all_contact_indices(scene), 1.0f);
+    contact_constraints::warm_start_velocity_constraints(scene.world->contact_constraints, scene.world->bodies, all_contact_indices(scene), 1.0f);
     CHECK_NEAR(ctx, box->motion_properties.linear_velocity.y, 0.0f, 1e-3f);
 
     release_contact_scene(scene);
@@ -436,28 +436,28 @@ void test_contact_constraints_from_cache_keeps_the_materials(TestCtx &ctx) {
 
     begin_contact_step(scene);
     CHECK(ctx, add_contact(scene, ball, floor, contact_manifold));
-    CHECK(ctx, scene.events.contacts_added.length == 1 && scene.contact_constraints.count == 1);
-    const events::ContactEvent added = scene.events.contacts_added[0];
-    const float added_friction = scene.contact_constraints.pool[0].friction;
+    CHECK(ctx, scene.world->events.contacts_added.length == 1 && scene.world->contact_constraints.count == 1);
+    const events::ContactEvent added = scene.world->events.contacts_added[0];
+    const float added_friction = scene.world->contact_constraints.pool[0].friction;
     // body a is the floor (the lower id)
     CHECK(ctx, added.body_id_a == floor->id && added.material_id_a == 5 && added.material_id_b == 3);
     CHECK_NEAR(ctx, added.settings.combined_friction, scalar::sqrt(0.8f * 0.2f), 1e-6f);
-    const int32_t contact_index = scene.contact_constraints.pool[0].contact_index;
+    const int32_t contact_index = scene.world->contact_constraints.pool[0].contact_index;
     end_contact_step(scene);
 
     // persisted through the cache, which keeps no materials: the same materials and friction as when first built
     for (uint32_t step = 0; step < 3; step++) {
         begin_contact_step(scene);
-        contacts::Contact &contact = scene.contacts.contacts[(uint32_t)contact_index];
-        CHECK(ctx, contact_constraints::add_contact_constraint_from_cache(scene.contact_constraints, scene.contacts, *floor, *ball, contact,
-                                                                          scene.settings, scene.events, CONTACT_SCENE_DELTA_TIME,
-                                                                          scene.bodies.step_stamp));
-        CHECK(ctx, scene.events.contacts_persisted.length == 1 && scene.contact_constraints.count == 1);
-        const events::ContactEvent &persisted = scene.events.contacts_persisted[0];
+        contacts::Contact &contact = scene.world->contacts.contacts[(uint32_t)contact_index];
+        CHECK(ctx, contact_constraints::add_contact_constraint_from_cache(scene.world->contact_constraints, scene.world->contacts, *floor, *ball, contact,
+                                                                          scene.world->settings, scene.world->events, CONTACT_SCENE_DELTA_TIME,
+                                                                          scene.world->bodies.step_stamp));
+        CHECK(ctx, scene.world->events.contacts_persisted.length == 1 && scene.world->contact_constraints.count == 1);
+        const events::ContactEvent &persisted = scene.world->events.contacts_persisted[0];
         CHECK(ctx, persisted.sub_shape_id_a == added.sub_shape_id_a && persisted.sub_shape_id_b == added.sub_shape_id_b);
         CHECK(ctx, persisted.material_id_a == added.material_id_a && persisted.material_id_b == added.material_id_b);
         CHECK(ctx, persisted.settings.combined_friction == added.settings.combined_friction);
-        CHECK(ctx, scene.contact_constraints.pool[0].friction == added_friction);
+        CHECK(ctx, scene.world->contact_constraints.pool[0].friction == added_friction);
         end_contact_step(scene);
     }
 
@@ -474,16 +474,16 @@ void test_contact_constraints_override_conveyor(TestCtx &ctx) {
     begin_contact_step(scene);
     ball->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
     CHECK(ctx, add_contact(scene, belt, ball, ball_manifold()));
-    CHECK(ctx, !contact_constraint_part::is_active(scene.contact_constraints.pool[0].friction_constraint_1));
+    CHECK(ctx, !contact_constraint_part::is_active(scene.world->contact_constraints.pool[0].friction_constraint_1));
 
     contact_constraints::ContactSettings settings = default_override();
     settings.combined_friction = 1.0f;
     settings.relative_linear_surface_velocity = {-2.0f, 0.0f, 0.0f};
     answer_first(scene, settings);
     apply_answers(scene);
-    CHECK(ctx, scene.contact_constraints.count == 1);
-    CHECK_NEAR(ctx, scene.contact_constraints.pool[0].friction, 1.0f, 0.0f);
-    CHECK(ctx, contact_constraint_part::is_active(scene.contact_constraints.pool[0].friction_constraint_1));
+    CHECK(ctx, scene.world->contact_constraints.count == 1);
+    CHECK_NEAR(ctx, scene.world->contact_constraints.pool[0].friction, 1.0f, 0.0f);
+    CHECK(ctx, contact_constraint_part::is_active(scene.world->contact_constraints.pool[0].friction_constraint_1));
 
     // the ball's contact point is carried along with the belt (it sticks: 4/7 m of the m friction allows)
     solve_contact_velocities(scene, 10);
@@ -520,9 +520,9 @@ void test_contact_constraints_override_restitution_and_mass_scale(TestCtx &ctx) 
     settings.inv_mass_scale_2 = 0.5f;
     answer_first(scene, settings);
     apply_answers(scene);
-    CHECK_NEAR(ctx, scene.contact_constraints.pool[0].inv_mass_b, 0.5f * ball->motion_properties.inv_mass, 1e-12f);
+    CHECK_NEAR(ctx, scene.world->contact_constraints.pool[0].inv_mass_b, 0.5f * ball->motion_properties.inv_mass, 1e-12f);
     solve_contact_velocities(scene, 10);
-    CHECK_NEAR(ctx, scene.contact_constraints.pool[0].contact_points[0].normal_constraint.total_lambda, 2.0f * ball_mass(ball), 0.05f);
+    CHECK_NEAR(ctx, scene.world->contact_constraints.pool[0].contact_points[0].normal_constraint.total_lambda, 2.0f * ball_mass(ball), 0.05f);
 
     // an inverse mass scale of 0 on the only dynamic body leaves no constraint
     begin_contact_step(scene);
@@ -531,7 +531,7 @@ void test_contact_constraints_override_restitution_and_mass_scale(TestCtx &ctx) 
     settings.inv_mass_scale_2 = 0.0f;
     answer_first(scene, settings);
     apply_answers(scene);
-    CHECK(ctx, scene.contact_constraints.count == 0);
+    CHECK(ctx, scene.world->contact_constraints.count == 0);
 
     release_contact_scene(scene);
 }
@@ -556,24 +556,24 @@ void test_contact_constraints_override_reject_drops_and_zeroes_the_cache(TestCtx
     other->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
     CHECK(ctx, add_contact(scene, ground, other, other_manifold));
-    CHECK(ctx, scene.contact_constraints.count == 2);
-    CHECK(ctx, scene.events.contacts_persisted.length == 1 && scene.events.contacts_added.length == 1);
-    const int32_t rejected_contact = scene.contact_constraints.pool[0].contact_index;
-    const int32_t kept_contact = scene.contact_constraints.pool[1].contact_index;
-    CHECK(ctx, scene.contact_constraints.pool[0].contact_points[0].normal_constraint.total_lambda > 0.0f);
+    CHECK(ctx, scene.world->contact_constraints.count == 2);
+    CHECK(ctx, scene.world->events.contacts_persisted.length == 1 && scene.world->events.contacts_added.length == 1);
+    const int32_t rejected_contact = scene.world->contact_constraints.pool[0].contact_index;
+    const int32_t kept_contact = scene.world->contact_constraints.pool[1].contact_index;
+    CHECK(ctx, scene.world->contact_constraints.pool[0].contact_points[0].normal_constraint.total_lambda > 0.0f);
 
     // answers: contacts_added first (the other ball, untouched), then contacts_persisted (the ball, rejected)
-    events::reset_contact_answers(scene.answers, scene.events, 0);
-    events::ContactOverride &answer = scene.answers.contact_override[1];
+    events::reset_contact_answers(scene.world->answers, scene.world->events, 0);
+    events::ContactOverride &answer = scene.world->answers.contact_override[1];
     answer.written = true;
     answer.reject = true;
     answer.settings = default_override();
     apply_answers(scene);
 
-    CHECK(ctx, scene.contact_constraints.count == 1);
-    CHECK(ctx, scene.contact_constraints.pool[0].contact_index == kept_contact);
+    CHECK(ctx, scene.world->contact_constraints.count == 1);
+    CHECK(ctx, scene.world->contact_constraints.pool[0].contact_index == kept_contact);
     const contacts::CachedManifold &write =
-        contacts::get_write_manifold(scene.contacts.contacts[(uint32_t)rejected_contact], scene.contacts);
+        contacts::get_write_manifold(scene.world->contacts.contacts[(uint32_t)rejected_contact], scene.world->contacts);
     CHECK(ctx, write.contact_points[0].normal_lambda == 0.0f && write.friction_lambda_1 == 0.0f);
 
     // nothing holds the rejected ball up
@@ -588,7 +588,7 @@ void test_contact_constraints_override_reject_drops_and_zeroes_the_cache(TestCtx
     sensor.is_sensor = true;
     answer_first(scene, sensor);
     apply_answers(scene);
-    CHECK(ctx, scene.contact_constraints.count == 0);
+    CHECK(ctx, scene.world->contact_constraints.count == 0);
 
     release_contact_scene(scene);
 }
@@ -606,16 +606,16 @@ void test_contact_constraints_sort_is_by_key_then_ids(TestCtx &ctx) {
 
     collections::Vec<uint32_t> indices = {};
     for (uint32_t i = 5; i-- > 0;) indices.push(i);
-    contact_constraints::sort_contact_indices(scene.contact_constraints, scene.bodies, indices);
+    contact_constraints::sort_contact_indices(scene.world->contact_constraints, scene.world->bodies, indices);
     CHECK(ctx, indices.length == 5);
     for (uint32_t i = 1; i < indices.length; i++) {
-        CHECK(ctx, scene.contact_constraints.pool[indices[i - 1]].sort_key <= scene.contact_constraints.pool[indices[i]].sort_key);
+        CHECK(ctx, scene.world->contact_constraints.pool[indices[i - 1]].sort_key <= scene.world->contact_constraints.pool[indices[i]].sort_key);
     }
     // the key is the 64 bit fnv-1a hash of body id a, sub shape a, body id b, sub shape b, each as its four little
     // endian bytes
-    const contact_constraints::ContactConstraint &first = scene.contact_constraints.pool[0];
-    const body_id::BodyId id_a = scene.bodies.pool[first.body_index_a]->id;
-    const body_id::BodyId id_b = scene.bodies.pool[first.body_index_b]->id;
+    const contact_constraints::ContactConstraint &first = scene.world->contact_constraints.pool[0];
+    const body_id::BodyId id_a = scene.world->bodies.pool[first.body_index_a]->id;
+    const body_id::BodyId id_b = scene.world->bodies.pool[first.body_index_b]->id;
     CHECK(ctx, first.sort_key == fnv1a_64({id_a, sub_shape::EMPTY_SUB_SHAPE_ID, id_b, sub_shape::EMPTY_SUB_SHAPE_ID}));
 
     indices.release();
@@ -644,7 +644,7 @@ void test_contact_constraints_dynamic_body_without_mass_makes_a_constraint(TestC
 
     begin_contact_step(scene);
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
-    CHECK(ctx, scene.contact_constraints.count == 1);
+    CHECK(ctx, scene.world->contact_constraints.count == 1);
 
     // and an answer that scales the dynamic body's inverse mass to 0 drops it
     answer_first(scene, [] {
@@ -653,7 +653,7 @@ void test_contact_constraints_dynamic_body_without_mass_makes_a_constraint(TestC
         return settings;
     }());
     apply_answers(scene);
-    CHECK(ctx, scene.contact_constraints.count == 0);
+    CHECK(ctx, scene.world->contact_constraints.count == 0);
 
     release_contact_scene(scene);
 }

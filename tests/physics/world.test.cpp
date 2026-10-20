@@ -33,8 +33,8 @@ void test_world_create_takes_settings_and_destroy_frees(TestCtx &ctx) {
     // bodies, contacts, constraints and events in use, then every part freed
     shapes::Shape *floor_shape = box::create({.half_extents = {5.0f, 0.5f, 5.0f}});
     shapes::Shape *box_shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
-    add_body(*world, body_settings(floor_shape, not_moving, motion_type::MOTION_STATIC, {0.0f, -0.5f, 0.0f}));
-    add_body(*world, body_settings(box_shape, moving, motion_type::MOTION_DYNAMIC, {0.0f, 0.5f, 0.0f}));
+    rigid_body::create(*world, body_settings(floor_shape, not_moving, motion_type::MOTION_STATIC, {0.0f, -0.5f, 0.0f}));
+    rigid_body::create(*world, body_settings(box_shape, moving, motion_type::MOTION_DYNAMIC, {0.0f, 0.5f, 0.0f}));
     for (uint32_t i = 0; i < 5; i++) step_world(*world);
     CHECK(ctx, world->contacts.contacts.length > 0 && world->events.contacts_persisted.length > 0);
     world::destroy(world);
@@ -71,8 +71,8 @@ void test_world_stale_contacts_removed_when_bodies_move_apart(TestCtx &ctx) {
     }
 
     // far apart, beyond the broadphase: removed
-    set_body_transform(world, body_a, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, false);
-    set_body_transform(world, body_b, {100.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, false);
+    rigid_body::set_transform(world, body_a, vec3f::make(0.0f, 0.0f, 0.0f), quatf::identity(), false);
+    rigid_body::set_transform(world, body_b, vec3f::make(100.0f, 0.0f, 0.0f), quatf::identity(), false);
     step_world(world);
     CHECK(ctx, world.events.contacts_removed.length > 0);
     if (world.events.contacts_removed.length > 0) {
@@ -93,7 +93,7 @@ void test_world_stale_contacts_removed_when_shapes_stop_colliding(TestCtx &ctx) 
     CHECK(ctx, body_contact_count(world, *body_a) > 0);
 
     // in broadphase reach, no longer colliding
-    set_body_transform(world, body_a, {5.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, false);
+    rigid_body::set_transform(world, body_a, vec3f::make(5.0f, 0.0f, 0.0f), quatf::identity(), false);
     step_world(world);
     CHECK(ctx, world.events.contacts_removed.length > 0);
     CHECK(ctx, body_contact_count(world, *body_a) == 0);
@@ -113,7 +113,7 @@ void test_world_contacts_removed_the_step_after_body_removal(TestCtx &ctx) {
 
     // the removal queues the report; the buffers the caller reads after this step are untouched
     const body_id::BodyId body_b_id = body_b->id;
-    CHECK(ctx, remove_body(world, body_b));
+    CHECK(ctx, rigid_body::remove(world, body_b));
     CHECK(ctx, world.events.contacts_removed.length == 0);
     CHECK(ctx, body_contact_count(world, *body_a) == 0);
 

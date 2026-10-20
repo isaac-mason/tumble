@@ -31,8 +31,8 @@ void test_fixed_constraint_create_world_space(TestCtx &ctx) {
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 1.0f, 0.0f}, stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.7f));
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {2.0f, 1.0f, 0.0f}, stored_axis_angle(vec3f::make(1.0f, 1.0f, 0.0f), -1.1f));
     const constraint_id::ConstraintId id =
-        fixed_constraint::create(scene.constraints, scene.bodies, a, b, {.point1 = {1.0f, 1.0f, 0.0f}, .point2 = {1.0f, 1.0f, 0.0f}});
-    FixedConstraint *constraint = fixed_constraint::get(scene.constraints, id);
+        fixed_constraint::create(*scene.world, a, b, {.point1 = {1.0f, 1.0f, 0.0f}, .point2 = {1.0f, 1.0f, 0.0f}});
+    FixedConstraint *constraint = fixed_constraint::get(*scene.world, id);
     CHECK(ctx, constraint != nullptr && constraint_id::type(id) == constraint_id::FIXED);
 
     // both attachments are the same world point, and the current relative pose is the rest pose
@@ -58,9 +58,9 @@ void test_fixed_constraint_create_local_space(TestCtx &ctx) {
     const Float3 x2 = {0.0f, 2.0f, 0.0f};
     const Float3 y2 = {-3.0f, 0.0f, 0.0f};
     const constraint_id::ConstraintId id = fixed_constraint::create(
-        scene.constraints, scene.bodies, a, b,
+        *scene.world, a, b,
         {.point1 = {1.0f, 0.0f, 0.0f}, .point2 = {-1.0f, 0.0f, 0.0f}, .axis_x2 = x2, .axis_y2 = y2, .space = constraints::SPACE_LOCAL});
-    const FixedConstraint *constraint = fixed_constraint::get(scene.constraints, id);
+    const FixedConstraint *constraint = fixed_constraint::get(*scene.world, id);
     CHECK(ctx, vec3f::exact_equals(constraint->local_space_position1, vec3f::make(1.0f, 0.0f, 0.0f)));
     CHECK(ctx, vec3f::exact_equals(constraint->local_space_position2, vec3f::make(-1.0f, 0.0f, 0.0f)));
     const Quatf expected = rotation_euler_constraint_part::get_inv_initial_orientation_xy(
@@ -71,8 +71,8 @@ void test_fixed_constraint_create_local_space(TestCtx &ctx) {
                1e-5f);
 
     // default axes in local space: no relative rotation
-    const constraint_id::ConstraintId plain = fixed_constraint::create(scene.constraints, scene.bodies, a, b, {.space = constraints::SPACE_LOCAL});
-    CHECK(ctx, same_rotation(fixed_constraint::get(scene.constraints, plain)->inv_initial_orientation, quatf::identity()));
+    const constraint_id::ConstraintId plain = fixed_constraint::create(*scene.world, a, b, {.space = constraints::SPACE_LOCAL});
+    CHECK(ctx, same_rotation(fixed_constraint::get(*scene.world, plain)->inv_initial_orientation, quatf::identity()));
     release_constraint_scene(scene);
 }
 
@@ -84,15 +84,15 @@ void test_fixed_constraint_auto_detect_point(TestCtx &ctx) {
 
     // equal masses: the midpoint
     const constraint_id::ConstraintId id =
-        fixed_constraint::create(scene.constraints, scene.bodies, a, b, {.point1 = {9.0f, 9.0f, 9.0f}, .auto_detect_point = true});
-    const FixedConstraint *constraint = fixed_constraint::get(scene.constraints, id);
+        fixed_constraint::create(*scene.world, a, b, {.point1 = {9.0f, 9.0f, 9.0f}, .auto_detect_point = true});
+    const FixedConstraint *constraint = fixed_constraint::get(*scene.world, id);
     CHECK(ctx, vec3f::distance(constraint->local_space_position1, vec3f::make(1.0f, 0.0f, 0.0f)) < 1e-5f);
     CHECK(ctx, vec3f::distance(constraint->local_space_position2, vec3f::make(-1.0f, 0.0f, 0.0f)) < 1e-5f);
 
     // a static body has no inverse mass: the anchor sits on the dynamic body
     const constraint_id::ConstraintId to_ground =
-        fixed_constraint::create(scene.constraints, scene.bodies, ground, b, {.auto_detect_point = true});
-    const FixedConstraint *grounded = fixed_constraint::get(scene.constraints, to_ground);
+        fixed_constraint::create(*scene.world, ground, b, {.auto_detect_point = true});
+    const FixedConstraint *grounded = fixed_constraint::get(*scene.world, to_ground);
     CHECK(ctx, vec3f::distance(grounded->local_space_position1, vec3f::make(2.0f, 5.0f, 0.0f)) < 1e-5f);
     CHECK(ctx, vec3f::length(grounded->local_space_position2) < 1e-5f);
     release_constraint_scene(scene);
@@ -105,17 +105,17 @@ void test_fixed_constraint_auto_detect_point_static(TestCtx &ctx) {
 
     // body a is static, so the anchor is body b's center of mass even though neither has an inverse mass
     const FixedConstraint *both_static = fixed_constraint::get(
-        scene.constraints, fixed_constraint::create(scene.constraints, scene.bodies, static_a, static_b, {.auto_detect_point = true}));
+        *scene.world, fixed_constraint::create(*scene.world, static_a, static_b, {.auto_detect_point = true}));
     CHECK(ctx, vec3f::exact_equals(both_static->local_space_position1, vec3f::make(4.0f, 0.0f, 0.0f)));
     CHECK(ctx, vec3f::length(both_static->local_space_position2) == 0.0f);
 
     // a body made static keeps the inverse mass it had; being static, it still anchors on the other body
     RigidBody *made_static = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 2.0f, 0.0f});
     RigidBody *dynamic = add_body(scene, motion_type::MOTION_DYNAMIC, {4.0f, 2.0f, 0.0f});
-    rigid_body::set_motion_type(scene.bodies, made_static, motion_type::MOTION_STATIC, false);
+    rigid_body::set_motion_type(*scene.world, made_static, motion_type::MOTION_STATIC, false);
     CHECK(ctx, made_static->motion_properties.inv_mass > 0.0f);
     const FixedConstraint *anchored = fixed_constraint::get(
-        scene.constraints, fixed_constraint::create(scene.constraints, scene.bodies, made_static, dynamic, {.auto_detect_point = true}));
+        *scene.world, fixed_constraint::create(*scene.world, made_static, dynamic, {.auto_detect_point = true}));
     CHECK(ctx, vec3f::exact_equals(anchored->local_space_position1, vec3f::make(4.0f, 0.0f, 0.0f)));
     CHECK(ctx, vec3f::length(anchored->local_space_position2) == 0.0f);
     release_constraint_scene(scene);
@@ -129,7 +129,7 @@ void test_fixed_constraint_holds_pose(TestCtx &ctx) {
     RigidBody *body = add_body(scene, motion_type::MOTION_DYNAMIC, {1.5f, 5.0f, 0.0f}, rest_rotation);
     const Float3 rest_position = body->center_of_mass_position;
     const constraint_id::ConstraintId id =
-        fixed_constraint::create(scene.constraints, scene.bodies, wall, body, {.point1 = {0.5f, 5.0f, 0.0f}, .point2 = {0.5f, 5.0f, 0.0f}});
+        fixed_constraint::create(*scene.world, wall, body, {.point1 = {0.5f, 5.0f, 0.0f}, .point2 = {0.5f, 5.0f, 0.0f}});
     scene.ids.push(id);
     body->motion_properties.linear_velocity = {0.0f, 3.0f, 1.0f};
     body->motion_properties.angular_velocity = {1.0f, 2.0f, 0.5f};
@@ -137,7 +137,7 @@ void test_fixed_constraint_holds_pose(TestCtx &ctx) {
     const float dt = 1.0f / 60.0f;
     for (int i = 0; i < 120; i++) step_constraint_scene(scene, dt, vec3f::load(GRAVITY));
 
-    const FixedConstraint *constraint = fixed_constraint::get(scene.constraints, id);
+    const FixedConstraint *constraint = fixed_constraint::get(*scene.world, id);
     CHECK(ctx, vec3f::distance(vec3f::load(body->center_of_mass_position), vec3f::load(rest_position)) < 1e-2f);
     CHECK(ctx, scalar::abs(quatf::dot(quatf::load(body->quaternion), quatf::load(rest_rotation))) > scalar::cos(0.5f * 1e-2f));
     CHECK(ctx, rotation_error(*constraint, wall, body) < 1e-2f);
@@ -157,7 +157,7 @@ void test_fixed_constraint_joins_two_dynamic_bodies(TestCtx &ctx) {
     ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.5f, 0.0f}, stored_axis_angle(vec3f::make(1.0f, 0.0f, 1.0f), 0.8f));
-    const constraint_id::ConstraintId id = fixed_constraint::create(scene.constraints, scene.bodies, a, b, {.auto_detect_point = true});
+    const constraint_id::ConstraintId id = fixed_constraint::create(*scene.world, a, b, {.auto_detect_point = true});
     scene.ids.push(id);
     a->motion_properties.angular_velocity = {0.0f, 4.0f, 0.0f};
     b->motion_properties.linear_velocity = {-2.0f, 0.0f, 1.0f};
@@ -168,7 +168,7 @@ void test_fixed_constraint_joins_two_dynamic_bodies(TestCtx &ctx) {
     const float dt = 1.0f / 60.0f;
     for (int i = 0; i < 90; i++) step_constraint_scene(scene, dt, vec3f::zero());
 
-    const FixedConstraint *constraint = fixed_constraint::get(scene.constraints, id);
+    const FixedConstraint *constraint = fixed_constraint::get(*scene.world, id);
     CHECK(ctx, vec3f::distance(offset_in_a(a, b), rest_offset) < 1e-2f);
     CHECK(ctx, rotation_error(*constraint, a, b) < 1e-2f);
     // the pair has turned as a whole

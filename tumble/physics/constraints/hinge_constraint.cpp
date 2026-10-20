@@ -7,6 +7,7 @@
 #include "tumble/math/vec4f.h"
 #include "tumble/physics/body/motion_properties.h"
 #include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/world.h"
 #include "tumble/util/assert.h"
 
 TUMBLE_NAMESPACE_BEGIN
@@ -76,8 +77,10 @@ static void reset_constraint(HingeConstraint &constraint) {
     angle_constraint_part::deactivate(constraint.motor_constraint_part);
 }
 
-ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodies, RigidBody *body_a, RigidBody *body_b,
+ConstraintId create(world::World &world, RigidBody *body_a, RigidBody *body_b,
                     const HingeConstraintSettings &settings) {
+    constraints::Constraints &constraints = world.constraints;
+    bodies::Bodies &bodies = world.bodies;
     TUMBLE_ASSERT(is_body_live(bodies, body_a->index) && bodies.pool[body_a->index] == body_a);
     TUMBLE_ASSERT(is_body_live(bodies, body_b->index) && bodies.pool[body_b->index] == body_b);
     constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::HINGE);
@@ -162,7 +165,12 @@ ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodie
     return id;
 }
 
-void remove(constraints::Constraints &constraints, bodies::Bodies &bodies, HingeConstraint &constraint) {
+bool remove(world::World &world, ConstraintId id) {
+    HingeConstraint *found = get(world, id);
+    if (found == nullptr) return false;
+    HingeConstraint &constraint = *found;
+    constraints::Constraints &constraints = world.constraints;
+    bodies::Bodies &bodies = world.bodies;
     constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::HINGE);
 
     // remove from bodies' constraint_ids
@@ -176,11 +184,12 @@ void remove(constraints::Constraints &constraints, bodies::Bodies &bodies, Hinge
     constraint.base.pooled = true;
     constraint.base.id = constraint_id::INVALID_CONSTRAINT_ID;
     pool.free_indices.push(constraint.base.index);
+    return true;
 }
 
-HingeConstraint *get(constraints::Constraints &constraints, ConstraintId id) {
+HingeConstraint *get(world::World &world, ConstraintId id) {
     if (constraint_id::type(id) != constraint_id::HINGE) return nullptr;
-    return reinterpret_cast<HingeConstraint *>(constraints::get(constraints, id));
+    return reinterpret_cast<HingeConstraint *>(constraints::get(world.constraints, id));
 }
 
 void set_limits(HingeConstraint &constraint, float min, float max) {

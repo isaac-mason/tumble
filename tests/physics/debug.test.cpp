@@ -242,9 +242,9 @@ void test_debug_bodies_one_of_each_shape(TestCtx &ctx) {
     add_body(scene, make_cube_hull(), motion_type::MOTION_DYNAMIC, {12.0f, 5.0f, 0.0f});
     add_body(scene, compound::create({.children = children, .num_children = 2}), motion_type::MOTION_DYNAMIC, {15.0f, 5.0f, 0.0f});
     RigidBody *kinematic =
-        add_body(*scene.world, body_settings(box_shape, scene.moving, motion_type::MOTION_KINEMATIC, {18.0f, 5.0f, 0.0f}));
+        rigid_body::create(*scene.world, body_settings(box_shape, scene.moving, motion_type::MOTION_KINEMATIC, {18.0f, 5.0f, 0.0f}));
     RigidBody *removed = add_body(scene, sphere_shape, motion_type::MOTION_DYNAMIC, {21.0f, 5.0f, 0.0f});
-    remove_body(*scene.world, removed);
+    rigid_body::remove(*scene.world, removed);
 
     const uint32_t expected = PLANE_LINES + QUAD_MESH_LINES + BOX_LINES + SPHERE_LINES + CAPSULE_LINES + CYLINDER_LINES +
                               CUBE_HULL_LINES + (BOX_LINES + SPHERE_LINES) + BOX_LINES;
@@ -300,7 +300,7 @@ void test_debug_body_colour_modes(TestCtx &ctx) {
     debug::clear(*buffers);
     debug::body(*buffers, *dynamic, {.color_mode = debug::COLOR_SLEEPING});
     CHECK(ctx, near3(vertex_color(*buffers, 0), 1.0f, 0.2f, 0.2f, 0.0f));
-    rigid_body::sleep(scene.world->bodies, dynamic);
+    rigid_body::sleep(*scene.world, dynamic);
     debug::clear(*buffers);
     debug::body(*buffers, *dynamic, {.color_mode = debug::COLOR_SLEEPING});
     CHECK(ctx, near3(vertex_color(*buffers, 0), 0.2f, 0.2f, 1.0f, 0.0f));
@@ -319,8 +319,8 @@ void test_debug_body_velocities(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     debug::DebugBuffers *buffers = debug::create();
     RigidBody *body = add_body(scene, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}), motion_type::MOTION_DYNAMIC, {0.0f, 5.0f, 0.0f});
-    rigid_body::set_linear_velocity(scene.world->bodies, body, vec3f::make(3.0f, 0.0f, 0.0f));
-    rigid_body::set_angular_velocity(scene.world->bodies, body, vec3f::make(0.0f, 8.0f, 0.0f));
+    rigid_body::set_linear_velocity(*scene.world, body, vec3f::make(3.0f, 0.0f, 0.0f));
+    rigid_body::set_angular_velocity(*scene.world, body, vec3f::make(0.0f, 8.0f, 0.0f));
 
     debug::body(*buffers, *body, {.show_linear_velocity = true, .show_angular_velocity = true});
     CHECK(ctx, buffers->line_count == BOX_LINES + 2);
@@ -333,8 +333,8 @@ void test_debug_body_velocities(TestCtx &ctx) {
     CHECK(ctx, near3(vertex_color(*buffers, BOX_LINES * 2 + 2), 1.0f, 0.5f, 0.0f, 0.0f));
 
     // a still body draws no arrows
-    rigid_body::set_linear_velocity(scene.world->bodies, body, vec3f::make(0.0f, 0.0f, 0.0f));
-    rigid_body::set_angular_velocity(scene.world->bodies, body, vec3f::make(0.0f, 0.0f, 0.0f));
+    rigid_body::set_linear_velocity(*scene.world, body, vec3f::make(0.0f, 0.0f, 0.0f));
+    rigid_body::set_angular_velocity(*scene.world, body, vec3f::make(0.0f, 0.0f, 0.0f));
     debug::clear(*buffers);
     debug::body(*buffers, *body, {.show_linear_velocity = true, .show_angular_velocity = true});
     CHECK(ctx, buffers->line_count == BOX_LINES);
@@ -394,7 +394,7 @@ void test_debug_joints_hinge(TestCtx &ctx) {
     RigidBody *b = add_body(scene, box_shape, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
     hinge_constraint::HingeConstraintSettings settings;
     settings.point_a = settings.point_b = {0.5f, 0.0f, 0.0f};
-    hinge_constraint::create(scene.world->constraints, scene.world->bodies, a, b, settings);
+    hinge_constraint::create(*scene.world, a, b, settings);
 
     // a's cross and hinge axis, b's cross and hinge axis, b's normal axis
     const uint32_t hinge_lines = 2 * (CROSS_LINES + 1) + 1;
@@ -412,7 +412,7 @@ void test_debug_joints_hinge(TestCtx &ctx) {
 
     // b turned a quarter about the hinge: b's normal axis turns with it
     Float4 quarter_y = stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), scalar::PI * 0.5f);
-    set_body_transform(*scene.world, b, {1.0f, 0.0f, 0.0f}, quarter_y, false);
+    rigid_body::set_transform(*scene.world, b, vec3f::make(1.0f, 0.0f, 0.0f), quatf::load(quarter_y), false);
     debug::clear(*buffers);
     debug::joints(*buffers, *scene.world, {});
     // b's pivot (-0.5, 0, 0) from its centre turns to (0, 0, 0.5), its normal axis to -z
@@ -422,7 +422,7 @@ void test_debug_joints_hinge(TestCtx &ctx) {
     // limits add a 32 segment pie: 33 spokes and 32 rim lines
     settings.limits_min = -1.0f;
     settings.limits_max = 1.0f;
-    hinge_constraint::create(scene.world->constraints, scene.world->bodies, a, b, settings);
+    hinge_constraint::create(*scene.world, a, b, settings);
     debug::clear(*buffers);
     debug::joints(*buffers, *scene.world, {});
     CHECK(ctx, buffers->line_count == 2 * hinge_lines + 33 + 32);
@@ -442,12 +442,12 @@ void test_debug_joints_point_and_distance(TestCtx &ctx) {
     RigidBody *b = add_body(scene, box_shape, motion_type::MOTION_DYNAMIC, {2.0f, 0.0f, 0.0f});
 
     // point: two crosses and the line between
-    point_constraint::create(scene.world->constraints, scene.world->bodies, a, b, {.point_a = {0.5f, 0.0f, 0.0f}, .point_b = {1.5f, 0.0f, 0.0f}});
+    point_constraint::create(*scene.world, a, b, {.point_a = {0.5f, 0.0f, 0.0f}, .point_b = {1.5f, 0.0f, 0.0f}});
     debug::joints(*buffers, *scene.world, {});
     CHECK(ctx, buffers->line_count == 2 * CROSS_LINES + 1);
 
     // distance with both limits: the line and two 16 segment circles
-    distance_constraint::create(scene.world->constraints, scene.world->bodies, a, b,
+    distance_constraint::create(*scene.world, a, b,
                                 {.point_a = {0.5f, 0.0f, 0.0f}, .point_b = {1.5f, 0.0f, 0.0f}, .min_distance = 0.5f, .max_distance = 2.0f});
     debug::clear(*buffers);
     debug::joints(*buffers, *scene.world, {});
@@ -459,7 +459,7 @@ void test_debug_joints_point_and_distance(TestCtx &ctx) {
     CHECK_NEAR(ctx, rim.x, 0.5f, 1e-5f);
 
     // a removed body takes its constraints with it
-    remove_body(*scene.world, b);
+    rigid_body::remove(*scene.world, b);
     debug::clear(*buffers);
     debug::joints(*buffers, *scene.world, {});
     CHECK(ctx, buffers->line_count == 0);

@@ -4,6 +4,7 @@
 #include "tumble/physics/contacts.h"
 #include "tumble/physics/shapes/box.h"
 #include "tumble/physics/shapes/dispatch.h"
+#include "tumble/physics/world.h"
 #include "test.h"
 #include "test_math.h"
 
@@ -13,44 +14,18 @@ namespace {
 
 constexpr float SPEC = 0.02f;
 
-struct World {
-    layers::Layers layers;
-    bodies::Bodies bodies;
-    broadphase::Broadphase broadphase;
-    pairs::Pairs pairs;
-    contacts::Contacts contacts;
-    events::PhysicsEvents events;
-};
-
-/** a world over `layers`, which it takes */
-World make_world(const layers::Layers &layers) {
-    World world = {};
-    world.layers = layers;
-    world.bodies = bodies::init();
-    world.broadphase = broadphase::init(world.layers);
-    world.pairs = pairs::create();
-    world.contacts = contacts::create();
-    world.events = events::create_events();
-    return world;
-}
+/** a world over `settings`, which it takes */
+world::World &make_world(world_settings::WorldSettings &settings) { return *world::create(settings); }
 
 /** a world with a single object layer that collides with itself */
-World make_single_layer_world(uint32_t &layer) {
-    layers::Layers layers = layers::create();
-    const uint32_t broadphase_layer = layers::add_broadphase_layer(layers);
-    layer = layers::add_object_layer(layers, broadphase_layer);
-    layers::enable_collision(layers, layer, layer);
-    return make_world(layers);
+world::World &make_single_layer_world(uint32_t &layer) {
+    world_settings::WorldSettings settings = world_settings::create();
+    layer = world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
+    world_settings::enable_collision(settings, layer, layer);
+    return make_world(settings);
 }
 
-void release_world(World &world) {
-    events::release(world.events);
-    contacts::release(world.contacts);
-    pairs::release(world.pairs);
-    broadphase::release(world.broadphase);
-    bodies::release(world.bodies);
-    layers::release(world.layers);
-}
+void release_world(world::World &world) { world::destroy(&world); }
 
 struct BoxOptions {
     motion_type::MotionType motion_type = motion_type::MOTION_DYNAMIC;
@@ -59,9 +34,8 @@ struct BoxOptions {
     uint64_t user_data = 0;
 };
 
-/** in the broadphase and marked moved */
-RigidBody *add_body(World &world, shapes::Shape *shape, uint32_t layer, const Float3 &position, const BoxOptions &options = {}) {
-    RigidBody *body = rigid_body::create(world.bodies, world.layers,
+RigidBody *add_body(world::World &world, shapes::Shape *shape, uint32_t layer, const Float3 &position, const BoxOptions &options = {}) {
+    return rigid_body::create(world,
                                          {.shape = shape,
                                           .object_layer = layer,
                                           .motion_type = options.motion_type,
@@ -70,31 +44,16 @@ RigidBody *add_body(World &world, shapes::Shape *shape, uint32_t layer, const Fl
                                           .sensor = options.sensor,
                                           .collide_kinematic_vs_non_dynamic = options.collide_kinematic_vs_non_dynamic,
                                           .mass = options.motion_type == motion_type::MOTION_DYNAMIC ? 1.0f : -1.0f});
-    broadphase::add_body(world.broadphase, body, world.layers);
-    pairs::mark_moved(world.pairs, *body);
-    return body;
 }
 
-/** pairs purged, out of the broadphase, slot freed */
-void remove_body(World &world, RigidBody *body) {
-    pairs::purge_body_pairs(world.pairs, world.contacts, world.bodies, *body, world.events);
-    broadphase::remove_body(world.broadphase, body);
-    rigid_body::remove(world.bodies, body);
-}
-
-/** the leaf refreshed, the body marked moved if it escaped */
-void set_position(World &world, RigidBody *body, const Float3 &position, bool wake) {
-    rigid_body::set_position(world.bodies, body, vec3f::load(position), wake);
-    if (broadphase::update_body(world.broadphase, body)) pairs::mark_moved(world.pairs, *body);
-}
-
-void find_pairs(World &world) {
+/** the pair phase alone, with this file's speculative distance */
+void find_pairs(world::World &world) {
     world.events.pairs.length = 0;
-    pairs::find_colliding_pairs(world.pairs, world.contacts, world.broadphase, world.layers, world.bodies, SPEC, world.events);
+    pairs::find_colliding_pairs(world.pairs, world.contacts, world.broadphase, world.settings.layers, world.bodies, SPEC, world.events);
 }
 
 /** whether the emitted pairs hold (a, b) in either order */
-bool emitted(const World &world, const RigidBody *a, const RigidBody *b) {
+bool emitted(const world::World &world, const RigidBody *a, const RigidBody *b) {
     for (uint32_t i = 0; i < world.pairs.colliding_pairs.length; i++) {
         const int32_t x = (int32_t)world.pairs.colliding_pairs[i].body_index_a;
         const int32_t y = (int32_t)world.pairs.colliding_pairs[i].body_index_b;
@@ -104,7 +63,7 @@ bool emitted(const World &world, const RigidBody *a, const RigidBody *b) {
 }
 
 /** the number of records in the body's intrusive pair list */
-uint32_t pair_list_length(const World &world, const RigidBody *body) {
+uint32_t pair_list_length(const world::World &world, const RigidBody *body) {
     uint32_t count = 0;
     int32_t edge_key = body->head_pair_key;
     while (edge_key != pairs::INVALID_PAIR_KEY) {
@@ -139,17 +98,17 @@ bool reference_should_report(const PairBodySpec &a, const PairBodySpec &b, bool 
 }
 
 uint32_t run_combo(shapes::Shape *shape, const PairBodySpec &a, const PairBodySpec &b, bool layers_collide) {
-    layers::Layers layers = layers::create();
-    const uint32_t broadphase_layer = layers::add_broadphase_layer(layers);
-    const uint32_t layer_a = layers::add_object_layer(layers, broadphase_layer);
-    const uint32_t layer_b = layers::add_object_layer(layers, broadphase_layer);
-    if (layers_collide) layers::enable_collision(layers, layer_a, layer_b);
-    World world = make_world(layers);
+    world_settings::WorldSettings settings = world_settings::create();
+    const uint32_t broadphase_layer = world_settings::add_broadphase_layer(settings);
+    const uint32_t layer_a = world_settings::add_object_layer(settings, broadphase_layer);
+    const uint32_t layer_b = world_settings::add_object_layer(settings, broadphase_layer);
+    if (layers_collide) world_settings::enable_collision(settings, layer_a, layer_b);
+    world::World &world = make_world(settings);
 
     RigidBody *body_a = add_body(world, shape, layer_a, {0, 0, 0}, {a.motion_type, a.sensor, a.opt_in});
     RigidBody *body_b = add_body(world, shape, layer_b, {0.4f, 0, 0}, {b.motion_type, b.sensor, b.opt_in});
-    if (a.sleeping) rigid_body::sleep(world.bodies, body_a);
-    if (b.sleeping) rigid_body::sleep(world.bodies, body_b);
+    if (a.sleeping) rigid_body::sleep(world, body_a);
+    if (b.sleeping) rigid_body::sleep(world, body_b);
 
     find_pairs(world);
     const uint32_t count = world.pairs.colliding_pairs.length;
@@ -197,7 +156,7 @@ void test_pairs_reporting_truth_table(TestCtx &ctx) {
 void test_pairs_cluster_records_and_events(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
-    World world = make_single_layer_world(layer);
+    world::World &world = make_single_layer_world(layer);
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
 
     // three mutually overlapping boxes and a fourth far away
@@ -243,7 +202,7 @@ void test_pairs_cluster_records_and_events(TestCtx &ctx) {
 void test_pairs_record_survives_while_overlapping(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
-    World world = make_single_layer_world(layer);
+    world::World &world = make_single_layer_world(layer);
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
 
     RigidBody *a = add_body(world, shape, layer, {0, 0, 0});
@@ -256,7 +215,7 @@ void test_pairs_record_survives_while_overlapping(TestCtx &ctx) {
     bool same_record = true;
     bool escaped = false;
     for (uint32_t step = 1; step <= 20; step++) {
-        set_position(world, b, {0.4f, 0.04f * (float)step, 0}, false);
+        rigid_body::set_position(world, b, vec3f::make(0.4f, 0.04f * (float)step, 0), false);
         escaped = escaped || b->in_move_set;
         find_pairs(world);
         same_record = same_record && world.pairs.record_count == 1 && pairs::find_pair_record(world.pairs, *a, *b) == record &&
@@ -267,7 +226,7 @@ void test_pairs_record_survives_while_overlapping(TestCtx &ctx) {
     CHECK(ctx, same_record);
 
     // once they part beyond the fat boxes the record goes
-    set_position(world, b, {5, 0, 0}, false);
+    rigid_body::set_position(world, b, vec3f::make(5, 0, 0), false);
     find_pairs(world);
     CHECK(ctx, world.pairs.record_count == 0 && world.pairs.colliding_pairs.length == 0 && world.events.pairs.length == 0);
     CHECK(ctx, a->head_pair_key == pairs::INVALID_PAIR_KEY && b->head_pair_key == pairs::INVALID_PAIR_KEY);
@@ -279,7 +238,7 @@ void test_pairs_record_survives_while_overlapping(TestCtx &ctx) {
 void test_pairs_persist_through_sleep(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
-    World world = make_single_layer_world(layer);
+    world::World &world = make_single_layer_world(layer);
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
 
     RigidBody *a = add_body(world, shape, layer, {0, 0, 0});
@@ -290,13 +249,13 @@ void test_pairs_persist_through_sleep(TestCtx &ctx) {
     CHECK(ctx, world.pairs.colliding_pairs.length == 1 && world.pairs.record_count == 1);
 
     // both asleep: the record persists but is not emitted (both have INACTIVE_BODY_INDEX)
-    rigid_body::sleep(world.bodies, a);
-    rigid_body::sleep(world.bodies, b);
+    rigid_body::sleep(world, a);
+    rigid_body::sleep(world, b);
     find_pairs(world);
     CHECK(ctx, world.pairs.colliding_pairs.length == 0 && world.pairs.record_count == 1 && world.events.pairs.length == 0);
 
     // waking one (without moving it) re-emits the persisted pair
-    rigid_body::wake(world.bodies, a);
+    rigid_body::wake(world, a);
     find_pairs(world);
     CHECK(ctx, world.pairs.colliding_pairs.length == 1 && world.events.pairs.length == 1);
 
@@ -307,7 +266,7 @@ void test_pairs_persist_through_sleep(TestCtx &ctx) {
 void test_pairs_teleport_sleeping_destroys_record(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
-    World world = make_single_layer_world(layer);
+    world::World &world = make_single_layer_world(layer);
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
 
     RigidBody *a = add_body(world, shape, layer, {0, 0, 0});
@@ -315,14 +274,14 @@ void test_pairs_teleport_sleeping_destroys_record(TestCtx &ctx) {
     find_pairs(world);
     CHECK(ctx, world.pairs.record_count == 1);
 
-    rigid_body::sleep(world.bodies, a);
-    rigid_body::sleep(world.bodies, b);
+    rigid_body::sleep(world, a);
+    rigid_body::sleep(world, b);
     find_pairs(world);
     CHECK(ctx, world.pairs.record_count == 1 && world.pairs.colliding_pairs.length == 0);
 
     // a sleeping body teleported away without waking: the moved flag routes the pair past the sleeping-pair skip, so the
     // separated record is destroyed this step
-    set_position(world, a, {100, 0, 0}, false);
+    rigid_body::set_position(world, a, vec3f::make(100, 0, 0), false);
     find_pairs(world);
     CHECK(ctx, world.pairs.record_count == 0);
     CHECK(ctx, world.pairs.free_records.length == 1 && world.pairs.records[0].body_index[0] == pairs::INVALID_PAIR_KEY);
@@ -334,23 +293,23 @@ void test_pairs_teleport_sleeping_destroys_record(TestCtx &ctx) {
 void test_pairs_teleport_sleeping_discovers_pair(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
-    World world = make_single_layer_world(layer);
+    world::World &world = make_single_layer_world(layer);
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
 
     RigidBody *a = add_body(world, shape, layer, {0, 0, 0});
     RigidBody *b = add_body(world, shape, layer, {50, 0, 0});
     find_pairs(world);
     CHECK(ctx, world.pairs.colliding_pairs.length == 0 && world.pairs.record_count == 0);
-    rigid_body::sleep(world.bodies, a);
-    rigid_body::sleep(world.bodies, b);
+    rigid_body::sleep(world, a);
+    rigid_body::sleep(world, b);
 
     // a sleeping body teleported onto another without waking still discovers the overlap
-    set_position(world, a, {50.4f, 0, 0}, false);
+    rigid_body::set_position(world, a, vec3f::make(50.4f, 0, 0), false);
     find_pairs(world);
     CHECK(ctx, world.pairs.colliding_pairs.length == 0 && world.pairs.record_count == 1);
 
     // waking one emits it
-    rigid_body::wake(world.bodies, a);
+    rigid_body::wake(world, a);
     find_pairs(world);
     CHECK(ctx, world.pairs.colliding_pairs.length == 1);
 
@@ -361,7 +320,7 @@ void test_pairs_teleport_sleeping_discovers_pair(TestCtx &ctx) {
 void test_pairs_removal_purges(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
-    World world = make_single_layer_world(layer);
+    world::World &world = make_single_layer_world(layer);
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
 
     RigidBody *a = add_body(world, shape, layer, {0, 0, 0});
@@ -370,7 +329,7 @@ void test_pairs_removal_purges(TestCtx &ctx) {
     CHECK(ctx, world.pairs.colliding_pairs.length == 1 && world.pairs.record_count == 1);
 
     // removing one body of the pair purges its record from both lists
-    remove_body(world, b);
+    rigid_body::remove(world, b);
     CHECK(ctx, world.pairs.record_count == 0 && a->head_pair_key == pairs::INVALID_PAIR_KEY);
 
     find_pairs(world);
@@ -379,7 +338,7 @@ void test_pairs_removal_purges(TestCtx &ctx) {
 
     // a body marked moved and then removed in the same step is skipped by discovery
     RigidBody *c = add_body(world, shape, layer, {-0.4f, 0, 0});
-    remove_body(world, c);
+    rigid_body::remove(world, c);
     find_pairs(world);
     CHECK(ctx, world.pairs.record_count == 0 && world.pairs.moved.length == 0);
 
@@ -390,13 +349,13 @@ void test_pairs_removal_purges(TestCtx &ctx) {
 void test_pairs_recycled_bodies_stay_distinct(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
-    World world = make_single_layer_world(layer);
+    world::World &world = make_single_layer_world(layer);
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
 
     // recycle three slots so the ids carry sequences above the index bits
     RigidBody *scratch[3] = {add_body(world, shape, layer, {100, 0, 0}), add_body(world, shape, layer, {103, 0, 0}),
                              add_body(world, shape, layer, {106, 0, 0})};
-    for (RigidBody *body : scratch) remove_body(world, body);
+    for (RigidBody *body : scratch) rigid_body::remove(world, body);
 
     // all three pairwise overlapping: three distinct pairs
     RigidBody *cluster[3] = {add_body(world, shape, layer, {0, 0, 0}), add_body(world, shape, layer, {0.4f, 0, 0}),
@@ -415,7 +374,7 @@ void test_pairs_recycled_bodies_stay_distinct(TestCtx &ctx) {
 void test_pairs_hub_with_spokes(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
-    World world = make_single_layer_world(layer);
+    world::World &world = make_single_layer_world(layer);
     shapes::Shape *hub_shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
     shapes::Shape *spoke_shape = box::create({.half_extents = {0.1f, 0.1f, 0.1f}});
 
@@ -428,8 +387,8 @@ void test_pairs_hub_with_spokes(TestCtx &ctx) {
     CHECK(ctx, world.pairs.record_count == 4 && world.pairs.colliding_pairs.length == 4 && pair_list_length(world, hub) == 4);
 
     // removing two spokes unlinks their records from the hub's list (one the head, one interior)
-    remove_body(world, spokes[0]);
-    remove_body(world, spokes[1]);
+    rigid_body::remove(world, spokes[0]);
+    rigid_body::remove(world, spokes[1]);
     CHECK(ctx, world.pairs.record_count == 2 && pair_list_length(world, hub) == 2 && world.pairs.free_records.length == 2);
 
     find_pairs(world);
@@ -451,7 +410,7 @@ void test_pairs_hub_with_spokes(TestCtx &ctx) {
 void test_pairs_pose_cache(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
-    World world = make_single_layer_world(layer);
+    world::World &world = make_single_layer_world(layer);
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
 
     RigidBody *a = add_body(world, shape, layer, {0, 0, 0});
@@ -466,7 +425,7 @@ void test_pairs_pose_cache(TestCtx &ctx) {
     CHECK(ctx, cache.delta_rotation.z == 0.6f && cache.delta_rotation.w == 0.8f);
 
     // a reused record starts invalid
-    remove_body(world, b);
+    rigid_body::remove(world, b);
     RigidBody *c = add_body(world, shape, layer, {0.4f, 0, 0});
     const int32_t reused = pairs::add_pair_record(world.pairs, *a, *c);
     CHECK(ctx, reused == record && !world.pairs.pose_cache[(uint32_t)reused].valid);

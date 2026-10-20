@@ -101,7 +101,7 @@ WorldScene make_floor_scene() {
 rigid_body::RigidBody *add_awake_body(WorldScene &scene, shapes::Shape *shape, const Float3 &position) {
     rigid_body::RigidBodySettings settings = body_settings(shape, scene.moving, motion_type::MOTION_DYNAMIC, position);
     settings.allow_sleeping = false;
-    return add_body(*scene.world, settings);
+    return rigid_body::create(*scene.world, settings);
 }
 
 }  // namespace

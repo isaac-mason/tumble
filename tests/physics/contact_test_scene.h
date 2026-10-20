@@ -1,41 +1,21 @@
 #pragma once
 
-#include "tumble/math/vec3f.h"
-#include "tumble/math/vec3f.h"
-#include "tumble/math/vec3f.h"
-#include "tumble/physics/body/rigid_body.h"
-#include "tumble/math/vec3f.h"
-#include "tumble/physics/body/rigid_body_step.h"
-#include "tumble/math/vec3f.h"
-#include "tumble/physics/constraints/contact_constraints.h"
-#include "tumble/math/vec3f.h"
-#include "tumble/physics/contacts.h"
-#include "tumble/math/vec3f.h"
-#include "tumble/physics/events.h"
-#include "tumble/math/vec3f.h"
-#include "tumble/physics/pairs.h"
-#include "tumble/math/vec3f.h"
-#include "tumble/physics/shapes/box.h"
-#include "tumble/math/vec3f.h"
-#include "tumble/physics/shapes/dispatch.h"
-#include "tumble/math/vec3f.h"
-#include "tumble/physics/shapes/sphere.h"
-#include "tumble/math/vec3f.h"
-#include "tumble/physics/world_settings.h"
-#include "tumble/math/vec3f.h"
 #include "test.h"
 #include "tumble/math/vec3f.h"
+#include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/body/rigid_body_step.h"
+#include "tumble/physics/constraints/contact_constraints.h"
+#include "tumble/physics/contacts.h"
+#include "tumble/physics/events.h"
+#include "tumble/physics/pairs.h"
+#include "tumble/physics/shapes/box.h"
+#include "tumble/physics/shapes/dispatch.h"
+#include "tumble/physics/shapes/sphere.h"
+#include "tumble/physics/world.h"
 
-/** a world without a world: bodies, pairs, contacts and contact constraints, manifolds written and phases run by hand */
+/** a world whose bodies never collide on their own (one layer, colliding with nothing): manifolds written and phases run by hand */
 struct ContactScene {
-    bodies::Bodies bodies;
-    layers::Layers layers;
-    pairs::Pairs pairs;
-    contacts::Contacts contacts;
-    events::PhysicsEvents events;
-    events::PhysicsAnswers answers;
-    contact_constraints::ContactConstraints contact_constraints;
-    world_settings::WorldSettings settings;
+    world::World *world;
     uint32_t layer;
     collections::Vec<uint32_t> indices;
 };
@@ -45,28 +25,15 @@ constexpr float CONTACT_SCENE_DELTA_TIME = 1.0f / 60.0f;
 inline ContactScene make_contact_scene() {
     dispatch::init();
     ContactScene scene = {};
-    scene.bodies = bodies::init();
-    scene.layers = layers::create();
-    scene.layer = layers::add_object_layer(scene.layers, layers::add_broadphase_layer(scene.layers));
-    scene.pairs = pairs::create();
-    scene.contacts = contacts::create();
-    scene.events = events::create_events();
-    scene.answers = events::create_answers();
-    scene.contact_constraints = contact_constraints::create();
-    scene.settings = world_settings::create();
+    world_settings::WorldSettings settings = world_settings::create();
+    scene.layer = world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
+    scene.world = world::create(settings);
     return scene;
 }
 
 inline void release_contact_scene(ContactScene &scene) {
     scene.indices.release();
-    world_settings::release(scene.settings);
-    contact_constraints::release(scene.contact_constraints);
-    events::release(scene.answers);
-    events::release(scene.events);
-    contacts::release(scene.contacts);
-    pairs::release(scene.pairs);
-    bodies::release(scene.bodies);
-    layers::release(scene.layers);
+    world::destroy(scene.world);
 }
 
 struct ContactBodySettings {
@@ -88,7 +55,7 @@ inline rigid_body::RigidBody *add_contact_body(ContactScene &scene, shapes::Shap
     settings.friction = body_settings.friction;
     settings.restitution = body_settings.restitution;
     settings.sensor = body_settings.sensor;
-    return rigid_body::create(scene.bodies, scene.layers, settings);
+    return rigid_body::create(*scene.world, settings);
 }
 
 /** a manifold of world points (on a and on b alike, touching) with a unit normal from a to b */
@@ -106,41 +73,41 @@ inline manifold::ContactManifold touching_manifold(const Float3 *points, uint32_
 
 /** a new step: no constraints, no contact events, the stamps advanced */
 inline void begin_contact_step(ContactScene &scene) {
-    scene.contact_constraints.count = 0;
-    scene.events.contacts_added.length = 0;
-    scene.events.contacts_persisted.length = 0;
-    scene.contacts.frame_stamp++;
-    scene.bodies.step_stamp++;
+    scene.world->contact_constraints.count = 0;
+    scene.world->events.contacts_added.length = 0;
+    scene.world->events.contacts_persisted.length = 0;
+    scene.world->contacts.frame_stamp++;
+    scene.world->bodies.step_stamp++;
 }
 
 /** the narrowphase's call for one manifold, through the pair's record (made on first use) */
 inline bool add_contact(ContactScene &scene, rigid_body::RigidBody *body_a, rigid_body::RigidBody *body_b,
                         const manifold::ContactManifold &manifold) {
-    int32_t record = pairs::find_pair_record(scene.pairs, *body_a, *body_b);
-    if (record == pairs::INVALID_PAIR_KEY) record = pairs::add_pair_record(scene.pairs, *body_a, *body_b);
-    return contact_constraints::add_contact_constraint(scene.contact_constraints, scene.contacts, scene.pairs, record, *body_a, *body_b,
-                                                       manifold, scene.settings, scene.events, CONTACT_SCENE_DELTA_TIME,
-                                                       scene.bodies.step_stamp);
+    int32_t record = pairs::find_pair_record(scene.world->pairs, *body_a, *body_b);
+    if (record == pairs::INVALID_PAIR_KEY) record = pairs::add_pair_record(scene.world->pairs, *body_a, *body_b);
+    return contact_constraints::add_contact_constraint(scene.world->contact_constraints, scene.world->contacts, scene.world->pairs, record, *body_a, *body_b,
+                                                       manifold, scene.world->settings, scene.world->events, CONTACT_SCENE_DELTA_TIME,
+                                                       scene.world->bodies.step_stamp);
 }
 
 /** every live constraint, in pool order */
 inline const collections::Vec<uint32_t> &all_contact_indices(ContactScene &scene) {
     scene.indices.length = 0;
-    for (uint32_t i = 0; i < scene.contact_constraints.count; i++) scene.indices.push(i);
+    for (uint32_t i = 0; i < scene.world->contact_constraints.count; i++) scene.indices.push(i);
     return scene.indices;
 }
 
 /** warm start, then `iterations` velocity iterations over every constraint */
 inline void solve_contact_velocities(ContactScene &scene, uint32_t iterations) {
     const collections::Vec<uint32_t> &indices = all_contact_indices(scene);
-    contact_constraints::warm_start_velocity_constraints(scene.contact_constraints, scene.bodies, indices, 1.0f);
+    contact_constraints::warm_start_velocity_constraints(scene.world->contact_constraints, scene.world->bodies, indices, 1.0f);
     for (uint32_t i = 0; i < iterations; i++) {
-        contact_constraints::solve_velocity_constraints_for_island(scene.contact_constraints, scene.bodies, indices);
+        contact_constraints::solve_velocity_constraints_for_island(scene.world->contact_constraints, scene.world->bodies, indices);
     }
 }
 
 /** the impulses into the cache, which becomes the next step's read side */
 inline void end_contact_step(ContactScene &scene) {
-    contact_constraints::store_applied_impulses(scene.contact_constraints, scene.contacts);
-    contacts::flip_manifold_cache(scene.contacts);
+    contact_constraints::store_applied_impulses(scene.world->contact_constraints, scene.world->contacts);
+    contacts::flip_manifold_cache(scene.world->contacts);
 }

@@ -4,7 +4,11 @@
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/vec3f.h"
+#include "tumble/physics/broadphase/broadphase.h"
+#include "tumble/physics/constraints/constraints.h"
+#include "tumble/physics/pairs.h"
 #include "tumble/physics/shapes/empty.h"
+#include "tumble/physics/world.h"
 #include "tumble/util/assert.h"
 #include "tumble/util/object.h"
 
@@ -148,9 +152,14 @@ static void set_rigid_body(RigidBody *body, bodies::Bodies &bodies, const RigidB
     body->constraint_ids.length = 0;
 }
 
-RigidBody *create(bodies::Bodies &bodies, const layers::Layers &layers, const RigidBodySettings &settings) {
-    TUMBLE_ASSERT(settings.object_layer < layers.object_layers);
-    (void)layers;
+static void update_body_shape(RigidBody *body);
+
+/** the bounds published: the broadphase moves the body's leaf when it left its fat bounds, and the pairs look again */
+static void notify_bounds_changed(world::World &world, RigidBody *body) {
+    if (broadphase::update_body(world.broadphase, body)) pairs::mark_moved(world.pairs, *body);
+}
+
+static RigidBody *create_in_pool(bodies::Bodies &bodies, const RigidBodySettings &settings) {
 
     // claim a slot: the last freed one, or a new one at the end
     const body_id::BodyId id = bodies::add_slot(bodies);
@@ -178,7 +187,7 @@ RigidBody *create(bodies::Bodies &bodies, const layers::Layers &layers, const Ri
     set_rigid_body(body, bodies, settings);
 
     // update shape-related properties
-    update_shape(body);
+    update_body_shape(body);
 
     // initialize sleep test spheres
     if (body->motion_type == motion_type::MOTION_DYNAMIC) {
@@ -193,25 +202,34 @@ RigidBody *create(bodies::Bodies &bodies, const layers::Layers &layers, const Ri
     return body;
 }
 
-bool remove(bodies::Bodies &bodies, RigidBody *body) {
-    // return false if already removed
-    if (!bodies::is_valid(bodies, body->id)) {
-        return false;
-    }
+RigidBody *create(world::World &world, const RigidBodySettings &settings) {
+    TUMBLE_ASSERT(settings.object_layer < world.settings.layers.object_layers);
+    RigidBody *body = create_in_pool(world.bodies, settings);
+    if (body == nullptr) return nullptr;
+    broadphase::add_body(world.broadphase, body, world.settings.layers);
+    // a new body is a move: it finds its overlaps, and a static one added beside dynamic ones is paired with them
+    pairs::mark_moved(world.pairs, *body);
+    return body;
+}
 
-    // remove from active bodies list
+bool remove(world::World &world, RigidBody *body) {
+    bodies::Bodies &bodies = world.bodies;
+    if (!bodies::is_valid(bodies, body->id)) return false;
+
     sleep::remove_body_from_active_bodies(bodies, body);
+    constraints::destroy_body_constraints(world.constraints, bodies, *body);
+    pairs::purge_body_pairs(world.pairs, world.contacts, bodies, *body, world.events);
+    broadphase::remove_body(world.broadphase, body);
 
     // release references to user owned objects
     body->user_data = 0;
     body->shape = shared_empty_shape(bodies);
 
     bodies::remove_slot(bodies, body->id);
-
     return true;
 }
 
-RigidBody *get(const bodies::Bodies &bodies, body_id::BodyId body_id) { return bodies::get(bodies, body_id); }
+RigidBody *get(const world::World &world, body_id::BodyId body_id) { return bodies::get(world.bodies, body_id); }
 
 Float4x4 &get_inverse_inertia(Float4x4 &out, RigidBody *body) {
     if (body->motion_type != motion_type::MOTION_DYNAMIC) {
@@ -247,7 +265,7 @@ void update_aabb(RigidBody *body) {
     aabox::store(out, aabox::make(vec3f::subtract(center, extents), vec3f::add(center, extents)));
 }
 
-void update_shape(RigidBody *body) {
+static void update_body_shape(RigidBody *body) {
     // handle mass properties based on mode
     if (body->mass_properties_override == CALCULATE_MASS_AND_INERTIA) {
         // auto-calculate from shape
@@ -279,49 +297,55 @@ void update_shape(RigidBody *body) {
     update_aabb(body);
 }
 
-void set_position(bodies::Bodies &bodies, RigidBody *body, Vec3f position, bool wake) {
-    vec3f::store(body->position, position);
-
-    update_center_of_mass_position(body);
-    update_aabb(body);
-
-    if (wake) {
-        sleep::wake(bodies, body);
-    }
+void set_shape(world::World &world, RigidBody *body, shapes::Shape *shape) {
+    const Vec3f previous_center_of_mass = vec3f::load(body->shape->center_of_mass);
+    body->shape = shape;
+    update_shape(world, body, previous_center_of_mass);
 }
 
-void set_quaternion(bodies::Bodies &bodies, RigidBody *body, Quatf quaternion, bool wake) {
-    quatf::store(body->quaternion, quaternion);
+void update_shape(world::World &world, RigidBody *body, Vec3f previous_center_of_mass) {
+    update_body_shape(body);
+    constraints::notify_shape_changed(world.constraints, *body, vec3f::subtract(vec3f::load(body->shape->center_of_mass), previous_center_of_mass));
+    notify_bounds_changed(world, body);
+}
 
+void set_position(world::World &world, RigidBody *body, Vec3f position, bool wake) {
+    vec3f::store(body->position, position);
+    update_center_of_mass_position(body);
+    update_aabb(body);
+    notify_bounds_changed(world, body);
+    if (wake) sleep::wake(world.bodies, body);
+}
+
+void set_quaternion(world::World &world, RigidBody *body, Quatf quaternion, bool wake) {
+    quatf::store(body->quaternion, quaternion);
     body->motion_properties.world_inverse_inertia_stamp = motion_properties::STEP_STAMP_NONE;
     update_center_of_mass_position(body);
     update_aabb(body);
-
-    if (wake) {
-        sleep::wake(bodies, body);
-    }
+    notify_bounds_changed(world, body);
+    if (wake) sleep::wake(world.bodies, body);
 }
 
-void set_transform(bodies::Bodies &bodies, RigidBody *body, Vec3f position, Quatf quaternion, bool wake) {
+void set_transform(world::World &world, RigidBody *body, Vec3f position, Quatf quaternion, bool wake) {
     vec3f::store(body->position, position);
     quatf::store(body->quaternion, quaternion);
-
     body->motion_properties.world_inverse_inertia_stamp = motion_properties::STEP_STAMP_NONE;
     update_center_of_mass_position(body);
     update_aabb(body);
-
-    if (wake) {
-        sleep::wake(bodies, body);
-    }
+    notify_bounds_changed(world, body);
+    if (wake) sleep::wake(world.bodies, body);
 }
 
-void set_object_layer(const layers::Layers &layers, RigidBody *body, uint32_t object_layer) {
-    TUMBLE_ASSERT(object_layer < layers.object_layers);
-    (void)layers;
+void set_object_layer(world::World &world, RigidBody *body, uint32_t object_layer) {
+    TUMBLE_ASSERT(object_layer < world.settings.layers.object_layers);
     body->object_layer = object_layer;
+    broadphase::reinsert_body(world.broadphase, body, world.settings.layers);
+    // a layer change is a move: the body finds its overlaps in the new layer's tree
+    pairs::mark_moved(world.pairs, *body);
 }
 
-void set_motion_type(bodies::Bodies &bodies, RigidBody *body, motion_type::MotionType motion_type, bool wake) {
+void set_motion_type(world::World &world, RigidBody *body, motion_type::MotionType motion_type, bool wake) {
+    bodies::Bodies &bodies = world.bodies;
     const motion_type::MotionType old_motion_type = body->motion_type;
     if (old_motion_type == motion_type) return;
 
@@ -359,67 +383,67 @@ void set_motion_type(bodies::Bodies &bodies, RigidBody *body, motion_type::Motio
     body->motion_properties.world_inverse_inertia_stamp = motion_properties::STEP_STAMP_NONE;
 }
 
-void add_force(bodies::Bodies &bodies, RigidBody *body, Vec3f force, bool wake) {
+void add_force(world::World &world, RigidBody *body, Vec3f force, bool wake) {
     if (body->motion_type != motion_type::MOTION_DYNAMIC) return;
     motion_properties::add_force(body->motion_properties, force);
-    if (wake) sleep::wake(bodies, body);
+    if (wake) sleep::wake(world.bodies, body);
 }
 
-void add_torque(bodies::Bodies &bodies, RigidBody *body, Vec3f torque, bool wake) {
+void add_torque(world::World &world, RigidBody *body, Vec3f torque, bool wake) {
     if (body->motion_type != motion_type::MOTION_DYNAMIC) return;
     motion_properties::add_torque(body->motion_properties, torque);
-    if (wake) sleep::wake(bodies, body);
+    if (wake) sleep::wake(world.bodies, body);
 }
 
-void add_force_at_position(bodies::Bodies &bodies, RigidBody *body, Vec3f force, Vec3f world_position, bool wake) {
+void add_force_at_position(world::World &world, RigidBody *body, Vec3f force, Vec3f world_position, bool wake) {
     if (body->motion_type != motion_type::MOTION_DYNAMIC) return;
     motion_properties::add_force_at_position(body->motion_properties, force, world_position,
                                              vec3f::load(body->center_of_mass_position));
-    if (wake) sleep::wake(bodies, body);
+    if (wake) sleep::wake(world.bodies, body);
 }
 
-void add_impulse(bodies::Bodies &bodies, RigidBody *body, Vec3f impulse) {
+void add_impulse(world::World &world, RigidBody *body, Vec3f impulse) {
     if (body->motion_type != motion_type::MOTION_DYNAMIC) return;
     if (body->motion_properties.inv_mass <= 0.0f) return;
     motion_properties::add_impulse(body->motion_properties, impulse);
-    sleep::wake(bodies, body);
+    sleep::wake(world.bodies, body);
 }
 
-void add_impulse_at_position(bodies::Bodies &bodies, RigidBody *body, Vec3f impulse, Vec3f world_position) {
+void add_impulse_at_position(world::World &world, RigidBody *body, Vec3f impulse, Vec3f world_position) {
     if (body->motion_type != motion_type::MOTION_DYNAMIC) return;
     motion_properties::add_impulse_at_position(body->motion_properties, impulse, world_position,
                                                vec3f::load(body->center_of_mass_position), quatf::load(body->quaternion));
-    sleep::wake(bodies, body);
+    sleep::wake(world.bodies, body);
 }
 
-void add_angular_impulse(bodies::Bodies &bodies, RigidBody *body, Vec3f impulse) {
+void add_angular_impulse(world::World &world, RigidBody *body, Vec3f impulse) {
     if (body->motion_type != motion_type::MOTION_DYNAMIC) return;
     motion_properties::add_angular_impulse(body->motion_properties, impulse, quatf::load(body->quaternion));
-    sleep::wake(bodies, body);
+    sleep::wake(world.bodies, body);
 }
 
-void set_linear_velocity(bodies::Bodies &bodies, RigidBody *body, Vec3f velocity) {
+void set_linear_velocity(world::World &world, RigidBody *body, Vec3f velocity) {
     if (body->motion_type == motion_type::MOTION_STATIC) return;
     motion_properties::set_linear_velocity(body->motion_properties, velocity);
-    sleep::wake(bodies, body);
+    sleep::wake(world.bodies, body);
 }
 
-void add_linear_velocity(bodies::Bodies &bodies, RigidBody *body, Vec3f velocity_delta) {
+void add_linear_velocity(world::World &world, RigidBody *body, Vec3f velocity_delta) {
     if (body->motion_type == motion_type::MOTION_STATIC) return;
     motion_properties::add_linear_velocity(body->motion_properties, velocity_delta);
-    sleep::wake(bodies, body);
+    sleep::wake(world.bodies, body);
 }
 
-void set_angular_velocity(bodies::Bodies &bodies, RigidBody *body, Vec3f velocity) {
+void set_angular_velocity(world::World &world, RigidBody *body, Vec3f velocity) {
     if (body->motion_type == motion_type::MOTION_STATIC) return;
     motion_properties::set_angular_velocity(body->motion_properties, velocity);
-    sleep::wake(bodies, body);
+    sleep::wake(world.bodies, body);
 }
 
-void add_angular_velocity(bodies::Bodies &bodies, RigidBody *body, Vec3f velocity_delta) {
+void add_angular_velocity(world::World &world, RigidBody *body, Vec3f velocity_delta) {
     if (body->motion_type == motion_type::MOTION_STATIC) return;
     motion_properties::add_angular_velocity(body->motion_properties, velocity_delta);
-    sleep::wake(bodies, body);
+    sleep::wake(world.bodies, body);
 }
 
 void clear_forces(RigidBody *body) {
@@ -493,6 +517,10 @@ Vec3f get_velocity_at_point_com(const RigidBody *body, Vec3f point_relative_to_c
 Vec3f get_velocity_at_point(const RigidBody *body, Vec3f world_point) {
     return get_velocity_at_point_com(body, vec3f::subtract(world_point, vec3f::load(body->center_of_mass_position)));
 }
+
+void sleep(world::World &world, RigidBody *body) { sleep::sleep(world.bodies, body); }
+
+void wake(world::World &world, RigidBody *body) { sleep::wake(world.bodies, body); }
 
 bool bodies_share_constraint(const RigidBody *body_a, const RigidBody *body_b) {
     // fast path: if either has no constraints, they can't be connected

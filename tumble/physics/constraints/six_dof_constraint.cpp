@@ -8,6 +8,7 @@
 #include "tumble/math/vec4f.h"
 #include "tumble/physics/body/motion_properties.h"
 #include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/world.h"
 #include "tumble/util/assert.h"
 
 TUMBLE_NAMESPACE_BEGIN
@@ -201,8 +202,10 @@ static Quatf constraint_to_body(Vec3f axis_x, Vec3f axis_y) {
     return quatf::from_mat4(mat4f::make_columns({axis_x.v}, {axis_y.v}, {axis_z.v}, vec4f::make(0.0f, 0.0f, 0.0f, 1.0f)));
 }
 
-ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodies, RigidBody *body_a, RigidBody *body_b,
+ConstraintId create(world::World &world, RigidBody *body_a, RigidBody *body_b,
                     const SixDOFConstraintSettings &settings) {
+    constraints::Constraints &constraints = world.constraints;
+    bodies::Bodies &bodies = world.bodies;
     TUMBLE_ASSERT(is_body_live(bodies, body_a->index) && bodies.pool[body_a->index] == body_a);
     TUMBLE_ASSERT(is_body_live(bodies, body_b->index) && bodies.pool[body_b->index] == body_b);
     constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::SIX_DOF);
@@ -279,7 +282,12 @@ ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodie
     return id;
 }
 
-void remove(constraints::Constraints &constraints, bodies::Bodies &bodies, SixDOFConstraint &constraint) {
+bool remove(world::World &world, ConstraintId id) {
+    SixDOFConstraint *found = get(world, id);
+    if (found == nullptr) return false;
+    SixDOFConstraint &constraint = *found;
+    constraints::Constraints &constraints = world.constraints;
+    bodies::Bodies &bodies = world.bodies;
     constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::SIX_DOF);
 
     // remove from bodies' constraint_ids
@@ -293,11 +301,12 @@ void remove(constraints::Constraints &constraints, bodies::Bodies &bodies, SixDO
     constraint.base.pooled = true;
     constraint.base.id = constraint_id::INVALID_CONSTRAINT_ID;
     pool.free_indices.push(constraint.base.index);
+    return true;
 }
 
-SixDOFConstraint *get(constraints::Constraints &constraints, ConstraintId id) {
+SixDOFConstraint *get(world::World &world, ConstraintId id) {
     if (constraint_id::type(id) != constraint_id::SIX_DOF) return nullptr;
-    return reinterpret_cast<SixDOFConstraint *>(constraints::get(constraints, id));
+    return reinterpret_cast<SixDOFConstraint *>(constraints::get(world.constraints, id));
 }
 
 /** the body's inverse mass and world space inverse inertia as the axis part takes them: zero unless dynamic */

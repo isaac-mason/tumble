@@ -32,9 +32,9 @@ static SixDOFConstraintSettings translation_fixed_settings(const Float3 &pivot) 
 static SixDOFConstraint *make_joint(ConstraintScene &scene, RigidBody *&ball, const SixDOFConstraintSettings &settings) {
     RigidBody *base = add_body(scene, motion_type::MOTION_STATIC, ZERO);
     ball = add_body(scene, motion_type::MOTION_DYNAMIC, ZERO);
-    const constraint_id::ConstraintId id = six_dof_constraint::create(scene.constraints, scene.bodies, base, ball, settings);
+    const constraint_id::ConstraintId id = six_dof_constraint::create(*scene.world, base, ball, settings);
     scene.ids.push(id);
-    return six_dof_constraint::get(scene.constraints, id);
+    return six_dof_constraint::get(*scene.world, id);
 }
 
 /** the angle a rotation turns by */
@@ -52,10 +52,10 @@ void test_six_dof_constraint_create(TestCtx &ctx) {
 
     // everything free by default; motor springs at 2 hz, critically damped, on every axis
     const constraint_id::ConstraintId id = six_dof_constraint::create(
-        scene.constraints, scene.bodies, a, b,
+        *scene.world, a, b,
         {.position1 = {1.0f, 0.0f, 0.0f}, .position2 = {1.0f, 0.0f, 0.0f}, .axis_x1 = {0.0f, 2.0f, 0.0f},
          .axis_y1 = {0.0f, 0.0f, 3.0f}, .axis_x2 = {0.0f, 2.0f, 0.0f}, .axis_y2 = {0.0f, 0.0f, 3.0f}});
-    const SixDOFConstraint *constraint = six_dof_constraint::get(scene.constraints, id);
+    const SixDOFConstraint *constraint = six_dof_constraint::get(*scene.world, id);
     CHECK(ctx, constraint != nullptr && constraint_id::type(id) == constraint_id::SIX_DOF);
     CHECK(ctx, a->constraint_ids.length == 1 && b->constraint_ids.length == 1);
     CHECK(ctx, constraint->free_axis == 0b111111 && constraint->fixed_axis == 0);
@@ -90,7 +90,7 @@ void test_six_dof_constraint_create(TestCtx &ctx) {
     limited.limit_min[5] = -0.1f;
     limited.limit_max[5] = 0.4f;
     const SixDOFConstraint *clamped =
-        six_dof_constraint::get(scene.constraints, six_dof_constraint::create(scene.constraints, scene.bodies, a, b, limited));
+        six_dof_constraint::get(*scene.world, six_dof_constraint::create(*scene.world, a, b, limited));
     CHECK(ctx, clamped->limit_min[0] == 0.0f && clamped->limit_max[0] == 0.0f);
     CHECK(ctx, clamped->limit_min[3] == -scalar::PI && clamped->limit_max[3] == scalar::PI);
     CHECK(ctx, clamped->limit_min[4] == 0.0f && clamped->limit_max[4] == 0.0f);
@@ -98,7 +98,7 @@ void test_six_dof_constraint_create(TestCtx &ctx) {
     // x and swing y fixed; translation z and twist free; y and swing z limited
     CHECK(ctx, clamped->fixed_axis == ((1u << 0) | (1u << 4)));
     CHECK(ctx, clamped->free_axis == ((1u << 2) | (1u << 3)));
-    CHECK(ctx, six_dof_constraint::get(scene.constraints, constraint_id::ser(0, constraint_id::FIXED, 0)) == nullptr);
+    CHECK(ctx, six_dof_constraint::get(*scene.world, constraint_id::ser(0, constraint_id::FIXED, 0)) == nullptr);
     release_constraint_scene(scene);
 }
 
@@ -154,11 +154,11 @@ void test_six_dof_constraint_translation_locked_is_a_point_constraint(TestCtx &c
     RigidBody *ball = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 9.0f, 0.0f});
     RigidBody *base2 = add_body(scene, motion_type::MOTION_STATIC, pivot2);
     RigidBody *ball2 = add_body(scene, motion_type::MOTION_DYNAMIC, {6.0f, 9.0f, 0.0f});
-    scene.ids.push(point_constraint::create(scene.constraints, scene.bodies, base, ball, {.point_a = pivot, .point_b = pivot}));
+    scene.ids.push(point_constraint::create(*scene.world, base, ball, {.point_a = pivot, .point_b = pivot}));
     const constraint_id::ConstraintId id =
-        six_dof_constraint::create(scene.constraints, scene.bodies, base2, ball2, translation_fixed_settings(pivot2));
+        six_dof_constraint::create(*scene.world, base2, ball2, translation_fixed_settings(pivot2));
     scene.ids.push(id);
-    const SixDOFConstraint *constraint = six_dof_constraint::get(scene.constraints, id);
+    const SixDOFConstraint *constraint = six_dof_constraint::get(*scene.world, id);
     CHECK(ctx, constraint->fixed_axis == 0b000111 && constraint->free_axis == 0b111000);
     RigidBody *const balls[2] = {ball, ball2};
     for (RigidBody *body : balls) {
@@ -193,16 +193,16 @@ void test_six_dof_constraint_all_locked_is_a_fixed_constraint(TestCtx &ctx) {
     RigidBody *base2 = add_body(scene, motion_type::MOTION_STATIC, {5.0f, 10.0f, 0.0f});
     RigidBody *ball2 = add_body(scene, motion_type::MOTION_DYNAMIC, {6.0f, 9.5f, 0.0f}, tilt);
     const constraint_id::ConstraintId fixed_id = fixed_constraint::create(
-        scene.constraints, scene.bodies, base, ball, {.point1 = {0.5f, 10.0f, 0.0f}, .point2 = {0.5f, 10.0f, 0.0f}});
+        *scene.world, base, ball, {.point1 = {0.5f, 10.0f, 0.0f}, .point2 = {0.5f, 10.0f, 0.0f}});
     scene.ids.push(fixed_id);
     SixDOFConstraintSettings settings = translation_fixed_settings({5.5f, 10.0f, 0.0f});
     for (uint32_t i = 3; i < 6; i++) {
         settings.limit_min[i] = 0.0f;
         settings.limit_max[i] = 0.0f;
     }
-    const constraint_id::ConstraintId id = six_dof_constraint::create(scene.constraints, scene.bodies, base2, ball2, settings);
+    const constraint_id::ConstraintId id = six_dof_constraint::create(*scene.world, base2, ball2, settings);
     scene.ids.push(id);
-    const SixDOFConstraint *constraint = six_dof_constraint::get(scene.constraints, id);
+    const SixDOFConstraint *constraint = six_dof_constraint::get(*scene.world, id);
     CHECK(ctx, constraint->fixed_axis == 0b111111 && constraint->free_axis == 0);
     RigidBody *const balls[2] = {ball, ball2};
     for (RigidBody *body : balls) {
@@ -328,9 +328,9 @@ void test_six_dof_constraint_motors(TestCtx &ctx) {
 }
 
 static void solve_six_dof_velocities(ConstraintScene &scene, SixDOFConstraint &constraint) {
-    six_dof_constraint::setup_velocity(constraint, scene.bodies, DT);
-    six_dof_constraint::warm_start_velocity(constraint, scene.bodies, 1.0f);
-    for (uint32_t i = 0; i < 10; i++) six_dof_constraint::solve_velocity(constraint, scene.bodies, DT);
+    six_dof_constraint::setup_velocity(constraint, scene.world->bodies, DT);
+    six_dof_constraint::warm_start_velocity(constraint, scene.world->bodies, 1.0f);
+    for (uint32_t i = 0; i < 10; i++) six_dof_constraint::solve_velocity(constraint, scene.world->bodies, DT);
 }
 
 static SixDOFConstraintSettings all_fixed_settings() {
@@ -347,16 +347,16 @@ void test_six_dof_constraint_solve_velocity_reports_impulses(TestCtx &ctx) {
     RigidBody *ball = nullptr;
     SixDOFConstraint *fixed = make_joint(scene, ball, all_fixed_settings());
     ball->motion_properties.linear_velocity = {1.0f, 0.0f, 0.0f};
-    six_dof_constraint::setup_velocity(*fixed, scene.bodies, DT);
-    CHECK(ctx, six_dof_constraint::solve_velocity(*fixed, scene.bodies, DT));
+    six_dof_constraint::setup_velocity(*fixed, scene.world->bodies, DT);
+    CHECK(ctx, six_dof_constraint::solve_velocity(*fixed, scene.world->bodies, DT));
     // the velocity is now consistent, nothing more to apply
-    CHECK(ctx, !six_dof_constraint::solve_velocity(*fixed, scene.bodies, DT));
+    CHECK(ctx, !six_dof_constraint::solve_velocity(*fixed, scene.world->bodies, DT));
 
     RigidBody *free_ball = nullptr;
     SixDOFConstraint *free_joint = make_joint(scene, free_ball, {});
     free_ball->motion_properties.linear_velocity = {1.0f, 0.0f, 0.0f};
-    six_dof_constraint::setup_velocity(*free_joint, scene.bodies, DT);
-    CHECK(ctx, !six_dof_constraint::solve_velocity(*free_joint, scene.bodies, DT));
+    six_dof_constraint::setup_velocity(*free_joint, scene.world->bodies, DT);
+    CHECK(ctx, !six_dof_constraint::solve_velocity(*free_joint, scene.world->bodies, DT));
     release_constraint_scene(scene);
 }
 
@@ -388,7 +388,7 @@ void test_six_dof_constraint_runtime_fixed_and_free_axes(TestCtx &ctx) {
         ball->center_of_mass_position.x = 2.0f;
         six_dof_constraint::make_fixed_axis(*constraint, six_dof_constraint::TRANSLATION_X);
         CHECK(ctx, constraint->limit_min[0] == 0.0f && constraint->limit_max[0] == 0.0f);
-        for (uint32_t i = 0; i < 4; i++) six_dof_constraint::solve_position(*constraint, scene.bodies, DT, 1.0f);
+        for (uint32_t i = 0; i < 4; i++) six_dof_constraint::solve_position(*constraint, scene.world->bodies, DT, 1.0f);
         CHECK_NEAR(ctx, ball->center_of_mass_position.x, 0.0f, 1e-5f);
         release_constraint_scene(scene);
     }
@@ -422,15 +422,15 @@ void test_six_dof_constraint_position_solve_uses_fresh_rotations(TestCtx &ctx) {
     RigidBody *base = add_body(scene, motion_type::MOTION_STATIC, ZERO);
     RigidBody *ball = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
     SixDOFConstraintSettings settings = all_fixed_settings();
-    const constraint_id::ConstraintId id = six_dof_constraint::create(scene.constraints, scene.bodies, base, ball, settings);
-    SixDOFConstraint *constraint = six_dof_constraint::get(scene.constraints, id);
+    const constraint_id::ConstraintId id = six_dof_constraint::create(*scene.world, base, ball, settings);
+    SixDOFConstraint *constraint = six_dof_constraint::get(*scene.world, id);
 
     // the ball's center is a unit from the joint; turn it 0.3 about z around the joint: no point error, a rotation error
     ball->quaternion = stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.3f);
     vec3f::store(ball->center_of_mass_position, vec3f::transform_quat(vec3f::axis_x(), quatf::load(ball->quaternion)));
     CHECK(ctx, vec3f::length(world_point(ball, constraint->local_space_position2)) < 1e-6f);
 
-    six_dof_constraint::solve_position(*constraint, scene.bodies, DT, 1.0f);
+    six_dof_constraint::solve_position(*constraint, scene.world->bodies, DT, 1.0f);
 
     // turning the ball back swings the joint point 0.2955 away. the point solve, with its moment arm taken from the
     // turned back ball, splits the correction by 1/m : r^2/I = 1 : 10, so it turns the ball by about
@@ -452,7 +452,7 @@ void test_six_dof_constraint_fixed_rotation_offsets_euler_zyx(TestCtx &ctx) {
     // the rest orientation composes the offsets z * y * x
     const Quatf rest = quatf::multiply(axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.3f), axis_angle(vec3f::make(1.0f, 0.0f, 0.0f), 0.4f));
     quatf::store(ball->quaternion, rest);
-    six_dof_constraint::solve_position(*constraint, scene.bodies, DT, 1.0f);
+    six_dof_constraint::solve_position(*constraint, scene.world->bodies, DT, 1.0f);
     CHECK(ctx, rotation_angle(quatf::multiply(quatf::load(ball->quaternion), quatf::conjugate(rest))) < 1e-4f);
     release_constraint_scene(scene);
 }

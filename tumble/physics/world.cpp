@@ -1,5 +1,6 @@
 #include "tumble/physics/world.h"
 
+#include "tumble/physics/update.h"
 #include "tumble/util/assert.h"
 #include "tumble/util/object.h"
 
@@ -47,6 +48,16 @@ void destroy(World *world) {
     broadphase::release(world->broadphase);
     world_settings::release(world->settings);
     util::destroy(world);
+}
+
+void step(World &world, float delta_time) {
+    update::step_begin(world, delta_time);
+    do {
+        update::find_pairs(world);
+        update::narrowphase(world);
+    } while (world.events.woken > 0);
+    update::solve(world);
+    update::step_end(world);
 }
 
 }  // namespace world

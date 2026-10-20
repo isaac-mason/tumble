@@ -3,6 +3,7 @@
 #include "tumble/physics/shapes/box.h"
 #include "tumble/physics/shapes/dispatch.h"
 #include "tumble/physics/shapes/sphere.h"
+#include "tumble/physics/world.h"
 #include "test.h"
 #include "test_math.h"
 
@@ -12,63 +13,46 @@ using rigid_body::RigidBody;
 
 namespace {
 
-/** a moving and a not-moving layer, each with its own broadphase layer */
-struct World {
-    layers::Layers layers;
-    bodies::Bodies bodies;
-    broadphase::Broadphase broadphase;
-    pairs::Pairs pairs;
-    contacts::Contacts contacts;
-    events::PhysicsEvents events;
+/** a world with a moving and a not-moving layer, each with its own broadphase layer, and a unit sphere for its bodies */
+struct Scene {
+    world::World *world;
     uint32_t moving;
     uint32_t not_moving;
     shapes::Shape *sphere;
 };
 
-World make_world() {
+Scene make_scene() {
     dispatch::init();
-    World world = {};
-    const uint32_t broadphase_moving = layers::add_broadphase_layer(world.layers);
-    const uint32_t broadphase_not_moving = layers::add_broadphase_layer(world.layers);
-    world.moving = layers::add_object_layer(world.layers, broadphase_moving);
-    world.not_moving = layers::add_object_layer(world.layers, broadphase_not_moving);
-    layers::enable_collision(world.layers, world.moving, world.moving);
-    layers::enable_collision(world.layers, world.moving, world.not_moving);
-    world.bodies = bodies::init();
-    world.broadphase = broadphase::init(world.layers);
-    world.pairs = pairs::create();
-    world.contacts = contacts::create();
-    world.events = events::create_events();
-    world.sphere = sphere::create({.radius = 1});
-    return world;
+    Scene scene = {};
+    world_settings::WorldSettings settings = world_settings::create();
+    const uint32_t broadphase_moving = world_settings::add_broadphase_layer(settings);
+    const uint32_t broadphase_not_moving = world_settings::add_broadphase_layer(settings);
+    scene.moving = world_settings::add_object_layer(settings, broadphase_moving);
+    scene.not_moving = world_settings::add_object_layer(settings, broadphase_not_moving);
+    world_settings::enable_collision(settings, scene.moving, scene.moving);
+    world_settings::enable_collision(settings, scene.moving, scene.not_moving);
+    scene.world = world::create(settings);
+    scene.sphere = sphere::create({.radius = 1});
+    return scene;
 }
 
-void release_world(World &world) {
-    sphere::destroy(world.sphere);
-    events::release(world.events);
-    contacts::release(world.contacts);
-    pairs::release(world.pairs);
-    broadphase::release(world.broadphase);
-    bodies::release(world.bodies);
-    layers::release(world.layers);
+void release_scene(Scene &scene) {
+    world::destroy(scene.world);
+    sphere::destroy(scene.sphere);
 }
 
-/** a unit sphere, dynamic, in the moving layer, in the broadphase and marked moved */
-RigidBody *make_body(World &world, const Float3 &position = {0, 0, 0}, motion_type::MotionType motion_type = motion_type::MOTION_DYNAMIC) {
-    RigidBody *body = rigid_body::create(world.bodies, world.layers,
-                                         {.shape = world.sphere,
-                                          .object_layer = motion_type == motion_type::MOTION_STATIC ? world.not_moving : world.moving,
-                                          .motion_type = motion_type,
-                                          .position = position});
-    broadphase::add_body(world.broadphase, body, world.layers);
-    pairs::mark_moved(world.pairs, *body);
-    return body;
+/** a unit sphere, dynamic, in the moving layer */
+RigidBody *make_body(Scene &scene, const Float3 &position = {0, 0, 0}, motion_type::MotionType motion_type = motion_type::MOTION_DYNAMIC) {
+    return rigid_body::create(*scene.world, {.shape = scene.sphere,
+                                             .object_layer = motion_type == motion_type::MOTION_STATIC ? scene.not_moving : scene.moving,
+                                             .motion_type = motion_type,
+                                             .position = position});
 }
 
 uint32_t active_contact_count(const contacts::Contacts &contacts) { return contacts.contacts.length - contacts.free_indices.length; }
 
 /** the contact indices of a record's chain, head first */
-uint32_t chain(const World &world, int32_t record, int32_t *out, uint32_t capacity) {
+uint32_t chain(const world::World &world, int32_t record, int32_t *out, uint32_t capacity) {
     uint32_t count = 0;
     int32_t contact_index = world.pairs.first_contact[(uint32_t)record];
     while (contact_index != INVALID_CONTACT_KEY) {
@@ -80,7 +64,7 @@ uint32_t chain(const World &world, int32_t record, int32_t *out, uint32_t capaci
 }
 
 /** every chain link reciprocal, every contact pointing at its record, the head's prev empty, no freed contact in a chain */
-bool chains_consistent(const World &world, const int32_t *records, uint32_t num_records) {
+bool chains_consistent(const world::World &world, const int32_t *records, uint32_t num_records) {
     for (uint32_t r = 0; r < num_records; r++) {
         int32_t contact_index = world.pairs.first_contact[(uint32_t)records[r]];
         int32_t previous = INVALID_CONTACT_KEY;
@@ -102,9 +86,10 @@ bool removed_event_is(const events::ContactRemovedEvent &event, const RigidBody 
     return event.body_id_a == a->id && event.body_id_b == b->id && event.sub_shape_id_a == sub_shape_a && event.sub_shape_id_b == sub_shape_b;
 }
 
-void find_pairs(World &world) {
+/** the pair phase alone */
+void find_pairs(world::World &world) {
     world.events.pairs.length = 0;
-    pairs::find_colliding_pairs(world.pairs, world.contacts, world.broadphase, world.layers, world.bodies, 0.02f, world.events);
+    pairs::find_colliding_pairs(world.pairs, world.contacts, world.broadphase, world.settings.layers, world.bodies, 0.02f, world.events);
 }
 
 }  // namespace
@@ -116,9 +101,10 @@ void test_contacts_create_empty(TestCtx &ctx) {
 }
 
 void test_contacts_create_nested_under_record(TestCtx &ctx) {
-    World world = make_world();
-    RigidBody *a = make_body(world);
-    RigidBody *b = make_body(world);
+    Scene scene = make_scene();
+    world::World &world = *scene.world;
+    RigidBody *a = make_body(scene);
+    RigidBody *b = make_body(scene);
     const int32_t record = pairs::add_pair_record(world.pairs, *a, *b);
 
     Contact *contact = contacts::create_contact(world.contacts, world.pairs, record, *a, *b, 0, 0);
@@ -134,13 +120,14 @@ void test_contacts_create_nested_under_record(TestCtx &ctx) {
     CHECK(ctx, world.pairs.first_contact[(uint32_t)record] == contact->contact_index && contact->pair_record == record);
     CHECK(ctx, contact->prev_in_pair == INVALID_CONTACT_KEY && contact->next_in_pair == INVALID_CONTACT_KEY);
 
-    release_world(world);
+    release_scene(scene);
 }
 
 void test_contacts_destroy_reports_and_empties_chain(TestCtx &ctx) {
-    World world = make_world();
-    RigidBody *a = make_body(world);
-    RigidBody *b = make_body(world);
+    Scene scene = make_scene();
+    world::World &world = *scene.world;
+    RigidBody *a = make_body(scene);
+    RigidBody *b = make_body(scene);
     const int32_t record = pairs::add_pair_record(world.pairs, *a, *b);
 
     Contact *contact = contacts::create_contact(world.contacts, world.pairs, record, *a, *b, 3, 7);
@@ -151,13 +138,14 @@ void test_contacts_destroy_reports_and_empties_chain(TestCtx &ctx) {
     CHECK(ctx, active_contact_count(world.contacts) == 0);
     CHECK(ctx, world.events.contacts_removed.length == 1 && removed_event_is(world.events.contacts_removed[0], a, b, 3, 7));
 
-    release_world(world);
+    release_scene(scene);
 }
 
 void test_contacts_reuse_freed_index(TestCtx &ctx) {
-    World world = make_world();
-    RigidBody *a = make_body(world);
-    RigidBody *b = make_body(world);
+    Scene scene = make_scene();
+    world::World &world = *scene.world;
+    RigidBody *a = make_body(scene);
+    RigidBody *b = make_body(scene);
     const int32_t record = pairs::add_pair_record(world.pairs, *a, *b);
 
     Contact *first = contacts::create_contact(world.contacts, world.pairs, record, *a, *b, 0, 0);
@@ -172,13 +160,14 @@ void test_contacts_reuse_freed_index(TestCtx &ctx) {
     CHECK(ctx, contacts::get_write_manifold(*second, world.contacts).num_contact_points == 0);
     CHECK(ctx, contacts::get_write_manifold(*second, world.contacts).contact_points[0].normal_lambda == 0);
 
-    release_world(world);
+    release_scene(scene);
 }
 
 void test_contacts_manifold_double_buffer(TestCtx &ctx) {
-    World world = make_world();
-    RigidBody *a = make_body(world);
-    RigidBody *b = make_body(world);
+    Scene scene = make_scene();
+    world::World &world = *scene.world;
+    RigidBody *a = make_body(scene);
+    RigidBody *b = make_body(scene);
     const int32_t record = pairs::add_pair_record(world.pairs, *a, *b);
     Contact *contact = contacts::create_contact(world.contacts, world.pairs, record, *a, *b, 0, 0);
 
@@ -190,13 +179,14 @@ void test_contacts_manifold_double_buffer(TestCtx &ctx) {
     CHECK(ctx, contacts::get_read_manifold(*contact, world.contacts).num_contact_points == 2);
     CHECK(ctx, &contacts::get_write_manifold(*contact, world.contacts) == &contact->manifolds[0]);
 
-    release_world(world);
+    release_scene(scene);
 }
 
 void test_contacts_chain_middle_destroy(TestCtx &ctx) {
-    World world = make_world();
-    RigidBody *a = make_body(world);
-    RigidBody *b = make_body(world);
+    Scene scene = make_scene();
+    world::World &world = *scene.world;
+    RigidBody *a = make_body(scene);
+    RigidBody *b = make_body(scene);
     const int32_t record = pairs::add_pair_record(world.pairs, *a, *b);
 
     const int32_t c0 = contacts::create_contact(world.contacts, world.pairs, record, *a, *b, 0, 0)->contact_index;
@@ -211,13 +201,14 @@ void test_contacts_chain_middle_destroy(TestCtx &ctx) {
     CHECK(ctx, chain(world, record, links, 4) == 2 && links[0] == c2 && links[1] == c0);
     CHECK(ctx, world.contacts.contacts[(uint32_t)c2].next_in_pair == c0 && world.contacts.contacts[(uint32_t)c0].prev_in_pair == c2);
 
-    release_world(world);
+    release_scene(scene);
 }
 
 void test_contacts_find_in_pair(TestCtx &ctx) {
-    World world = make_world();
-    RigidBody *a = make_body(world);
-    RigidBody *b = make_body(world);
+    Scene scene = make_scene();
+    world::World &world = *scene.world;
+    RigidBody *a = make_body(scene);
+    RigidBody *b = make_body(scene);
     const int32_t record = pairs::add_pair_record(world.pairs, *a, *b);
 
     CHECK(ctx, contacts::find_contact_in_pair(world.contacts, world.pairs, record, 5, 10) == nullptr);
@@ -234,14 +225,15 @@ void test_contacts_find_in_pair(TestCtx &ctx) {
     CHECK(ctx, contacts::find_contact_in_pair(world.contacts, world.pairs, record, 2, 2) == nullptr);
     CHECK(ctx, contacts::find_contact_in_pair(world.contacts, world.pairs, record, 10, 5) == nullptr);
 
-    release_world(world);
+    release_scene(scene);
 }
 
 void test_contacts_destroy_stale_in_pair(TestCtx &ctx) {
-    World world = make_world();
+    Scene scene = make_scene();
+    world::World &world = *scene.world;
     world.contacts.frame_stamp = 5;
-    RigidBody *a = make_body(world);
-    RigidBody *b = make_body(world);
+    RigidBody *a = make_body(scene);
+    RigidBody *b = make_body(scene);
     const int32_t record = pairs::add_pair_record(world.pairs, *a, *b);
 
     Contact *fresh = contacts::create_contact(world.contacts, world.pairs, record, *a, *b, 0, 0);
@@ -258,13 +250,14 @@ void test_contacts_destroy_stale_in_pair(TestCtx &ctx) {
     CHECK(ctx, world.contacts.contacts[(uint32_t)stale_index].contact_index == INVALID_CONTACT_KEY);
     CHECK(ctx, world.events.contacts_removed.length == 1 && removed_event_is(world.events.contacts_removed[0], a, b, 1, 1));
 
-    release_world(world);
+    release_scene(scene);
 }
 
 void test_contacts_destroy_pair_chain_immediate_and_queued(TestCtx &ctx) {
-    World world = make_world();
-    RigidBody *a = make_body(world);
-    RigidBody *b = make_body(world);
+    Scene scene = make_scene();
+    world::World &world = *scene.world;
+    RigidBody *a = make_body(scene);
+    RigidBody *b = make_body(scene);
     const int32_t record = pairs::add_pair_record(world.pairs, *a, *b);
 
     // reported now
@@ -283,16 +276,17 @@ void test_contacts_destroy_pair_chain_immediate_and_queued(TestCtx &ctx) {
     CHECK(ctx, world.contacts.pending_contact_removed.length == 0);
     CHECK(ctx, world.events.contacts_removed.length == 1 && removed_event_is(world.events.contacts_removed[0], a, b, 2, 3));
 
-    release_world(world);
+    release_scene(scene);
 }
 
 void test_contacts_chain_integrity_many_pairs(TestCtx &ctx) {
-    World world = make_world();
-    RigidBody *hub = make_body(world);
+    Scene scene = make_scene();
+    world::World &world = *scene.world;
+    RigidBody *hub = make_body(scene);
     RigidBody *spokes[6];
     int32_t records[6];
     for (uint32_t i = 0; i < 6; i++) {
-        spokes[i] = make_body(world);
+        spokes[i] = make_body(scene);
         records[i] = pairs::add_pair_record(world.pairs, *hub, *spokes[i]);
     }
 
@@ -319,13 +313,14 @@ void test_contacts_chain_integrity_many_pairs(TestCtx &ctx) {
     CHECK(ctx, chains_consistent(world, records, 6));
     CHECK(ctx, world.contacts.contacts.length == before_slots + 2 && world.contacts.free_indices.length == 0);
 
-    release_world(world);
+    release_scene(scene);
 }
 
 void test_contacts_lifecycle_under_found_pair(TestCtx &ctx) {
-    World world = make_world();
-    RigidBody *floor = make_body(world, {0, -1, 0}, motion_type::MOTION_STATIC);
-    RigidBody *ball = make_body(world, {0, 0.9f, 0});
+    Scene scene = make_scene();
+    world::World &world = *scene.world;
+    RigidBody *floor = make_body(scene, {0, -1, 0}, motion_type::MOTION_STATIC);
+    RigidBody *ball = make_body(scene, {0, 0.9f, 0});
 
     // the broadphase finds the pair; the narrowphase's part is played by hand: a contact per sub shape pair, ids in body
     // id order
@@ -358,7 +353,7 @@ void test_contacts_lifecycle_under_found_pair(TestCtx &ctx) {
 
     // the ball falls asleep: the record is kept but not emitted, so the sweep destroys its chain, reported now
     world.events.contacts_removed.length = 0;
-    rigid_body::sleep(world.bodies, ball);
+    rigid_body::sleep(world, ball);
     find_pairs(world);
     CHECK(ctx, world.pairs.record_count == 1 && world.pairs.colliding_pairs.length == 0 && world.events.pairs.length == 0);
     CHECK(ctx, world.pairs.first_contact[(uint32_t)record] == INVALID_CONTACT_KEY && active_contact_count(world.contacts) == 0);
@@ -367,13 +362,13 @@ void test_contacts_lifecycle_under_found_pair(TestCtx &ctx) {
 
     // woken, with a contact again; then the ball is removed: the purge queues the removal for the next step
     world.events.contacts_removed.length = 0;
-    rigid_body::wake(world.bodies, ball);
+    rigid_body::wake(world, ball);
     find_pairs(world);
     CHECK(ctx, world.pairs.colliding_pairs.length == 1 && world.events.pairs[0].pair_record == record);
     contacts::create_contact(world.contacts, world.pairs, record, *a, *b, 0, 0);
     pairs::purge_body_pairs(world.pairs, world.contacts, world.bodies, *ball, world.events);
     broadphase::remove_body(world.broadphase, ball);
-    rigid_body::remove(world.bodies, ball);
+    rigid_body::remove(world, ball);
     CHECK(ctx, world.pairs.record_count == 0 && active_contact_count(world.contacts) == 0);
     CHECK(ctx, world.events.contacts_removed.length == 0 && world.contacts.pending_contact_removed.length == 4);
 
@@ -386,5 +381,5 @@ void test_contacts_lifecycle_under_found_pair(TestCtx &ctx) {
     contacts::flush_pending_contact_removed(world.contacts, world.events);
     CHECK(ctx, world.events.contacts_removed.length == 1);
 
-    release_world(world);
+    release_scene(scene);
 }

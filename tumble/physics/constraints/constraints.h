@@ -10,6 +10,10 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+namespace world {
+struct World;
+}
+
 // a world's user constraints, a pool per type; every record starts with the base
 namespace constraints {
 

@@ -6,6 +6,7 @@
 #include "tumble/physics/body/motion_properties.h"
 #include "tumble/physics/body/motion_type.h"
 #include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/world.h"
 #include "tumble/util/assert.h"
 
 TUMBLE_NAMESPACE_BEGIN
@@ -40,8 +41,10 @@ static void reset_constraint(FixedConstraint &constraint) {
     point_constraint_part::deactivate(constraint.point_constraint_part);
 }
 
-ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodies, RigidBody *body_a, RigidBody *body_b,
+ConstraintId create(world::World &world, RigidBody *body_a, RigidBody *body_b,
                     const FixedConstraintSettings &settings) {
+    constraints::Constraints &constraints = world.constraints;
+    bodies::Bodies &bodies = world.bodies;
     TUMBLE_ASSERT(is_body_live(bodies, body_a->index) && bodies.pool[body_a->index] == body_a);
     TUMBLE_ASSERT(is_body_live(bodies, body_b->index) && bodies.pool[body_b->index] == body_b);
     constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::FIXED);
@@ -128,7 +131,12 @@ ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodie
     return id;
 }
 
-void remove(constraints::Constraints &constraints, bodies::Bodies &bodies, FixedConstraint &constraint) {
+bool remove(world::World &world, ConstraintId id) {
+    FixedConstraint *found = get(world, id);
+    if (found == nullptr) return false;
+    FixedConstraint &constraint = *found;
+    constraints::Constraints &constraints = world.constraints;
+    bodies::Bodies &bodies = world.bodies;
     constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::FIXED);
 
     // remove from bodies' constraint_ids
@@ -142,11 +150,12 @@ void remove(constraints::Constraints &constraints, bodies::Bodies &bodies, Fixed
     constraint.base.pooled = true;
     constraint.base.id = constraint_id::INVALID_CONSTRAINT_ID;
     pool.free_indices.push(constraint.base.index);
+    return true;
 }
 
-FixedConstraint *get(constraints::Constraints &constraints, ConstraintId id) {
+FixedConstraint *get(world::World &world, ConstraintId id) {
     if (constraint_id::type(id) != constraint_id::FIXED) return nullptr;
-    return reinterpret_cast<FixedConstraint *>(constraints::get(constraints, id));
+    return reinterpret_cast<FixedConstraint *>(constraints::get(world.constraints, id));
 }
 
 void setup_velocity(FixedConstraint &constraint, bodies::Bodies &bodies, float delta_time) {

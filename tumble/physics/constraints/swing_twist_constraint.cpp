@@ -6,6 +6,7 @@
 #include "tumble/math/vec4f.h"
 #include "tumble/physics/body/motion_properties.h"
 #include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/world.h"
 #include "tumble/util/assert.h"
 
 TUMBLE_NAMESPACE_BEGIN
@@ -70,8 +71,10 @@ static Quatf constraint_to_body(Vec3f twist_axis, Vec3f plane_axis) {
     return quatf::from_mat4(mat4f::make_columns({twist_axis.v}, {normal_axis.v}, {plane_axis.v}, vec4f::make(0.0f, 0.0f, 0.0f, 1.0f)));
 }
 
-ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodies, RigidBody *body_a, RigidBody *body_b,
+ConstraintId create(world::World &world, RigidBody *body_a, RigidBody *body_b,
                     const SwingTwistConstraintSettings &settings) {
+    constraints::Constraints &constraints = world.constraints;
+    bodies::Bodies &bodies = world.bodies;
     TUMBLE_ASSERT(is_body_live(bodies, body_a->index) && bodies.pool[body_a->index] == body_a);
     TUMBLE_ASSERT(is_body_live(bodies, body_b->index) && bodies.pool[body_b->index] == body_b);
     constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::SWING_TWIST);
@@ -147,7 +150,12 @@ ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodie
     return id;
 }
 
-void remove(constraints::Constraints &constraints, bodies::Bodies &bodies, SwingTwistConstraint &constraint) {
+bool remove(world::World &world, ConstraintId id) {
+    SwingTwistConstraint *found = get(world, id);
+    if (found == nullptr) return false;
+    SwingTwistConstraint &constraint = *found;
+    constraints::Constraints &constraints = world.constraints;
+    bodies::Bodies &bodies = world.bodies;
     constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::SWING_TWIST);
 
     // remove from bodies' constraint_ids
@@ -161,11 +169,12 @@ void remove(constraints::Constraints &constraints, bodies::Bodies &bodies, Swing
     constraint.base.pooled = true;
     constraint.base.id = constraint_id::INVALID_CONSTRAINT_ID;
     pool.free_indices.push(constraint.base.index);
+    return true;
 }
 
-SwingTwistConstraint *get(constraints::Constraints &constraints, ConstraintId id) {
+SwingTwistConstraint *get(world::World &world, ConstraintId id) {
     if (constraint_id::type(id) != constraint_id::SWING_TWIST) return nullptr;
-    return reinterpret_cast<SwingTwistConstraint *>(constraints::get(constraints, id));
+    return reinterpret_cast<SwingTwistConstraint *>(constraints::get(world.constraints, id));
 }
 
 void set_normal_half_cone_angle(SwingTwistConstraint &constraint, float angle) {

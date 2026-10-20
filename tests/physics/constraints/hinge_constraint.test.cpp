@@ -24,9 +24,9 @@ static HingeConstraint *make_spinner(ConstraintScene &scene, RigidBody *&ball, c
     settings.hinge_axis_b = {0.0f, 0.0f, 1.0f};
     settings.normal_axis_a = {1.0f, 0.0f, 0.0f};
     settings.normal_axis_b = {1.0f, 0.0f, 0.0f};
-    const constraint_id::ConstraintId id = hinge_constraint::create(scene.constraints, scene.bodies, base, ball, settings);
+    const constraint_id::ConstraintId id = hinge_constraint::create(*scene.world, base, ball, settings);
     scene.ids.push(id);
-    return hinge_constraint::get(scene.constraints, id);
+    return hinge_constraint::get(*scene.world, id);
 }
 
 void test_hinge_constraint_create(TestCtx &ctx) {
@@ -35,7 +35,7 @@ void test_hinge_constraint_create(TestCtx &ctx) {
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {2.0f, 0.0f, 0.0f}, stored_axis_angle(vec3f::make(1.0f, 1.0f, 0.0f), 0.6f));
 
     // world space: axes normalized and taken to body space, positions relative to the centers of mass
-    const constraint_id::ConstraintId id = hinge_constraint::create(scene.constraints, scene.bodies, a, b,
+    const constraint_id::ConstraintId id = hinge_constraint::create(*scene.world, a, b,
                                                                     {.point_a = {1.0f, 0.0f, 0.0f},
                                                                      .point_b = {1.0f, 0.0f, 0.0f},
                                                                      .hinge_axis_a = {0.0f, 0.0f, 3.0f},
@@ -44,7 +44,7 @@ void test_hinge_constraint_create(TestCtx &ctx) {
                                                                      .normal_axis_b = {2.0f, 0.0f, 0.0f},
                                                                      .limits_min = -scalar::PI,
                                                                      .limits_max = 1.0f});
-    HingeConstraint *constraint = hinge_constraint::get(scene.constraints, id);
+    HingeConstraint *constraint = hinge_constraint::get(*scene.world, id);
     CHECK(ctx, constraint != nullptr && constraint_id::type(id) == constraint_id::HINGE);
     CHECK(ctx, a->constraint_ids.length == 1 && b->constraint_ids.length == 1);
     // a is turned a quarter about z: world +x is its body -y, world z stays z
@@ -57,16 +57,16 @@ void test_hinge_constraint_create(TestCtx &ctx) {
     CHECK(ctx, constraint->limits_min == -scalar::PI && constraint->limits_max == 1.0f);
 
     // the rest pose is angle 0, and turning b about the world hinge axis turns the angle by as much
-    hinge_constraint::setup_velocity(*constraint, scene.bodies, DT);
+    hinge_constraint::setup_velocity(*constraint, scene.world->bodies, DT);
     CHECK_NEAR(ctx, hinge_constraint::get_current_angle(*constraint), 0.0f, 1e-5f);
     rotate_body(b, axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.3f));
-    hinge_constraint::setup_velocity(*constraint, scene.bodies, DT);
+    hinge_constraint::setup_velocity(*constraint, scene.world->bodies, DT);
     CHECK_NEAR(ctx, hinge_constraint::get_current_angle(*constraint), 0.3f, 1e-5f);
     CHECK(ctx, vec3f::distance(constraint->world_space_hinge_axis1, vec3f::make(0.0f, 0.0f, 1.0f)) < 1e-5f);
 
     // the full circle is no limits
-    const constraint_id::ConstraintId free_id = hinge_constraint::create(scene.constraints, scene.bodies, a, b, {});
-    const HingeConstraint *free_hinge = hinge_constraint::get(scene.constraints, free_id);
+    const constraint_id::ConstraintId free_id = hinge_constraint::create(*scene.world, a, b, {});
+    const HingeConstraint *free_hinge = hinge_constraint::get(*scene.world, free_id);
     CHECK(ctx, !free_hinge->has_limits && free_hinge->limits_min == -scalar::PI && free_hinge->limits_max == scalar::PI);
     CHECK(ctx, free_hinge->motor_state == motor_settings::OFF);
 
@@ -74,7 +74,7 @@ void test_hinge_constraint_create(TestCtx &ctx) {
     RigidBody *c = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *d = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 1.0f, 0.0f});
     const constraint_id::ConstraintId local_id =
-        hinge_constraint::create(scene.constraints, scene.bodies, c, d,
+        hinge_constraint::create(*scene.world, c, d,
                                  {.point_a = {0.0f, 0.5f, 0.0f},
                                   .point_b = {0.0f, -0.5f, 0.0f},
                                   .hinge_axis_a = {1.0f, 0.0f, 0.0f},
@@ -84,18 +84,18 @@ void test_hinge_constraint_create(TestCtx &ctx) {
                                   .space = constraints::SPACE_LOCAL,
                                   .limits_min = -1.0f,
                                   .limits_max = 1.0f});
-    HingeConstraint *local = hinge_constraint::get(scene.constraints, local_id);
+    HingeConstraint *local = hinge_constraint::get(*scene.world, local_id);
     CHECK(ctx, vec3f::exact_equals(local->local_space_position1, vec3f::make(0.0f, 0.5f, 0.0f)));
     CHECK(ctx, vec3f::exact_equals(local->local_space_hinge_axis2, vec3f::make(1.0f, 0.0f, 0.0f)));
     CHECK(ctx, same_bits(local->inv_initial_orientation, quatf::make(0.0f, 0.0f, 0.0f, 1.0f)));
-    hinge_constraint::setup_velocity(*local, scene.bodies, DT);
+    hinge_constraint::setup_velocity(*local, scene.world->bodies, DT);
     CHECK(ctx, scalar::abs(hinge_constraint::get_current_angle(*local)) < 1e-6f);
     d->quaternion = stored_axis_angle(vec3f::make(1.0f, 0.0f, 0.0f), -0.4f);
-    hinge_constraint::setup_velocity(*local, scene.bodies, DT);
+    hinge_constraint::setup_velocity(*local, scene.world->bodies, DT);
     CHECK_NEAR(ctx, hinge_constraint::get_current_angle(*local), -0.4f, 1e-5f);
 
     // another type's id is not a hinge
-    CHECK(ctx, hinge_constraint::get(scene.constraints, constraint_id::ser(0, constraint_id::SLIDER, 0)) == nullptr);
+    CHECK(ctx, hinge_constraint::get(*scene.world, constraint_id::ser(0, constraint_id::SLIDER, 0)) == nullptr);
     release_constraint_scene(scene);
 }
 
@@ -134,11 +134,11 @@ void test_hinge_constraint_holds_axis(TestCtx &ctx) {
     RigidBody *pivot = add_body(scene, motion_type::MOTION_STATIC, ZERO);
     RigidBody *ball = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
     const constraint_id::ConstraintId id = hinge_constraint::create(
-        scene.constraints, scene.bodies, pivot, ball,
+        *scene.world, pivot, ball,
         {.hinge_axis_a = {0.0f, 0.0f, 1.0f}, .hinge_axis_b = {0.0f, 0.0f, 1.0f}, .normal_axis_a = {1.0f, 0.0f, 0.0f},
          .normal_axis_b = {1.0f, 0.0f, 0.0f}});
     scene.ids.push(id);
-    const HingeConstraint *constraint = hinge_constraint::get(scene.constraints, id);
+    const HingeConstraint *constraint = hinge_constraint::get(*scene.world, id);
     ball->motion_properties.linear_velocity = {0.0f, 0.0f, 2.0f};
     ball->motion_properties.angular_velocity = {2.0f, 3.0f, 0.0f};
 
@@ -261,9 +261,9 @@ void test_hinge_constraint_friction(TestCtx &ctx) {
 
 /** setup, warm start and ten velocity iterations, as one solver step runs them */
 static void solve_hinge_velocities(ConstraintScene &scene, HingeConstraint &constraint) {
-    hinge_constraint::setup_velocity(constraint, scene.bodies, DT);
-    hinge_constraint::warm_start_velocity(constraint, scene.bodies, 1.0f);
-    for (uint32_t i = 0; i < 10; i++) hinge_constraint::solve_velocity(constraint, scene.bodies, DT);
+    hinge_constraint::setup_velocity(constraint, scene.world->bodies, DT);
+    hinge_constraint::warm_start_velocity(constraint, scene.world->bodies, 1.0f);
+    for (uint32_t i = 0; i < 10; i++) hinge_constraint::solve_velocity(constraint, scene.world->bodies, DT);
 }
 
 void test_hinge_constraint_local_space_rest_with_rotated_bodies(TestCtx &ctx) {
@@ -290,15 +290,15 @@ void test_hinge_constraint_local_space_rest_with_rotated_bodies(TestCtx &ctx) {
         vec3f::store(settings.normal_axis_a, vec3f::transform_quat(world_normal, inv_a));
         vec3f::store(settings.normal_axis_b, vec3f::transform_quat(world_normal, inv_b));
         settings.max_friction_torque = 1.0f;
-        const constraint_id::ConstraintId id = hinge_constraint::create(scene.constraints, scene.bodies, a, b, settings);
-        HingeConstraint *constraint = hinge_constraint::get(scene.constraints, id);
+        const constraint_id::ConstraintId id = hinge_constraint::create(*scene.world, a, b, settings);
+        HingeConstraint *constraint = hinge_constraint::get(*scene.world, id);
 
-        hinge_constraint::setup_velocity(*constraint, scene.bodies, DT);
+        hinge_constraint::setup_velocity(*constraint, scene.world->bodies, DT);
         CHECK_NEAR(ctx, hinge_constraint::get_current_angle(*constraint), 0.0f, 1e-5f);
 
         // turning body b about the world hinge axis turns the angle by as much
         rotate_body(b, axis_angle(world_hinge, 0.3f));
-        hinge_constraint::setup_velocity(*constraint, scene.bodies, DT);
+        hinge_constraint::setup_velocity(*constraint, scene.world->bodies, DT);
         CHECK_NEAR(ctx, hinge_constraint::get_current_angle(*constraint), 0.3f, 1e-5f);
         release_constraint_scene(scene);
     }
@@ -316,8 +316,8 @@ void test_hinge_constraint_axes_a_hair_apart(TestCtx &ctx) {
     settings.hinge_axis_b = {0.0f, 0.0f, 1.0f};
     settings.normal_axis_a = {1.0f, 0.0f, 0.0f};
     settings.normal_axis_b = {scalar::cos(angle), scalar::sin(angle), 0.0f};
-    const constraint_id::ConstraintId id = hinge_constraint::create(scene.constraints, scene.bodies, base, ball, settings);
-    const HingeConstraint *hair = hinge_constraint::get(scene.constraints, id);
+    const constraint_id::ConstraintId id = hinge_constraint::create(*scene.world, base, ball, settings);
+    const HingeConstraint *hair = hinge_constraint::get(*scene.world, id);
     // r0^-1 = c2 c1^-1 turns by the hair about the hinge axis
     CHECK(ctx, quatf::z(hair->inv_initial_orientation) != 0.0f);
     CHECK_NEAR(ctx, quatf::z(hair->inv_initial_orientation), angle / 2.0f, 1e-8f);

@@ -46,30 +46,6 @@ static constexpr float IMPULSE_PENETRATION_RESOLUTION_FACTOR = 0.4f;
 /** the most steep slope normals walk_stairs keeps */
 static constexpr uint32_t WALK_STAIRS_MAX_STEEP_SLOPE_NORMALS = 16;
 
-// world level calls on the inner body: the body, the broadphase and the pairs together
-
-static RigidBody *add_world_body(World &world, const rigid_body::RigidBodySettings &settings) {
-    RigidBody *body = rigid_body::create(world.bodies, world.settings.layers, settings);
-    if (body == nullptr) return nullptr;
-    broadphase::add_body(world.broadphase, body, world.settings.layers);
-    pairs::mark_moved(world.pairs, *body);
-    return body;
-}
-
-static void remove_world_body(World &world, RigidBody *body) {
-    if (!bodies::is_valid(world.bodies, body->id)) return;
-    sleep::remove_body_from_active_bodies(world.bodies, body);
-    constraints::destroy_body_constraints(world.constraints, world.bodies, *body);
-    pairs::purge_body_pairs(world.pairs, world.contacts, world.bodies, *body, world.events);
-    broadphase::remove_body(world.broadphase, body);
-    rigid_body::remove(world.bodies, body);
-}
-
-static void notify_body_bounds_changed(World &world, RigidBody *body) {
-    if (broadphase::update_body(world.broadphase, body)) pairs::mark_moved(world.pairs, *body);
-}
-
-
 struct IgnoreSingleBodyChainedBodyFilter {
     body_id::BodyId body_id;
     filter::BodyFilter inner_body_filter;
@@ -235,7 +211,7 @@ void add(KCC &character, World &world) {
     // disable sleeping so sensor contacts keep coming
     settings.allow_sleeping = false;
 
-    RigidBody *inner_rigid_body = add_world_body(world, settings);
+    RigidBody *inner_rigid_body = rigid_body::create(world, settings);
     if (inner_rigid_body == nullptr) return;
     character.inner_rigid_body_id = inner_rigid_body->id;
 }
@@ -243,8 +219,8 @@ void add(KCC &character, World &world) {
 void remove(KCC &character, World &world) {
     if (character.inner_rigid_body_id == body_id::INVALID_BODY_ID) return;
 
-    RigidBody *inner_rigid_body = rigid_body::get(world.bodies, character.inner_rigid_body_id);
-    if (inner_rigid_body != nullptr) remove_world_body(world, inner_rigid_body);
+    RigidBody *inner_rigid_body = rigid_body::get(world, character.inner_rigid_body_id);
+    if (inner_rigid_body != nullptr) rigid_body::remove(world, inner_rigid_body);
 
     character.inner_rigid_body_id = body_id::INVALID_BODY_ID;
 }
@@ -349,7 +325,7 @@ static void fill_contact_properties(CharacterContact &contact, const KCC &charac
 static bool validate_contact(World &world, const KCC &character, const CharacterContact &contact, const CharacterListener *listener) {
     if (listener == nullptr || listener->on_contact_validate == nullptr) return true;
 
-    const RigidBody *body = rigid_body::get(world.bodies, contact.body_id);
+    const RigidBody *body = rigid_body::get(world, contact.body_id);
     if (body == nullptr) return true;
 
     // contact_normal points toward the character, callbacks expect it pointing away (into the surface)
@@ -369,7 +345,7 @@ static void contact_added(World &world, KCC &character, const CharacterContact &
         // contact was known from before - fire on_contact_persisted (max 1 per contact)
         if (++tracked->count == 1) {
             if (listener->on_contact_persisted != nullptr) {
-                const RigidBody *body = rigid_body::get(world.bodies, contact.body_id);
+                const RigidBody *body = rigid_body::get(world, contact.body_id);
                 if (body != nullptr) {
                     listener->on_contact_persisted(character, *body, contact.sub_shape_id, contact.position, normal, io_settings, listener->context);
                 }
@@ -382,7 +358,7 @@ static void contact_added(World &world, KCC &character, const CharacterContact &
     } else {
         // new contact - fire on_contact_added
         if (listener->on_contact_added != nullptr) {
-            const RigidBody *body = rigid_body::get(world.bodies, contact.body_id);
+            const RigidBody *body = rigid_body::get(world, contact.body_id);
             if (body != nullptr) {
                 listener->on_contact_added(character, *body, contact.sub_shape_id, contact.position, normal, io_settings, listener->context);
             }
@@ -445,7 +421,7 @@ static void character_collide_add_hit(collide_shape::CollideShapeCollector &coll
         }
     }
 
-    const RigidBody *body = rigid_body::get(context.world->bodies, hit.body_id_b);
+    const RigidBody *body = rigid_body::get(*context.world, hit.body_id_b);
     if (body == nullptr) return;
 
     CharacterContact *contact = acquire_contact(contacts);
@@ -551,7 +527,7 @@ static void character_cast_add_hit(cast_shape::CastShapeCollector &collector, co
         }
     }
 
-    const RigidBody *body = rigid_body::get(context.world->bodies, hit.body_id_b);
+    const RigidBody *body = rigid_body::get(*context.world, hit.body_id_b);
     if (body == nullptr) return;
 
     // sensors don't affect character movement, only detection
@@ -679,7 +655,7 @@ static bool get_first_contact_for_sweep(CharacterContact &out, KCC &character, W
 
     // correct the fraction so the padding, not the shape, touches the face hit
     bool corrected = false;
-    const RigidBody *hit_body = rigid_body::get(world.bodies, out.body_id);
+    const RigidBody *hit_body = rigid_body::get(world, out.body_id);
     if (hit_body != nullptr) {
         // the supporting face against the contact normal, the direction in the body's local space
         Vec3f direction = vec3f::negate(out.contact_normal);
@@ -830,7 +806,7 @@ static void apply_impulse_to_body(World &world, const KCC &character, const Char
     if (contact.is_sensor) return;
     if (!contact.can_receive_impulses) return;
 
-    RigidBody *body = rigid_body::get(world.bodies, contact.body_id);
+    RigidBody *body = rigid_body::get(world, contact.body_id);
     if (body == nullptr) return;
 
     const motion_properties::MotionProperties &mp = body->motion_properties;
@@ -865,7 +841,7 @@ static void apply_impulse_to_body(World &world, const KCC &character, const Char
     const float impulse_dot_up = vec3f::dot(world_impulse, character.up);
     if (impulse_dot_up < 0.0f) world_impulse = vec3f::scale_and_add(world_impulse, character.up, -impulse_dot_up);
 
-    rigid_body::add_impulse_at_position(world.bodies, body, world_impulse, contact.position);
+    rigid_body::add_impulse_at_position(world, body, world_impulse, contact.position);
 }
 
 /**
@@ -1041,7 +1017,7 @@ static float solve_constraints(KCC &character, World &world, Vec3f &velocity, fl
 
         // the solve callback may change the new velocity
         if (listener != nullptr && listener->on_contact_solve != nullptr) {
-            const RigidBody *body = rigid_body::get(world.bodies, active_constraint->contact->body_id);
+            const RigidBody *body = rigid_body::get(world, active_constraint->contact->body_id);
             if (body != nullptr) {
                 const CharacterContact &contact = *active_constraint->contact;
                 listener->on_contact_solve(character, *body, contact.sub_shape_id, contact.position, contact.contact_normal, contact.linear_velocity,
@@ -1151,7 +1127,7 @@ static void update_supporting_contact(KCC &character, World &world, bool skip_co
             if (contact.motion_type != motion_type::MOTION_KINEMATIC || !supported) {
                 avg_velocity = vec3f::add(avg_velocity, contact.linear_velocity);
             } else {
-                const RigidBody *body = rigid_body::get(world.bodies, contact.body_id);
+                const RigidBody *body = rigid_body::get(world, contact.body_id);
                 if (body != nullptr) {
                     Vec3f linear_velocity, angular_velocity;
                     get_adjusted_body_velocity(character, *body, listener, linear_velocity, angular_velocity);
@@ -1359,11 +1335,10 @@ static void finalize_contact_tracking(KCC &character, const CharacterListener *l
 static void update_inner_body_transform(KCC &character, World &world) {
     if (character.inner_rigid_body_id == body_id::INVALID_BODY_ID) return;
 
-    RigidBody *inner_rigid_body = rigid_body::get(world.bodies, character.inner_rigid_body_id);
+    RigidBody *inner_rigid_body = rigid_body::get(world, character.inner_rigid_body_id);
     if (inner_rigid_body == nullptr) return;
 
-    rigid_body::set_transform(world.bodies, inner_rigid_body, get_inner_body_position(character), character.quaternion, false);
-    notify_body_bounds_changed(world, inner_rigid_body);
+    rigid_body::set_transform(world, inner_rigid_body, get_inner_body_position(character), character.quaternion, false);
 }
 
 void set_position(KCC &character, World &world, Vec3f position) {
@@ -1379,7 +1354,7 @@ void set_quaternion(KCC &character, World &world, Quatf quaternion) {
 void update_ground_velocity(KCC &character, World &world, const CharacterListener *listener) {
     if (character.ground.body_id == body_id::INVALID_BODY_ID) return;
 
-    const RigidBody *ground_body = rigid_body::get(world.bodies, character.ground.body_id);
+    const RigidBody *ground_body = rigid_body::get(world, character.ground.body_id);
     if (ground_body == nullptr) {
         // body was removed - clear ground info
         character.ground.body_id = body_id::INVALID_BODY_ID;
@@ -1457,14 +1432,9 @@ bool set_shape(KCC &character, World &world, shapes::Shape *new_shape, const fil
     }
 
     if (character.inner_rigid_body_id != body_id::INVALID_BODY_ID) {
-        RigidBody *inner_body = rigid_body::get(world.bodies, character.inner_rigid_body_id);
+        RigidBody *inner_body = rigid_body::get(world, character.inner_rigid_body_id);
         if (inner_body != nullptr) {
-            const Vec3f previous_center_of_mass = vec3f::load(inner_body->shape->center_of_mass);
-            inner_body->shape = new_shape;
-            rigid_body::update_shape(inner_body);
-            constraints::notify_shape_changed(world.constraints, *inner_body,
-                                              vec3f::subtract(vec3f::load(new_shape->center_of_mass), previous_center_of_mass));
-            notify_body_bounds_changed(world, inner_body);
+            rigid_body::set_shape(world, inner_body, new_shape);
         }
     }
 
@@ -1485,12 +1455,12 @@ void move(KCC &character, World &world, float delta_time, Vec3f gravity, const C
 
     // the character's weight on a dynamic ground body: p = f dt = m g dt, along the normal
     if (character.ground.body_id != body_id::INVALID_BODY_ID && character.mass > 0.0f) {
-        RigidBody *ground_body = rigid_body::get(world.bodies, character.ground.body_id);
+        RigidBody *ground_body = rigid_body::get(world, character.ground.body_id);
         if (ground_body != nullptr && ground_body->motion_type == motion_type::MOTION_DYNAMIC) {
             const float normal_dot_gravity = vec3f::dot(character.ground.normal, gravity);
             if (normal_dot_gravity < 0.0f) {
                 Vec3f impulse = vec3f::scale(gravity, -(character.mass * normal_dot_gravity / vec3f::length(gravity) * delta_time));
-                rigid_body::add_impulse_at_position(world.bodies, ground_body, impulse, character.ground.position);
+                rigid_body::add_impulse_at_position(world, ground_body, impulse, character.ground.position);
             }
         }
     }

@@ -7,6 +7,7 @@
 #include "tumble/physics/body/motion_properties.h"
 #include "tumble/physics/body/motion_type.h"
 #include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/world.h"
 #include "tumble/util/assert.h"
 
 TUMBLE_NAMESPACE_BEGIN
@@ -47,8 +48,10 @@ static void reset_constraint(DistanceConstraint &constraint) {
     axis_constraint_part::deactivate(constraint.axis_constraint);
 }
 
-ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodies, RigidBody *body_a, RigidBody *body_b,
+ConstraintId create(world::World &world, RigidBody *body_a, RigidBody *body_b,
                     const DistanceConstraintSettings &settings) {
+    constraints::Constraints &constraints = world.constraints;
+    bodies::Bodies &bodies = world.bodies;
     TUMBLE_ASSERT(is_body_live(bodies, body_a->index) && bodies.pool[body_a->index] == body_a);
     TUMBLE_ASSERT(is_body_live(bodies, body_b->index) && bodies.pool[body_b->index] == body_b);
     constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::DISTANCE);
@@ -119,7 +122,12 @@ ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodie
     return id;
 }
 
-void remove(constraints::Constraints &constraints, bodies::Bodies &bodies, DistanceConstraint &constraint) {
+bool remove(world::World &world, ConstraintId id) {
+    DistanceConstraint *found = get(world, id);
+    if (found == nullptr) return false;
+    DistanceConstraint &constraint = *found;
+    constraints::Constraints &constraints = world.constraints;
+    bodies::Bodies &bodies = world.bodies;
     constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::DISTANCE);
 
     // remove from bodies' constraint_ids
@@ -133,11 +141,12 @@ void remove(constraints::Constraints &constraints, bodies::Bodies &bodies, Dista
     constraint.base.pooled = true;
     constraint.base.id = constraint_id::INVALID_CONSTRAINT_ID;
     pool.free_indices.push(constraint.base.index);
+    return true;
 }
 
-DistanceConstraint *get(constraints::Constraints &constraints, ConstraintId id) {
+DistanceConstraint *get(world::World &world, ConstraintId id) {
     if (constraint_id::type(id) != constraint_id::DISTANCE) return nullptr;
-    return reinterpret_cast<DistanceConstraint *>(constraints::get(constraints, id));
+    return reinterpret_cast<DistanceConstraint *>(constraints::get(world.constraints, id));
 }
 
 /** updates the world positions and normal, then sets the axis part up by the limit the distance is at */

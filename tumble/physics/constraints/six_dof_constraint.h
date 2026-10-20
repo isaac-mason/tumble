@@ -116,11 +116,12 @@ struct SixDOFConstraintSettings {
 };
 
 /** a six dof constraint between two live bodies, linked into both bodies' constraint_ids; INVALID_CONSTRAINT_ID (error set) when the pool cannot grow */
-constraint_id::ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodies, rigid_body::RigidBody *body_a,
+constraint_id::ConstraintId create(world::World &world, rigid_body::RigidBody *body_a,
                                    rigid_body::RigidBody *body_b, const SixDOFConstraintSettings &settings);
-void remove(constraints::Constraints &constraints, bodies::Bodies &bodies, SixDOFConstraint &constraint);
+/** false for a stale id or one of another type */
+bool remove(world::World &world, constraint_id::ConstraintId id);
 /** null when the id is stale or not a six dof constraint */
-SixDOFConstraint *get(constraints::Constraints &constraints, constraint_id::ConstraintId id);
+SixDOFConstraint *get(world::World &world, constraint_id::ConstraintId id);
 
 void set_translation_limits(SixDOFConstraint &constraint, Vec3f limit_min, Vec3f limit_max);
 void set_rotation_limits(SixDOFConstraint &constraint, Vec3f limit_min, Vec3f limit_max);

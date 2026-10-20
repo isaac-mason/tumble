@@ -173,7 +173,7 @@ void hash_pile(Hash &hash) {
         }
         rigid_body::RigidBodySettings settings = body_settings(shape, scene.moving, motion_type::MOTION_DYNAMIC, position);
         settings.quaternion = stored_axis_angle(vec3f::normalize(vec3f::make(0.3f, 1.0f, 0.2f * (float)i)), 0.37f * (float)i);
-        add_body(*scene.world, settings);
+        rigid_body::create(*scene.world, settings);
     }
 
     for (uint32_t step = 0; step < 300; step++) {

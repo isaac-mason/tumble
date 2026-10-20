@@ -38,7 +38,7 @@ struct World {
     ccd::CCD ccd;
     events::PhysicsEvents events;
     events::PhysicsAnswers answers;
-    /** the step in flight, set by physics_step_begin */
+    /** the step in flight, set by update::step_begin */
     float delta_time;
     /** the step before's, for the warm start ratio */
     float previous_time_step;
@@ -48,6 +48,12 @@ struct World {
 World *create(const world_settings::WorldSettings &settings);
 /** frees every body, constraint, contact and buffer, then the world */
 void destroy(World *world);
+
+/**
+ * one step answering nothing: update.h's phases in order, finding pairs again while the narrowphase wakes bodies.
+ * a caller that rejects pairs or overrides contacts runs the phases itself
+ */
+void step(World &world, float delta_time);
 
 }  // namespace world
 

@@ -7,14 +7,13 @@
 #include "tumble/physics/constraints/constraints.h"
 #include "tumble/physics/shapes/dispatch.h"
 #include "tumble/physics/shapes/sphere.h"
+#include "tumble/physics/world.h"
 #include "test.h"
 #include "test_math.h"
 
-/** a world without a world: bodies, layers and constraints, and a step that runs the solver phases by hand */
+/** a world whose bodies never collide (one layer, colliding with nothing), and a step that runs the solver phases by hand */
 struct ConstraintScene {
-    bodies::Bodies bodies;
-    layers::Layers layers;
-    constraints::Constraints constraints;
+    world::World *world;
     uint32_t layer;
     collections::Vec<constraint_id::ConstraintId> ids;
 };
@@ -22,19 +21,15 @@ struct ConstraintScene {
 inline ConstraintScene make_constraint_scene() {
     dispatch::init();
     ConstraintScene scene = {};
-    scene.bodies = bodies::init();
-    scene.layers = layers::create();
-    const uint32_t broadphase_layer = layers::add_broadphase_layer(scene.layers);
-    scene.layer = layers::add_object_layer(scene.layers, broadphase_layer);
-    scene.constraints = constraints::create();
+    world_settings::WorldSettings settings = world_settings::create();
+    scene.layer = world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
+    scene.world = world::create(settings);
     return scene;
 }
 
 inline void release_constraint_scene(ConstraintScene &scene) {
     scene.ids.release();
-    constraints::release(scene.constraints);
-    bodies::release(scene.bodies);
-    layers::release(scene.layers);
+    world::destroy(scene.world);
 }
 
 /** a sphere of radius 0.5 (mass 1000 * 4/3 pi 0.125, about 523.6), or a shapeless body when static */
@@ -48,7 +43,7 @@ inline rigid_body::RigidBody *add_body(ConstraintScene &scene, motion_type::Moti
     settings.quaternion = quaternion;
     settings.linear_damping = 0.0f;
     settings.angular_damping = 0.0f;
-    return rigid_body::create(scene.bodies, scene.layers, settings);
+    return rigid_body::create(*scene.world, settings);
 }
 
 /** turns the body by rotation, in world space: q = rotation * q */
@@ -63,7 +58,8 @@ inline Vec3f world_point(const rigid_body::RigidBody *body, Vec3f local) {
 
 /** one step: ten velocity iterations and two position iterations over scene.ids, gravity on dynamic bodies */
 inline void step_constraint_scene(ConstraintScene &scene, float delta_time, Vec3f gravity) {
-    bodies::Bodies &bodies = scene.bodies;
+    bodies::Bodies &bodies = scene.world->bodies;
+    constraints::Constraints &constraints = scene.world->constraints;
     bodies.step_stamp++;
 
     for (uint32_t i = 0; i < bodies.pool.length; i++) {
@@ -73,11 +69,11 @@ inline void step_constraint_scene(ConstraintScene &scene, float delta_time, Vec3
         vec3f::store(velocity, vec3f::scale_and_add(vec3f::load(velocity), gravity, delta_time));
     }
 
-    constraints::update_sleeping(scene.constraints, bodies);
-    constraints::setup_velocity_constraints(scene.constraints, bodies, delta_time);
-    constraints::warm_start_velocity_constraints(scene.constraints, bodies, scene.ids, 1.0f);
+    constraints::update_sleeping(constraints, bodies);
+    constraints::setup_velocity_constraints(constraints, bodies, delta_time);
+    constraints::warm_start_velocity_constraints(constraints, bodies, scene.ids, 1.0f);
     for (uint32_t i = 0; i < 10; i++) {
-        constraints::solve_velocity_constraints_for_island(scene.constraints, bodies, scene.ids, delta_time);
+        constraints::solve_velocity_constraints_for_island(constraints, bodies, scene.ids, delta_time);
     }
 
     for (uint32_t i = 0; i < bodies.pool.length; i++) {
@@ -88,7 +84,7 @@ inline void step_constraint_scene(ConstraintScene &scene, float delta_time, Vec3
     }
 
     for (uint32_t i = 0; i < 2; i++) {
-        constraints::solve_position_constraints_for_island(scene.constraints, bodies, scene.ids, 0.2f, delta_time);
+        constraints::solve_position_constraints_for_island(constraints, bodies, scene.ids, 0.2f, delta_time);
     }
 
     for (uint32_t i = 0; i < bodies.pool.length; i++) {

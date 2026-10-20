@@ -21,7 +21,7 @@ RigidBody *add_static_box(WorldScene &scene, const Float3 &half_extents, const F
     rigid_body::RigidBodySettings settings =
         body_settings(box::create({.half_extents = half_extents}), scene.not_moving, motion_type::MOTION_STATIC, position);
     settings.quaternion = quaternion;
-    return add_body(*scene.world, settings);
+    return rigid_body::create(*scene.world, settings);
 }
 
 RigidBody *add_floor(WorldScene &scene) { return add_static_box(scene, {50.0f, 0.5f, 50.0f}, {0.0f, -0.5f, 0.0f}); }
@@ -209,7 +209,7 @@ void test_kcc_recycled_body_slot_is_a_new_contact(TestCtx &ctx) {
 
     // floor a goes and floor b takes its slot: same index, a new sequence
     const body_id::BodyId floor_a_id = floor_a->id;
-    CHECK(ctx, remove_body(world, floor_a));
+    CHECK(ctx, rigid_body::remove(world, floor_a));
     RigidBody *floor_b = add_floor(scene);
     CHECK(ctx, floor_b->index == body_id::index(floor_a_id));
     CHECK(ctx, floor_b->id != floor_a_id);
@@ -247,7 +247,7 @@ void test_kcc_destroying_the_ground_reports_its_removal(TestCtx &ctx) {
     CHECK(ctx, character->ground.body_id == floor->id);
 
     const body_id::BodyId floor_id = floor->id;
-    CHECK(ctx, remove_body(world, floor));
+    CHECK(ctx, rigid_body::remove(world, floor));
     step_falling(world, *character, settings, filter, &listener);
     CHECK(ctx, log_has(log.removed, log.removed_count, floor_id));
     CHECK(ctx, character->ground.state == kcc::IN_AIR);
@@ -505,7 +505,7 @@ void test_kcc_rides_a_moving_kinematic_platform(TestCtx &ctx) {
     world::World &world = *scene.world;
     add_floor(scene);
     RigidBody *platform = add_body(scene, box::create({.half_extents = {2.0f, 0.25f, 2.0f}}), motion_type::MOTION_KINEMATIC, {0.0f, 1.0f, 0.0f});
-    rigid_body::set_linear_velocity(world.bodies, platform, vec3f::make(1.0f, 0.0f, 0.0f));
+    rigid_body::set_linear_velocity(world, platform, vec3f::make(1.0f, 0.0f, 0.0f));
     step_world(world, DT);
 
     kcc::KCC *character = make_footed_character({0.0f, 1.3f, 0.0f});
@@ -539,7 +539,7 @@ void test_kcc_reports_a_sensor_and_walks_through_it(TestCtx &ctx) {
     rigid_body::RigidBodySettings sensor_settings =
         body_settings(box::create({.half_extents = {0.5f, 1.0f, 2.0f}}), scene.not_moving, motion_type::MOTION_STATIC, {1.5f, 1.0f, 0.0f});
     sensor_settings.sensor = true;
-    RigidBody *sensor = add_body(world, sensor_settings);
+    RigidBody *sensor = rigid_body::create(world, sensor_settings);
     step_world(world, DT);
 
     kcc::KCC *character = make_footed_character({0.0f, 0.0f, 0.0f});
@@ -612,7 +612,7 @@ void test_kcc_inner_body_follows_and_is_ignored_by_its_own_queries(TestCtx &ctx)
     kcc::KCC *character = kcc::create(character_settings, vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY));
 
     kcc::add(*character, world);
-    RigidBody *inner = rigid_body::get(world.bodies, character->inner_rigid_body_id);
+    RigidBody *inner = rigid_body::get(world, character->inner_rigid_body_id);
     CHECK(ctx, inner != nullptr);
     if (inner == nullptr) return;
     CHECK(ctx, inner->motion_type == motion_type::MOTION_KINEMATIC);
@@ -642,7 +642,7 @@ void test_kcc_inner_body_follows_and_is_ignored_by_its_own_queries(TestCtx &ctx)
 
     kcc::remove(*character, world);
     CHECK(ctx, character->inner_rigid_body_id == body_id::INVALID_BODY_ID);
-    CHECK(ctx, rigid_body::get(world.bodies, inner_id) == nullptr);
+    CHECK(ctx, rigid_body::get(world, inner_id) == nullptr);
 
     kcc::destroy(character);
     filter::release(filter);

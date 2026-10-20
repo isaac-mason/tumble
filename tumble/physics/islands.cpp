@@ -298,7 +298,7 @@ void finish_island_step(const Island &island, bodies::Bodies &bodies, broadphase
     if (all_can_sleep) {
         for (uint32_t i = 0; i < island.body_indices.length; i++) {
             rigid_body::RigidBody *body = bodies.pool[bodies.active_body_indices[island.body_indices[i]]];
-            if (body->motion_type == motion_type::MOTION_DYNAMIC) rigid_body::sleep(bodies, body);
+            if (body->motion_type == motion_type::MOTION_DYNAMIC) sleep::sleep(bodies, body);
         }
     }
 }

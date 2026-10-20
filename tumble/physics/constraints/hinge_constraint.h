@@ -103,11 +103,12 @@ struct HingeConstraintSettings {
 };
 
 /** a hinge constraint between two live bodies, linked into both bodies' constraint_ids; INVALID_CONSTRAINT_ID (error set) when the pool cannot grow */
-constraint_id::ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodies, rigid_body::RigidBody *body_a,
+constraint_id::ConstraintId create(world::World &world, rigid_body::RigidBody *body_a,
                                    rigid_body::RigidBody *body_b, const HingeConstraintSettings &settings);
-void remove(constraints::Constraints &constraints, bodies::Bodies &bodies, HingeConstraint &constraint);
+/** false for a stale id or one of another type */
+bool remove(world::World &world, constraint_id::ConstraintId id);
 /** null when the id is stale or not a hinge constraint */
-HingeConstraint *get(constraints::Constraints &constraints, constraint_id::ConstraintId id);
+HingeConstraint *get(world::World &world, constraint_id::ConstraintId id);
 
 /** angle limits in radians, min in [-pi, 0] and max in [0, pi]; [-pi, pi] is no limits */
 void set_limits(HingeConstraint &constraint, float min, float max);

@@ -58,11 +58,12 @@ struct FixedConstraintSettings {
 };
 
 /** a fixed constraint between two live bodies, linked into both bodies' constraint_ids; INVALID_CONSTRAINT_ID (error set) when the pool cannot grow */
-constraint_id::ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodies, rigid_body::RigidBody *body_a,
+constraint_id::ConstraintId create(world::World &world, rigid_body::RigidBody *body_a,
                                    rigid_body::RigidBody *body_b, const FixedConstraintSettings &settings);
-void remove(constraints::Constraints &constraints, bodies::Bodies &bodies, FixedConstraint &constraint);
+/** false for a stale id or one of another type */
+bool remove(world::World &world, constraint_id::ConstraintId id);
 /** null when the id is stale or not a fixed constraint */
-FixedConstraint *get(constraints::Constraints &constraints, constraint_id::ConstraintId id);
+FixedConstraint *get(world::World &world, constraint_id::ConstraintId id);
 
 void setup_velocity(FixedConstraint &constraint, bodies::Bodies &bodies, float delta_time);
 void warm_start_velocity(FixedConstraint &constraint, bodies::Bodies &bodies, float warm_start_impulse_ratio);

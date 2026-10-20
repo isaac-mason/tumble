@@ -47,15 +47,6 @@ inline WorldScene make_world_scene(TestCtx &ctx, void (*tune)(world_settings::Wo
 
 inline void release_world_scene(WorldScene &scene) { world::destroy(scene.world); }
 
-/** rigidBody.create(world, ...): the body, in the broadphase and the move set */
-inline rigid_body::RigidBody *add_body(world::World &world, const rigid_body::RigidBodySettings &settings) {
-    rigid_body::RigidBody *body = rigid_body::create(world.bodies, world.settings.layers, settings);
-    if (body == nullptr) return nullptr;
-    broadphase::add_body(world.broadphase, body, world.settings.layers);
-    pairs::mark_moved(world.pairs, *body);
-    return body;
-}
-
 inline rigid_body::RigidBodySettings body_settings(shapes::Shape *shape, uint32_t object_layer, motion_type::MotionType motion_type, const Float3 &position) {
     rigid_body::RigidBodySettings settings;
     settings.shape = shape;
@@ -67,35 +58,10 @@ inline rigid_body::RigidBodySettings body_settings(shapes::Shape *shape, uint32_
 
 inline rigid_body::RigidBody *add_body(WorldScene &scene, shapes::Shape *shape, motion_type::MotionType motion_type, const Float3 &position) {
     const uint32_t layer = motion_type == motion_type::MOTION_STATIC ? scene.not_moving : scene.moving;
-    return add_body(*scene.world, body_settings(shape, layer, motion_type, position));
+    return rigid_body::create(*scene.world, body_settings(shape, layer, motion_type, position));
 }
 
-/** rigidBody.remove(world, ...): off the active list, its constraints and pairs gone (removals queued), out of the broadphase */
-inline bool remove_body(world::World &world, rigid_body::RigidBody *body) {
-    if (!bodies::is_valid(world.bodies, body->id)) return false;
-    sleep::remove_body_from_active_bodies(world.bodies, body);
-    constraints::destroy_body_constraints(world.constraints, world.bodies, *body);
-    pairs::purge_body_pairs(world.pairs, world.contacts, world.bodies, *body, world.events);
-    broadphase::remove_body(world.broadphase, body);
-    return rigid_body::remove(world.bodies, body);
-}
-
-/** rigidBody.setTransform(world, ...): the pose, published to the broadphase */
-inline void set_body_transform(world::World &world, rigid_body::RigidBody *body, const Float3 &position, const Float4 &quaternion, bool wake) {
-    rigid_body::set_transform(world.bodies, body, vec3f::load(position), quatf::load(quaternion), wake);
-    if (broadphase::update_body(world.broadphase, body)) pairs::mark_moved(world.pairs, *body);
-}
-
-/** one step answering nothing: find_pairs and the narrowphase again while the narrowphase woke bodies */
-inline void step_world(world::World &world, float delta_time = WORLD_TEST_DELTA_TIME) {
-    update::step_begin(world, delta_time);
-    do {
-        update::find_pairs(world);
-        update::narrowphase(world);
-    } while (world.events.woken > 0);
-    update::solve(world);
-    update::step_end(world);
-}
+inline void step_world(world::World &world, float delta_time = WORLD_TEST_DELTA_TIME) { world::step(world, delta_time); }
 
 /** the contacts nested under the pair record of the two bodies, 0 when there is no record */
 inline uint32_t pair_contact_count(const world::World &world, const rigid_body::RigidBody &a, const rigid_body::RigidBody &b) {

@@ -31,7 +31,7 @@ RigidBody *add_box(GroundScene &s, float half_extent, const Float3 &position, ui
     settings.user_data = user_data;
     settings.allow_sleeping = false;
     settings.observes_contacts = observes;
-    return add_body(*s.scene.world, settings);
+    return rigid_body::create(*s.scene.world, settings);
 }
 
 /** the active pairs whose sides are these two bodies, either way round */
@@ -62,8 +62,6 @@ void step(world::World &world) {
 }
 
 const ContactPair &active_pair(const ContactPairs &pairs, uint32_t i) { return pairs.pairs[pairs.active[i]]; }
-
-const Float4 IDENTITY = {0.0f, 0.0f, 0.0f, 1.0f};
 
 }  // namespace
 
@@ -114,8 +112,8 @@ void test_contact_pairs_removed_in_the_order_added_then_freed_a_step_later(TestC
     const uint32_t right_handle = left_handle == pairs.active[0] ? pairs.active[1] : pairs.active[0];
 
     // lifted out of reach, in the reverse order of adding
-    set_body_transform(*s.scene.world, right, {3.5f, 20.0f, 0.5f}, IDENTITY, false);
-    set_body_transform(*s.scene.world, left, {-3.5f, 20.0f, 0.5f}, IDENTITY, false);
+    rigid_body::set_transform(*s.scene.world, right, vec3f::make(3.5f, 20.0f, 0.5f), quatf::identity(), false);
+    rigid_body::set_transform(*s.scene.world, left, vec3f::make(-3.5f, 20.0f, 0.5f), quatf::identity(), false);
     step(*s.scene.world);
     CHECK(ctx, pairs.active.length == 0 && pairs.removed.length == 2);
     CHECK(ctx, pairs.removed[0] == left_handle && pairs.removed[1] == right_handle);
@@ -124,7 +122,7 @@ void test_contact_pairs_removed_in_the_order_added_then_freed_a_step_later(TestC
     // freed by the next begin; a pair added after takes a freed handle
     step(*s.scene.world);
     CHECK(ctx, pairs.removed.length == 0 && pairs.live == 0 && pairs.free.length == 2);
-    set_body_transform(*s.scene.world, left, {-3.5f, 1.39f, 0.5f}, IDENTITY, false);
+    rigid_body::set_transform(*s.scene.world, left, vec3f::make(-3.5f, 1.39f, 0.5f), quatf::identity(), false);
     step(*s.scene.world);
     CHECK(ctx, pairs.active.length == 1 && active_pair(pairs, 0).added);
     CHECK(ctx, pairs.active[0] == left_handle || pairs.active[0] == right_handle);
@@ -179,7 +177,7 @@ void test_contact_pairs_a_body_made_again_is_a_new_pair(TestCtx &ctx) {
     const ContactPairs &pairs = s.scene.world->contact_pairs;
     CHECK(ctx, pairs.active.length == 1);
     const body_id::BodyId old_id = box->id;
-    CHECK(ctx, remove_body(*s.scene.world, box));
+    CHECK(ctx, rigid_body::remove(*s.scene.world, box));
     RigidBody *again = add_box(s, 0.4f, {0.5f, 1.39f, 0.5f}, 7);
     CHECK(ctx, again->id != old_id);
     step(*s.scene.world);

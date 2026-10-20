@@ -30,11 +30,6 @@ static constexpr uint32_t MAX_REDUCTION_MANIFOLDS = 32;
 /** the body's pose as the narrowphase takes it: the shape origin, unscaled */
 static Transformf body_transform(const RigidBody &body) { return {body.position, body.quaternion, {1.0f, 1.0f, 1.0f}}; }
 
-/** the leaf follows the body, and a body that escaped its fat leaf rediscovers its pairs */
-static void notify_body_bounds_changed(World &world, RigidBody &body) {
-    if (broadphase::update_body(world.broadphase, &body)) pairs::mark_moved(world.pairs, body);
-}
-
 static void reset_forces(World &world) {
     for (uint32_t i = 0; i < world.bodies.active_body_count; i++) {
         RigidBody *body = world.bodies.pool[world.bodies.active_body_indices[i]];
@@ -435,8 +430,8 @@ void narrowphase(World &world) {
 
         // a contact constraint wakes the sleeping dynamic bodies
         if (any_constraints_created) {
-            if (body_a->motion_type == motion_type::MOTION_DYNAMIC && body_a->sleeping) rigid_body::wake(world.bodies, body_a);
-            if (body_b->motion_type == motion_type::MOTION_DYNAMIC && body_b->sleeping) rigid_body::wake(world.bodies, body_b);
+            if (body_a->motion_type == motion_type::MOTION_DYNAMIC && body_a->sleeping) rigid_body::wake(world, body_a);
+            if (body_b->motion_type == motion_type::MOTION_DYNAMIC && body_b->sleeping) rigid_body::wake(world, body_b);
         }
 
         // contacts not stamped this step (sub shapes no longer colliding); a cache hit stamped every one
@@ -473,8 +468,8 @@ static void wake_bodies_in_user_constraints(World &world) {
                                          (body_b->motion_type != motion_type::MOTION_STATIC && !body_b->sleeping);
             const bool has_dynamic_body = body_a->motion_type == motion_type::MOTION_DYNAMIC || body_b->motion_type == motion_type::MOTION_DYNAMIC;
             if (has_active_body && has_dynamic_body) {
-                if (body_a->sleeping && body_a->motion_type == motion_type::MOTION_DYNAMIC) rigid_body::wake(world.bodies, body_a);
-                if (body_b->sleeping && body_b->motion_type == motion_type::MOTION_DYNAMIC) rigid_body::wake(world.bodies, body_b);
+                if (body_a->sleeping && body_a->motion_type == motion_type::MOTION_DYNAMIC) rigid_body::wake(world, body_a);
+                if (body_b->sleeping && body_b->motion_type == motion_type::MOTION_DYNAMIC) rigid_body::wake(world, body_b);
             }
         }
     }
@@ -525,8 +520,7 @@ static void velocity_integration_update(World &world, float delta_time) {
                 if (world.ccd.ccd_bodies.push(ccd_body)) {
                     body->ccd_body_index = (int32_t)(world.ccd.ccd_bodies.length - 1);
 
-                    rigid_body::set_quaternion(world.bodies, body, quatf::load(body->quaternion), false);
-                    notify_body_bounds_changed(world, *body);
+                    rigid_body::set_quaternion(world, body, quatf::load(body->quaternion), false);
 
                     // the position waits for the ccd resolution
                     update_position = false;
@@ -948,15 +942,14 @@ static void resolve_ccd_contacts(World &world) {
             // response. we still only move to the impact, the last position known to be free
             if (ccd_body_b == nullptr || ccd_body_b->fraction >= ccd_body.fraction) {
                 apply_ccd(world, ccd_body, body_a, body_b);
-                if (body_b.sleeping) rigid_body::wake(world.bodies, &body_b);
+                if (body_b.sleeping) rigid_body::wake(world, &body_b);
             }
         }
 
         // to the impact with the penetration allowance, or as far as an earlier hit by another body allows (only dynamic
         // bodies make ccd bodies, kinematic ones already moved in velocity integration)
         const Vec3f position = vec3f::scale_and_add(vec3f::load(body_a.position), ccd_body.delta_position, ccd_body.fraction_plus_slop);
-        rigid_body::set_transform(world.bodies, &body_a, position, quatf::load(body_a.quaternion), false);
-        notify_body_bounds_changed(world, body_a);
+        rigid_body::set_transform(world, &body_a, position, quatf::load(body_a.quaternion), false);
     }
 }
 

@@ -12,7 +12,7 @@ namespace {
 RigidBody *add_bullet(WorldScene &scene, float x = -2.0f) {
     rigid_body::RigidBodySettings settings = body_settings(sphere::create({.radius = 0.2f}), scene.moving, motion_type::MOTION_DYNAMIC, {x, 0.0f, 0.0f});
     settings.motion_quality = motion_properties::MOTION_QUALITY_LINEAR_CAST;
-    RigidBody *bullet = add_body(*scene.world, settings);
+    RigidBody *bullet = rigid_body::create(*scene.world, settings);
     bullet->motion_properties.linear_velocity = {300.0f, 0.0f, 0.0f};
     return bullet;
 }
@@ -146,8 +146,8 @@ void test_ccd_body_index_only_for_ccd_bodies(TestCtx &ctx) {
     RigidBody *wall = add_body(scene, box::create({.half_extents = {0.5f, 5.0f, 5.0f}}), motion_type::MOTION_STATIC, {20.0f, 0.0f, 0.0f});
     rigid_body::RigidBodySettings settings = body_settings(sphere::create({.radius = 0.1f}), scene.moving, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     settings.motion_quality = motion_properties::MOTION_QUALITY_LINEAR_CAST;
-    RigidBody *bullet = add_body(*scene.world, settings);
-    rigid_body::set_linear_velocity(scene.world->bodies, bullet, vec3f::make(200.0f, 0.0f, 0.0f));
+    RigidBody *bullet = rigid_body::create(*scene.world, settings);
+    rigid_body::set_linear_velocity(*scene.world, bullet, vec3f::make(200.0f, 0.0f, 0.0f));
     RigidBody *bystander = add_body(scene, sphere::create({.radius = 0.1f}), motion_type::MOTION_DYNAMIC, {0.0f, 5.0f, 0.0f});
 
     step_world(*scene.world);
@@ -160,7 +160,7 @@ void test_ccd_body_index_only_for_ccd_bodies(TestCtx &ctx) {
     // no hit: the whole displacement
     CHECK_NEAR(ctx, bullet->position.x, 200.0f * WORLD_TEST_DELTA_TIME * (1.0f - 0.05f * WORLD_TEST_DELTA_TIME), 1e-3f);
 
-    rigid_body::set_linear_velocity(scene.world->bodies, bullet, vec3f::make(0.0f, 0.0f, 0.0f));
+    rigid_body::set_linear_velocity(*scene.world, bullet, vec3f::make(0.0f, 0.0f, 0.0f));
     step_world(*scene.world);
     CHECK(ctx, scene.world->ccd.ccd_bodies.length == 0);
     CHECK(ctx, bullet->ccd_body_index == -1);
@@ -176,7 +176,7 @@ void test_ccd_two_bullets_in_time_of_impact_order(TestCtx &ctx) {
     RigidBody *far_bullet = add_bullet(scene, -4.0f);
     rigid_body::RigidBodySettings settings = body_settings(sphere::create({.radius = 0.2f}), scene.moving, motion_type::MOTION_DYNAMIC, {-2.0f, 2.0f, 0.0f});
     settings.motion_quality = motion_properties::MOTION_QUALITY_LINEAR_CAST;
-    RigidBody *near_bullet = add_body(*scene.world, settings);
+    RigidBody *near_bullet = rigid_body::create(*scene.world, settings);
     near_bullet->motion_properties.linear_velocity = {300.0f, 0.0f, 0.0f};
 
     step_world(*scene.world);
@@ -200,7 +200,7 @@ RigidBody *add_linear_cast_sphere(WorldScene &scene, float radius, float x, floa
     rigid_body::RigidBodySettings settings =
         body_settings(sphere::create({.radius = radius, .material_id = material_id}), scene.moving, motion_type::MOTION_DYNAMIC, {x, y, 0.0f});
     settings.motion_quality = motion_properties::MOTION_QUALITY_LINEAR_CAST;
-    RigidBody *body = add_body(*scene.world, settings);
+    RigidBody *body = rigid_body::create(*scene.world, settings);
     body->motion_properties.linear_velocity = {velocity_x, 0.0f, 0.0f};
     return body;
 }
@@ -253,7 +253,7 @@ void test_ccd_kinematic_linear_cast_target_does_not_shift_the_contact(TestCtx &c
     rigid_body::RigidBodySettings settings =
         body_settings(box::create({.half_extents = {0.1f, 5.0f, 5.0f}}), scene.moving, motion_type::MOTION_KINEMATIC, {0.0f, 0.0f, 0.0f});
     settings.motion_quality = motion_properties::MOTION_QUALITY_LINEAR_CAST;
-    RigidBody *wall = add_body(*scene.world, settings);
+    RigidBody *wall = rigid_body::create(*scene.world, settings);
     wall->motion_properties.linear_velocity = {0.0f, 60.0f, 0.0f};
     add_bullet(scene);
 

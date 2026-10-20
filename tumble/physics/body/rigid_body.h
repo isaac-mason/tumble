@@ -21,7 +21,12 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
-// a body lives in a slot of bodies::Bodies; adding it to and refreshing it in the broadphase is the caller's
+namespace world {
+struct World;
+}
+
+// a body in a world: everything that changes it takes the world, which keeps the broadphase, the pairs and the
+// constraints in step with it
 namespace rigid_body {
 
 enum MassPropertiesOverride : uint32_t {
@@ -197,77 +202,80 @@ struct RigidBody {
 };
 
 /**
- * a new body in a slot of `bodies`, its mass, centre of mass and aabb from its shape, on the active list unless static.
- * not in the broadphase: broadphase::add_body puts it there. null (error set) when the pool cannot grow. `layers` holds
- * settings.object_layer
+ * a new body in the world: its mass, centre of mass and aabb from its shape, in the broadphase, on the active list
+ * unless static, and found by the next find_pairs. null (error set) when the allocator fails or the pool is full
  */
-RigidBody *create(bodies::Bodies &bodies, const layers::Layers &layers, const RigidBodySettings &settings);
+RigidBody *create(world::World &world, const RigidBodySettings &settings);
 
 /**
- * off the active list and its slot freed, so its id stops resolving; the record stays in the slot for the next create.
- * the caller removes it from the broadphase, its constraints and its pairs first. false if it was already removed
+ * out of the world: its constraints destroyed, its pairs and contacts dropped (their removal events come with the next
+ * step), out of the broadphase, its id no longer resolving. the record stays for the next create to reuse. false if
+ * it was already removed
  */
-bool remove(bodies::Bodies &bodies, RigidBody *body);
+bool remove(world::World &world, RigidBody *body);
 
 /** null for a removed body's id */
-RigidBody *get(const bodies::Bodies &bodies, body_id::BodyId body_id);
+RigidBody *get(const world::World &world, body_id::BodyId body_id);
 
 /** world space; zero for a body that is not dynamic */
 Float4x4 &get_inverse_inertia(Float4x4 &out, RigidBody *body);
 
-/** from the transform and the shape; after any change to them */
+/** from the transform and the shape */
 void update_center_of_mass_position(RigidBody *body);
 
-/** from the transform and the shape; after any change to them */
+/** from the transform and the shape */
 void update_aabb(RigidBody *body);
 
-/** mass, centre of mass and aabb from the shape; after the shape changes. the caller refreshes the broadphase */
-void update_shape(RigidBody *body);
+/** the shape swapped, mass, centre of mass and bounds from it, the constraints' anchors kept where they were on the body */
+void set_shape(world::World &world, RigidBody *body, shapes::Shape *shape);
 
-/** the centre of mass and aabb follow. the caller refreshes the broadphase */
-void set_position(bodies::Bodies &bodies, RigidBody *body, Vec3f position, bool wake);
+/**
+ * after the body's shape changed in place: mass, centre of mass and bounds from it again. `previous_center_of_mass` is
+ * the shape's centre of mass before the change, so the constraints' anchors stay where they were on the body
+ */
+void update_shape(world::World &world, RigidBody *body, Vec3f previous_center_of_mass);
 
-/** the centre of mass and aabb follow. the caller refreshes the broadphase */
-void set_quaternion(bodies::Bodies &bodies, RigidBody *body, Quatf quaternion, bool wake);
+void set_position(world::World &world, RigidBody *body, Vec3f position, bool wake);
 
-/** the centre of mass and aabb follow. the caller refreshes the broadphase */
-void set_transform(bodies::Bodies &bodies, RigidBody *body, Vec3f position, Quatf quaternion, bool wake);
+void set_quaternion(world::World &world, RigidBody *body, Quatf quaternion, bool wake);
 
-/** the caller reinserts the body in the broadphase and marks it moved */
-void set_object_layer(const layers::Layers &layers, RigidBody *body, uint32_t object_layer);
+void set_transform(world::World &world, RigidBody *body, Vec3f position, Quatf quaternion, bool wake);
 
-/** the active list follows; `wake` wakes one not becoming static, and one becoming static stops. the caller refreshes the broadphase */
-void set_motion_type(bodies::Bodies &bodies, RigidBody *body, motion_type::MotionType motion_type, bool wake);
+/** the body moves to the layer's broadphase layer, and finds its pairs again */
+void set_object_layer(world::World &world, RigidBody *body, uint32_t object_layer);
+
+/** the active list follows; `wake` wakes one not becoming static, and one becoming static stops */
+void set_motion_type(world::World &world, RigidBody *body, motion_type::MotionType motion_type, bool wake);
 
 /** at the centre of mass, integrated over the next step; dynamic bodies only */
-void add_force(bodies::Bodies &bodies, RigidBody *body, Vec3f force, bool wake);
+void add_force(world::World &world, RigidBody *body, Vec3f force, bool wake);
 
 /** integrated over the next step; dynamic bodies only */
-void add_torque(bodies::Bodies &bodies, RigidBody *body, Vec3f torque, bool wake);
+void add_torque(world::World &world, RigidBody *body, Vec3f torque, bool wake);
 
 /** the force, and the torque r x f about the centre of mass; dynamic bodies only */
-void add_force_at_position(bodies::Bodies &bodies, RigidBody *body, Vec3f force, Vec3f world_position, bool wake);
+void add_force_at_position(world::World &world, RigidBody *body, Vec3f force, Vec3f world_position, bool wake);
 
 /** at the centre of mass, dv = impulse / mass; dynamic bodies only, always wakes */
-void add_impulse(bodies::Bodies &bodies, RigidBody *body, Vec3f impulse);
+void add_impulse(world::World &world, RigidBody *body, Vec3f impulse);
 
 /** dynamic bodies only, always wakes */
-void add_impulse_at_position(bodies::Bodies &bodies, RigidBody *body, Vec3f impulse, Vec3f world_position);
+void add_impulse_at_position(world::World &world, RigidBody *body, Vec3f impulse, Vec3f world_position);
 
 /** dw = I^-1 impulse; dynamic bodies only, always wakes */
-void add_angular_impulse(bodies::Bodies &bodies, RigidBody *body, Vec3f impulse);
+void add_angular_impulse(world::World &world, RigidBody *body, Vec3f impulse);
 
 /** always wakes */
-void set_linear_velocity(bodies::Bodies &bodies, RigidBody *body, Vec3f velocity);
+void set_linear_velocity(world::World &world, RigidBody *body, Vec3f velocity);
 
 /** always wakes */
-void add_linear_velocity(bodies::Bodies &bodies, RigidBody *body, Vec3f velocity_delta);
+void add_linear_velocity(world::World &world, RigidBody *body, Vec3f velocity_delta);
 
 /** always wakes */
-void set_angular_velocity(bodies::Bodies &bodies, RigidBody *body, Vec3f velocity);
+void set_angular_velocity(world::World &world, RigidBody *body, Vec3f velocity);
 
 /** always wakes */
-void add_angular_velocity(bodies::Bodies &bodies, RigidBody *body, Vec3f velocity_delta);
+void add_angular_velocity(world::World &world, RigidBody *body, Vec3f velocity_delta);
 
 void clear_forces(RigidBody *body);
 
@@ -300,9 +308,10 @@ Vec3f get_velocity_at_point(const RigidBody *body, Vec3f world_point);
 
 bool bodies_share_constraint(const RigidBody *body_a, const RigidBody *body_b);
 
-inline void sleep(bodies::Bodies &bodies, RigidBody *body) { sleep::sleep(bodies, body); }
+/** a dynamic body out of the simulation until something wakes it */
+void sleep(world::World &world, RigidBody *body);
 
-inline void wake(bodies::Bodies &bodies, RigidBody *body) { sleep::wake(bodies, body); }
+void wake(world::World &world, RigidBody *body);
 
 }  // namespace rigid_body
 
