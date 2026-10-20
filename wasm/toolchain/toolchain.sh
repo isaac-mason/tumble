@@ -47,7 +47,7 @@ COMMON="--target=wasm32 $OPT $FEATURES -nostdlib -nostdlibinc -ffreestanding -fv
 # ours: every warning is an error.
 # -Wglobal-constructors: a static needing a constructor would put a constructor list in the
 # module, and with no entry point the linker then runs that list on every export call.
-CXXFLAGS="$COMMON -std=c++23 -Wall -Wextra -Werror -Wglobal-constructors -I$ROOT"
+CXXFLAGS="$COMMON -std=c++20 -Wall -Wextra -Werror -Wglobal-constructors -I$ROOT"
 
 LDFLAGS="--no-entry --import-memory --export-dynamic --export=__heap_base --export=__data_end --stack-first -z stack-size=1048576"
 
