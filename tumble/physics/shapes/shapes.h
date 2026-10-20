@@ -28,10 +28,17 @@ struct CompoundData;
 namespace static_compound {
 struct StaticCompoundData;
 }
+namespace world {
+struct World;
+}
+namespace debug {
+struct DebugBuffers;
+}
 // a shape is the fields every shape has, then a union of the per-type payloads: small shapes inline, the heavy ones
 // (hull, mesh, compound) pointing at data many shapes can share, the wrappers holding the shape they wrap. read a
 // payload once `type` says which. each type's functions live in the namespace named after its file, and dispatch.cpp
-// gathers every def() into shape_defs and fills the collide and cast tables
+// gathers every def() into shape_defs and fills the collide and cast tables. a type of the caller's own takes a user
+// slot: its def goes to dispatch::init with the built-ins, its payload is the `user` arm
 namespace shapes {
 
 enum ShapeType : uint32_t {
@@ -48,10 +55,21 @@ enum ShapeType : uint32_t {
     SHAPE_OFFSET_CENTER_OF_MASS = 10,
     SHAPE_PLANE = 11,
     SHAPE_STATIC_COMPOUND = 12,
+    SHAPE_USER_1 = 13,
+    SHAPE_USER_2 = 14,
+    SHAPE_USER_3 = 15,
+    SHAPE_USER_4 = 16,
+    SHAPE_USER_5 = 17,
+    SHAPE_USER_6 = 18,
+    SHAPE_USER_7 = 19,
+    SHAPE_USER_8 = 20,
 };
 
-/** the built-ins, as the tables are sized. */
-constexpr uint32_t SHAPE_TYPE_COUNT = 13;
+constexpr uint32_t USER_SHAPE_TYPE_COUNT = 8;
+/** the built-ins and the user slots, as the tables are sized. */
+constexpr uint32_t SHAPE_TYPE_COUNT = 21;
+
+inline bool is_user_shape_type(ShapeType type) { return type >= SHAPE_USER_1 && type < SHAPE_USER_1 + USER_SHAPE_TYPE_COUNT; }
 
 /** a type's row in the tables. */
 inline uint32_t shape_type_index(ShapeType type) { return (uint32_t)type; }
@@ -127,6 +145,11 @@ struct OffsetCenterOfMassShape {
     Float3 offset;
 };
 
+/** a user type's payload: whatever its def's functions read */
+struct UserShape {
+    void *data;
+};
+
 struct Shape {
     ShapeType type;
     /** local bounds */
@@ -148,6 +171,7 @@ struct Shape {
         TransformedShape transformed;
         ScaledShape scaled;
         OffsetCenterOfMassShape offset_center_of_mass;
+        UserShape user;
     };
 };
 
@@ -207,6 +231,11 @@ typedef void (*CastShapeVsShapeFn)(cast_shape::CastShapeCollector &collector, co
                                    Vec3f displacement_a, const Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b,
                                    const Transformf &transform_b);
 
+/** at the start of every step of every world, before anything in it; for state a type keeps across a step */
+typedef void (*StepBeginFn)(world::World &world);
+/** appends the shape's wireframe at `transform` (scale included) to `out`, through debug::line */
+typedef void (*DrawFn)(debug::DebugBuffers &out, const Shape *shape, const Transformf &transform, Vec3f color);
+
 struct ShapeDef {
     ShapeType type;
     /** present for convex types only; null otherwise */
@@ -222,6 +251,15 @@ struct ShapeDef {
     GetSubShapeTransformedShapeFn get_sub_shape_transformed_shape;
     CastRayFn cast_ray;
     CollidePointFn collide_point;
+    /** null for none */
+    StepBeginFn step_begin;
+    /** null draws the shape's bounds */
+    DrawFn draw;
+    /**
+     * the body pair cache rebuilds a pair's contacts from last step's when the bodies barely moved; a type whose
+     * contacts name state it renews each step (as hits a step_begin evicts) sets this so its pairs always collide anew
+     */
+    bool skips_pair_cache;
 };
 
 /** what a def leaves null filled in: unit mass, zero inner radius, a leaf that is itself */
@@ -240,6 +278,8 @@ extern CastShapeVsShapeFn cast_table[SHAPE_TYPE_COUNT][SHAPE_TYPE_COUNT];
 
 inline const ShapeDef &def_of(const Shape *shape) { return shape_defs[shape_type_index(shape->type)]; }
 inline bool is_convex(const Shape *shape) { return def_of(shape).set_support != nullptr; }
+/** false when a leaf anywhere in the shape (under wrappers and compound children) skips the pair cache */
+bool caches_pairs(const Shape *shape);
 
 void set_shape_def(const ShapeDef &def);
 /** a handler for the pair; a later set for the same pair replaces an earlier one */

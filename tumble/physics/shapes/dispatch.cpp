@@ -16,13 +16,14 @@
 #include "tumble/physics/shapes/static_compound.h"
 #include "tumble/physics/shapes/transformed.h"
 #include "tumble/physics/shapes/triangle_mesh.h"
+#include "tumble/util/assert.h"
 #include "tumble/util/mem.h"
 
 TUMBLE_NAMESPACE_BEGIN
 
 namespace dispatch {
 
-void init() {
+void init(const shapes::ShapeDef *user_defs, uint32_t user_def_count) {
     util::zero(shapes::shape_defs, sizeof(shapes::shape_defs));
     util::zero(shapes::collide_table, sizeof(shapes::collide_table));
     util::zero(shapes::cast_table, sizeof(shapes::cast_table));
@@ -41,6 +42,10 @@ void init() {
     shapes::set_shape_def(static_compound::def());
     shapes::set_shape_def(transformed::def());
     shapes::set_shape_def(triangle_mesh::def());
+    for (uint32_t i = 0; i < user_def_count; i++) {
+        TUMBLE_ASSERT(shapes::is_user_shape_type(user_defs[i].type));
+        shapes::set_shape_def(user_defs[i]);
+    }
 
     // the pair tables in full: the generic rule first, then every specialised pair over it
 

@@ -70,6 +70,8 @@ static void push_line(DebugBuffers &out, Vec3f a, Vec3f b, Vec3f color) {
     out.line_count++;
 }
 
+void line(DebugBuffers &out, Vec3f a, Vec3f b, Vec3f color) { push_line(out, a, b, color); }
+
 /** circle in the plane of two perpendicular unit axes u and v, centred at `center` */
 static void push_circle(DebugBuffers &out, Vec3f center, Vec3f u, Vec3f v, float radius, uint32_t segments,
                         Vec3f color) {
@@ -181,12 +183,11 @@ static void draw_sphere(DebugBuffers &out, const Shape *shape, const Transformf 
     }
 }
 
-static void draw_box(DebugBuffers &out, const Shape *shape, const Transformf &transform, Vec3f color) {
-    const Vec3f h = vec3f::load(shape->box.half_extents);
-    // transform all 8 corners into world space then draw 12 edges
+/** the 12 edges of the local box from lo to hi */
+static void draw_local_box(DebugBuffers &out, Vec3f lo, Vec3f hi, const Transformf &transform, Vec3f color) {
     const Vec3f corners[8] = {
-        vec3f::make(-vec3f::x(h), -vec3f::y(h), -vec3f::z(h)), vec3f::make(vec3f::x(h), -vec3f::y(h), -vec3f::z(h)), vec3f::make(vec3f::x(h), -vec3f::y(h), vec3f::z(h)), vec3f::make(-vec3f::x(h), -vec3f::y(h), vec3f::z(h)),
-        vec3f::make(-vec3f::x(h), vec3f::y(h), -vec3f::z(h)),  vec3f::make(vec3f::x(h), vec3f::y(h), -vec3f::z(h)),  vec3f::make(vec3f::x(h), vec3f::y(h), vec3f::z(h)),  vec3f::make(-vec3f::x(h), vec3f::y(h), vec3f::z(h)),
+        vec3f::make(vec3f::x(lo), vec3f::y(lo), vec3f::z(lo)), vec3f::make(vec3f::x(hi), vec3f::y(lo), vec3f::z(lo)), vec3f::make(vec3f::x(hi), vec3f::y(lo), vec3f::z(hi)), vec3f::make(vec3f::x(lo), vec3f::y(lo), vec3f::z(hi)),
+        vec3f::make(vec3f::x(lo), vec3f::y(hi), vec3f::z(lo)), vec3f::make(vec3f::x(hi), vec3f::y(hi), vec3f::z(lo)), vec3f::make(vec3f::x(hi), vec3f::y(hi), vec3f::z(hi)), vec3f::make(vec3f::x(lo), vec3f::y(hi), vec3f::z(hi)),
     };
     Vec3f world_corners[8];
     for (uint32_t i = 0; i < 8; i++) transform_point(world_corners[i], corners[i], transform);
@@ -196,6 +197,11 @@ static void draw_box(DebugBuffers &out, const Shape *shape, const Transformf &tr
         {0, 4}, {1, 5}, {2, 6}, {3, 7},  // verticals
     };
     for (uint32_t i = 0; i < 12; i++) push_line(out, world_corners[EDGES[i][0]], world_corners[EDGES[i][1]], color);
+}
+
+static void draw_box(DebugBuffers &out, const Shape *shape, const Transformf &transform, Vec3f color) {
+    const Vec3f h = vec3f::load(shape->box.half_extents);
+    draw_local_box(out, vec3f::negate(h), h, transform, color);
 }
 
 static void draw_capsule(DebugBuffers &out, const Shape *shape, const Transformf &transform, Vec3f color) {
@@ -380,9 +386,14 @@ static void draw_shape(DebugBuffers &out, const Shape *shape, const Transformf &
             // offset only affects com, not geometry position
             draw_shape(out, shape->offset_center_of_mass.shape, transform, color);
             break;
-        default:
-            // empty: nothing
+        case shapes::SHAPE_EMPTY:
             break;
+        default: {
+            const shapes::ShapeDef &def = shapes::def_of(shape);
+            if (def.draw != nullptr) def.draw(out, shape, transform, color);
+            else draw_local_box(out, vec3f::load(shape->aabb.min), vec3f::load(shape->aabb.max), transform, color);
+            break;
+        }
     }
 }
 

@@ -84,6 +84,10 @@ static void acceleration_integration_update(World &world, float delta_time) {
 void step_begin(World &world, float delta_time) {
     world.delta_time = delta_time;
 
+    for (uint32_t i = 0; i < shapes::SHAPE_TYPE_COUNT; i++) {
+        if (shapes::shape_defs[i].step_begin != nullptr) shapes::shape_defs[i].step_begin(world);
+    }
+
     // every event buffer and answer starts the step empty
     world.events.pairs.length = 0;
     world.events.contacts_added.length = 0;
@@ -415,7 +419,8 @@ void narrowphase(World &world) {
         bool pair_handled = false;
         Vec3f current_delta_position;
         Quatf current_delta_rotation;
-        if (use_body_pair_cache) {
+        const bool pair_cacheable = use_body_pair_cache && shapes::caches_pairs(body_a->shape) && shapes::caches_pairs(body_b->shape);
+        if (pair_cacheable) {
             compute_body_pair_delta(current_delta_position, current_delta_rotation, *body_a, *body_b);
             pair_handled = get_contacts_from_cache(world, delta_time, current_delta_position, current_delta_rotation, pair_record);
         }
@@ -424,7 +429,7 @@ void narrowphase(World &world) {
 
         // the cache keeps the relative pose of the last fresh narrowphase, refreshed only when the narrowphase ran: a hit
         // carries the old pose forward so the threshold measures the total drift since then, not since the last step
-        if (use_body_pair_cache && !pair_handled && any_constraints_created) {
+        if (pair_cacheable && !pair_handled && any_constraints_created) {
             pairs::set_cache(world.pairs, pair_record, current_delta_position, current_delta_rotation);
         }
 

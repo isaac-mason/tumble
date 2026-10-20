@@ -79,6 +79,8 @@ void clear(DebugBuffers &buffers);
 void bodies(DebugBuffers &out, const world::World &world, const BodiesOptions &options);
 /** one body's shape and velocities */
 void body(DebugBuffers &out, const rigid_body::RigidBody &body, const BodyOptions &options);
+/** one line, as a user shape's draw makes its wireframe */
+void line(DebugBuffers &out, Vec3f a, Vec3f b, Vec3f color);
 /** a shape at a world-space pose */
 void shape(DebugBuffers &out, const shapes::Shape *shape, Vec3f position, Quatf quaternion, const ShapeOptions &options);
 /** each contact constraint's points on body a with the normal */

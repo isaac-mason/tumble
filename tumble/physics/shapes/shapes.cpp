@@ -3,6 +3,7 @@
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/vec3f.h"
+#include "tumble/physics/shapes/compound.h"
 #include "tumble/util/assert.h"
 #include "tumble/util/object.h"
 
@@ -56,6 +57,23 @@ void set_collide_shape_fn(ShapeType type_a, ShapeType type_b, CollideShapeVsShap
 
 void set_cast_shape_fn(ShapeType type_a, ShapeType type_b, CastShapeVsShapeFn fn) {
     cast_table[shape_type_index(type_a)][shape_type_index(type_b)] = fn;
+}
+
+bool caches_pairs(const Shape *shape) {
+    switch (shape->type) {
+        case SHAPE_TRANSFORMED: return caches_pairs(shape->transformed.shape);
+        case SHAPE_SCALED: return caches_pairs(shape->scaled.shape);
+        case SHAPE_OFFSET_CENTER_OF_MASS: return caches_pairs(shape->offset_center_of_mass.shape);
+        case SHAPE_COMPOUND:
+        case SHAPE_STATIC_COMPOUND: {
+            const collections::Vec<compound::CompoundShapeChild> &children = compound::children_of(shape);
+            for (uint32_t i = 0; i < children.length; i++) {
+                if (!caches_pairs(children[i].shape)) return false;
+            }
+            return true;
+        }
+        default: return !def_of(shape).skips_pair_cache;
+    }
 }
 
 static constexpr float SCALE_TOLERANCE_SQ = 1.0e-8f;
