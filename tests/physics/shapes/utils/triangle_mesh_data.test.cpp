@@ -1,6 +1,5 @@
 #include "tumble/physics/shapes/utils/triangle_mesh_data.h"
 
-#include "tumble/instance.h"
 #include "test.h"
 #include "test_math.h"
 #include "tumble/util/alloc.h"
@@ -9,11 +8,7 @@
 using triangle_mesh_data::TriangleMeshData;
 using triangle_mesh_data::Triangle;
 
-static uint32_t heap_bytes_in_use() {
-    util::HeapStats stats;
-    util::heap_stats(&stats);
-    return stats.bytes_in_use;
-}
+static uintptr_t address_of(const void *p) { return reinterpret_cast<uintptr_t>(p); }
 
 /** two triangles over four vertices: a unit square in z = 0 and a tilted one above it */
 static TriangleMeshData *make_two_triangles() {
@@ -26,26 +21,25 @@ static TriangleMeshData *make_two_triangles() {
 }
 
 void test_triangle_mesh_data_layout(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
-    const uint32_t before = heap_bytes_in_use();
+    const size_t before = util::allocated_bytes();
 
     TriangleMeshData *data = triangle_mesh_data::create(5, 3, 7);
     CHECK(ctx, data != nullptr);
     CHECK(ctx, data->vertex_count == 5 && data->triangle_count == 3 && data->node_count == 7);
 
     // one block: the header, then the arrays in order, each 16-aligned, none overlapping the next
-    const uint32_t base = util::address_of(data);
-    const uint32_t positions = util::address_of(data->positions);
-    const uint32_t triangles = util::address_of(data->triangles);
-    const uint32_t aabbs = util::address_of(data->triangle_aabbs);
-    const uint32_t nodes = util::address_of(data->nodes);
+    const uintptr_t base = address_of(data);
+    const uintptr_t positions = address_of(data->positions);
+    const uintptr_t triangles = address_of(data->triangles);
+    const uintptr_t aabbs = address_of(data->triangle_aabbs);
+    const uintptr_t nodes = address_of(data->nodes);
     CHECK(ctx, (positions & 15) == 0 && (triangles & 15) == 0 && (aabbs & 15) == 0 && (nodes & 15) == 0);
     CHECK(ctx, positions >= base + sizeof(TriangleMeshData));
     CHECK(ctx, triangles >= positions + 5 * 3 * 4);
     CHECK(ctx, aabbs >= triangles + 3 * triangle_mesh_data::TRIANGLE_STRIDE * 4);
     CHECK(ctx, nodes >= aabbs + 3 * 6 * 4);
     CHECK(ctx, nodes + 7 * bvh::NODE_STRIDE * 4 == base + triangle_mesh_data::byte_size(5, 3, 7));
-    CHECK(ctx, heap_bytes_in_use() - before == triangle_mesh_data::byte_size(5, 3, 7));
+    CHECK(ctx, util::allocated_bytes() - before == triangle_mesh_data::byte_size(5, 3, 7));
 
     // zeroed
     bool zeroed = true;
@@ -65,17 +59,16 @@ void test_triangle_mesh_data_layout(TestCtx &ctx) {
     CHECK(ctx, (int32_t)words[triangle_mesh_data::OFFSET_MATERIAL_ID] == -3);
 
     triangle_mesh_data::destroy(data);
-    CHECK(ctx, heap_bytes_in_use() == before);
+    CHECK(ctx, util::allocated_bytes() == before);
 
     // an empty mesh is just the header
     TriangleMeshData *empty = triangle_mesh_data::create(0, 0, 0);
     CHECK(ctx, empty != nullptr && empty->triangle_count == 0 && empty->node_count == 0);
     triangle_mesh_data::destroy(empty);
-    CHECK(ctx, heap_bytes_in_use() == before);
+    CHECK(ctx, util::allocated_bytes() == before);
 }
 
 void test_triangle_mesh_data_accessors(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     TriangleMeshData *data = make_two_triangles();
 
     uint32_t indices[3];
@@ -106,7 +99,6 @@ void test_triangle_mesh_data_accessors(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_data_aabb_and_centroid(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     TriangleMeshData *data = make_two_triangles();
 
     Box3f aabb;
@@ -135,7 +127,6 @@ void test_triangle_mesh_data_aabb_and_centroid(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_data_swap(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     TriangleMeshData *data = make_two_triangles();
 
     // the whole stride moves; swapping with itself changes nothing

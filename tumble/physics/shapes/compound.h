@@ -35,7 +35,7 @@ struct CompoundShapeSettings {
     uint32_t num_children = 0;
 };
 
-/** null when the memory cannot grow */
+/** null when the allocator fails */
 Shape *create(const CompoundShapeSettings &settings);
 /** frees the shape and its child list, not the children */
 void destroy(Shape *shape);

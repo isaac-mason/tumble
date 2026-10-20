@@ -30,7 +30,7 @@ static HingeConstraint *make_spinner(ConstraintScene &scene, RigidBody *&ball, c
 }
 
 void test_hinge_constraint_create(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f}, stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), scalar::PI / 2.0f));
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {2.0f, 0.0f, 0.0f}, stored_axis_angle(vec3f::make(1.0f, 1.0f, 0.0f), 0.6f));
 
@@ -100,7 +100,7 @@ void test_hinge_constraint_create(TestCtx &ctx) {
 }
 
 void test_hinge_constraint_setters(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     HingeConstraint *constraint = make_spinner(scene, ball, {});
     CHECK(ctx, !constraint->has_limits);
@@ -130,7 +130,7 @@ void test_hinge_constraint_setters(TestCtx &ctx) {
 
 void test_hinge_constraint_holds_axis(TestCtx &ctx) {
     // a pendulum on a hinge about z, kicked out of its plane and spun about the other axes
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *pivot = add_body(scene, motion_type::MOTION_STATIC, ZERO);
     RigidBody *ball = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
     const constraint_id::ConstraintId id = hinge_constraint::create(
@@ -165,7 +165,7 @@ void test_hinge_constraint_holds_axis(TestCtx &ctx) {
 }
 
 void test_hinge_constraint_limits(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     HingeConstraint *constraint = make_spinner(scene, ball, {.limits_min = -0.5f, .limits_max = 0.5f});
     ball->motion_properties.angular_velocity = {0.0f, 0.0f, 3.0f};
@@ -196,7 +196,7 @@ void test_hinge_constraint_limits(TestCtx &ctx) {
 }
 
 void test_hinge_constraint_velocity_motor(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     HingeConstraint *constraint = make_spinner(scene, ball, {});
     hinge_constraint::set_motor_state(*constraint, motor_settings::VELOCITY);
@@ -223,7 +223,7 @@ void test_hinge_constraint_velocity_motor(TestCtx &ctx) {
 }
 
 void test_hinge_constraint_position_motor(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     HingeConstraint *constraint = make_spinner(scene, ball, {.limits_min = -1.0f, .limits_max = 1.0f});
     hinge_constraint::set_motor_state(*constraint, motor_settings::POSITION);
@@ -247,7 +247,7 @@ void test_hinge_constraint_position_motor(TestCtx &ctx) {
 
 void test_hinge_constraint_friction(TestCtx &ctx) {
     // a friction torque of I slows a free spin by 1 rad/s each second
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     make_spinner(scene, ball, {.max_friction_torque = SPHERE_INERTIA});
     ball->motion_properties.angular_velocity = {0.0f, 0.0f, 3.0f};
@@ -275,7 +275,7 @@ void test_hinge_constraint_local_space_rest_with_rotated_bodies(TestCtx &ctx) {
     const Vec3f world_normal = vec3f::axis_x();
     const Vec3f world_hinge = vec3f::axis_z();
     for (uint32_t c = 0; c < 2; c++) {
-        ConstraintScene scene = make_constraint_scene(ctx);
+        ConstraintScene scene = make_constraint_scene();
         RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f}, rotations[c][0]);
         RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 2.0f, 0.0f}, rotations[c][1]);
         const Quatf inv_a = quatf::conjugate(quatf::load(a->quaternion));
@@ -305,7 +305,7 @@ void test_hinge_constraint_local_space_rest_with_rotated_bodies(TestCtx &ctx) {
 }
 
 void test_hinge_constraint_axes_a_hair_apart(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *base = add_body(scene, motion_type::MOTION_STATIC, ZERO);
     RigidBody *ball = add_body(scene, motion_type::MOTION_DYNAMIC, ZERO);
     // body 2's normal is turned by a hair about the hinge
@@ -327,7 +327,7 @@ void test_hinge_constraint_axes_a_hair_apart(TestCtx &ctx) {
 void test_hinge_constraint_position_and_velocity_motor(TestCtx &ctx) {
     // with a frequency spring the motor drives the angular velocity at the target angle
     {
-        ConstraintScene scene = make_constraint_scene(ctx);
+        ConstraintScene scene = make_constraint_scene();
         RigidBody *ball = nullptr;
         HingeConstraint *constraint = make_spinner(scene, ball, {});
         hinge_constraint::set_motor_state(*constraint, motor_settings::POSITION_AND_VELOCITY);
@@ -340,7 +340,7 @@ void test_hinge_constraint_position_and_velocity_motor(TestCtx &ctx) {
 
     // a damping only spring is a soft velocity drive: w = w_target (dt c / I) / (dt c / I + 1); dt c / I = 1 halves it
     {
-        ConstraintScene scene = make_constraint_scene(ctx);
+        ConstraintScene scene = make_constraint_scene();
         RigidBody *ball = nullptr;
         hinge_constraint::HingeConstraintSettings settings;
         settings.motor_settings.spring = {spring_settings::STIFFNESS_AND_DAMPING, 0.0f, SPHERE_INERTIA / DT};

@@ -1,6 +1,6 @@
 #include "tumble/physics/body/bodies.h"
 
-#include "tumble/instance.h"
+#include "tumble/util/error.h"
 
 #include "tumble/physics/body/rigid_body.h"
 #include "tumble/physics/shapes/empty.h"

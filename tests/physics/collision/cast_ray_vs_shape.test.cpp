@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
@@ -30,7 +29,6 @@ static CastRaySettings settings_with(bool triangles, bool convex, bool solid) {
 }
 
 void test_cast_ray_vs_shape_sphere(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *shape = sphere::create({.radius = 1.0f});
     const CastRaySettings settings = cast_ray::default_settings();
@@ -77,7 +75,6 @@ void test_cast_ray_vs_shape_sphere(TestCtx &ctx) {
 }
 
 void test_cast_ray_vs_shape_box(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *shape = box::create({.half_extents = {1, 1, 1}, .material_id = 4});
     const CastRaySettings settings = cast_ray::default_settings();
@@ -126,7 +123,6 @@ void test_cast_ray_vs_shape_box(TestCtx &ctx) {
 }
 
 void test_cast_ray_vs_shape_treat_convex_as_solid(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *shapes_under_test[3] = {
         sphere::create({.radius = 1.0f}),
@@ -170,7 +166,6 @@ void test_cast_ray_vs_shape_treat_convex_as_solid(TestCtx &ctx) {
 }
 
 void test_cast_ray_vs_shape_back_face_modes(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *box_shape = box::create({.half_extents = {1, 2, 3}});
     shapes::Shape *sphere_shape = sphere::create({.radius = 1.0f});
@@ -218,7 +213,6 @@ void test_cast_ray_vs_shape_back_face_modes(TestCtx &ctx) {
 }
 
 void test_cast_ray_vs_shape_initial_early_out_fraction(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *shape = box::create({.half_extents = {1, 1, 1}});
     CastRayCollector collector = cast_ray::create_collector(collector::COLLECT_ALL);
@@ -242,7 +236,6 @@ void test_cast_ray_vs_shape_initial_early_out_fraction(TestCtx &ctx) {
 }
 
 void test_cast_ray_vs_shape_collectors(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *near_box = box::create({.half_extents = {1, 1, 1}, .material_id = 1});
     shapes::Shape *far_sphere = sphere::create({.radius = 1.0f, .material_id = 2});
@@ -275,7 +268,6 @@ void test_cast_ray_vs_shape_collectors(TestCtx &ctx) {
 }
 
 void test_cast_ray_vs_shape_sort(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *shape = sphere::create({.radius = 0.5f});
     const CastRaySettings settings = cast_ray::default_settings();

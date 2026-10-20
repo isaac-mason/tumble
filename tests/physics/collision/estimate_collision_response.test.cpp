@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/collision/estimate_collision_response.h"
@@ -25,8 +24,7 @@ struct Scene {
 static constexpr float RADIUS = 0.5f;
 
 /** a dynamic ball of radius 0.5 resting its lowest point on a static box's top face at y = 0, the contact at the origin */
-static void make_scene(TestCtx &ctx, Scene &scene, const Float3 &velocity) {
-    CHECK(ctx, util::init(test_heap_begin()));
+static void make_scene(Scene &scene, const Float3 &velocity) {
     dispatch::init();
     scene.bodies = bodies::init();
     scene.layers = layers::create();
@@ -59,7 +57,7 @@ static void release_scene(Scene &scene) {
 void test_estimate_collision_response_sphere_drop(TestCtx &ctx) {
     Scene scene;
     const float v0 = 4.0f;
-    make_scene(ctx, scene, {0, -v0, 0});
+    make_scene(scene, {0, -v0, 0});
     CHECK_NEAR(ctx, 1.0f / scene.ball->motion_properties.inv_mass, scene.mass, 0.05f);
 
     // restitution 0.5 above the 1 m/s threshold: the normal impulse is m v0 (1 + e) and the ball leaves at e v0
@@ -101,7 +99,7 @@ void test_estimate_collision_response_sliding_sphere_rolls(TestCtx &ctx) {
     Scene scene;
     const float v0 = 4.0f;
     const float slide = 1.0f;
-    make_scene(ctx, scene, {slide, -v0, 0});
+    make_scene(scene, {slide, -v0, 0});
 
     // enough friction to grip: the contact point stops slipping, so a solid sphere keeps 5/7 of its speed and spins at
     // v / r. the friction impulse takes m slide 2/7, within mu times the normal impulse

@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
@@ -255,7 +254,6 @@ void test_gjk_cast_shape(TestCtx &ctx) {
 }
 
 void test_gjk_convex_radius_contract(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *box_shape = box::create({.half_extents = {1.0f, 2.0f, 1.5f}, .convex_radius = 0.1f});
     shapes::Shape *sphere_shape = sphere::create({.radius = 0.5f});

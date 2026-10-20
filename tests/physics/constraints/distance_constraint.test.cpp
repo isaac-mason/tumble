@@ -14,7 +14,7 @@ static float current_distance(const DistanceConstraint &constraint, const RigidB
 }
 
 void test_distance_constraint_create_limits(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {4.0f, 0.0f, 0.0f}, stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 1.0f));
     const Float3 point_a = {0.5f, 0.0f, 0.0f};
@@ -52,7 +52,7 @@ void test_distance_constraint_create_limits(TestCtx &ctx) {
 }
 
 void test_distance_constraint_set_distance(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {2.0f, 0.0f, 0.0f});
     DistanceConstraint *constraint = distance_constraint::get(
@@ -66,7 +66,7 @@ void test_distance_constraint_set_distance(TestCtx &ctx) {
 }
 
 void test_distance_constraint_reused_slot_starts_fresh(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {5.0f, 0.0f, 0.0f});
 
@@ -95,7 +95,7 @@ void test_distance_constraint_reused_slot_starts_fresh(TestCtx &ctx) {
 
 void test_distance_constraint_pendulum(TestCtx &ctx) {
     // a shapeless static anchor and a ball five below it, 30 steps of gravity
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *anchor = add_body(scene, motion_type::MOTION_STATIC, {0.0f, 10.0f, 0.0f});
     RigidBody *bob = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 5.0f, 0.0f});
     const constraint_id::ConstraintId id = distance_constraint::create(
@@ -112,7 +112,7 @@ void test_distance_constraint_pendulum(TestCtx &ctx) {
 
 void test_distance_constraint_holds_length(TestCtx &ctx) {
     // a ball on a 3 m rod from a static pivot, started sideways and swinging
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *pivot = add_body(scene, motion_type::MOTION_STATIC, {0.0f, 10.0f, 0.0f});
     RigidBody *ball = add_body(scene, motion_type::MOTION_DYNAMIC, {3.0f, 10.0f, 0.0f});
     ball->motion_properties.linear_velocity = {0.0f, 0.0f, 4.0f};
@@ -135,7 +135,7 @@ void test_distance_constraint_holds_length(TestCtx &ctx) {
 
 void test_distance_constraint_respects_min_max(TestCtx &ctx) {
     // a slack rope between 1 and 3: thrown apart it stops at 3, thrown together it stops at 1, in between it is free
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {2.0f, 0.0f, 0.0f});
     const constraint_id::ConstraintId id = distance_constraint::create(
@@ -177,7 +177,7 @@ void test_distance_constraint_respects_min_max(TestCtx &ctx) {
 
 void test_distance_constraint_soft_limit(TestCtx &ctx) {
     // a spring limit: no position correction, and the bob oscillates past the rest length before settling
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *anchor = add_body(scene, motion_type::MOTION_STATIC, {0.0f, 10.0f, 0.0f});
     RigidBody *bob = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 8.0f, 0.0f});
     const constraint_id::ConstraintId id = distance_constraint::create(

@@ -1,6 +1,5 @@
 #include "tumble/physics/shapes/transformed.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
@@ -54,7 +53,6 @@ static bool point_inside(const Shape *shape, const Transformf &transform, const 
 /* creation, bounds, centre of mass */
 
 void test_transformed_create_and_aabb(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     Shape *t = transformed::create({.shape = s, .position = {5, 3, 2}, .quaternion = IDENTITY});
@@ -81,7 +79,6 @@ void test_transformed_create_and_aabb(TestCtx &ctx) {
 }
 
 void test_transformed_center_of_mass(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
 
@@ -106,7 +103,6 @@ void test_transformed_center_of_mass(TestCtx &ctx) {
 }
 
 void test_transformed_mass_properties(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *b = box::create({.half_extents = {1, 2, 3}});
     Shape *t = transformed::create({.shape = b, .position = {7, 8, 9}, .quaternion = stored_axis_angle(vec3f::make(0, 0, 1), scalar::PI * 0.5f)});
@@ -127,7 +123,6 @@ void test_transformed_mass_properties(TestCtx &ctx) {
 }
 
 void test_transformed_inner_radius_and_leaf(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 7.0f});
     Shape *t = transformed::create({.shape = s, .position = {10, 20, 30}, .quaternion = IDENTITY});
@@ -145,7 +140,6 @@ void test_transformed_inner_radius_and_leaf(TestCtx &ctx) {
 /* surface normal */
 
 void test_transformed_surface_normal(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Float3 normal;
 
@@ -181,7 +175,6 @@ void test_transformed_surface_normal(TestCtx &ctx) {
 /* supporting face, the values pinned */
 
 void test_transformed_supporting_face(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Float4x4 identity;
     mat4f::store(identity, mat4f::identity());
@@ -250,7 +243,6 @@ void test_transformed_supporting_face(TestCtx &ctx) {
 }
 
 void test_transformed_supporting_face_with_scaled(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Float4x4 identity;
     mat4f::store(identity, mat4f::identity());
@@ -282,7 +274,6 @@ void test_transformed_supporting_face_with_scaled(TestCtx &ctx) {
 }
 
 void test_transformed_sub_shape_transformed_shape(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *b = box::create({.half_extents = {1, 2, 3}});
     const Float4 quarter_z = stored_axis_angle(vec3f::make(0, 0, 1), scalar::PI * 0.5f);
@@ -307,7 +298,6 @@ void test_transformed_sub_shape_transformed_shape(TestCtx &ctx) {
 /* ray and point */
 
 void test_transformed_cast_ray(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
 
     // a sphere moved to x = 5: its surface at 4 is 0.4 of 10
@@ -332,7 +322,6 @@ void test_transformed_cast_ray(TestCtx &ctx) {
 }
 
 void test_transformed_collide_point(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     Shape *ts = transformed::create({.shape = s, .position = {5, 0, 0}, .quaternion = IDENTITY});
@@ -355,7 +344,6 @@ void test_transformed_collide_point(TestCtx &ctx) {
 /* collide and cast through dispatch */
 
 void test_transformed_box_vs_sphere_collide(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // a (1, 2, 3) box turned a quarter about z at (5, 0, 0) spans x over [3, 7], y over [-1, 1]; a unit sphere at (5, 1.5, 0)
     // is 0.5 into its top face
@@ -410,7 +398,6 @@ void test_transformed_box_vs_sphere_collide(TestCtx &ctx) {
 }
 
 void test_transformed_cast(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *b = box::create({.half_extents = {1, 2, 3}});
     Shape *t = transformed::create({.shape = b, .position = {5, 0, 0}, .quaternion = stored_axis_angle(vec3f::make(0, 0, 1), scalar::PI * 0.5f)});
@@ -450,7 +437,6 @@ void test_transformed_cast(TestCtx &ctx) {
 /* a rotated child under a non-uniform scale */
 
 void test_transformed_scaled_compound_rotated_child(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // a (1, 2, 0.5) box turned a quarter about z inside a transformed child at (1, 0, 0) of a compound, under a
     // (2, 1, 1) scale, the whole moved to (10, 0, 0). the box's frame sees the scale as (1, 2, 1): half extents
@@ -544,7 +530,6 @@ void test_transformed_dispatch_rows(TestCtx &ctx) {
 /* material by sub shape id */
 
 void test_transformed_material(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // through the inner shape, sub shape id and all
     Shape *b = box::create({.half_extents = {1, 1, 1}, .material_id = 6});

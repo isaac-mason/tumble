@@ -21,7 +21,7 @@ struct ScaledShapeSettings {
     Float3 scale = {1.0f, 1.0f, 1.0f};
 };
 
-/** null when the memory cannot grow */
+/** null when the allocator fails */
 Shape *create(const ScaledShapeSettings &settings);
 /** frees the shape, not the shape it wraps */
 void destroy(Shape *shape);

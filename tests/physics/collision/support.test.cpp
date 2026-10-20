@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
@@ -311,7 +310,6 @@ void test_support_hull_random(TestCtx &ctx) {
 }
 
 void test_support_hull_scaled(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     uint32_t rng = 8;
     RandomHull hull;
     build_random_hull(hull, rng, 9);
@@ -337,7 +335,6 @@ static const uint32_t CUBE_NUM_FACES[8] = {3, 3, 3, 3, 3, 3, 3, 3};
 static const int32_t CUBE_FACES[24] = {0, 2, 4, 1, 2, 4, 0, 3, 4, 1, 3, 4, 0, 2, 5, 1, 2, 5, 0, 3, 5, 1, 3, 5};
 
 void test_support_shrunk_hull(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     collections::Vec<float> shrunk = {};
     support::compute_shrunk_hull_points(shrunk, 8, CUBE, CUBE_NUM_FACES, CUBE_FACES, CUBE_PLANES, 0.1f);
     CHECK(ctx, shrunk.length == 24);
@@ -401,7 +398,7 @@ void test_support_polygon(TestCtx &ctx) {
     CHECK(ctx, near3(get(s, vec3f::make(1.0f, 0.0f, 0.0f)), 0.0f, 0.0f, 0.0f, 0.0f));
 }
 
-/** a file static as the shape fills hold them: it outlives every heap reset */
+/** a file static as the shape fills hold them: it outlives the hull it was filled from */
 static support::Support mirrored_support;
 
 /** the cube as a hull keeping its whole convex radius (the corner shift allowance is loosened) */
@@ -411,15 +408,22 @@ static shapes::Shape *cube_hull(float convex_radius) {
     return data == nullptr ? nullptr : convex_hull::create({.data = data});
 }
 
-/** overwrites the start of a fresh heap, where the previous heap's allocations were */
-static void scribble_heap(TestCtx &ctx) {
-    float *junk = util::alloc<float>(1 << 16);
-    CHECK(ctx, junk != nullptr);
-    for (uint32_t i = 0; i < (1u << 16); i++) junk[i] = 1e9f;
+static void drop_hull(shapes::Shape *shape) {
+    convex_hull::ConvexHullData *data = shape->convex_hull.data;
+    convex_hull::destroy(shape);
+    convex_hull::release(data);
 }
 
-void test_support_hull_scratch_survives_heap_reset(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
+/** takes the freed memory back and overwrites it */
+static void scribble_freed(TestCtx &ctx) {
+    constexpr uint32_t COUNT = 1u << 16;
+    float *junk = util::alloc<float>(COUNT);
+    CHECK(ctx, junk != nullptr);
+    for (uint32_t i = 0; i < COUNT; i++) junk[i] = 1e9f;
+    util::free(junk, COUNT);
+}
+
+void test_support_hull_scratch_outlives_its_hull(TestCtx &ctx) {
     shapes::Shape *first = cube_hull(0.1f);
     CHECK(ctx, first != nullptr && first->convex_hull.data->convex_radius == 0.1f);
     // mirrored non-uniform scale, convex radius excluded: shrunk corners at (+-1.95, +-0.95, +-0.45)
@@ -428,21 +432,21 @@ void test_support_hull_scratch_survives_heap_reset(TestCtx &ctx) {
     CHECK_NEAR(ctx, mirrored_support.convex_radius, 0.05f, EPS);
     CHECK(ctx, near3(get(mirrored_support, vec3f::make(1.0f, -1.0f, 1.0f)), 1.95f, -0.95f, 0.45f, EPS));
 
-    // the heap resets under the static: its baked vertices hold no heap memory, so they survive
-    CHECK(ctx, util::init(test_heap_begin()));
-    scribble_heap(ctx);
+    // the hull goes: the baked vertices hold none of its memory, so they survive
+    drop_hull(first);
+    scribble_freed(ctx);
     CHECK(ctx, near3(get(mirrored_support, vec3f::make(1.0f, -1.0f, 1.0f)), 1.95f, -0.95f, 0.45f, EPS));
     CHECK(ctx, near3(get(mirrored_support, vec3f::make(-1.0f, 1.0f, -1.0f)), -1.95f, 0.95f, -0.45f, EPS));
 
-    // refilled from a hull on the new heap, convex radius included: the raw corners mirrored in y
+    // refilled from another hull, convex radius included: the raw corners mirrored in y
     shapes::Shape *second = cube_hull(0.1f);
     CHECK(ctx, second != nullptr);
     convex_hull::set_support(mirrored_support, second, support::INCLUDE_CONVEX_RADIUS, vec3f::make(1.0f, -3.0f, 0.5f));
     CHECK(ctx, mirrored_support.hull.vertices == mirrored_support.hull.scratch && mirrored_support.convex_radius == 0.0f);
     CHECK(ctx, near3(get(mirrored_support, vec3f::make(1.0f, 1.0f, -1.0f)), 1.0f, 3.0f, -0.5f, EPS));
 
-    CHECK(ctx, util::init(test_heap_begin()));
-    scribble_heap(ctx);
+    drop_hull(second);
+    scribble_freed(ctx);
     CHECK(ctx, near3(get(mirrored_support, vec3f::make(1.0f, 1.0f, -1.0f)), 1.0f, 3.0f, -0.5f, EPS));
     CHECK(ctx, near3(get(mirrored_support, vec3f::make(-1.0f, -1.0f, 1.0f)), -1.0f, -3.0f, 0.5f, EPS));
 }

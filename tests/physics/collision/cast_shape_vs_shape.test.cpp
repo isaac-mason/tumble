@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
@@ -26,7 +25,6 @@ static void cast(CastShapeCollector &collector, const CastShapeSettings &setting
 }
 
 void test_cast_shape_vs_shape_sphere_vs_sphere(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *a = sphere::create({.radius = 1.0f});
     shapes::Shape *b = sphere::create({.radius = 1.0f});
@@ -71,7 +69,6 @@ void test_cast_shape_vs_shape_sphere_vs_sphere(TestCtx &ctx) {
 }
 
 void test_cast_shape_vs_shape_box_vs_box(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *a = box::create({.half_extents = {1, 1, 1}, .convex_radius = 0.0f});
     shapes::Shape *b = box::create({.half_extents = {1, 1, 1}, .convex_radius = 0.0f});
@@ -109,7 +106,6 @@ void test_cast_shape_vs_shape_box_vs_box(TestCtx &ctx) {
 }
 
 void test_cast_shape_vs_shape_sphere_vs_box(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *a = sphere::create({.radius = 1.0f});
     shapes::Shape *b = box::create({.half_extents = {1, 1, 1}, .convex_radius = 0.0f});
@@ -145,7 +141,6 @@ void test_cast_shape_vs_shape_sphere_vs_box(TestCtx &ctx) {
 }
 
 void test_cast_shape_vs_shape_supporting_faces(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *unit_box_a = box::create({.half_extents = {1, 1, 1}, .convex_radius = 0.0f});
     shapes::Shape *unit_box_b = box::create({.half_extents = {1, 1, 1}, .convex_radius = 0.0f});
@@ -217,7 +212,6 @@ void test_cast_shape_vs_shape_supporting_faces(TestCtx &ctx) {
 }
 
 void test_cast_shape_vs_shape_epa_faces(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *a = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.0f});
     shapes::Shape *b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.0f});
@@ -242,7 +236,6 @@ void test_cast_shape_vs_shape_epa_faces(TestCtx &ctx) {
 }
 
 void test_cast_shape_vs_shape_gjk_restart(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // this configuration takes the branch where gjk fails to find a closer simplex and has already used its one
     // restart. the contact points must come out of the previous valid simplex, not the rejected support point.
@@ -291,7 +284,6 @@ static void init_counting(CountingCollector &counting, collector::CollectorKind 
 }
 
 void test_cast_shape_vs_shape_any_collector_early_out(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *ball = sphere::create({.radius = 1.0f});
     // its top face at y = 0
@@ -320,7 +312,6 @@ void test_cast_shape_vs_shape_any_collector_early_out(TestCtx &ctx) {
 }
 
 void test_cast_shape_vs_shape_closest_orders_starting_overlaps_by_depth(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *ball = sphere::create({.radius = 0.5f});
     // its top face at y = 0, so a radius 0.5 sphere at height y starts 0.5 - y deep
@@ -346,7 +337,6 @@ void test_cast_shape_vs_shape_closest_orders_starting_overlaps_by_depth(TestCtx 
 }
 
 void test_cast_shape_vs_shape_reversed(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *ball = sphere::create({.radius = 0.5f, .material_id = 3});
     shapes::Shape *block = box::create({.half_extents = {1, 1, 1}, .material_id = 7});
@@ -405,7 +395,6 @@ void test_cast_shape_vs_shape_reversed(TestCtx &ctx) {
 }
 
 void test_cast_shape_vs_shape_sort(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *shape = sphere::create({.radius = 1.0f});
     const CastShapeSettings settings = cast_shape::default_settings();

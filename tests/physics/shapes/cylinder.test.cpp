@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
@@ -15,7 +14,6 @@ static void cylinder_face(shapes::SupportingFaceResult &io, const shapes::Shape 
 }
 
 void test_cylinder_create(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *c = cylinder::create({.half_height = 1.0f, .radius = 0.5f});
     CHECK(ctx, c != nullptr);
@@ -45,7 +43,6 @@ void test_cylinder_create(TestCtx &ctx) {
 }
 
 void test_cylinder_convex_radius_clamp(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *c = cylinder::create({.half_height = 1.0f, .radius = 0.5f, .convex_radius = 0.1f});
     CHECK(ctx, c->cylinder.convex_radius == 0.1f);
@@ -71,7 +68,6 @@ void test_cylinder_convex_radius_clamp(TestCtx &ctx) {
 }
 
 void test_cylinder_mass_properties(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *c = cylinder::create({.half_height = 1.0f, .radius = 0.5f, .density = 100.0f});
     mass_properties::MassProperties props = mass_properties::create();
@@ -90,7 +86,6 @@ void test_cylinder_mass_properties(TestCtx &ctx) {
 }
 
 void test_cylinder_inner_radius(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     shapes::Shape *c = cylinder::create({.half_height = 1.0f, .radius = 0.5f});
     CHECK(ctx, cylinder::get_inner_radius(c) == 0.5f);
     cylinder::destroy(c);
@@ -100,7 +95,6 @@ void test_cylinder_inner_radius(TestCtx &ctx) {
 }
 
 void test_cylinder_surface_normal(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *c = cylinder::create({.half_height = 2.0f, .radius = 1.0f});
     shapes::SurfaceNormalResult io;
@@ -130,7 +124,6 @@ void test_cylinder_surface_normal(TestCtx &ctx) {
 }
 
 void test_cylinder_supporting_face(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::SupportingFaceResult io;
     const Float3 unit = {1.0f, 1.0f, 1.0f};
@@ -218,7 +211,6 @@ void test_cylinder_supporting_face(TestCtx &ctx) {
 }
 
 void test_cylinder_set_support(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *c = cylinder::create({.half_height = 1.0f, .radius = 0.5f, .convex_radius = 0.04f});
     support::Support s = support::create();
@@ -255,7 +247,6 @@ void test_cylinder_set_support(TestCtx &ctx) {
 /* material by sub shape id */
 
 void test_cylinder_material(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // a convex shape is one leaf: the empty sub shape id names its own material
     shapes::Shape *painted = cylinder::create({.half_height = 1.0f, .radius = 0.5f, .material_id = 6});

@@ -70,7 +70,7 @@ struct TriangleMeshData {
 /** the bytes create allocates for a mesh of these counts, header included. */
 uint32_t byte_size(uint32_t vertex_count, uint32_t triangle_count, uint32_t node_count);
 
-/** a zeroed mesh with room for the counts, or null (error set) when the memory cannot grow. */
+/** a zeroed mesh with room for the counts, or null (error set) when the allocator fails. */
 TriangleMeshData *create(uint32_t vertex_count, uint32_t triangle_count, uint32_t node_count);
 
 void destroy(TriangleMeshData *data);

@@ -67,13 +67,13 @@ struct JointsOptions {
     bool draw_limits = true;
 };
 
-/** empty buffers, or null (error set) when the memory cannot grow */
+/** empty buffers, or null (error set) when the allocator fails */
 DebugBuffers *create();
 void release(DebugBuffers *buffers);
 /** empties both buffers, keeping their memory */
 void clear(DebugBuffers &buffers);
 
-// every draw appends; a line that cannot fit because the memory cannot grow is dropped (error set)
+// every draw appends; a line that cannot fit because the allocator fails is dropped (error set)
 
 /** every live body's shape outside the excluded layers, coloured by the mode, with its velocities when asked */
 void bodies(DebugBuffers &out, const world::World &world, const BodiesOptions &options);

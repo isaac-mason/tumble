@@ -111,12 +111,12 @@ struct ConvexHullShapeSettings {
 
 /**
  * builds the hull, then shrinks the convex radius until it fits the hull's thickness and its sharpest vertex. null when
- * the points make no hull (or the memory cannot grow); `out_result`, when given, says why.
+ * the points make no hull (or the allocator fails); `out_result`, when given, says why.
  */
 ConvexHullData *build(const ConvexHullBuildSettings &settings, BuildResult *out_result = nullptr);
 /** frees a built hull; every shape over it is destroyed first */
 void release(ConvexHullData *data);
-/** a shape over a built hull; null when the memory cannot grow */
+/** a shape over a built hull; null when the allocator fails */
 Shape *create(const ConvexHullShapeSettings &settings);
 /** frees the shape, not the hull it borrows */
 void destroy(Shape *shape);

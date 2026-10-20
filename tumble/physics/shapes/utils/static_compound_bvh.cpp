@@ -198,9 +198,9 @@ bool build(collections::Vec<bvh::Node> &out, collections::Vec<CompoundShapeChild
     float *build_data = util::alloc<float>(count * BUILD_DATA_STRIDE);
     CompoundShapeChild *reordered = util::alloc<CompoundShapeChild>(count);
     if (indices == nullptr || build_data == nullptr || reordered == nullptr) {
-        util::free(indices);
-        util::free(build_data);
-        util::free(reordered);
+        util::free(indices, count);
+        util::free(build_data, count * BUILD_DATA_STRIDE);
+        util::free(reordered, count);
         return false;
     }
 
@@ -214,9 +214,9 @@ bool build(collections::Vec<bvh::Node> &out, collections::Vec<CompoundShapeChild
     for (uint32_t i = 0; i < count; i++) reordered[i] = children[indices[i]];
     for (uint32_t i = 0; i < count; i++) children[i] = reordered[i];
 
-    util::free(indices);
-    util::free(build_data);
-    util::free(reordered);
+    util::free(indices, count);
+    util::free(build_data, count * BUILD_DATA_STRIDE);
+    util::free(reordered, count);
     return true;
 }
 

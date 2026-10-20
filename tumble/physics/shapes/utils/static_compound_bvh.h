@@ -35,7 +35,7 @@ inline uint32_t node_child_count(const bvh::Node *nodes, int32_t node) { return 
 
 /**
  * builds the bvh over the children into `out` (pre-order, the root at 0; empty when there are no
- * children), reordering the children in place. false (error set) when the memory cannot grow.
+ * children), reordering the children in place. false (error set) when the allocator fails.
  */
 bool build(collections::Vec<bvh::Node> &out, collections::Vec<compound::CompoundShapeChild> &children, const BvhBuildSettings &settings);
 

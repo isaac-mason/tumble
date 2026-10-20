@@ -1,6 +1,5 @@
 #include "tumble/physics/pairs.h"
 
-#include "tumble/instance.h"
 #include "tumble/physics/body/sleep.h"
 #include "tumble/physics/contacts.h"
 #include "tumble/physics/shapes/box.h"
@@ -168,7 +167,6 @@ void test_pairs_edge_keys(TestCtx &ctx) {
 }
 
 void test_pairs_reporting_truth_table(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
 
@@ -197,7 +195,6 @@ void test_pairs_reporting_truth_table(TestCtx &ctx) {
 }
 
 void test_pairs_cluster_records_and_events(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     uint32_t layer;
     World world = make_single_layer_world(layer);
@@ -244,7 +241,6 @@ void test_pairs_cluster_records_and_events(TestCtx &ctx) {
 }
 
 void test_pairs_record_survives_while_overlapping(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     uint32_t layer;
     World world = make_single_layer_world(layer);
@@ -281,7 +277,6 @@ void test_pairs_record_survives_while_overlapping(TestCtx &ctx) {
 }
 
 void test_pairs_persist_through_sleep(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     uint32_t layer;
     World world = make_single_layer_world(layer);
@@ -310,7 +305,6 @@ void test_pairs_persist_through_sleep(TestCtx &ctx) {
 }
 
 void test_pairs_teleport_sleeping_destroys_record(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     uint32_t layer;
     World world = make_single_layer_world(layer);
@@ -338,7 +332,6 @@ void test_pairs_teleport_sleeping_destroys_record(TestCtx &ctx) {
 }
 
 void test_pairs_teleport_sleeping_discovers_pair(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     uint32_t layer;
     World world = make_single_layer_world(layer);
@@ -366,7 +359,6 @@ void test_pairs_teleport_sleeping_discovers_pair(TestCtx &ctx) {
 }
 
 void test_pairs_removal_purges(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     uint32_t layer;
     World world = make_single_layer_world(layer);
@@ -396,7 +388,6 @@ void test_pairs_removal_purges(TestCtx &ctx) {
 }
 
 void test_pairs_recycled_bodies_stay_distinct(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     uint32_t layer;
     World world = make_single_layer_world(layer);
@@ -422,7 +413,6 @@ void test_pairs_recycled_bodies_stay_distinct(TestCtx &ctx) {
 }
 
 void test_pairs_hub_with_spokes(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     uint32_t layer;
     World world = make_single_layer_world(layer);
@@ -459,7 +449,6 @@ void test_pairs_hub_with_spokes(TestCtx &ctx) {
 }
 
 void test_pairs_pose_cache(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     uint32_t layer;
     World world = make_single_layer_world(layer);

@@ -19,7 +19,7 @@ struct TransformedShapeSettings {
     Float4 quaternion = {0.0f, 0.0f, 0.0f, 1.0f};
 };
 
-/** null when the memory cannot grow */
+/** null when the allocator fails */
 Shape *create(const TransformedShapeSettings &settings);
 /** frees the shape, not the shape it wraps */
 void destroy(Shape *shape);

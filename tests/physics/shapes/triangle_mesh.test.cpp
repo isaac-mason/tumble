@@ -1,7 +1,6 @@
 #include "tumble/physics/shapes/triangle_mesh.h"
 #include "tumble/math/aabox.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
@@ -21,12 +20,6 @@ using shapes::Shape;
 using triangle_mesh_data::TriangleMeshData;
 
 static const sub_shape::SubShapeIdBuilder NO_SUB_SHAPE = {sub_shape::EMPTY_SUB_SHAPE_ID, 0};
-
-static uint32_t heap_bytes_in_use() {
-    util::HeapStats stats;
-    util::heap_stats(&stats);
-    return stats.bytes_in_use;
-}
 
 /** builds the mesh with the builder's defaults and a shape over it */
 static Shape *mesh(const float *positions, uint32_t num_floats, const uint32_t *indices, uint32_t num_indices,
@@ -150,9 +143,8 @@ static uint32_t triangle_of(const Shape *s, sub_shape::SubShapeId id) {
 /* the shape */
 
 void test_triangle_mesh_create_and_mass(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
-    const uint32_t heap_before = heap_bytes_in_use();
+    const size_t bytes_before = util::allocated_bytes();
 
     Shape *s = mesh(TRIANGLE_POSITIONS, 9, TRIANGLE_INDICES, 3, nullptr, 4);
     CHECK(ctx, s != nullptr);
@@ -186,11 +178,10 @@ void test_triangle_mesh_create_and_mass(TestCtx &ctx) {
     drop(two);
 
     // shape and mesh return every byte
-    CHECK(ctx, heap_bytes_in_use() == heap_before);
+    CHECK(ctx, util::allocated_bytes() == bytes_before);
 }
 
 void test_triangle_mesh_shared_data(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     TriangleMeshData *data = triangle_mesh_builder::build({.positions = QUAD_POSITIONS, .num_positions = 4, .indices = QUAD_INDICES, .num_indices = 6});
     Shape *first = triangle_mesh::create({.data = data});
@@ -209,7 +200,6 @@ void test_triangle_mesh_shared_data(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_surface_normal(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
 
     // one triangle in the xy plane: its normal is +z
@@ -244,7 +234,6 @@ void test_triangle_mesh_surface_normal(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_supporting_face(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = mesh(TRIANGLE_POSITIONS, TRIANGLE_INDICES);
     sub_shape::SubShapeIdBuilder id;
@@ -313,7 +302,6 @@ static uint32_t ray_hits(cast_ray::CastRayCollector &collector, const Shape *s, 
 }
 
 void test_triangle_mesh_ray_scaled_quad(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *quad = mesh(QUAD_POSITIONS, QUAD_INDICES);
     cast_ray::CastRayCollector collector = cast_ray::create_collector(collector::COLLECT_ALL);
@@ -362,7 +350,6 @@ void test_triangle_mesh_ray_scaled_quad(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_ray_closed_cube(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *cube = mesh(CUBE_POSITIONS, CUBE_INDICES);
 
@@ -424,7 +411,6 @@ void test_triangle_mesh_ray_closed_cube(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_ray_materials_and_sub_shapes(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // the quad's first input triangle (0, 2, 1) covers x > z, the second (0, 3, 2) covers x < z
     const int32_t materials[2] = {3, 7};
@@ -460,7 +446,6 @@ void test_triangle_mesh_ray_materials_and_sub_shapes(TestCtx &ctx) {
 /* collide point */
 
 void test_triangle_mesh_collide_point(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *cube = mesh(CUBE_POSITIONS, CUBE_INDICES);
 
@@ -505,7 +490,6 @@ void test_triangle_mesh_collide_point(TestCtx &ctx) {
 /* collide */
 
 void test_triangle_mesh_sphere_resting_on_quad(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // a 2 by 2 quad at y = 0 facing +y, its diagonal from (0, 0) to (2, 2)
     const float positions[12] = {0, 0, 0, 2, 0, 0, 2, 0, 2, 0, 0, 2};
@@ -598,7 +582,6 @@ void test_triangle_mesh_sphere_resting_on_quad(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_sphere_collide_features(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *tri = mesh(BIG_TRIANGLE_POSITIONS, TRIANGLE_INDICES);
     const collide_shape::CollideShapeSettings settings = collide_shape::default_settings();
@@ -636,7 +619,6 @@ void test_triangle_mesh_sphere_collide_features(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_convex_collide(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *tri = mesh(BIG_TRIANGLE_POSITIONS, TRIANGLE_INDICES);
     const collide_shape::CollideShapeSettings settings = collide_shape::default_settings();
@@ -712,7 +694,6 @@ void test_triangle_mesh_convex_collide(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_box_sliding_on_grid(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *floor = grid(6, 1.0f);
     Shape *crate = box::create({.half_extents = {0.3f, 0.3f, 0.3f}, .convex_radius = 0.0f});
@@ -793,7 +774,6 @@ void test_triangle_mesh_box_sliding_on_grid(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_active_edges_ported(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // xy grids laid in xz with y up
     Shape *floor = grid(4, 1.0f);
@@ -852,7 +832,6 @@ void test_triangle_mesh_active_edges_ported(TestCtx &ctx) {
 /* cast */
 
 void test_triangle_mesh_sphere_cast(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     const cast_shape::CastShapeSettings settings = cast_shape::default_settings();
     cast_shape::CastShapeCollector collector = cast_shape::create_collector(collector::COLLECT_ALL);
@@ -949,7 +928,6 @@ static Shape *ramp(float angle) {
 }
 
 void test_triangle_mesh_cast_onto_ramp(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     const float angle = scalar::PI / 6.0f;
     const Float3 n = {-scalar::sin(angle), scalar::cos(angle), 0};
@@ -1003,7 +981,6 @@ void test_triangle_mesh_cast_onto_ramp(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_convex_cast(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     const cast_shape::CastShapeSettings settings = cast_shape::default_settings();
     cast_shape::CastShapeCollector collector = cast_shape::create_collector(collector::COLLECT_ALL);
@@ -1069,7 +1046,6 @@ void test_triangle_mesh_convex_cast(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_closest_cast_orders_overlaps(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     cast_shape::CastShapeSettings deepest = cast_shape::default_settings();
     deepest.return_deepest_point = true;
@@ -1110,7 +1086,6 @@ void test_triangle_mesh_closest_cast_orders_overlaps(TestCtx &ctx) {
 /* scaled and transformed poses: the mesh handles its scale itself */
 
 void test_triangle_mesh_scaled_poses(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *quad = mesh(QUAD_POSITIONS, QUAD_INDICES);
     Shape *cube = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
@@ -1206,7 +1181,6 @@ void test_triangle_mesh_scaled_poses(TestCtx &ctx) {
 /* the reversed pairs */
 
 void test_triangle_mesh_reversed_pairs(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // a 2 by 2 quad at y = 0 facing +y
     const float positions[12] = {0, 0, 0, 2, 0, 0, 2, 0, 2, 0, 0, 2};
@@ -1275,7 +1249,6 @@ void test_triangle_mesh_reversed_pairs(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_sphere_cast_inactive_edge_no_hint(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *floor = grid(4, 1.0f);
     Shape *ball = sphere::create({.radius = 0.4f});
@@ -1300,7 +1273,6 @@ static Vec3f winding_normal(const face::Face &face) {
 }
 
 void test_triangle_mesh_mirrored_faces(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // mirrored in x the quad spans x in [-1, 0] and still faces +y; the triangle face each hit reports must too
     Shape *quad = mesh(QUAD_POSITIONS, QUAD_INDICES);
@@ -1340,7 +1312,6 @@ void test_triangle_mesh_mirrored_faces(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_default_cast_tolerance(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *big_tri = mesh(BIG_TRIANGLE_POSITIONS, TRIANGLE_INDICES);
     Shape *pill = capsule::create({.half_height_of_cylinder = 0.01f, .radius = 0.5f});
@@ -1359,7 +1330,6 @@ void test_triangle_mesh_default_cast_tolerance(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_sphere_cast_zero_closest_point_falls_back_to_normal(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // a zero radius sphere cast in the triangle's plane straight onto a vertex: the centre at the hit is the vertex
     // itself, so the closest point is zero and has no direction of its own
@@ -1387,7 +1357,6 @@ void test_triangle_mesh_sphere_cast_zero_closest_point_falls_back_to_normal(Test
 /* material by sub shape id */
 
 void test_triangle_mesh_material(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // the shape's own material is not what a triangle reports
     const int32_t materials[12] = {1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6};

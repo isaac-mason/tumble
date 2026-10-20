@@ -1,6 +1,5 @@
 #include "tumble/physics/broadphase/broadphase.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/body/bodies.h"
 #include "tumble/physics/body/rigid_body.h"
@@ -28,8 +27,7 @@ struct World {
     uint32_t not_moving;
 };
 
-World make_world(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
+World make_world() {
     dispatch::init();
     World world = {};
     world.bodies = bodies::init();
@@ -115,7 +113,7 @@ const Box3f EVERYTHING = {{-100, -100, -100}, {100, 100, 100}};
 }  // namespace
 
 void test_broadphase_add_to_layer_trees(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     CHECK(ctx, world.broadphase.trees.length == 2 && world.broadphase.next_tree_to_optimize == 0);
 
     RigidBody *a = make_body(world, 0, 0, 0, 1, 1, 1, world.moving);
@@ -137,7 +135,7 @@ void test_broadphase_add_to_layer_trees(TestCtx &ctx) {
 }
 
 void test_broadphase_optimize_round_robin(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     make_body(world, 0, 0, 0, 1, 1, 1, world.moving);
     make_body(world, 2, 0, 0, 3, 1, 1, world.moving);
     make_body(world, 4, 0, 0, 5, 1, 1, world.not_moving);
@@ -166,7 +164,7 @@ void test_broadphase_optimize_round_robin(TestCtx &ctx) {
 }
 
 void test_broadphase_layer_filter(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     RigidBody *moving = make_body(world, 0, 0, 0, 1, 1, 1, world.moving);
     RigidBody *not_moving = make_body(world, 5, 0, 0, 6, 1, 1, world.not_moving);
     RigidBody *overlapping = make_body(world, 0, 0, 0, 2, 2, 2, world.not_moving);
@@ -212,7 +210,7 @@ void test_broadphase_layer_filter(TestCtx &ctx) {
 }
 
 void test_broadphase_groups_and_mask(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
 
     // three bodies at one place with different groups and masks
     RigidBody *first = make_body(world, 0, 0, 0, 2, 2, 2, world.moving, 0b0001, 0b0010);
@@ -266,7 +264,7 @@ bool reject_one(const RigidBody *body, void *context) {
 }  // namespace
 
 void test_broadphase_body_filter(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     RigidBody *a = make_body(world, 0, 0, 0, 1, 1, 1, world.moving);
     RigidBody *b = make_body(world, 2, 0, 0, 3, 1, 1, world.moving);
     RigidBody *c = make_body(world, 4, 0, 0, 5, 1, 1, world.not_moving);
@@ -298,7 +296,7 @@ void test_broadphase_body_filter(TestCtx &ctx) {
 }
 
 void test_broadphase_update_moved_body(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     RigidBody *body = make_body(world, 0, 0, 0, 1, 1, 1, world.moving);
     make_body(world, 4, 0, 0, 5, 1, 1, world.moving);
     broadphase::optimize(world.broadphase, world.bodies);
@@ -336,7 +334,7 @@ void test_broadphase_update_moved_body(TestCtx &ctx) {
 }
 
 void test_broadphase_remove(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     RigidBody *a = make_body(world, 0, 0, 0, 1, 1, 1, world.moving);
     RigidBody *b = make_body(world, 0, 0, 0, 1, 1, 1, world.not_moving);
     RigidBody *c = make_body(world, 3, 0, 0, 4, 1, 1, world.moving);
@@ -376,7 +374,7 @@ void test_broadphase_remove(TestCtx &ctx) {
 }
 
 void test_broadphase_reinsert_after_layer_change(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     RigidBody *body = make_body(world, 0, 0, 0, 1, 1, 1, world.moving);
     make_body(world, 3, 0, 0, 4, 1, 1, world.moving);
 
@@ -403,7 +401,7 @@ void test_broadphase_reinsert_after_layer_change(TestCtx &ctx) {
 }
 
 void test_broadphase_cast_ray_layers(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     // along x: not-moving at 2, moving at 4, not-moving at 6, moving at 8
     RigidBody *moving_near = make_body(world, 4, 0, 0, 5, 1, 1, world.moving);
     RigidBody *moving_far = make_body(world, 8, 0, 0, 9, 1, 1, world.moving);
@@ -445,7 +443,7 @@ void test_broadphase_cast_ray_layers(TestCtx &ctx) {
 }
 
 void test_broadphase_point_queries(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     RigidBody *a = make_body(world, 0, 0, 0, 4, 4, 4, world.moving);
     RigidBody *b = make_body(world, 2, 2, 2, 6, 6, 6, world.not_moving);
     Hits hits;
@@ -471,7 +469,7 @@ void test_broadphase_point_queries(TestCtx &ctx) {
 }
 
 void test_broadphase_bounds(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     Box3f all;
     CHECK(ctx, aabox::is_empty(aabox::load(broadphase::bounds(all, world.broadphase))));
 

@@ -1,4 +1,4 @@
-#include "tumble/instance.h"
+#include "tumble/util/error.h"
 #include "tumble/math/scalar.h"
 #include "tumble/physics/constraints/cone_constraint.h"
 #include "physics/constraints/constraint_test_scene.h"
@@ -19,7 +19,7 @@ static bool has_id(const RigidBody *body, ConstraintId id) {
 }
 
 void test_constraints_pools(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     for (uint32_t type = 0; type < constraint_id::CONSTRAINT_TYPE_COUNT; type++) {
         const constraints::ConstraintPool &pool = scene.constraints.pools[type];
         CHECK(ctx, pool.type == type && pool.stride == 0 && pool.count == 0);
@@ -60,7 +60,7 @@ void test_constraints_pools(TestCtx &ctx) {
 }
 
 void test_constraints_pool_caps_at_the_id_index_range(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
     const ConstraintId live = point_constraint::create(scene.constraints, scene.bodies, a, b, {});
@@ -81,7 +81,7 @@ void test_constraints_pool_caps_at_the_id_index_range(TestCtx &ctx) {
 }
 
 void test_constraints_remove_by_id(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
     RigidBody *c = add_body(scene, motion_type::MOTION_DYNAMIC, {2.0f, 0.0f, 0.0f});
@@ -110,7 +110,7 @@ void test_constraints_remove_by_id(TestCtx &ctx) {
 }
 
 void test_constraints_sequence_per_slot(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
     const ConstraintId kept = point_constraint::create(scene.constraints, scene.bodies, a, b, {});
@@ -141,7 +141,7 @@ void test_constraints_sequence_per_slot(TestCtx &ctx) {
 }
 
 void test_constraints_destroy_body_constraints(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *hub = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *spokes[3];
     ConstraintId ids[3];
@@ -164,7 +164,7 @@ void test_constraints_destroy_body_constraints(TestCtx &ctx) {
 }
 
 void test_constraints_overrides_and_sort(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
     const ConstraintId p0 = point_constraint::create(scene.constraints, scene.bodies, a, b, {.constraint_priority = 2});
@@ -206,7 +206,7 @@ void test_constraints_overrides_and_sort(TestCtx &ctx) {
 }
 
 void test_constraints_sleeping_and_disabled(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
     RigidBody *c = add_body(scene, motion_type::MOTION_DYNAMIC, {2.0f, 0.0f, 0.0f});
@@ -245,7 +245,7 @@ void test_constraints_sleeping_and_disabled(TestCtx &ctx) {
 
 void test_constraints_island_solve(TestCtx &ctx) {
     // a chain of three balls hung from a static pivot by point constraints, solved through the island loops
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *pivot = add_body(scene, motion_type::MOTION_STATIC, {0.0f, 10.0f, 0.0f});
     RigidBody *links[3];
     RigidBody *previous = pivot;

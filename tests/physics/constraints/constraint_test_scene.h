@@ -1,6 +1,5 @@
 #pragma once
 
-#include "tumble/instance.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/body/rigid_body.h"
@@ -20,8 +19,7 @@ struct ConstraintScene {
     collections::Vec<constraint_id::ConstraintId> ids;
 };
 
-inline ConstraintScene make_constraint_scene(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
+inline ConstraintScene make_constraint_scene() {
     dispatch::init();
     ConstraintScene scene = {};
     scene.bodies = bodies::init();

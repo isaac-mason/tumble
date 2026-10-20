@@ -8,10 +8,9 @@
 using rigid_body::RigidBody;
 
 void test_world_create_takes_settings_and_destroy_frees(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
-    util::HeapStats before;
-    util::heap_stats(&before);
+    const size_t bytes_before = util::allocated_bytes();
+    const size_t blocks_before = util::allocated_blocks();
 
     uint32_t moving, not_moving;
     world_settings::WorldSettings settings = make_world_test_settings(moving, not_moving);
@@ -42,10 +41,8 @@ void test_world_create_takes_settings_and_destroy_frees(TestCtx &ctx) {
     box::destroy(floor_shape);
     box::destroy(box_shape);
 
-    util::HeapStats after;
-    util::heap_stats(&after);
-    CHECK(ctx, after.allocations == before.allocations);
-    CHECK(ctx, after.bytes_in_use == before.bytes_in_use);
+    CHECK(ctx, util::allocated_blocks() == blocks_before);
+    CHECK(ctx, util::allocated_bytes() == bytes_before);
 }
 
 

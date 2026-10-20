@@ -1,6 +1,5 @@
 #pragma once
 
-#include "tumble/instance.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/math/vec3f.h"
@@ -43,8 +42,7 @@ struct ContactScene {
 
 constexpr float CONTACT_SCENE_DELTA_TIME = 1.0f / 60.0f;
 
-inline ContactScene make_contact_scene(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
+inline ContactScene make_contact_scene() {
     dispatch::init();
     ContactScene scene = {};
     scene.bodies = bodies::init();

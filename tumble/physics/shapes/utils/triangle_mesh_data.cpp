@@ -50,7 +50,10 @@ TriangleMeshData *create(uint32_t vertex_count, uint32_t triangle_count, uint32_
     return data;
 }
 
-void destroy(TriangleMeshData *data) { util::free(data); }
+void destroy(TriangleMeshData *data) {
+    if (data == nullptr) return;
+    util::free_bytes(data, byte_size(data->vertex_count, data->triangle_count, data->node_count));
+}
 
 void get_triangle_indices(uint32_t out[3], const TriangleMeshData &data, uint32_t tri_idx) {
     const Triangle &triangle = data.triangles[tri_idx];

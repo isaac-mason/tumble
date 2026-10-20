@@ -1,4 +1,4 @@
-#include "tumble/instance.h"
+#include "tumble/util/error.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/physics/collision/cast_ray_vs_shape.h"
 #include "tumble/physics/collision/cast_utils.h"
@@ -49,7 +49,6 @@ static bool counting_should_early_out(const cast_ray::CastRayCollector &c) {
 }
 
 void test_collectors(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // all: every hit in order, never early out
     cast_ray::CastRayCollector all = cast_ray::create_collector(collector::COLLECT_ALL);
@@ -114,7 +113,6 @@ void test_collectors(TestCtx &ctx) {
 }
 
 void test_collectors_any_early_out(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
 
     // the ray's any collector drops to 0; the others to -FLT_MAX, below any -penetration bound
@@ -306,7 +304,6 @@ void test_world_tier_types(TestCtx &ctx) {
     CHECK(ctx, &contacts::get_read_manifold(c, cs) == &c.manifolds[1]);
 
     // answers size to the events: one bit per pair, nothing rejected, one override per contact event, none written
-    CHECK(ctx, util::init(test_heap_begin()));
     events::PhysicsEvents ev = events::create_events();
     events::PhysicsAnswers an = events::create_answers();
     for (uint32_t i = 0; i < 40; i++) ev.pairs.push({});

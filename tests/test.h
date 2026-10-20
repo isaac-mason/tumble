@@ -18,10 +18,6 @@ struct TestCtx {
     uint32_t failures;
 };
 
-/** the first byte above the core's own data and stack, from the linker; the tests put their layout here. */
-extern "C" unsigned char __heap_base[];
-inline uint32_t test_heap_begin() { return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(__heap_base)); }
-
 constexpr uint32_t TEST_MAX_FAILURES = 256;
 
 void test_record(TestCtx &ctx, const char *file, uint32_t line, const char *expr);

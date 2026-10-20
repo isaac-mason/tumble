@@ -1,6 +1,5 @@
 #include "tumble/physics/collision/narrowphase.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/shapes/box.h"
 #include "tumble/physics/shapes/capsule.h"
@@ -23,8 +22,7 @@ struct NarrowphaseWorld {
     shapes::Shape *empty;
 };
 
-NarrowphaseWorld make_world(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
+NarrowphaseWorld make_world() {
     dispatch::init();
     NarrowphaseWorld world;
     world.sphere = sphere::create({.radius = 1.0f});
@@ -72,7 +70,7 @@ bool point_hits(const shapes::Shape *shape, const Float3 &point, const Float3 &p
 }  // namespace
 
 void test_narrowphase_cast_ray_goes_to_the_shapes_def(TestCtx &ctx) {
-    NarrowphaseWorld world = make_world(ctx);
+    NarrowphaseWorld world = make_world();
 
     // from x = -5, 10 long: the unit sphere's near side at x = -1 is 4 in
     CHECK_NEAR(ctx, ray_fraction(world.sphere, {-5.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}), 0.4f, 1e-5f);
@@ -86,7 +84,7 @@ void test_narrowphase_cast_ray_goes_to_the_shapes_def(TestCtx &ctx) {
 }
 
 void test_narrowphase_cast_shape_goes_through_the_cast_table(TestCtx &ctx) {
-    NarrowphaseWorld world = make_world(ctx);
+    NarrowphaseWorld world = make_world();
 
     // a unit sphere swept from x = -5 meets the box's face at x = -1 when its centre is at -2: 3 of the 10
     CHECK_NEAR(ctx, cast_fraction(world.sphere, world.box), 0.3f, 1e-3f);
@@ -103,7 +101,7 @@ void test_narrowphase_cast_shape_goes_through_the_cast_table(TestCtx &ctx) {
 }
 
 void test_narrowphase_collide_shape_goes_through_the_collide_table(TestCtx &ctx) {
-    NarrowphaseWorld world = make_world(ctx);
+    NarrowphaseWorld world = make_world();
     const collide_shape::CollideShapeSettings settings = collide_shape::default_settings();
 
     // the unit sphere at x = 1.5 is half a unit into the box, pushed out along +x
@@ -137,7 +135,7 @@ void test_narrowphase_collide_shape_goes_through_the_collide_table(TestCtx &ctx)
 }
 
 void test_narrowphase_collide_with_internal_edge_removal(TestCtx &ctx) {
-    NarrowphaseWorld world = make_world(ctx);
+    NarrowphaseWorld world = make_world();
 
     // the caller asks for no faces and active edges only; the wrapper forces faces on, the face contact passes
     // straight through to the caller's collector with the same depth
@@ -174,7 +172,7 @@ void test_narrowphase_collide_with_internal_edge_removal(TestCtx &ctx) {
 }
 
 void test_narrowphase_collide_point_goes_to_the_shapes_def(TestCtx &ctx) {
-    NarrowphaseWorld world = make_world(ctx);
+    NarrowphaseWorld world = make_world();
 
     CHECK(ctx, point_hits(world.box, {0.5f, 0.5f, 0.5f}, {0.0f, 0.0f, 0.0f}));
     CHECK(ctx, !point_hits(world.box, {1.5f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}));

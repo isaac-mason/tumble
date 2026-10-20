@@ -34,13 +34,13 @@ struct StaticCompoundShapeSettings {
     uint32_t bvh_max_leaf_children = 4;
 };
 
-/** null (error set) when the memory cannot grow */
+/** null (error set) when the allocator fails */
 Shape *create(const StaticCompoundShapeSettings &settings);
 /** frees the shape, its child list and its bvh, not the children */
 void destroy(Shape *shape);
 /**
  * rebuilds the bvh (reordering the children, which invalidates sub shape ids taken before) and
- * recomputes bounds, centre of mass and volume. false (error set) when the memory cannot grow.
+ * recomputes bounds, centre of mass and volume. false (error set) when the allocator fails.
  */
 bool update(Shape *shape);
 

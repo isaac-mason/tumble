@@ -27,7 +27,7 @@ static float rotation_error(const FixedConstraint &constraint, const RigidBody *
 }
 
 void test_fixed_constraint_create_world_space(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 1.0f, 0.0f}, stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.7f));
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {2.0f, 1.0f, 0.0f}, stored_axis_angle(vec3f::make(1.0f, 1.0f, 0.0f), -1.1f));
     const constraint_id::ConstraintId id =
@@ -50,7 +50,7 @@ void test_fixed_constraint_create_world_space(TestCtx &ctx) {
 }
 
 void test_fixed_constraint_create_local_space(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {2.0f, 0.0f, 0.0f}, stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.5f));
 
@@ -77,7 +77,7 @@ void test_fixed_constraint_create_local_space(TestCtx &ctx) {
 }
 
 void test_fixed_constraint_auto_detect_point(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {2.0f, 0.0f, 0.0f});
     RigidBody *ground = add_body(scene, motion_type::MOTION_STATIC, {0.0f, -5.0f, 0.0f});
@@ -99,7 +99,7 @@ void test_fixed_constraint_auto_detect_point(TestCtx &ctx) {
 }
 
 void test_fixed_constraint_auto_detect_point_static(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *static_a = add_body(scene, motion_type::MOTION_STATIC, {0.0f, 0.0f, 0.0f});
     RigidBody *static_b = add_body(scene, motion_type::MOTION_STATIC, {4.0f, 0.0f, 0.0f});
 
@@ -123,7 +123,7 @@ void test_fixed_constraint_auto_detect_point_static(TestCtx &ctx) {
 
 void test_fixed_constraint_holds_pose(TestCtx &ctx) {
     // a body welded to a static one, spun, thrown and pulled by gravity, stays where it was put
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *wall = add_body(scene, motion_type::MOTION_STATIC, {0.0f, 5.0f, 0.0f});
     const Float4 rest_rotation = stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.3f);
     RigidBody *body = add_body(scene, motion_type::MOTION_DYNAMIC, {1.5f, 5.0f, 0.0f}, rest_rotation);
@@ -154,7 +154,7 @@ void test_fixed_constraint_holds_pose(TestCtx &ctx) {
 
 void test_fixed_constraint_joins_two_dynamic_bodies(TestCtx &ctx) {
     // two welded bodies thrown with spin move as one: the relative pose is kept
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.5f, 0.0f}, stored_axis_angle(vec3f::make(1.0f, 0.0f, 1.0f), 0.8f));
     const constraint_id::ConstraintId id = fixed_constraint::create(scene.constraints, scene.bodies, a, b, {.auto_detect_point = true});

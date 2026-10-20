@@ -57,7 +57,7 @@ static void unlink(ContactPairs &pairs, uint32_t handle) {
     else pairs.pairs[(uint32_t)pair.next].previous = pair.previous;
 }
 
-/** the pair of these sides, recorded this step: found, or added; repeat records this step return the same one. null when the memory cannot grow */
+/** the pair of these sides, recorded this step: found, or added; repeat records this step return the same one. null when the allocator fails */
 static ContactPair *record(ContactPairs &pairs, const Side &a, const Side &b) {
     const PairKey key = pair_key(a, b);
     const uint32_t *found = pairs.index.get(key);

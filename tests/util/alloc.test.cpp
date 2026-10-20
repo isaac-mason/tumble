@@ -1,117 +1,89 @@
-#include "tumble/instance.h"
 #include "test.h"
 #include "tumble/util/alloc.h"
-#include "tumble/util/mem.h"
+#include "tumble/util/collections.h"
+#include "tumble/util/error.h"
 #include "tumble/util/object.h"
 
-static util::HeapStats stats() {
-    util::HeapStats s;
-    util::heap_stats(&s);
-    return s;
+/** a bump allocator over a static buffer that remembers the last request and refuses once `fail` is set */
+struct Recorder {
+    alignas(64) uint8_t buffer[1 << 16];
+    size_t used;
+    size_t last_size;
+    size_t last_alignment;
+    size_t freed_bytes;
+    uint32_t frees;
+    bool fail;
+};
+
+static Recorder recorder;
+
+static void *record_allocate(size_t size, size_t alignment, void *user) {
+    Recorder &r = *static_cast<Recorder *>(user);
+    r.last_size = size;
+    r.last_alignment = alignment;
+    if (r.fail) return nullptr;
+    const size_t at = util::align_up(r.used, alignment);
+    if (at + size > sizeof(r.buffer)) return nullptr;
+    r.used = at + size;
+    return r.buffer + at;
 }
 
-void test_alloc(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
-    CHECK(ctx, util::error() == 0);
-    CHECK(ctx, stats().bytes_in_use == 0 && stats().allocations == 0);
-
-    // blocks are 16-aligned, distinct, and sized as asked
-    uint8_t *a = util::alloc<uint8_t>(100);
-    uint8_t *b = util::alloc<uint8_t>(100);
-    CHECK(ctx, a != nullptr && b != nullptr && a != b);
-    CHECK(ctx, (util::address_of(a) & 15) == 0 && (util::address_of(b) & 15) == 0);
-    CHECK(ctx, b >= a + 100 || a >= b + 100);
-    CHECK(ctx, stats().bytes_in_use == 200 && stats().allocations == 2);
-
-    // a freed block is reused: the same request lands in the same place
-    util::free(a);
-    CHECK(ctx, util::alloc<uint8_t>(100) == a);
-    // a small block serves any request of its size class (65 to 128 bytes), the last freed first
-    util::free(a);
-    util::free(b);
-    CHECK(ctx, util::alloc<uint8_t>(128) == b && util::alloc<uint8_t>(65) == a);
-    CHECK(ctx, stats().bytes_in_use == 193 && stats().allocations == 2);
-    // and a request of another class never gets it
-    util::free(a);
-    uint8_t *other = util::alloc<uint8_t>(64);
-    CHECK(ctx, other != a);
-    util::free(other);
-    util::free(b);
-    CHECK(ctx, stats().bytes_in_use == 0 && stats().allocations == 0);
-
-    // neighbours coalesce: three freed blocks, each past the small classes, make room for one as big as all of them
-    uint8_t *x = util::alloc<uint8_t>(2000);
-    uint8_t *y = util::alloc<uint8_t>(2000);
-    uint8_t *z = util::alloc<uint8_t>(2000);
-    util::free(x);
-    util::free(y);
-    util::free(z);
-    uint8_t *big = util::alloc<uint8_t>(6000);
-    CHECK(ctx, big == x);
-    util::free(big);
-
-    // new and delete run over the same heap
-    uint32_t *words = new uint32_t[64];
-    CHECK(ctx, words != nullptr && stats().allocations == 1);
-    delete[] words;
-    CHECK(ctx, stats().allocations == 0);
-
-    // the memory grows to cover what is handed out, and keeps working after
-    const uint32_t before = util::memory_bytes();
-    const uint32_t grows_before = stats().grows;
-    uint8_t *huge = util::alloc<uint8_t>(before + 1024);
-    CHECK(ctx, huge != nullptr);
-    CHECK(ctx, util::memory_bytes() >= before + 1024);
-    CHECK(ctx, stats().grows > grows_before);
-    huge[before] = 7;
-    CHECK(ctx, huge[before] == 7);
-    util::free(huge);
-
-    // the node tables grow through the heap itself: far more live blocks than the first tables hold
-    constexpr uint32_t MANY = 10000;
-    uint8_t **blocks = util::alloc<uint8_t *>(MANY);
-    bool all = true;
-    for (uint32_t i = 0; i < MANY; i++) {
-        blocks[i] = util::alloc<uint8_t>(16 + (i % 7) * 16);
-        all = all && blocks[i] != nullptr;
-    }
-    CHECK(ctx, all);
-    CHECK(ctx, stats().allocations >= MANY);
-    // free every other one so the survivors are fenced by gaps, then the rest
-    for (uint32_t i = 0; i < MANY; i += 2) util::free(blocks[i]);
-    for (uint32_t i = 1; i < MANY; i += 2) util::free(blocks[i]);
-    util::free(blocks);
-    CHECK(ctx, stats().allocations == 0 && stats().bytes_in_use == 0);
-    CHECK(ctx, util::error() == 0);
+static void record_free(void *, size_t size, void *user) {
+    Recorder &r = *static_cast<Recorder *>(user);
+    r.freed_bytes += size;
+    r.frees++;
 }
 
-void test_alloc_largest_free(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
-    // a fresh heap is one free block from the tables to the end of the address space; only its part inside the memory counts
-    const util::HeapStats fresh = stats();
-    CHECK(ctx, fresh.largest_free > 0);
-    CHECK(ctx, fresh.largest_free <= fresh.memory_bytes - fresh.bytes_in_use);
+struct alignas(64) Wide {
+    float lanes[16];
+};
 
-    // a block past the memory's end grows it, and the free block after it ends at the new end
-    constexpr uint32_t HOLE_BYTES = 4u << 20;
-    uint8_t *hole = util::alloc<uint8_t>(HOLE_BYTES);
-    CHECK(ctx, hole != nullptr);
-    const util::HeapStats grown = stats();
-    CHECK(ctx, grown.memory_bytes >= util::address_of(hole) + HOLE_BYTES);
-    CHECK(ctx, grown.largest_free == grown.memory_bytes - (util::address_of(hole) + HOLE_BYTES));
+void test_alloc_set_allocator(TestCtx &ctx) {
+    util::set_allocator({record_allocate, record_free, &recorder});
+    CHECK(ctx, util::allocated_bytes() == 0 && util::allocated_blocks() == 0);
 
-    // a block filling the rest of the memory exactly (its header included) leaves nothing free inside it
-    uint8_t *fence = util::alloc<uint8_t>(grown.largest_free - 16);
-    CHECK(ctx, fence == hole + HOLE_BYTES + 16);
-    CHECK(ctx, stats().memory_bytes == grown.memory_bytes);
-    CHECK(ctx, stats().largest_free == 0);
+    // a request reaches the allocator with its size and at least the minimum alignment
+    float *floats = util::alloc<float>(10);
+    CHECK(ctx, floats != nullptr && recorder.last_size == 40 && recorder.last_alignment == util::MIN_ALIGNMENT);
+    CHECK(ctx, util::allocated_bytes() == 40 && util::allocated_blocks() == 1);
 
-    // freeing the first block leaves a hole in the middle, block header and all, and it is the largest
-    util::free(hole);
-    CHECK(ctx, stats().largest_free == HOLE_BYTES + 16);
-    CHECK(ctx, stats().largest_free <= stats().memory_bytes - stats().bytes_in_use);
+    // a type aligned past the minimum asks for its own alignment
+    Wide *wide = util::alloc<Wide>(2);
+    CHECK(ctx, wide != nullptr && recorder.last_size == 128 && recorder.last_alignment == 64);
+    CHECK(ctx, (reinterpret_cast<uintptr_t>(wide) & 63) == 0);
 
-    util::free(fence);
-    CHECK(ctx, stats().largest_free <= stats().memory_bytes);
-    CHECK(ctx, stats().allocations == 0 && util::error() == 0);
+    // a free hands back the size the block was asked with
+    util::free(wide, 2);
+    CHECK(ctx, recorder.frees == 1 && recorder.freed_bytes == 128);
+    util::free(floats, 10);
+    CHECK(ctx, recorder.frees == 2 && recorder.freed_bytes == 168);
+    CHECK(ctx, util::allocated_bytes() == 0 && util::allocated_blocks() == 0);
+
+    // nothing to free never reaches the allocator, and zero bytes allocate nothing
+    util::free<float>(nullptr, 10);
+    CHECK(ctx, util::alloc_bytes(0) == nullptr && recorder.frees == 2 && util::error() == util::ERROR_NONE);
+
+    // create and destroy go through the same allocator, a whole object at a time
+    collections::Vec<uint32_t> *vec = util::create<collections::Vec<uint32_t>>();
+    CHECK(ctx, vec != nullptr && vec->length == 0 && recorder.last_size == sizeof(collections::Vec<uint32_t>));
+    util::destroy(vec);
+    CHECK(ctx, recorder.freed_bytes == 168 + sizeof(collections::Vec<uint32_t>));
+}
+
+void test_alloc_failure_sets_the_error(TestCtx &ctx) {
+    util::set_allocator({record_allocate, record_free, &recorder});
+    recorder.fail = true;
+    CHECK(ctx, util::alloc<float>(4) == nullptr);
+    CHECK(ctx, util::error() == util::ERROR_OUT_OF_MEMORY);
+    CHECK(ctx, util::allocated_bytes() == 0 && util::allocated_blocks() == 0);
+
+    // a container that cannot grow says so and keeps what it had
+    collections::Vec<uint32_t> vec = {};
+    CHECK(ctx, vec.push(1) == false && vec.length == 0 && vec.data == nullptr);
+
+    util::error_clear();
+    recorder.fail = false;
+    CHECK(ctx, vec.push(1) && vec.length == 1);
+    vec.release();
+    CHECK(ctx, util::allocated_bytes() == 0 && util::allocated_blocks() == 0 && util::error() == util::ERROR_NONE);
 }

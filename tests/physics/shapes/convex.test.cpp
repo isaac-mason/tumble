@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
@@ -44,7 +43,6 @@ static bool point_hits(Vec3f point, const shapes::Shape *shape, const Transformf
 /* collide */
 
 void test_convex_collide_spheres_overlapping(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *a = sphere::create({.radius = 1.0f, .material_id = 3});
     shapes::Shape *b = sphere::create({.radius = 0.5f, .material_id = 7});
@@ -84,7 +82,6 @@ void test_convex_collide_spheres_overlapping(TestCtx &ctx) {
 }
 
 void test_convex_collide_spheres_within_max_separation(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *a = sphere::create({.radius = 1.0f});
     shapes::Shape *b = sphere::create({.radius = 0.5f});
@@ -121,7 +118,6 @@ void test_convex_collide_spheres_within_max_separation(TestCtx &ctx) {
 }
 
 void test_convex_collide_box_resting_on_box_face(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // sharp boxes: the cores are the boxes, so the overlap goes to epa
     shapes::Shape *a = box::create({.half_extents = {1, 1, 1}, .convex_radius = 0.0f});
@@ -159,7 +155,6 @@ void test_convex_collide_box_resting_on_box_face(TestCtx &ctx) {
 }
 
 void test_convex_collide_rounded_boxes_posed(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // rounded boxes 0.0625 into each other: the cores stay apart, gjk's shallow path
     shapes::Shape *a = box::create({.half_extents = {1, 1, 1}});
@@ -194,7 +189,6 @@ void test_convex_collide_rounded_boxes_posed(TestCtx &ctx) {
 }
 
 void test_convex_collide_scaled(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // a 0.5 sphere at scale 2 is a unit sphere; a unit box mirrored and stretched in x is 1.5 half wide
     shapes::Shape *s = sphere::create({.radius = 0.5f});
@@ -236,7 +230,6 @@ void test_convex_collide_scaled(TestCtx &ctx) {
 }
 
 void test_convex_collide_early_out(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *a = sphere::create({.radius = 1.0f});
     shapes::Shape *b = sphere::create({.radius = 0.5f});
@@ -258,7 +251,6 @@ void test_convex_collide_early_out(TestCtx &ctx) {
 /* cast */
 
 void test_convex_cast_sphere_onto_box(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *s = sphere::create({.radius = 0.5f, .material_id = 2});
     shapes::Shape *b = box::create({.half_extents = {1, 1, 1}, .material_id = 5});
@@ -306,7 +298,6 @@ void test_convex_cast_sphere_onto_box(TestCtx &ctx) {
 }
 
 void test_convex_cast_starting_inside(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *s = sphere::create({.radius = 0.5f});
     shapes::Shape *b = box::create({.half_extents = {1, 1, 1}});
@@ -367,7 +358,6 @@ void test_convex_cast_starting_inside(TestCtx &ctx) {
 }
 
 void test_convex_cast_perpendicular_normal(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.05f});
     cast_shape::CastShapeCollector collector = cast_shape::create_collector(collector::COLLECT_ALL);
@@ -385,7 +375,6 @@ void test_convex_cast_perpendicular_normal(TestCtx &ctx) {
 }
 
 void test_convex_cast_scaled(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // a unit sphere through scale 2 against a unit box mirrored and doubled in x: the face at x = -2
     shapes::Shape *s = sphere::create({.radius = 0.5f});
@@ -418,7 +407,6 @@ void test_convex_cast_scaled(TestCtx &ctx) {
 }
 
 void test_convex_cast_early_out_prunes_farther(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *s = sphere::create({.radius = 0.5f});
     shapes::Shape *b = box::create({.half_extents = {1, 1, 1}});
@@ -453,7 +441,6 @@ void test_convex_cast_early_out_prunes_farther(TestCtx &ctx) {
 /* cast ray */
 
 void test_convex_cast_ray_sphere_and_box(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *s = sphere::create({.radius = 1.0f, .material_id = 4});
     shapes::Shape *b = box::create({.half_extents = {1, 2, 3}, .material_id = 9});
@@ -507,7 +494,6 @@ void test_convex_cast_ray_sphere_and_box(TestCtx &ctx) {
 }
 
 void test_convex_cast_ray_starting_inside(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *s = sphere::create({.radius = 1.0f});
     shapes::Shape *b = box::create({.half_extents = {1, 1, 1}});
@@ -564,7 +550,6 @@ void test_convex_cast_ray_starting_inside(TestCtx &ctx) {
 }
 
 void test_convex_cast_ray_scaled(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // a unit box mirrored and doubled in x, halved in y: half extents (2, 0.5, 1)
     shapes::Shape *b = box::create({.half_extents = {1, 1, 1}});
@@ -597,7 +582,6 @@ void test_convex_cast_ray_scaled(TestCtx &ctx) {
 /* collide point */
 
 void test_convex_collide_point(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // half extents (1, 2, 3) turned a quarter about z: 2 along x, 1 along y, 3 along z, about (1, 2, 3)
     shapes::Shape *b = box::create({.half_extents = {1, 2, 3}, .material_id = 6});

@@ -82,7 +82,7 @@ inline bool merge_sort(T *begin, T *end, Before before) {
     T *scratch = util::alloc<T>(count);
     if (scratch == nullptr) return false;
     merge_sort(begin, end, before, scratch);
-    util::free(scratch);
+    util::free(scratch, count);
     return true;
 }
 

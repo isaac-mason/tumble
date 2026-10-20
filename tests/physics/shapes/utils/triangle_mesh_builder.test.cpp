@@ -1,6 +1,5 @@
 #include "tumble/physics/shapes/utils/triangle_mesh_builder.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/scalar.h"
 #include "test.h"
 #include "test_math.h"
@@ -12,12 +11,6 @@ using triangle_mesh_data::get_active_edges;
 namespace builder = triangle_mesh_builder;
 
 static constexpr float ACTIVE_EDGE_COS_THRESHOLD_ANGLE = 0.996195f;
-
-static uint32_t heap_bytes_in_use() {
-    util::HeapStats stats;
-    util::heap_stats(&stats);
-    return stats.bytes_in_use;
-}
 
 /** sah, two triangles per leaf */
 template <uint32_t NUM_FLOATS, uint32_t NUM_INDICES>
@@ -46,7 +39,6 @@ static uint32_t built_triangle_count(const float (&positions)[NUM_FLOATS], const
 }
 
 void test_triangle_mesh_builder_basic(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // builds valid non-degenerate triangle
     {
@@ -71,7 +63,6 @@ void test_triangle_mesh_builder_basic(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_builder_degenerate_removal(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // removes collinear triangle (zero area)
     {
@@ -107,7 +98,6 @@ void test_triangle_mesh_builder_degenerate_removal(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_builder_duplicate_removal(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // removes exact duplicate triangles (same vertex order)
     {
@@ -183,7 +173,6 @@ void test_triangle_mesh_builder_duplicate_removal(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_builder_combined_removal(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // removes both degenerate and duplicate triangles
     {
@@ -217,7 +206,6 @@ void test_triangle_mesh_builder_combined_removal(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_builder_bvh(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // builds valid bvh after cleanup: the root bounds every triangle
     {
@@ -242,8 +230,7 @@ void test_triangle_mesh_builder_bvh(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_builder_edge_cases(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
-    const uint32_t before = heap_bytes_in_use();
+    const size_t before = util::allocated_bytes();
 
     // handles empty mesh
     {
@@ -282,11 +269,10 @@ void test_triangle_mesh_builder_edge_cases(TestCtx &ctx) {
     }
 
     // everything the builds allocated was given back
-    CHECK(ctx, heap_bytes_in_use() == before);
+    CHECK(ctx, util::allocated_bytes() == before);
 }
 
 void test_triangle_mesh_builder_active_edges(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // single triangle has all edges active: they are boundary edges
     {
@@ -422,7 +408,6 @@ static void check_shared_edge(TestCtx &ctx, TriangleMeshData *data, bool active)
 }
 
 void test_triangle_mesh_builder_active_edges_by_fold_angle(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // the shared edge of a flat quad is inactive
     check_shared_edge(ctx, build_fold(0, false), false);
@@ -440,7 +425,6 @@ static bool on_border(const float *a, const float *b, float side) {
 }
 
 void test_triangle_mesh_builder_flat_grid(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // a flat 10 x 10 grid in z = 0, every triangle with its own three vertices, counter clockwise from +z
     constexpr uint32_t SIDE = 10;

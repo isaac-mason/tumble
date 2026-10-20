@@ -41,7 +41,7 @@ void collide_shape_vs_shape_with_internal_edge_removal(collide_shape::CollideSha
     modified_settings.collide_only_with_active_edges = false;
     modified_settings.collect_faces = true;
 
-    // the wrapper lives for this call: a static would keep heap vectors past a util::init
+    // the wrapper lives for this call: a static would hold allocations that no world owns
     internal_edge_removing::InternalEdgeRemovingCollector wrapper = internal_edge_removing::create();
     internal_edge_removing::set(wrapper, collector, settings.internal_edge_removal_vertex_tolerance_sq);
 

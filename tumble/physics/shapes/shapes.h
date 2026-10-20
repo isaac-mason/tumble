@@ -248,7 +248,7 @@ void set_cast_shape_fn(ShapeType type_a, ShapeType type_b, CastShapeVsShapeFn fn
 inline CollideShapeVsShapeFn collide_fn(ShapeType a, ShapeType b) { return collide_table[shape_type_index(a)][shape_type_index(b)]; }
 inline CastShapeVsShapeFn cast_fn(ShapeType a, ShapeType b) { return cast_table[shape_type_index(a)][shape_type_index(b)]; }
 
-/** a zeroed shape of `type`, or null (error set) when the memory cannot grow; the type's create fills it. */
+/** a zeroed shape of `type`, or null (error set) when the allocator fails; the type's create fills it. */
 Shape *allocate(ShapeType type);
 /** frees the shape's own memory; a type's destroy frees what it points at first. */
 void release(Shape *shape);

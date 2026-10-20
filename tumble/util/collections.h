@@ -28,14 +28,14 @@ struct Vec {
         return data[i];
     }
 
-    /** room for at least `wanted`; false (error set) when the memory cannot grow. */
+    /** room for at least `wanted`; false (error set) when the allocator fails. */
     bool reserve(uint32_t wanted) {
         if (wanted <= capacity) return true;
         T *grown = util::alloc<T>(wanted);
         if (grown == nullptr) return false;
         if (data != nullptr) {
             util::copy(grown, data, length * sizeof(T));
-            util::free(data);
+            util::free(data, capacity);
         }
         data = grown;
         capacity = wanted;
@@ -49,7 +49,7 @@ struct Vec {
         if (grown == nullptr) return false;
         if (data != nullptr) {
             util::copy(grown, data, capacity * sizeof(T));
-            util::free(data);
+            util::free(data, capacity);
         }
         data = grown;
         capacity = wanted;
@@ -69,7 +69,7 @@ struct Vec {
     }
 
     void release() {
-        util::free(data);
+        util::free(data, capacity);
         data = nullptr;
         length = 0;
         capacity = 0;
@@ -111,7 +111,7 @@ struct Map {
         }
     }
 
-    /** stores value for key, replacing what was there; false (error set) when the memory cannot grow. */
+    /** stores value for key, replacing what was there; false (error set) when the allocator fails. */
     bool set(const K &key, const V &value) {
         if ((size + 1) * 2 > capacity && !grow()) return false;
         Slot &slot = probe(slots, capacity - 1, key);
@@ -145,7 +145,7 @@ struct Map {
     }
 
     void release() {
-        util::free(slots);
+        util::free(slots, capacity);
         slots = nullptr;
         capacity = 0;
         size = 0;
@@ -167,7 +167,7 @@ private:
             const Slot &slot = slots[i];
             if (slot.used) probe(table, wanted - 1, slot.key) = slot;
         }
-        util::free(slots);
+        util::free(slots, capacity);
         slots = table;
         capacity = wanted;
         return true;

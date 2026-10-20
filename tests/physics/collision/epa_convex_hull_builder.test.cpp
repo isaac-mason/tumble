@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/collision/epa_convex_hull_builder.h"
@@ -107,7 +106,6 @@ static void tetrahedron(collections::Vec<float> &positions) {
 }
 
 void test_epa_hull_initialize(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     collections::Vec<float> positions = {};
     tetrahedron(positions);
     static hull::EpaConvexHullBuilderState state;
@@ -140,7 +138,6 @@ void test_epa_hull_initialize(TestCtx &ctx) {
 }
 
 void test_epa_hull_tetrahedron_closest_face(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     collections::Vec<float> positions = {};
     tetrahedron(positions);
     static hull::EpaConvexHullBuilderState state;
@@ -213,7 +210,6 @@ void test_epa_hull_tetrahedron_closest_face(TestCtx &ctx) {
 }
 
 void test_epa_hull_add_point_replaces_seen_faces(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     collections::Vec<float> positions = {};
     tetrahedron(positions);
     // below the base: sees only the base
@@ -329,7 +325,6 @@ void test_epa_hull_add_point_replaces_seen_faces(TestCtx &ctx) {
 }
 
 void test_epa_hull_free_list_reuse(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     collections::Vec<float> positions = {};
     tetrahedron(positions);
     push_position(positions, 0.0f, 0.0f, -3.0f);

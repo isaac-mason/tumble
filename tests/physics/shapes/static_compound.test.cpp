@@ -1,6 +1,5 @@
 #include "tumble/physics/shapes/static_compound.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
@@ -47,7 +46,6 @@ static void collide_point_at(collide_point::CollidePointCollector &collector, co
 
 
 void test_static_compound_creation(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
 
     // empty
@@ -80,7 +78,6 @@ void test_static_compound_creation(TestCtx &ctx) {
 }
 
 void test_static_compound_aabb(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     const CompoundShapeChild one[] = {{{0, 0, 0}, IDENTITY, s}};
@@ -111,7 +108,6 @@ void test_static_compound_aabb(TestCtx &ctx) {
 }
 
 void test_static_compound_center_of_mass(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     const CompoundShapeChild one[] = {{{0, 0, 0}, IDENTITY, s}};
@@ -137,7 +133,6 @@ void test_static_compound_center_of_mass(TestCtx &ctx) {
 }
 
 void test_static_compound_bvh_structure(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 0.5f});
     CompoundShapeChild row[10];
@@ -191,7 +186,6 @@ void test_static_compound_bvh_structure(TestCtx &ctx) {
 }
 
 void test_static_compound_update(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     const CompoundShapeChild one[] = {{{0, 0, 0}, IDENTITY, s}};
@@ -212,7 +206,6 @@ void test_static_compound_update(TestCtx &ctx) {
 }
 
 void test_static_compound_cast_ray(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     cast_ray::CastRayCollector collector = cast_ray::create_collector(collector::COLLECT_ALL);
@@ -279,7 +272,6 @@ void test_static_compound_cast_ray(TestCtx &ctx) {
 }
 
 void test_static_compound_collide_point(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     collide_point::CollidePointCollector collector = collide_point::create_collector(collector::COLLECT_ALL);
@@ -343,7 +335,6 @@ void test_static_compound_dispatch_wiring(TestCtx &ctx) {
 }
 
 void test_static_compound_grid_cast_sphere(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.0f});
     Shape *grid = make_grid(b);
@@ -413,7 +404,6 @@ void test_static_compound_grid_cast_sphere(TestCtx &ctx) {
 }
 
 void test_static_compound_grid_collide(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
     Shape *grid = make_grid(b);
@@ -477,7 +467,6 @@ static uint32_t dyn_child_index(sub_shape::SubShapeId id) {
 }
 
 void test_static_compound_agrees_with_compound(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // the bvh walk finds what walking every child finds, for rays and points in and around a scattered set
     Shape *b = box::create({.half_extents = {0.4f, 0.7f, 0.3f}});
@@ -546,7 +535,6 @@ void test_static_compound_agrees_with_compound(TestCtx &ctx) {
 }
 
 void test_static_compound_nested(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // static compounds inside a static compound: each walk keeps its own stack and bounds
     Shape *b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
@@ -616,7 +604,6 @@ static shapes::GetSubShapeTransformedShapeResult transformed_shape_of(const Shap
 }
 
 void test_static_compound_sub_shape_id_last_of_two(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     Shape *leaf = box::create({.half_extents = {1, 1, 1}});
@@ -646,7 +633,6 @@ void test_static_compound_sub_shape_id_last_of_two(TestCtx &ctx) {
 }
 
 void test_static_compound_sub_shape_id_path_one_one(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     Shape *leaf = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
@@ -672,7 +658,6 @@ void test_static_compound_sub_shape_id_path_one_one(TestCtx &ctx) {
 }
 
 void test_static_compound_nested_rotated_surface_normal(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // outer turns its child a quarter about z, inner turns its box a quarter about x
     Shape *leaf = box::create({.half_extents = {1, 2, 3}});
@@ -691,7 +676,6 @@ void test_static_compound_nested_rotated_surface_normal(TestCtx &ctx) {
 }
 
 void test_static_compound_scaled_supporting_face(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *b = box::create({.half_extents = {1, 1, 1}});
     const CompoundShapeChild children[] = {{{-2, 0, 0}, IDENTITY, b}, {{2, 0, 0}, IDENTITY, b}};
@@ -711,7 +695,6 @@ void test_static_compound_scaled_supporting_face(TestCtx &ctx) {
 }
 
 void test_static_compound_as_a_culls_with_b_scale(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *b = box::create({.half_extents = {1, 1, 1}});
     const CompoundShapeChild children[] = {{{0, 0, 0}, IDENTITY, b}};
@@ -747,7 +730,6 @@ static bool box_contains(const Box3f &outer, const Box3f &inner) {
 }
 
 void test_static_compound_bvh_bounds_exact(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *b = box::create({.half_extents = {0.21f, 0.07f, 0.13f}, .convex_radius = 0.0f});
     CompoundShapeChild children[64];
@@ -786,7 +768,6 @@ void test_static_compound_bvh_bounds_exact(TestCtx &ctx) {
 /* material by sub shape id */
 
 void test_static_compound_material(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f, .material_id = 2});
     Shape *b = box::create({.half_extents = {1, 1, 1}, .material_id = 5});

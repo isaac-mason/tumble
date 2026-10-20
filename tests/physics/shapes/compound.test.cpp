@@ -1,6 +1,5 @@
 #include "tumble/physics/shapes/compound.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
@@ -34,7 +33,6 @@ static Shape *make_compound(const CompoundShapeChild *children, uint32_t count) 
 /* creation, bounds, centre of mass */
 
 void test_compound_aabb(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     Shape *b = box::create({.half_extents = {2, 2, 2}});
@@ -60,7 +58,6 @@ void test_compound_aabb(TestCtx &ctx) {
 }
 
 void test_compound_create(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     Shape *b = box::create({.half_extents = {1, 1, 1}});
@@ -84,17 +81,13 @@ void test_compound_create(TestCtx &ctx) {
     // destroying the compound leaves the children: freeing them afterwards gives back exactly their two blocks
     compound::destroy(c);
     compound::destroy(copy);
-    util::HeapStats with_children;
-    util::heap_stats(&with_children);
+    const size_t with_children = util::allocated_blocks();
     sphere::destroy(s);
     box::destroy(b);
-    util::HeapStats without_children;
-    util::heap_stats(&without_children);
-    CHECK(ctx, with_children.allocations - without_children.allocations == 2);
+    CHECK(ctx, with_children - util::allocated_blocks() == 2);
 }
 
 void test_compound_center_of_mass(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     Shape *b = box::create({.half_extents = {1, 1, 1}});
@@ -128,7 +121,6 @@ void test_compound_center_of_mass(TestCtx &ctx) {
 /* mass properties */
 
 void test_compound_mass_properties_parallel_axis(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // two unit spheres 4 apart: each is 2 from the centre of mass along x
     Shape *s = sphere::create({.radius = 1.0f});
@@ -168,7 +160,6 @@ void test_compound_mass_properties_parallel_axis(TestCtx &ctx) {
 }
 
 void test_compound_mass_properties_rotated_child(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // a box turned a quarter about z: its x and y inertia swap, and a single child sits on the centre of mass
     Shape *b = box::create({.half_extents = {1, 2, 3}, .convex_radius = 0.0f});
@@ -194,7 +185,6 @@ void test_compound_mass_properties_rotated_child(TestCtx &ctx) {
 /* per-shape functions through the leaf */
 
 void test_compound_inner_radius(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s5 = sphere::create({.radius = 5.0f});
     Shape *s3 = sphere::create({.radius = 3.0f});
@@ -219,7 +209,6 @@ void test_compound_inner_radius(TestCtx &ctx) {
 }
 
 void test_compound_surface_normal(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *box1 = box::create({.half_extents = {1, 1, 1}});
     Shape *box2 = box::create({.half_extents = {2, 2, 2}});
@@ -256,7 +245,6 @@ void test_compound_surface_normal(TestCtx &ctx) {
 }
 
 void test_compound_supporting_face(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Float4x4 identity;
     mat4f::store(identity, mat4f::identity());
@@ -296,7 +284,6 @@ void test_compound_supporting_face(TestCtx &ctx) {
 }
 
 void test_compound_leaf_shape(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     Shape *b = box::create({.half_extents = {1, 1, 1}});
@@ -364,7 +351,6 @@ static void collide(collide_shape::CollideShapeCollector &collector, const Shape
 }
 
 void test_compound_collide_two_boxes_vs_sphere(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *b0 = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .material_id = 3});
     Shape *b1 = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .material_id = 4});
@@ -436,7 +422,6 @@ void test_compound_collide_two_boxes_vs_sphere(TestCtx &ctx) {
 }
 
 void test_compound_cast_ray_and_point(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
     const CompoundShapeChild children[] = {{{-2, 0, 0}, IDENTITY, b}, {{2, 0, 0}, IDENTITY, b}};
@@ -478,7 +463,6 @@ void test_compound_cast_ray_and_point(TestCtx &ctx) {
 }
 
 void test_compound_cast_shape(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.0f});
     const CompoundShapeChild children[] = {{{-2, 0, 0}, IDENTITY, b}, {{2, 0, 0}, IDENTITY, b}};
@@ -514,7 +498,6 @@ void test_compound_cast_shape(TestCtx &ctx) {
 }
 
 void test_compound_nested(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
     Shape *other = box::create({.half_extents = {0.25f, 0.25f, 0.25f}});
@@ -628,7 +611,6 @@ static shapes::GetSubShapeTransformedShapeResult transformed_shape_of(const Shap
 }
 
 void test_compound_sub_shape_id_last_of_two(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     Shape *leaf = box::create({.half_extents = {1, 1, 1}});
@@ -658,7 +640,6 @@ void test_compound_sub_shape_id_last_of_two(TestCtx &ctx) {
 }
 
 void test_compound_sub_shape_id_path_one_one(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     Shape *leaf = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
@@ -698,7 +679,6 @@ void test_compound_sub_shape_id_path_one_one(TestCtx &ctx) {
 }
 
 void test_compound_nested_rotated_surface_normal(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // outer turns its child a quarter about z, inner turns its box a quarter about x
     Shape *leaf = box::create({.half_extents = {1, 2, 3}});
@@ -717,7 +697,6 @@ void test_compound_nested_rotated_surface_normal(TestCtx &ctx) {
 }
 
 void test_compound_scaled_supporting_face(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *b = box::create({.half_extents = {1, 1, 1}});
     const CompoundShapeChild children[] = {{{-2, 0, 0}, IDENTITY, b}, {{2, 0, 0}, IDENTITY, b}};
@@ -746,7 +725,6 @@ static bool point_hits(const Shape *shape, const Float3 &point, const Float3 &sc
 }
 
 void test_compound_rotated_child_under_non_uniform_scale(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // a bar long along its own x, turned to lie along y, under a scale that stretches x by 2. the scale applies in the
     // compound's space, so the bar is 1 wide in x (0.25 * 2 each side) and 2 tall in y; passed to the child unrotated it
@@ -791,7 +769,6 @@ void test_compound_rotated_child_under_non_uniform_scale(TestCtx &ctx) {
 /* material by sub shape id */
 
 void test_compound_material(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f, .material_id = 2});
     Shape *b = box::create({.half_extents = {1, 1, 1}, .material_id = 5});
@@ -832,7 +809,6 @@ void test_compound_material(TestCtx &ctx) {
 /* a child rotated by -identity is unrotated: under a non-uniform scale it sees the scale as +identity does */
 
 void test_compound_negated_identity_child_under_non_uniform_scale(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *b = box::create({.half_extents = {1, 2, 3}});
     const Float4 negated_identity = {0, 0, 0, -1};

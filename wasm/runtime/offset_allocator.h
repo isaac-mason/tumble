@@ -1,10 +1,9 @@
 // (C) Sebastian Aaltonen 2023
 // MIT License (see file: OFFSET_ALLOCATOR_LICENSE)
 //
-// https://github.com/sebbbi/OffsetAllocator, adapted for the core: no standard library, no
-// destructor (a static may not run code at exit here), and the node tables can be handed in and
-// relocated so the heap can grow its own through itself. offsets are relative to whatever range
-// the caller manages; the core's heap is one user, anything else that suballocates a range is another.
+// https://github.com/sebbbi/OffsetAllocator, adapted: no standard library, no destructor (a static
+// may not run code at exit in the wasm build), and the node tables can be handed in and relocated
+// so the heap can grow its own through itself. offsets are relative to whatever range the caller manages.
 
 #pragma once
 

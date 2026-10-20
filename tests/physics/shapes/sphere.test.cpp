@@ -1,6 +1,5 @@
 #include "tumble/physics/shapes/sphere.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/shapes/convex.h"
@@ -9,7 +8,6 @@
 #include "test_math.h"
 
 void test_sphere_create(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *s = sphere::create({.radius = 2.0f});
     CHECK(ctx, s != nullptr);
@@ -43,7 +41,6 @@ void test_sphere_create(TestCtx &ctx) {
 }
 
 void test_sphere_mass_properties(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *s = sphere::create({.radius = 1.0f});
     mass_properties::MassProperties props = mass_properties::create();
@@ -70,7 +67,6 @@ void test_sphere_mass_properties(TestCtx &ctx) {
 }
 
 void test_sphere_surface_normal_and_radius(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *s = sphere::create({.radius = 2.0f});
     CHECK(ctx, sphere::get_inner_radius(s) == 2.0f);
@@ -107,7 +103,6 @@ void test_sphere_surface_normal_and_radius(TestCtx &ctx) {
 }
 
 void test_sphere_set_support(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *s = sphere::create({.radius = 1.5f});
     support::Support sup;
@@ -154,7 +149,6 @@ void test_sphere_set_support(TestCtx &ctx) {
 /* material by sub shape id */
 
 void test_sphere_material(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // a convex shape is one leaf: the empty sub shape id names its own material
     shapes::Shape *painted = sphere::create({.radius = 1.0f, .material_id = 6});

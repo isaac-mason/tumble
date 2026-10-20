@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/shapes/box.h"
@@ -24,7 +23,6 @@ static bool vertex_is(const face::Face &face, uint32_t i, float x, float y, floa
 }
 
 void test_box_create(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *b = box::create({.half_extents = {1.0f, 2.0f, 3.0f}});
     CHECK(ctx, b != nullptr);
@@ -53,7 +51,6 @@ void test_box_create(TestCtx &ctx) {
 }
 
 void test_box_convex_radius_clamp(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // fits: kept
     shapes::Shape *b = box::create({.half_extents = {0.5f, 1.0f, 2.0f}, .convex_radius = 0.1f});
@@ -78,7 +75,6 @@ void test_box_convex_radius_clamp(TestCtx &ctx) {
 }
 
 void test_box_mass_properties(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // unit cube of half extent 1: mass 8 * density
     shapes::Shape *cube = box::create({.half_extents = {1.0f, 1.0f, 1.0f}});
@@ -102,14 +98,12 @@ void test_box_mass_properties(TestCtx &ctx) {
 }
 
 void test_box_inner_radius(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     shapes::Shape *b = box::create({.half_extents = {2.0f, 0.75f, 3.0f}});
     CHECK(ctx, box::get_inner_radius(b) == 0.75f);
     box::destroy(b);
 }
 
 void test_box_surface_normal(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::SurfaceNormalResult io;
     shapes::Shape *wide = box::create({.half_extents = {2.0f, 1.0f, 1.0f}});
@@ -142,7 +136,6 @@ void test_box_surface_normal(TestCtx &ctx) {
 }
 
 void test_box_supporting_face(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::SupportingFaceResult io;
     const Float3 unit = {1.0f, 1.0f, 1.0f};
@@ -198,7 +191,6 @@ void test_box_supporting_face(TestCtx &ctx) {
 }
 
 void test_box_set_support(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *b = box::create({.half_extents = {1.0f, 2.0f, 3.0f}, .convex_radius = 0.04f});
     support::Support s = support::create();
@@ -240,7 +232,6 @@ void test_box_set_support(TestCtx &ctx) {
 /* material by sub shape id */
 
 void test_box_material(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // a convex shape is one leaf: the empty sub shape id names its own material
     shapes::Shape *painted = box::create({.half_extents = {1, 2, 3}, .material_id = 6});

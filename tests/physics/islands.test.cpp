@@ -15,9 +15,9 @@ struct IslandScene {
     islands::Islands islands;
 };
 
-IslandScene make_island_scene(TestCtx &ctx) {
+IslandScene make_island_scene() {
     IslandScene scene;
-    scene.contact = make_contact_scene(ctx);
+    scene.contact = make_contact_scene();
     scene.constraints = constraints::create();
     scene.islands = islands::create();
     return scene;
@@ -64,7 +64,7 @@ int32_t island_of(const IslandScene &scene, const RigidBody *body) {
 }  // namespace
 
 void test_islands_link_bodies_unions_to_the_lowest(TestCtx &ctx) {
-    IslandScene scene = make_island_scene(ctx);
+    IslandScene scene = make_island_scene();
     for (uint32_t i = 0; i < 5; i++) add_sphere(scene, motion_type::MOTION_DYNAMIC, {(float)i * 3.0f, 0.0f, 0.0f});
     islands::prepare(scene.islands, scene.contact.bodies, 0);
     CHECK(ctx, scene.islands.body_links.length == 5);
@@ -92,7 +92,7 @@ void test_islands_link_bodies_unions_to_the_lowest(TestCtx &ctx) {
 }
 
 void test_islands_three_touching_bodies_one_island(TestCtx &ctx) {
-    IslandScene scene = make_island_scene(ctx);
+    IslandScene scene = make_island_scene();
     RigidBody *ground =
         add_contact_body(scene.contact, box::create({.half_extents = {20.0f, 0.5f, 20.0f}}), motion_type::MOTION_STATIC, {0.0f, -0.5f, 0.0f});
     RigidBody *a = add_sphere(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.5f, 0.0f});
@@ -133,7 +133,7 @@ void test_islands_three_touching_bodies_one_island(TestCtx &ctx) {
 }
 
 void test_islands_sleeping_body_excluded(TestCtx &ctx) {
-    IslandScene scene = make_island_scene(ctx);
+    IslandScene scene = make_island_scene();
     RigidBody *awake = add_sphere(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.5f, 0.0f});
     RigidBody *asleep = add_sphere(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.5f, 0.0f});
     rigid_body::sleep(scene.contact.bodies, asleep);
@@ -154,7 +154,7 @@ void test_islands_sleeping_body_excluded(TestCtx &ctx) {
 }
 
 void test_islands_user_constraint_links_two_islands(TestCtx &ctx) {
-    IslandScene scene = make_island_scene(ctx);
+    IslandScene scene = make_island_scene();
     RigidBody *a = add_sphere(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_sphere(scene, motion_type::MOTION_DYNAMIC, {5.0f, 0.0f, 0.0f});
     RigidBody *anchor = add_sphere(scene, motion_type::MOTION_STATIC, {0.0f, 10.0f, 0.0f});
@@ -192,7 +192,7 @@ void test_islands_user_constraint_links_two_islands(TestCtx &ctx) {
 }
 
 void test_islands_iteration_counts(TestCtx &ctx) {
-    IslandScene scene = make_island_scene(ctx);
+    IslandScene scene = make_island_scene();
     scene.contact.settings.solver.velocity_iterations = 10;
     scene.contact.settings.solver.position_iterations = 5;
 
@@ -230,7 +230,7 @@ void test_islands_iteration_counts(TestCtx &ctx) {
 }
 
 void test_islands_sorted_largest_first_and_reused(TestCtx &ctx) {
-    IslandScene scene = make_island_scene(ctx);
+    IslandScene scene = make_island_scene();
     RigidBody *lone = add_sphere(scene, motion_type::MOTION_DYNAMIC, {-10.0f, 0.0f, 0.0f});
     RigidBody *pair_a = add_sphere(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *pair_b = add_sphere(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});

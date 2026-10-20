@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "test.h"
 #include "test_rng.h"
 #include "tumble/util/alloc.h"
@@ -57,7 +56,6 @@ void test_sort_insertion_is_stable(TestCtx &ctx) {
 }
 
 void test_sort_merge_matches_insertion(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     const uint32_t max_count = 700;
     Item *merged = util::alloc<Item>(max_count);
     Item *inserted = util::alloc<Item>(max_count);

@@ -1,6 +1,5 @@
 #include "tumble/physics/shapes/empty.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/shapes/dispatch.h"
@@ -8,7 +7,6 @@
 #include "test_math.h"
 
 void test_empty_shape(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *e = empty::create();
     CHECK(ctx, e != nullptr);
@@ -48,7 +46,6 @@ void test_empty_shape(TestCtx &ctx) {
 /* material by sub shape id */
 
 void test_empty_material(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // no surface, no material
     shapes::Shape *s = empty::create();

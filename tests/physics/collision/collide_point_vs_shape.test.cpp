@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
 #include "tumble/physics/collision/collide_point_vs_shape.h"
@@ -32,7 +31,6 @@ static bool inside(const Float3 &point, const shapes::Shape *shape, const Transf
 }
 
 void test_collide_point_vs_shape_sphere(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *unit = sphere::create({.radius = 1.0f});
     shapes::Shape *two = sphere::create({.radius = 2.0f});
@@ -66,7 +64,6 @@ void test_collide_point_vs_shape_sphere(TestCtx &ctx) {
 }
 
 void test_collide_point_vs_shape_box(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *unit = box::create({.half_extents = {1, 1, 1}, .material_id = 7});
     shapes::Shape *two = box::create({.half_extents = {2, 2, 2}});
@@ -110,7 +107,6 @@ void test_collide_point_vs_shape_box(TestCtx &ctx) {
 }
 
 void test_collide_point_vs_shape_any_collector_early_out(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *unit = sphere::create({.radius = 1.0f});
     // the first hit forces the deepest possible early out, as for collide shape

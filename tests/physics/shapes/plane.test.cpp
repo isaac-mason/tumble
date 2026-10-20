@@ -1,6 +1,5 @@
 #include "tumble/physics/shapes/plane.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
@@ -59,7 +58,6 @@ static void cast(cast_shape::CastShapeCollector &collector, const cast_shape::Ca
 /* the shape */
 
 void test_plane_create(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // the normal is normalised and the constant with it, so the plane stays at y = 0.5; the defaults
     Shape *p = plane::create({.plane = {{0, 2, 0}, -1}, .material_id = 3});
@@ -97,7 +95,6 @@ void test_plane_create(TestCtx &ctx) {
 }
 
 void test_plane_supporting_face(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *p = plane::create({.plane = {{0, 1, 0}, 0}, .half_extent = 10});
     Float4x4 identity;
@@ -132,7 +129,6 @@ void test_plane_supporting_face(TestCtx &ctx) {
 /* ray */
 
 void test_plane_cast_ray(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *ground = make_ground();
     const Transformf origin = pose({0, 0, 0});
@@ -209,7 +205,6 @@ void test_plane_cast_ray(TestCtx &ctx) {
 }
 
 void test_plane_collide_point(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *ground = make_ground();
     CHECK(ctx, point_inside(ground, pose({0, 0, 0}), {0, -0.1f, 0}));
@@ -235,7 +230,6 @@ void test_plane_collide_point(TestCtx &ctx) {
 /* collide */
 
 void test_plane_collide_sphere_and_box(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *ground = make_ground();
     Shape *s = sphere::create({.radius = 1.0f});
@@ -308,7 +302,6 @@ void test_plane_collide_sphere_and_box(TestCtx &ctx) {
 }
 
 void test_plane_collide_faces(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *ground = make_ground(2);
     Shape *b = box::create({.half_extents = {1, 1, 1}, .material_id = 7});
@@ -341,7 +334,6 @@ void test_plane_collide_faces(TestCtx &ctx) {
 /* cast */
 
 void test_plane_cast_sphere_at_a_pose(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *ground = make_ground();
     Shape *s = sphere::create({.radius = 1.0f});
@@ -419,7 +411,6 @@ void test_plane_cast_sphere_at_a_pose(TestCtx &ctx) {
 }
 
 void test_plane_cast_box_faces_at_a_pose(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // a unit box at (0, 2, 0) cast +10 x onto the turned plane at x = 4: its +x face travels from 1 to 4, and both faces
     // lie on the plane at the hit
@@ -446,7 +437,6 @@ void test_plane_cast_box_faces_at_a_pose(TestCtx &ctx) {
 }
 
 void test_plane_reversed_cast(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // the plane swept +5 in y meets the bottom of a radius 0.5 sphere at (0, 3, 0) (y = 2.5) at fraction 0.5; the hit
     // comes back in the plane-first order
@@ -498,7 +488,6 @@ void test_plane_dispatch_rows(TestCtx &ctx) {
 /* material by sub shape id */
 
 void test_plane_material(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *painted = plane::create({.material_id = 4});
     Shape *plain = plane::create({});

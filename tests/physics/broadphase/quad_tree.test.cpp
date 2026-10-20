@@ -1,7 +1,6 @@
 #include "tumble/physics/broadphase/quad_tree.h"
 #include "tumble/math/aabox.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/body/bodies.h"
 #include "tumble/physics/body/rigid_body.h"
@@ -186,7 +185,6 @@ bool tree_valid(World &world, uint32_t *max_depth = nullptr) {
 }  // namespace
 
 void test_quad_tree_add(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     World world = make_world();
     quad_tree::QuadTree &tree = world.tree;
     Box3f all;
@@ -220,7 +218,6 @@ void test_quad_tree_add(TestCtx &ctx) {
 }
 
 void test_quad_tree_rebuild(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     World world = make_world();
     make_grid(world, 8, 8);
     quad_tree::QuadTree &tree = world.tree;
@@ -268,7 +265,6 @@ void test_quad_tree_rebuild(TestCtx &ctx) {
 }
 
 void test_quad_tree_update(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     World world = make_world();
     make_grid(world, 6, 2);
     quad_tree::QuadTree &tree = world.tree;
@@ -301,7 +297,6 @@ void test_quad_tree_update(TestCtx &ctx) {
 }
 
 void test_quad_tree_queries(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     World world = make_world();
     make_grid(world, 5, 5);
     quad_tree::rebuild(world.tree, world.bodies);
@@ -405,7 +400,6 @@ bool boxes_overlap(const Box3f &a, const Box3f &b) {
 }
 
 void test_quad_tree_agrees_with_brute_force(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     World world = make_world();
     Visits *visits = new_visits();
     uint32_t seed = 4242;

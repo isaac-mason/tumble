@@ -1,6 +1,5 @@
 #include "tumble/physics/shapes/capsule.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
@@ -10,7 +9,6 @@
 #include "test_math.h"
 
 void test_capsule_create(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *c = capsule::create({.half_height_of_cylinder = 2.0f, .radius = 0.5f});
     CHECK(ctx, c != nullptr);
@@ -54,7 +52,6 @@ static void expected_inertia(float h, float r, float density, float &i_xx_zz, fl
 }
 
 void test_capsule_mass_properties(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *c = capsule::create({.half_height_of_cylinder = 1.0f, .radius = 1.0f});
     mass_properties::MassProperties props = mass_properties::create();
@@ -109,7 +106,6 @@ void test_capsule_mass_properties(TestCtx &ctx) {
 }
 
 void test_capsule_surface_normal(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *c = capsule::create({.half_height_of_cylinder = 1.0f, .radius = 0.5f});
     shapes::SurfaceNormalResult io;
@@ -144,7 +140,6 @@ void test_capsule_surface_normal(TestCtx &ctx) {
 }
 
 void test_capsule_supporting_face(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *c = capsule::create({.half_height_of_cylinder = 1.0f, .radius = 0.5f});
     shapes::SupportingFaceResult io;
@@ -193,7 +188,6 @@ void test_capsule_supporting_face(TestCtx &ctx) {
 }
 
 void test_capsule_set_support(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     shapes::Shape *c = capsule::create({.half_height_of_cylinder = 1.0f, .radius = 0.5f});
     support::Support sup;
@@ -244,7 +238,6 @@ void test_capsule_set_support(TestCtx &ctx) {
 /* material by sub shape id */
 
 void test_capsule_material(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // a convex shape is one leaf: the empty sub shape id names its own material
     shapes::Shape *painted = capsule::create({.half_height_of_cylinder = 1.0f, .radius = 0.5f, .material_id = 6});

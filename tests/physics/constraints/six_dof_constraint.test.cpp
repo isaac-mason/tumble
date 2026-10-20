@@ -46,7 +46,7 @@ static float relative_angle(const RigidBody *a, const RigidBody *b) {
 }
 
 void test_six_dof_constraint_create(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f}, stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), scalar::PI / 2.0f));
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {2.0f, 0.0f, 0.0f}, stored_axis_angle(vec3f::make(1.0f, 1.0f, 0.0f), 0.6f));
 
@@ -103,7 +103,7 @@ void test_six_dof_constraint_create(TestCtx &ctx) {
 }
 
 void test_six_dof_constraint_setters(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     SixDOFConstraint *constraint = make_joint(scene, ball, {});
 
@@ -146,7 +146,7 @@ void test_six_dof_constraint_setters(TestCtx &ctx) {
 void test_six_dof_constraint_translation_locked_is_a_point_constraint(TestCtx &ctx) {
     // two pendulums kicked the same way, one on a point constraint and one on a six dof with only translation
     // locked: they swing alike
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     const Float3 offset = {5.0f, 0.0f, 0.0f};
     const Float3 pivot = {0.0f, 10.0f, 0.0f};
     const Float3 pivot2 = {5.0f, 10.0f, 0.0f};
@@ -185,7 +185,7 @@ void test_six_dof_constraint_translation_locked_is_a_point_constraint(TestCtx &c
 
 void test_six_dof_constraint_all_locked_is_a_fixed_constraint(TestCtx &ctx) {
     // two bodies welded to a static base by a fixed constraint and by a six dof with every axis locked
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     const Float3 offset = {5.0f, 0.0f, 0.0f};
     const Float4 tilt = stored_axis_angle(vec3f::make(0.0f, 1.0f, 1.0f), 0.3f);
     RigidBody *base = add_body(scene, motion_type::MOTION_STATIC, {0.0f, 10.0f, 0.0f});
@@ -233,7 +233,7 @@ void test_six_dof_constraint_all_locked_is_a_fixed_constraint(TestCtx &ctx) {
 
 void test_six_dof_constraint_limited_translation(TestCtx &ctx) {
     // a slider along x with limits, every other axis locked
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     SixDOFConstraintSettings settings = translation_fixed_settings(ZERO);
     settings.limit_min[0] = -0.2f;
     settings.limit_max[0] = 0.3f;
@@ -269,7 +269,7 @@ void test_six_dof_constraint_limited_translation(TestCtx &ctx) {
 
 void test_six_dof_constraint_swing_limits(TestCtx &ctx) {
     // translation locked, swing held to a 0.4 radian cone, twist free
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     SixDOFConstraintSettings settings = translation_fixed_settings(ZERO);
     settings.limit_max[4] = 0.4f;
     settings.limit_max[5] = 0.4f;
@@ -294,7 +294,7 @@ void test_six_dof_constraint_swing_limits(TestCtx &ctx) {
 }
 
 void test_six_dof_constraint_motors(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
 
     // a velocity motor on the free x axis, every other axis locked
     SixDOFConstraintSettings settings = translation_fixed_settings(ZERO);
@@ -343,7 +343,7 @@ static SixDOFConstraintSettings all_fixed_settings() {
 }
 
 void test_six_dof_constraint_solve_velocity_reports_impulses(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     SixDOFConstraint *fixed = make_joint(scene, ball, all_fixed_settings());
     ball->motion_properties.linear_velocity = {1.0f, 0.0f, 0.0f};
@@ -361,7 +361,7 @@ void test_six_dof_constraint_solve_velocity_reports_impulses(TestCtx &ctx) {
 }
 
 void test_six_dof_constraint_axis_set_change_clears_warm_start(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     SixDOFConstraint *constraint = make_joint(scene, ball, all_fixed_settings());
     ball->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
@@ -382,7 +382,7 @@ void test_six_dof_constraint_axis_set_change_clears_warm_start(TestCtx &ctx) {
 void test_six_dof_constraint_runtime_fixed_and_free_axes(TestCtx &ctx) {
     // a translation axis made fixed at runtime is fixed at 0, and the position solve pulls it there
     {
-        ConstraintScene scene = make_constraint_scene(ctx);
+        ConstraintScene scene = make_constraint_scene();
         RigidBody *ball = nullptr;
         SixDOFConstraint *constraint = make_joint(scene, ball, {});
         ball->center_of_mass_position.x = 2.0f;
@@ -395,7 +395,7 @@ void test_six_dof_constraint_runtime_fixed_and_free_axes(TestCtx &ctx) {
 
     // a rotation axis made free or fixed at runtime reaches the swing twist part
     {
-        ConstraintScene scene = make_constraint_scene(ctx);
+        ConstraintScene scene = make_constraint_scene();
         RigidBody *ball = nullptr;
         SixDOFConstraintSettings settings;
         settings.limit_min[six_dof_constraint::ROTATION_X] = -0.5f;
@@ -418,7 +418,7 @@ void test_six_dof_constraint_runtime_fixed_and_free_axes(TestCtx &ctx) {
 }
 
 void test_six_dof_constraint_position_solve_uses_fresh_rotations(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *base = add_body(scene, motion_type::MOTION_STATIC, ZERO);
     RigidBody *ball = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
     SixDOFConstraintSettings settings = all_fixed_settings();
@@ -441,7 +441,7 @@ void test_six_dof_constraint_position_solve_uses_fresh_rotations(TestCtx &ctx) {
 }
 
 void test_six_dof_constraint_fixed_rotation_offsets_euler_zyx(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     SixDOFConstraintSettings settings = all_fixed_settings();
     settings.swing_type = swing_twist_constraint_part::PYRAMID;
@@ -460,7 +460,7 @@ void test_six_dof_constraint_fixed_rotation_offsets_euler_zyx(TestCtx &ctx) {
 void test_six_dof_constraint_motor_limits_and_targets(TestCtx &ctx) {
     // rotation motors are limited by the torque limits, translation motors by the force limits
     {
-        ConstraintScene scene = make_constraint_scene(ctx);
+        ConstraintScene scene = make_constraint_scene();
         RigidBody *ball = nullptr;
         SixDOFConstraintSettings settings;
         settings.motor_settings[six_dof_constraint::ROTATION_X].min_torque_limit = -3.0f;
@@ -482,7 +482,7 @@ void test_six_dof_constraint_motor_limits_and_targets(TestCtx &ctx) {
 
     // a target orientation inside the limits is kept as given, here with w < 0
     {
-        ConstraintScene scene = make_constraint_scene(ctx);
+        ConstraintScene scene = make_constraint_scene();
         RigidBody *ball = nullptr;
         SixDOFConstraint *constraint = make_joint(scene, ball, {});
         const Quatf orientation = quatf::scale(axis_angle(vec3f::make(1.0f, 2.0f, 3.0f), 0.2f), -1.0f);
@@ -494,7 +494,7 @@ void test_six_dof_constraint_motor_limits_and_targets(TestCtx &ctx) {
     // a position motor on x keeps the twist about x of a near half turn about y, a quarter turn though its
     // unnormalized length is tiny (2e-12)
     {
-        ConstraintScene scene = make_constraint_scene(ctx);
+        ConstraintScene scene = make_constraint_scene();
         RigidBody *ball = nullptr;
         SixDOFConstraint *constraint = make_joint(scene, ball, {});
         six_dof_constraint::set_motor_state(*constraint, six_dof_constraint::ROTATION_X, motor_settings::POSITION);
@@ -506,7 +506,7 @@ void test_six_dof_constraint_motor_limits_and_targets(TestCtx &ctx) {
 }
 
 void test_six_dof_constraint_position_and_velocity_motors(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     SixDOFConstraintSettings settings;
     // a damping only spring on translation x: dt c / m = 1 halves the target

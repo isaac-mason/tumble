@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/shapes/utils/convex_hull_builder.h"
@@ -129,7 +128,6 @@ static bool has_face(const hull::ConvexHullBuilder &builder, int32_t a, int32_t 
 }
 
 void test_convex_hull_builder_degenerate(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     // too few points / coinciding points should be degenerate
     const Vec3f positions[4] = {
         vec3f::make(1, 2, 3), vec3f::make(1 + 0.5f * TOLERANCE, 2, 3), vec3f::make(1, 2 + 0.5f * TOLERANCE, 3), vec3f::make(1, 2, 3 + 0.5f * TOLERANCE)};
@@ -153,7 +151,6 @@ void test_convex_hull_builder_degenerate(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_line_is_degenerate(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     Vec3f positions[11];
     for (int32_t i = 0; i <= 10; i++) positions[i] = vec3f::make(0.1f * (float)i, 0.0f, 0.0f);
 
@@ -173,7 +170,6 @@ void test_convex_hull_builder_line_is_degenerate(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_triangle(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     const Vec3f positions[3] = {vec3f::make(-1, 0, -1), vec3f::make(1, 0, -1), vec3f::make(-1, 0, 1)};
 
     hull::ConvexHullBuilder builder = hull::create(positions, 3);
@@ -193,7 +189,6 @@ void test_convex_hull_builder_triangle(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_quad_with_interior_points(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     Vec3f positions[100];
     for (int32_t x = 0; x < 10; ++x) {
         for (int32_t z = 0; z < 10; ++z) positions[x * 10 + z] = vec3f::make(0.1f * (float)x, 0.0f, 0.2f * (float)z);
@@ -210,7 +205,6 @@ void test_convex_hull_builder_quad_with_interior_points(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_disc_with_interior_points(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     Vec3f positions[100];
     for (int32_t r = 0; r < 10; ++r) {
         for (int32_t phi = 0; phi < 10; ++phi) {
@@ -233,7 +227,6 @@ void test_convex_hull_builder_disc_with_interior_points(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_cube_with_interior_points(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     Vec3f positions[1000];
     for (int32_t x = 0; x < 10; ++x) {
         for (int32_t y = 0; y < 10; ++y) {
@@ -257,7 +250,6 @@ void test_convex_hull_builder_cube_with_interior_points(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_cube_corners_and_interior(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     // the eight corners of a box centred at (1, -2, 0.5) with interior points mixed in
     const Float3 center = {1.0f, -2.0f, 0.5f};
     const Float3 half = {1.0f, 0.5f, 2.0f};
@@ -301,7 +293,6 @@ void test_convex_hull_builder_cube_corners_and_interior(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_tetrahedron_and_octahedron(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     const Vec3f tetrahedron[4] = {vec3f::make(0, 0, 0), vec3f::make(1, 0, 0), vec3f::make(0, 1, 0), vec3f::make(0, 0, 1)};
     hull::ConvexHullBuilder builder = hull::create(tetrahedron, 4);
     CHECK(ctx, hull::initialize(builder, 100, 1e-4f) == hull::SUCCESS);
@@ -344,7 +335,6 @@ void test_convex_hull_builder_tetrahedron_and_octahedron(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_sphere_with_interior_points(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     static Vec3f positions[1000];
     for (int32_t r = 0; r < 10; ++r) {
         for (int32_t phi = 0; phi < 10; ++phi) {
@@ -375,7 +365,6 @@ void test_convex_hull_builder_sphere_with_interior_points(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_nearly_coplanar_faces(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     // hull with 2 faces that are nearly coplanar
     const Vec3f two_faces[8] = {
         vec3f::make(-0.020472288f, -0.195635557f, 0.308015466f), vec3f::make(0.136248738f, 0.633286834f, 0.135366619f),
@@ -413,7 +402,6 @@ void test_convex_hull_builder_nearly_coplanar_faces(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_random_cloud(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     uint32_t rng = 3;
     Vec3f positions[200];
     hull::ConvexHullBuilder builder = hull::create(positions, 200);
@@ -463,7 +451,6 @@ void test_convex_hull_builder_random_cloud(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_max_vertices(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     // points on a sphere, capped at 12 hull vertices
     uint32_t rng = 5;
     Vec3f positions[100];
@@ -485,7 +472,6 @@ void test_convex_hull_builder_max_vertices(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_contains_face(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     const Vec3f positions[4] = {vec3f::make(0, 0, 0), vec3f::make(1, 0, 0), vec3f::make(0, 1, 0), vec3f::make(0, 0, 1)};
     hull::ConvexHullBuilder builder = hull::create(positions, 4);
     CHECK(ctx, hull::initialize(builder, 100, 1e-4f) == hull::SUCCESS);
@@ -506,7 +492,6 @@ void test_convex_hull_builder_contains_face(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_center_of_mass_and_volume(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     // unit cube centered at origin
     const Vec3f cube[8] = {vec3f::make(-0.5f, -0.5f, -0.5f), vec3f::make(0.5f, -0.5f, -0.5f), vec3f::make(0.5f, 0.5f, -0.5f), vec3f::make(-0.5f, 0.5f, -0.5f),
                            vec3f::make(-0.5f, -0.5f, 0.5f),  vec3f::make(0.5f, -0.5f, 0.5f),  vec3f::make(0.5f, 0.5f, 0.5f),  vec3f::make(-0.5f, 0.5f, 0.5f)};
@@ -548,7 +533,6 @@ void test_convex_hull_builder_center_of_mass_and_volume(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_determine_max_error(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     // a cube with an interior point: every point is on or inside the hull
     const Vec3f positions[9] = {vec3f::make(-1, -1, -1), vec3f::make(1, -1, -1), vec3f::make(1, 1, -1), vec3f::make(-1, 1, -1), vec3f::make(-1, -1, 1),
                                 vec3f::make(1, -1, 1),   vec3f::make(1, 1, 1),   vec3f::make(-1, 1, 1),  vec3f::make(0, 0, 0)};

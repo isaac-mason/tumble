@@ -1,6 +1,5 @@
 #include "tumble/physics/manifold/manifold.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
@@ -148,7 +147,6 @@ void test_manifold_between_two_faces_square_vs_edge_swaps(TestCtx &ctx) {
 }
 
 void test_manifold_capsule_along_box_top(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // a 2 m box at the origin, and a capsule (radius 0.5, cylinder half height 0.5) turned to lie along x, its bottom
     // line sunk 0.1 into the box's top face
@@ -182,7 +180,6 @@ void test_manifold_capsule_along_box_top(TestCtx &ctx) {
 }
 
 void test_manifold_two_boxes_face_to_face(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // a 2 m box at the origin, a 1 m box on it, 0.25 off centre in x and sunk 0.1 into its top face
     shapes::Shape *box_a = box::create({.half_extents = {1, 1, 1}});

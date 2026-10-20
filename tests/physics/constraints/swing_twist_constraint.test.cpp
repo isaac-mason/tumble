@@ -38,7 +38,7 @@ static SwingTwistConstraint *make_joint(ConstraintScene &scene, RigidBody *&ball
 }
 
 void test_swing_twist_constraint_create(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f}, stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), scalar::PI / 2.0f));
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, -2.0f, 0.0f}, stored_axis_angle(vec3f::make(1.0f, 1.0f, 0.0f), 0.6f));
 
@@ -98,7 +98,7 @@ void test_swing_twist_constraint_create(TestCtx &ctx) {
 }
 
 void test_swing_twist_constraint_target_orientation(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     SwingTwistConstraint *constraint = make_joint(scene, ball,
                                                   {.normal_half_cone_angle = 0.4f,
@@ -135,7 +135,7 @@ void test_swing_twist_constraint_target_orientation(TestCtx &ctx) {
 }
 
 void test_swing_twist_constraint_clamps_swing(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     const SwingTwistConstraint *constraint = make_joint(scene, ball,
                                                         {.normal_half_cone_angle = 0.4f,
@@ -165,7 +165,7 @@ void test_swing_twist_constraint_clamps_swing(TestCtx &ctx) {
 }
 
 void test_swing_twist_constraint_clamps_twist(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     const SwingTwistConstraint *constraint = make_joint(scene, ball,
                                                         {.normal_half_cone_angle = 0.4f,
@@ -203,7 +203,7 @@ void test_swing_twist_constraint_clamps_twist(TestCtx &ctx) {
 
 void test_swing_twist_constraint_pendulum(TestCtx &ctx) {
     // a ball on a rod held to a 20 degree cone about straight down with a little twist, kicked over the top
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *pivot = add_body(scene, motion_type::MOTION_STATIC, {0.0f, 10.0f, 0.0f});
     RigidBody *ball = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 9.0f, 0.0f});
     const Float3 pivot_point = {0.0f, 10.0f, 0.0f};
@@ -245,7 +245,7 @@ void test_swing_twist_constraint_pendulum(TestCtx &ctx) {
 }
 
 void test_swing_twist_constraint_twist_motor_and_friction(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     SwingTwistConstraint *constraint = make_joint(scene, ball,
                                                   {.normal_half_cone_angle = 0.4f,
@@ -273,7 +273,7 @@ void test_swing_twist_constraint_twist_motor_and_friction(TestCtx &ctx) {
 }
 
 void test_swing_twist_constraint_position_and_velocity_motors(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *base = add_body(scene, motion_type::MOTION_STATIC, {0.0f, 0.0f, 0.0f});
     RigidBody *ball = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     swing_twist_constraint::SwingTwistConstraintSettings settings;

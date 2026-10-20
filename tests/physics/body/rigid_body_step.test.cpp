@@ -4,7 +4,6 @@
 #include "tumble/physics/body/rigid_body.h"
 #include "tumble/physics/body/rigid_body_step.h"
 #include "tumble/physics/shapes/box.h"
-#include "tumble/instance.h"
 #include "test.h"
 #include "test_math.h"
 
@@ -69,7 +68,6 @@ void test_rigid_body_step_rotation(TestCtx &ctx) {
 void test_rigid_body_step_derive_transform(TestCtx &ctx) {
     // a box whose centre of mass sits off its origin: position is the centre of mass minus the
     // rotated offset, and the aabb follows the derived position
-    CHECK(ctx, util::init(test_heap_begin()));
     shapes::Shape *shape = box::create({.half_extents = {1.0f, 0.5f, 0.5f}});
     shape->center_of_mass = {1.0f, 0.0f, 0.0f};
     RigidBody body = make_body(dof::DOF_ALL);

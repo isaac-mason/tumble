@@ -1,6 +1,5 @@
 #include "tumble/physics/shapes/scaled.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
@@ -44,7 +43,6 @@ static bool point_inside(const Shape *shape, const Transformf &transform, const 
 /* creation, bounds, centre of mass, volume */
 
 void test_scaled_create_and_aabb(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     Shape *ss = scaled::create({.shape = s, .scale = {2, 3, 4}});
@@ -68,7 +66,6 @@ void test_scaled_create_and_aabb(TestCtx &ctx) {
 }
 
 void test_scaled_offset_inner_shape(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // an inner shape whose centre of mass and bounds sit off the origin: a unit box moved to (1, 1, 1)
     Shape *s = box::create({.half_extents = {1, 1, 1}});
@@ -97,7 +94,6 @@ void test_scaled_offset_inner_shape(TestCtx &ctx) {
 }
 
 void test_scaled_mass_properties(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
 
     // a unit box scaled (2, 1, 1) is a (2, 1, 1) box
@@ -129,7 +125,6 @@ void test_scaled_mass_properties(TestCtx &ctx) {
 }
 
 void test_scaled_inner_radius_and_leaf(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 10.0f});
 
@@ -162,7 +157,6 @@ void test_scaled_inner_radius_and_leaf(TestCtx &ctx) {
 /* surface normal and supporting face */
 
 void test_scaled_surface_normal(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Float3 normal;
 
@@ -192,7 +186,6 @@ void test_scaled_surface_normal(TestCtx &ctx) {
 }
 
 void test_scaled_supporting_face(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Float4x4 identity;
     mat4f::store(identity, mat4f::identity());
@@ -252,7 +245,6 @@ void test_scaled_supporting_face(TestCtx &ctx) {
 /* ray and point */
 
 void test_scaled_cast_ray(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
 
     // a unit sphere scaled by 2 at x = 5: its surface at 3
@@ -285,7 +277,6 @@ void test_scaled_cast_ray(TestCtx &ctx) {
 }
 
 void test_scaled_collide_point(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     Shape *ss = scaled::create({.shape = s, .scale = {2, 2, 2}});
@@ -307,7 +298,6 @@ void test_scaled_collide_point(TestCtx &ctx) {
 /* collide and cast through dispatch */
 
 void test_scaled_sphere_and_box_vs_sphere(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     collide_shape::CollideShapeCollector collector = collide_shape::create_collector(collector::COLLECT_ALL);
@@ -390,7 +380,6 @@ void test_scaled_dispatch_rows(TestCtx &ctx) {
 /* material by sub shape id */
 
 void test_scaled_material(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // through the inner shape, sub shape id and all
     Shape *b = box::create({.half_extents = {1, 1, 1}, .material_id = 6});

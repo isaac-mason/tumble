@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/collision/cast_ray_vs_shape.h"
@@ -60,7 +59,6 @@ static uint32_t collide_visits(const Shape *ball, const Shape *shape, uint32_t n
 }
 
 void test_compound_culling_ray(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *cube = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.0f});
     Shape *many = row(cube, 8);
@@ -77,7 +75,6 @@ void test_compound_culling_ray(TestCtx &ctx) {
 }
 
 void test_compound_culling_collide(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *ball = sphere::create({.radius = 0.5f});
     const CompoundShapeChild inner_children[] = {{{0, 0, 0}, IDENTITY, ball}};
@@ -93,7 +90,6 @@ void test_compound_culling_collide(TestCtx &ctx) {
 }
 
 void test_compound_culling_cast(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *ball = sphere::create({.radius = 0.5f});
     Shape *many = row(ball, 8);

@@ -1,4 +1,4 @@
-#include "tumble/instance.h"
+#include "tumble/util/error.h"
 #include "test.h"
 #include "tumble/util/collections.h"
 
@@ -11,7 +11,6 @@ struct Key3 {
 inline uint32_t hash_of(const Key3 &k) { return (uint32_t)(k.x + k.y * 3 + k.z * 5) & 7; }
 
 void test_collections(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // a zeroed Vec is empty; push grows it; swap_remove keeps the rest
     collections::Vec<uint32_t> v = {};

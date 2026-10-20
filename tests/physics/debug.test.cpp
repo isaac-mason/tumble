@@ -84,7 +84,6 @@ Float3 max_abs_extent(const debug::DebugBuffers &buffers) {
 }  // namespace
 
 void test_debug_buffers_start_empty_and_clear(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     debug::DebugBuffers *buffers = debug::create();
     CHECK(ctx, buffers != nullptr);
@@ -102,7 +101,6 @@ void test_debug_buffers_start_empty_and_clear(TestCtx &ctx) {
 }
 
 void test_debug_shape_line_counts_per_type(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     debug::DebugBuffers *buffers = debug::create();
 
@@ -144,7 +142,6 @@ void test_debug_shape_line_counts_per_type(TestCtx &ctx) {
 }
 
 void test_debug_box_corners_under_pose(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     debug::DebugBuffers *buffers = debug::create();
     shapes::Shape *box_shape = box::create({.half_extents = {1.0f, 2.0f, 3.0f}});
@@ -168,7 +165,6 @@ void test_debug_box_corners_under_pose(TestCtx &ctx) {
 }
 
 void test_debug_round_shapes_lie_on_their_surface(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     debug::DebugBuffers *buffers = debug::create();
     const Float3 center = {1.0f, 2.0f, 3.0f};
@@ -198,7 +194,6 @@ void test_debug_round_shapes_lie_on_their_surface(TestCtx &ctx) {
 }
 
 void test_debug_wrappers_carry_scale_and_offset(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     debug::DebugBuffers *buffers = debug::create();
     shapes::Shape *unit_box = box::create({.half_extents = {1.0f, 1.0f, 1.0f}});

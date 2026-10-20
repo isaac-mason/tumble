@@ -21,7 +21,7 @@ struct TriangleMeshShapeSettings {
     int32_t material_id = -1;
 };
 
-/** a shape over a built mesh; null when the memory cannot grow */
+/** a shape over a built mesh; null when the allocator fails */
 Shape *create(const TriangleMeshShapeSettings &settings);
 /** frees the shape, not the mesh it borrows */
 void destroy(Shape *shape);

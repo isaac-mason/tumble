@@ -3,10 +3,8 @@
 #include "tumble/util/object.h"
 #include "test.h"
 #include "test_math.h"
-#include "tumble/instance.h"
 
 void test_bodies_slots(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     bodies::Bodies pool = bodies::init();
     CHECK(ctx, pool.pool.length == 0 && pool.active_body_count == 0 && pool.step_stamp == 0);
 
@@ -59,7 +57,6 @@ void test_bodies_slots(TestCtx &ctx) {
 }
 
 void test_bodies_sequence_wraps(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     bodies::Bodies pool = bodies::init();
     // each reuse of a slot bumps its sequence, so an id the slot's last body had stops naming the next; it wraps at 8 bits
     body_id::BodyId previous = bodies::add_slot(pool);

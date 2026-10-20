@@ -17,7 +17,7 @@ static float swing_angle(const ConeConstraint &constraint, const RigidBody *a, c
 }
 
 void test_cone_constraint_create(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     const Float4 turn = stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), scalar::PI / 2.0f);
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f}, turn);
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {2.0f, 0.0f, 0.0f});
@@ -53,7 +53,7 @@ void test_cone_constraint_create(TestCtx &ctx) {
 }
 
 void test_cone_constraint_half_cone_angle(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
     ConeConstraint *constraint =
@@ -70,7 +70,7 @@ void test_cone_constraint_half_cone_angle(TestCtx &ctx) {
 }
 
 void test_cone_constraint_rotation_axis_from_a_tiny_cross(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
     ConeConstraint *constraint = cone_constraint::get(
@@ -93,7 +93,7 @@ void test_cone_constraint_rotation_axis_from_a_tiny_cross(TestCtx &ctx) {
 
 void test_cone_constraint_clamps_swing(TestCtx &ctx) {
     // a ball held at its center to a static body, spun about z (a swing of its +x twist axis) inside a 30 degree cone
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *base = add_body(scene, motion_type::MOTION_STATIC, {0.0f, 0.0f, 0.0f});
     RigidBody *ball = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     const float half_cone = scalar::PI / 6.0f;
@@ -122,7 +122,7 @@ void test_cone_constraint_clamps_swing(TestCtx &ctx) {
 
 void test_cone_constraint_leaves_twist_free(TestCtx &ctx) {
     // spinning about the twist axis itself never leaves the cone, so nothing slows it
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *base = add_body(scene, motion_type::MOTION_STATIC, {0.0f, 0.0f, 0.0f});
     RigidBody *ball = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     const constraint_id::ConstraintId id = cone_constraint::create(scene.constraints, scene.bodies, base, ball,
@@ -139,7 +139,7 @@ void test_cone_constraint_leaves_twist_free(TestCtx &ctx) {
 
 void test_cone_constraint_pendulum(TestCtx &ctx) {
     // a pendulum kicked hard enough to go over the top, held to a 20 degree cone about straight down
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *pivot = add_body(scene, motion_type::MOTION_STATIC, {0.0f, 10.0f, 0.0f});
     RigidBody *ball = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 9.0f, 0.0f});
     const float half_cone = 20.0f * scalar::DEGREES_TO_RADIANS;

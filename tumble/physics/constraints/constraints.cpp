@@ -1,6 +1,6 @@
 #include "tumble/physics/constraints/constraints.h"
 
-#include "tumble/instance.h"
+#include "tumble/util/error.h"
 #include "tumble/physics/body/motion_type.h"
 #include "tumble/physics/body/rigid_body.h"
 #include "tumble/physics/constraints/cone_constraint.h"

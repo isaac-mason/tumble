@@ -31,7 +31,7 @@ static SliderConstraint *make_rail(ConstraintScene &scene, RigidBody *&ball, con
 static float rotation_angle(const RigidBody *body) { return 2.0f * scalar::acos(scalar::min(1.0f, scalar::abs(body->quaternion.w))); }
 
 void test_slider_constraint_create(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f}, stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), scalar::PI / 2.0f));
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {2.0f, 0.0f, 0.0f}, stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.4f));
 
@@ -86,7 +86,7 @@ void test_slider_constraint_create(TestCtx &ctx) {
 }
 
 void test_slider_constraint_setters(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     SliderConstraint *constraint = make_rail(scene, ball, {});
     CHECK(ctx, !constraint->has_limits);
@@ -113,7 +113,7 @@ void test_slider_constraint_setters(TestCtx &ctx) {
 
 void test_slider_constraint_holds_axis(TestCtx &ctx) {
     // under gravity across the rail, kicked along every axis and spun
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     const SliderConstraint *constraint = make_rail(scene, ball, {});
     ball->motion_properties.linear_velocity = {1.0f, 2.0f, 3.0f};
@@ -144,7 +144,7 @@ void test_slider_constraint_holds_axis(TestCtx &ctx) {
 }
 
 void test_slider_constraint_limits(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     const SliderConstraint *constraint = make_rail(scene, ball, {.limits_min = -0.5f, .limits_max = 0.5f});
     ball->motion_properties.linear_velocity = {3.0f, 0.0f, 0.0f};
@@ -173,7 +173,7 @@ void test_slider_constraint_limits(TestCtx &ctx) {
 }
 
 void test_slider_constraint_position_motor(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     SliderConstraint *constraint = make_rail(scene, ball, {});
     slider_constraint::set_motor_state(*constraint, motor_settings::POSITION);
@@ -193,7 +193,7 @@ void test_slider_constraint_position_motor(TestCtx &ctx) {
 }
 
 void test_slider_constraint_velocity_motor_and_friction(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     SliderConstraint *constraint = make_rail(scene, ball, {});
     slider_constraint::set_motor_state(*constraint, motor_settings::VELOCITY);
@@ -223,7 +223,7 @@ void test_slider_constraint_velocity_motor_and_friction(TestCtx &ctx) {
 /** the anchor auto-detected between a body at the origin and one at (4, 0, 0) */
 static void check_auto_detected(TestCtx &ctx, motion_type::MotionType motion_type_a, motion_type::MotionType motion_type_b, bool make_a_static,
                                 const Float3 &expected_a, const Float3 &expected_b) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type_a, ZERO);
     RigidBody *b = add_body(scene, motion_type_b, {4.0f, 0.0f, 0.0f});
     if (make_a_static) rigid_body::set_motion_type(scene.bodies, a, motion_type::MOTION_STATIC, false);
@@ -247,7 +247,7 @@ void test_slider_constraint_auto_detect_static_body(TestCtx &ctx) {
 }
 
 void test_slider_constraint_axes_a_hair_apart(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *base = add_body(scene, motion_type::MOTION_STATIC, ZERO);
     RigidBody *ball = add_body(scene, motion_type::MOTION_DYNAMIC, ZERO);
     // body 2's normal is turned by a hair about the slider axis
@@ -270,7 +270,7 @@ static void solve_slider_velocities(ConstraintScene &scene, SliderConstraint &co
 void test_slider_constraint_position_and_velocity_motor(TestCtx &ctx) {
     // with a frequency spring the motor drives the velocity at the target position
     {
-        ConstraintScene scene = make_constraint_scene(ctx);
+        ConstraintScene scene = make_constraint_scene();
         RigidBody *ball = nullptr;
         SliderConstraint *constraint = make_rail(scene, ball, {});
         slider_constraint::set_motor_state(*constraint, motor_settings::POSITION_AND_VELOCITY);
@@ -283,7 +283,7 @@ void test_slider_constraint_position_and_velocity_motor(TestCtx &ctx) {
 
     // a damping only spring is a soft velocity drive: v = v_target (dt c / m) / (dt c / m + 1); dt c / m = 1 halves it
     {
-        ConstraintScene scene = make_constraint_scene(ctx);
+        ConstraintScene scene = make_constraint_scene();
         RigidBody *ball = nullptr;
         slider_constraint::SliderConstraintSettings settings;
         settings.motor_settings.spring = {spring_settings::STIFFNESS_AND_DAMPING, 0.0f, SPHERE_MASS / DT};
@@ -297,7 +297,7 @@ void test_slider_constraint_position_and_velocity_motor(TestCtx &ctx) {
 
     // a damping only spring cannot drive a position motor, which needs stiffness
     {
-        ConstraintScene scene = make_constraint_scene(ctx);
+        ConstraintScene scene = make_constraint_scene();
         RigidBody *ball = nullptr;
         slider_constraint::SliderConstraintSettings settings;
         settings.motor_settings.spring = {spring_settings::STIFFNESS_AND_DAMPING, 0.0f, 100.0f};

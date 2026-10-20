@@ -23,7 +23,7 @@ struct PlaneShapeSettings {
     int32_t material_id = -1;
 };
 
-/** null when the memory cannot grow */
+/** null when the allocator fails */
 Shape *create(const PlaneShapeSettings &settings);
 void destroy(Shape *shape);
 /** bounds and volume after the fields changed */

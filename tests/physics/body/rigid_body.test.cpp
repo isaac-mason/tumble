@@ -1,4 +1,4 @@
-#include "tumble/instance.h"
+#include "tumble/util/error.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
@@ -21,8 +21,7 @@ struct Fixture {
     uint32_t moving;
 };
 
-static Fixture make_fixture(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
+static Fixture make_fixture() {
     dispatch::init();
     Fixture f;
     f.bodies = bodies::init();
@@ -52,7 +51,7 @@ static bool active_list_consistent(const bodies::Bodies &bodies) {
 }
 
 void test_rigid_body_create_box_mass(TestCtx &ctx) {
-    Fixture f = make_fixture(ctx);
+    Fixture f = make_fixture();
     // a 1 x 2 x 4 box at 500 kg/m^3: m = 4000, I = m/12 (b^2 + c^2) about each axis
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 1.0f, 2.0f}, .density = 500.0f});
     RigidBody *body = rigid_body::create(f.bodies, f.layers,
@@ -107,7 +106,7 @@ void test_rigid_body_create_box_mass(TestCtx &ctx) {
 }
 
 void test_rigid_body_mass_overrides(TestCtx &ctx) {
-    Fixture f = make_fixture(ctx);
+    Fixture f = make_fixture();
     shapes::Shape *shape = sphere::create({.radius = 1.0f, .density = 1000.0f});
 
     // computed: (4/3) pi r^3 density
@@ -141,7 +140,7 @@ void test_rigid_body_mass_overrides(TestCtx &ctx) {
 }
 
 void test_rigid_body_null_shape_is_empty(TestCtx &ctx) {
-    Fixture f = make_fixture(ctx);
+    Fixture f = make_fixture();
     RigidBody *body = rigid_body::create(f.bodies, f.layers, {.object_layer = f.moving, .motion_type = motion_type::MOTION_STATIC, .position = {1.0f, 2.0f, 3.0f}});
     CHECK(ctx, body->shape != nullptr && body->shape->type == shapes::SHAPE_EMPTY);
     CHECK(ctx, near_point(body->center_of_mass_position, 1.0f, 2.0f, 3.0f));
@@ -153,7 +152,7 @@ void test_rigid_body_null_shape_is_empty(TestCtx &ctx) {
 }
 
 void test_rigid_body_aabb(TestCtx &ctx) {
-    Fixture f = make_fixture(ctx);
+    Fixture f = make_fixture();
     shapes::Shape *shape = box::create({.half_extents = {1.0f, 0.5f, 0.25f}});
 
     // 30 degrees about z: the extents in x and y mix by |cos| and |sin|, z keeps its own
@@ -185,7 +184,7 @@ void test_rigid_body_aabb(TestCtx &ctx) {
 }
 
 void test_rigid_body_remove_and_ids(TestCtx &ctx) {
-    Fixture f = make_fixture(ctx);
+    Fixture f = make_fixture();
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
     const rigid_body::RigidBodySettings settings = {.shape = shape, .object_layer = f.moving, .motion_type = motion_type::MOTION_DYNAMIC};
     RigidBody *a = rigid_body::create(f.bodies, f.layers, settings);
@@ -228,7 +227,7 @@ void test_rigid_body_remove_and_ids(TestCtx &ctx) {
 }
 
 void test_rigid_body_remove_drops_shape_and_step_overrides(TestCtx &ctx) {
-    Fixture f = make_fixture(ctx);
+    Fixture f = make_fixture();
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
 
     // the step overrides in the settings land in the motion properties
@@ -259,7 +258,7 @@ void test_rigid_body_remove_drops_shape_and_step_overrides(TestCtx &ctx) {
 }
 
 void test_rigid_body_forces_and_impulses(TestCtx &ctx) {
-    Fixture f = make_fixture(ctx);
+    Fixture f = make_fixture();
     shapes::Shape *shape = sphere::create({.radius = 1.0f});
     RigidBody *body = rigid_body::create(f.bodies, f.layers, {.shape = shape, .object_layer = f.moving, .motion_type = motion_type::MOTION_DYNAMIC});
     motion_properties::MotionProperties &mp = body->motion_properties;
@@ -319,7 +318,7 @@ void test_rigid_body_forces_and_impulses(TestCtx &ctx) {
 }
 
 void test_rigid_body_velocity_at_point(TestCtx &ctx) {
-    Fixture f = make_fixture(ctx);
+    Fixture f = make_fixture();
     shapes::Shape *shape = sphere::create({.radius = 1.0f});
     RigidBody *body = rigid_body::create(f.bodies, f.layers,
                                          {.shape = shape, .object_layer = f.moving, .motion_type = motion_type::MOTION_DYNAMIC, .position = {5.0f, 0.0f, 0.0f}});
@@ -347,7 +346,7 @@ void test_rigid_body_velocity_at_point(TestCtx &ctx) {
 }
 
 void test_rigid_body_sleep_and_active_list(TestCtx &ctx) {
-    Fixture f = make_fixture(ctx);
+    Fixture f = make_fixture();
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
     const rigid_body::RigidBodySettings settings = {.shape = shape, .object_layer = f.moving, .motion_type = motion_type::MOTION_DYNAMIC};
     RigidBody *bodies[4];
@@ -398,7 +397,7 @@ void test_rigid_body_sleep_and_active_list(TestCtx &ctx) {
 }
 
 void test_rigid_body_set_motion_type(TestCtx &ctx) {
-    Fixture f = make_fixture(ctx);
+    Fixture f = make_fixture();
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
     RigidBody *body = rigid_body::create(f.bodies, f.layers, {.shape = shape, .object_layer = f.moving, .motion_type = motion_type::MOTION_STATIC});
     CHECK(ctx, body->motion_properties.inv_mass == 0.0f && f.bodies.active_body_count == 0);
@@ -434,7 +433,7 @@ void test_rigid_body_set_motion_type(TestCtx &ctx) {
 }
 
 void test_rigid_body_move_kinematic(TestCtx &ctx) {
-    Fixture f = make_fixture(ctx);
+    Fixture f = make_fixture();
     // a centre of mass off the origin, so the linear part has to follow the rotated offset
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
     shape->center_of_mass = {1.0f, 0.0f, 0.0f};
@@ -465,7 +464,7 @@ void test_rigid_body_move_kinematic(TestCtx &ctx) {
 
 void test_rigid_body_inverse_inertia_outside_the_step(TestCtx &ctx) {
     // the in-step setup, without the step: a rotated 1 x 2 x 4 box with rotation about y locked
-    Fixture f = make_fixture(ctx);
+    Fixture f = make_fixture();
     shapes::Shape *shape = box::create({.half_extents = {0.5f, 1.0f, 2.0f}});
     const Float4 rotation = stored_axis_angle(vec3f::make(0.3f, 0.8f, -0.5f), 0.9f);
     RigidBody *body = rigid_body::create(f.bodies, f.layers,
@@ -500,7 +499,7 @@ void test_rigid_body_inverse_inertia_outside_the_step(TestCtx &ctx) {
 }
 
 void test_rigid_body_center_of_mass_and_surface_normal(TestCtx &ctx) {
-    Fixture f = make_fixture(ctx);
+    Fixture f = make_fixture();
     shapes::Shape *shape = box::create({.half_extents = {1.0f, 1.0f, 1.0f}});
     shape->center_of_mass = {2.0f, 0.0f, 0.0f};
     // a quarter turn about z at (5, 10, 0): the com offset (2, 0, 0) turns to (0, 2, 0)
@@ -538,7 +537,6 @@ void test_rigid_body_center_of_mass_and_surface_normal(TestCtx &ctx) {
 }
 
 void test_rigid_body_bodies_share_constraint(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     RigidBody a = {};
     RigidBody b = {};
     // no constraints on either: not connected
@@ -560,7 +558,7 @@ void test_rigid_body_bodies_share_constraint(TestCtx &ctx) {
 }
 
 void test_rigid_body_filter_from_body(TestCtx &ctx) {
-    Fixture f = make_fixture(ctx);
+    Fixture f = make_fixture();
     // a second broadphase layer with a static layer the moving layer collides with, and a third it does not
     const uint32_t broadphase_static = layers::add_broadphase_layer(f.layers);
     const uint32_t still = layers::add_object_layer(f.layers, broadphase_static);

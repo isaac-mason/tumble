@@ -1,12 +1,10 @@
-#include "tumble/instance.h"
 #include "test.h"
-#include "tumble/util/offset_allocator.h"
+#include "wasm/runtime/offset_allocator.h"
 
 using OffsetAllocator::Allocation;
 using OffsetAllocator::Allocator;
 
 void test_offset_allocator_largest_free_region_below(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     Allocator allocator(1000, 16);
     CHECK(ctx, allocator.largestFreeRegionBelow(1000) == 1000);
     CHECK(ctx, allocator.largestFreeRegionBelow(10) == 10);

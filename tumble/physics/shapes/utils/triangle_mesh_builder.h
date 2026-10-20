@@ -37,7 +37,7 @@ struct TriangleMeshBuilderSettings {
     float active_edge_cos_threshold_angle = 0.996195f;  // cos(5 degrees)
 };
 
-/** build a triangle mesh from positions and indices; null (error set) when the memory cannot grow. */
+/** build a triangle mesh from positions and indices; null (error set) when the allocator fails. */
 TriangleMeshData *build(const TriangleMeshBuilderSettings &settings);
 
 }  // namespace triangle_mesh_builder

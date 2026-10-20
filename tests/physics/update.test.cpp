@@ -41,7 +41,7 @@ RigidBody *add_unit_box(WorldScene &scene, const Float3 &position) {
     return add_body(scene, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}), motion_type::MOTION_DYNAMIC, position);
 }
 
-/** a mesh shape over flat xyz positions and triangle indices; the data lives in the test heap */
+/** a mesh shape over flat xyz positions and triangle indices */
 shapes::Shape *make_mesh(const float *positions, uint32_t num_positions, const uint32_t *indices, uint32_t num_indices) {
     triangle_mesh_builder::TriangleMeshBuilderSettings settings;
     settings.positions = positions;
@@ -872,7 +872,7 @@ void test_update_weight_hanging_from_static_anchor_stays_asleep(TestCtx &ctx) {
 void test_update_determinism_two_worlds_bit_identical(TestCtx &ctx) {
     WorldScene scene_a = build_pile(ctx);
     for (uint32_t i = 0; i < 200; i++) step_world(*scene_a.world);
-    // the second world reuses the heap, so its bodies live at other addresses; nothing may depend on them
+    // the second world lives alongside the first, so its bodies are at other addresses; nothing may depend on them
     WorldScene scene_b = {};
     {
         world_settings::WorldSettings settings = make_world_test_settings(scene_b.moving, scene_b.not_moving);
@@ -960,8 +960,7 @@ void test_update_moved_lists_exactly_the_bodies_that_moved(TestCtx &ctx) {
 
 namespace {
 
-WorldScene make_single_layer_world(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
+WorldScene make_single_layer_world() {
     dispatch::init();
     world_settings::WorldSettings settings = world_settings::create();
     const uint32_t layer = world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
@@ -983,7 +982,7 @@ RigidBody *make_pair_box(WorldScene &scene, const Float3 &position, motion_type:
 }  // namespace
 
 void test_update_removal_purge_then_steps(TestCtx &ctx) {
-    WorldScene scene = make_single_layer_world(ctx);
+    WorldScene scene = make_single_layer_world();
     RigidBody *a = make_pair_box(scene, {0.0f, 0.0f, 0.0f});
     RigidBody *b = make_pair_box(scene, {0.4f, 0.0f, 0.0f});
     step_world(*scene.world);
@@ -1000,7 +999,7 @@ void test_update_removal_purge_then_steps(TestCtx &ctx) {
 }
 
 void test_update_hub_with_spokes_then_steps(TestCtx &ctx) {
-    WorldScene scene = make_single_layer_world(ctx);
+    WorldScene scene = make_single_layer_world();
     shapes::Shape *spoke_shape = box::create({.half_extents = {0.1f, 0.1f, 0.1f}});
     RigidBody *hub = make_pair_box(scene, {0.0f, 0.0f, 0.0f}, motion_type::MOTION_DYNAMIC, 0.0f);
     RigidBody *spokes[4];
@@ -1032,7 +1031,7 @@ void test_update_hub_with_spokes_then_steps(TestCtx &ctx) {
 void test_update_determinism_stack_60_steps(TestCtx &ctx) {
     Float3 positions[2][4];
     for (uint32_t run = 0; run < 2; run++) {
-        WorldScene scene = make_single_layer_world(ctx);
+        WorldScene scene = make_single_layer_world();
         make_pair_box(scene, {0.0f, -1.0f, 0.0f}, motion_type::MOTION_STATIC);
         make_pair_box(scene, {0.0f, 0.2f, 0.0f});
         make_pair_box(scene, {0.05f, 1.4f, 0.03f});
@@ -1045,7 +1044,7 @@ void test_update_determinism_stack_60_steps(TestCtx &ctx) {
 }
 
 void test_update_bodies_drifting_within_fat_bounds_form_contact(TestCtx &ctx) {
-    WorldScene scene = make_single_layer_world(ctx);
+    WorldScene scene = make_single_layer_world();
     // a 0.08 gap between faces: outside tight + speculative reach (0.07) at creation, inside fat + speculative (0.12)
     RigidBody *body_a = make_pair_box(scene, {-0.54f, 0.0f, 0.0f}, motion_type::MOTION_DYNAMIC, 0.0f);
     RigidBody *body_b = make_pair_box(scene, {0.54f, 0.0f, 0.0f}, motion_type::MOTION_DYNAMIC, 0.0f);

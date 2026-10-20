@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/collision/internal_edge_removing_collector.h"
@@ -35,7 +34,6 @@ static CollideShapeHit make_hit(float penetration, const Float3 &axis, const Flo
 static const float TRIANGLE[9] = {0, 0, 0, 1, 0, 0, 0.5f, 0.86602540378f, 0};
 
 void test_internal_edge_removing_face_contact_detection(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     CollideShapeCollector chained = collide_shape::create_collector(collector::COLLECT_ALL);
     InternalEdgeRemovingCollector wrapper = internal_edge_removing::create();
     internal_edge_removing::set(wrapper, chained, collide_shape::DEFAULT_INTERNAL_EDGE_REMOVAL_VERTEX_TOLERANCE_SQ);
@@ -76,7 +74,6 @@ void test_internal_edge_removing_face_contact_detection(TestCtx &ctx) {
 }
 
 void test_internal_edge_removing_voiding(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     CollideShapeCollector chained = collide_shape::create_collector(collector::COLLECT_ALL);
     InternalEdgeRemovingCollector wrapper = internal_edge_removing::create();
 
@@ -137,7 +134,6 @@ void test_internal_edge_removing_voiding(TestCtx &ctx) {
 }
 
 void test_internal_edge_removing_reset_and_early_out(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     CollideShapeCollector chained = collide_shape::create_collector(collector::COLLECT_ALL);
     InternalEdgeRemovingCollector wrapper = internal_edge_removing::create();
     internal_edge_removing::set(wrapper, chained, collide_shape::DEFAULT_INTERNAL_EDGE_REMOVAL_VERTEX_TOLERANCE_SQ);
@@ -187,7 +183,6 @@ static float normal_y(const CollideShapeHit &hit) {
 }
 
 void test_internal_edge_removing_sphere_across_coplanar_boxes(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *ball = sphere::create({.radius = 0.5f});
     shapes::Shape *slab = box::create({.half_extents = {1, 0.5f, 1}, .convex_radius = 0.0f});
@@ -248,7 +243,6 @@ void test_internal_edge_removing_sphere_across_coplanar_boxes(TestCtx &ctx) {
 }
 
 void test_internal_edge_removing_vertex_tolerance(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     CollideShapeCollector chained = collide_shape::create_collector(collector::COLLECT_ALL);
     InternalEdgeRemovingCollector wrapper = internal_edge_removing::create();
 
@@ -274,7 +268,6 @@ void test_internal_edge_removing_vertex_tolerance(TestCtx &ctx) {
 }
 
 void test_internal_edge_removing_short_edge_is_not_degenerate(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     CollideShapeCollector chained = collide_shape::create_collector(collector::COLLECT_ALL);
     InternalEdgeRemovingCollector wrapper = internal_edge_removing::create();
     internal_edge_removing::set(wrapper, chained, 0.0f);
@@ -294,7 +287,6 @@ void test_internal_edge_removing_short_edge_is_not_degenerate(TestCtx &ctx) {
 }
 
 void test_internal_edge_removing_reset_resets_chained(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     CollideShapeCollector chained = collide_shape::create_collector(collector::COLLECT_ALL);
     InternalEdgeRemovingCollector wrapper = internal_edge_removing::create();
     internal_edge_removing::set(wrapper, chained, collide_shape::DEFAULT_INTERNAL_EDGE_REMOVAL_VERTEX_TOLERANCE_SQ);

@@ -1,6 +1,6 @@
 #include "tumble/math/scalar.h"
 
-#include "export.h"
+#include "wasm/runtime/export.h"
 #include "test.h"
 
 // run.mjs sweeps these against node's Math

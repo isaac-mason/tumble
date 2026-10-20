@@ -65,7 +65,7 @@ inline uint32_t node_tri_count(const bvh::Node *nodes, int32_t node) { return (u
 
 /**
  * builds the bvh over data's triangles into `out` (pre-order, the root at 0; empty when there are
- * no triangles), reordering data.triangles. false (error set) when the memory cannot grow.
+ * no triangles), reordering data.triangles. false (error set) when the allocator fails.
  */
 bool build(collections::Vec<bvh::Node> &out, TriangleMeshData &data, const BvhBuildSettings &settings);
 

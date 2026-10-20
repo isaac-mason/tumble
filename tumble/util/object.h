@@ -10,7 +10,7 @@ TUMBLE_NAMESPACE_BEGIN
 
 namespace util {
 
-/** zeroed, so the containers in it start empty; null (error set) when the memory cannot grow */
+/** zeroed, so the containers in it start empty; null (error set) when the allocator fails */
 template <typename T>
 inline T *create() {
     T *object = alloc<T>();
@@ -27,12 +27,3 @@ inline void destroy(T *object) {
 }  // namespace util
 
 TUMBLE_NAMESPACE_END
-
-// the C++ allocation operators over the heap (defined in object.cpp). `new T[n]` works because
-// clang keeps the count in front of the block when a type needs destroying, and nothing here does.
-void *operator new(unsigned long bytes);
-void *operator new[](unsigned long bytes);
-void operator delete(void *p) noexcept;
-void operator delete[](void *p) noexcept;
-void operator delete(void *p, unsigned long bytes) noexcept;
-void operator delete[](void *p, unsigned long bytes) noexcept;

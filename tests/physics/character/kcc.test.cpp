@@ -294,7 +294,6 @@ void test_kcc_back_face_collide_finds_the_back_face(TestCtx &ctx) { CHECK(ctx, c
 void test_kcc_back_face_ignore_does_not(TestCtx &ctx) { CHECK(ctx, contacts_with_down_facing_quad(ctx, kcc::BACK_FACE_IGNORE) == 0); }
 
 void test_kcc_defaults_and_slope_test(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     kcc::KCCSettings settings;
     settings.shape = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
     settings.up = vec3f::make(0.0f, 2.0f, 0.0f);

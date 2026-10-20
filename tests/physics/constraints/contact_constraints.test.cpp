@@ -92,7 +92,7 @@ void apply_answers(ContactScene &scene) {
 }  // namespace
 
 void test_contact_constraints_box_resting_removes_approach_and_warm_starts(TestCtx &ctx) {
-    ContactScene scene = make_contact_scene(ctx);
+    ContactScene scene = make_contact_scene();
     BoxOnGround scenario = make_box_on_ground(scene);
     RigidBody *box = scenario.box;
     const float mass = 1.0f / box->motion_properties.inv_mass;
@@ -153,7 +153,7 @@ void test_contact_constraints_box_resting_removes_approach_and_warm_starts(TestC
 }
 
 void test_contact_constraints_event_carries_the_manifold(TestCtx &ctx) {
-    ContactScene scene = make_contact_scene(ctx);
+    ContactScene scene = make_contact_scene();
     BoxOnGround scenario = make_box_on_ground(scene);
     scenario.manifold.penetration_depth = 0.01f;
     scenario.manifold.material_id_a = 3;
@@ -183,7 +183,7 @@ void test_contact_constraints_event_carries_the_manifold(TestCtx &ctx) {
 }
 
 void test_contact_constraints_restitution_bounces_less_gravity(TestCtx &ctx) {
-    ContactScene scene = make_contact_scene(ctx);
+    ContactScene scene = make_contact_scene();
     RigidBody *ground = add_ground(scene);
     RigidBody *ball = add_ball(scene, {.restitution = 0.5f});
 
@@ -208,7 +208,7 @@ void test_contact_constraints_restitution_bounces_less_gravity(TestCtx &ctx) {
 }
 
 void test_contact_constraints_speculative_contact_allows_closing_the_gap(TestCtx &ctx) {
-    ContactScene scene = make_contact_scene(ctx);
+    ContactScene scene = make_contact_scene();
     RigidBody *ground = add_ground(scene);
     RigidBody *ball = add_ball(scene);
 
@@ -235,7 +235,7 @@ void test_contact_constraints_speculative_contact_allows_closing_the_gap(TestCtx
 }
 
 void test_contact_constraints_friction_slides_at_the_cone(TestCtx &ctx) {
-    ContactScene scene = make_contact_scene(ctx);
+    ContactScene scene = make_contact_scene();
     RigidBody *ground = add_ground(scene, {.friction = 0.5f});
     RigidBody *ball = add_ball(scene, {.friction = 0.5f});
 
@@ -257,7 +257,7 @@ void test_contact_constraints_friction_slides_at_the_cone(TestCtx &ctx) {
 }
 
 void test_contact_constraints_friction_sticks_inside_the_cone(TestCtx &ctx) {
-    ContactScene scene = make_contact_scene(ctx);
+    ContactScene scene = make_contact_scene();
     RigidBody *ground = add_ground(scene, {.friction = 1.0f});
     RigidBody *ball = add_ball(scene, {.friction = 1.0f});
 
@@ -274,7 +274,7 @@ void test_contact_constraints_friction_sticks_inside_the_cone(TestCtx &ctx) {
 }
 
 void test_contact_constraints_sensor_reports_without_impulse(TestCtx &ctx) {
-    ContactScene scene = make_contact_scene(ctx);
+    ContactScene scene = make_contact_scene();
     RigidBody *ground = add_ground(scene);
     RigidBody *ball = add_ball(scene, {.sensor = true});
 
@@ -300,7 +300,7 @@ void test_contact_constraints_sensor_reports_without_impulse(TestCtx &ctx) {
 }
 
 void test_contact_constraints_kinematic_pushes_dynamic(TestCtx &ctx) {
-    ContactScene scene = make_contact_scene(ctx);
+    ContactScene scene = make_contact_scene();
     RigidBody *platform =
         add_contact_body(scene, box::create({.half_extents = {5.0f, 0.5f, 5.0f}}), motion_type::MOTION_KINEMATIC, {0.0f, -0.5f, 0.0f});
     RigidBody *ball = add_ball(scene);
@@ -322,7 +322,7 @@ void test_contact_constraints_kinematic_pushes_dynamic(TestCtx &ctx) {
 }
 
 void test_contact_constraints_position_solve_pushes_out_by_baumgarte(TestCtx &ctx) {
-    ContactScene scene = make_contact_scene(ctx);
+    ContactScene scene = make_contact_scene();
     RigidBody *ground = add_ground(scene);
     RigidBody *ball = add_ball(scene);
 
@@ -356,7 +356,7 @@ void test_contact_constraints_position_solve_pushes_out_by_baumgarte(TestCtx &ct
 }
 
 void test_contact_constraints_from_cache_carries_the_manifold(TestCtx &ctx) {
-    ContactScene scene = make_contact_scene(ctx);
+    ContactScene scene = make_contact_scene();
     BoxOnGround scenario = make_box_on_ground(scene);
     RigidBody *box = scenario.box;
 
@@ -394,7 +394,7 @@ void test_contact_constraints_from_cache_carries_the_manifold(TestCtx &ctx) {
 }
 
 void test_contact_constraints_from_cache_keeps_the_materials(TestCtx &ctx) {
-    ContactScene scene = make_contact_scene(ctx);
+    ContactScene scene = make_contact_scene();
 
     // a quad of two triangles with their own materials; the first (0, 2, 1) covers x > z
     const float positions[12] = {-10, 0, -10, 10, 0, -10, 10, 0, 10, -10, 0, 10};
@@ -465,7 +465,7 @@ void test_contact_constraints_from_cache_keeps_the_materials(TestCtx &ctx) {
 }
 
 void test_contact_constraints_override_conveyor(TestCtx &ctx) {
-    ContactScene scene = make_contact_scene(ctx);
+    ContactScene scene = make_contact_scene();
     RigidBody *belt = add_ground(scene);
     RigidBody *ball = add_ball(scene);
 
@@ -497,7 +497,7 @@ void test_contact_constraints_override_conveyor(TestCtx &ctx) {
 }
 
 void test_contact_constraints_override_restitution_and_mass_scale(TestCtx &ctx) {
-    ContactScene scene = make_contact_scene(ctx);
+    ContactScene scene = make_contact_scene();
     RigidBody *ground = add_ground(scene);
     RigidBody *ball = add_ball(scene);
 
@@ -537,7 +537,7 @@ void test_contact_constraints_override_restitution_and_mass_scale(TestCtx &ctx) 
 }
 
 void test_contact_constraints_override_reject_drops_and_zeroes_the_cache(TestCtx &ctx) {
-    ContactScene scene = make_contact_scene(ctx);
+    ContactScene scene = make_contact_scene();
     RigidBody *ground = add_ground(scene);
     RigidBody *ball = add_ball(scene);
     RigidBody *other = add_contact_body(scene, sphere::create({.radius = SPHERE_RADIUS}), motion_type::MOTION_DYNAMIC, {3.0f, SPHERE_RADIUS, 0.0f});
@@ -594,7 +594,7 @@ void test_contact_constraints_override_reject_drops_and_zeroes_the_cache(TestCtx
 }
 
 void test_contact_constraints_sort_is_by_key_then_ids(TestCtx &ctx) {
-    ContactScene scene = make_contact_scene(ctx);
+    ContactScene scene = make_contact_scene();
     RigidBody *ground = add_ground(scene);
     RigidBody *balls[5];
     begin_contact_step(scene);
@@ -637,7 +637,7 @@ void test_contact_constraints_sort_key_known_pair(TestCtx &ctx) {
 void test_contact_constraints_dynamic_body_without_mass_makes_a_constraint(TestCtx &ctx) {
     // whether to make a constraint goes by the motion type and the inverse mass scale, not the inverse mass: a dynamic
     // body whose translation is locked (inverse mass 0) still turns against the ground
-    ContactScene scene = make_contact_scene(ctx);
+    ContactScene scene = make_contact_scene();
     RigidBody *ground = add_ground(scene);
     RigidBody *ball = add_ball(scene);
     ball->motion_properties.inv_mass = 0.0f;
@@ -675,7 +675,6 @@ void test_contact_combine_materials(TestCtx &ctx) {
     CHECK_NEAR(ctx, settings.combined_friction, scalar::sqrt(0.2f * 0.8f), 1e-6f);
     CHECK(ctx, settings.combined_restitution == 0.0f);
 
-    CHECK(ctx, util::init(test_heap_begin()));
     table.materials.push({0.0f, 0.0f});
     table.materials.push({0.0f, 0.0f});
     table.materials.push({0.0f, 0.0f});

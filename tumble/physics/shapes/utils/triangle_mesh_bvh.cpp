@@ -228,7 +228,7 @@ bool build(collections::Vec<bvh::Node> &out, TriangleMeshData &data, const BvhBu
     BuildContext ctx = {data, settings, out, build_data, {}};
     build_recursive(ctx, 0, count);
 
-    util::free(build_data);
+    util::free(build_data, count * BUILD_DATA_STRIDE);
     return true;
 }
 

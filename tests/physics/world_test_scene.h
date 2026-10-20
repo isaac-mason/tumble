@@ -1,6 +1,5 @@
 #pragma once
 
-#include "tumble/instance.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/body/rigid_body.h"
@@ -35,9 +34,8 @@ inline world_settings::WorldSettings make_world_test_settings(uint32_t &out_movi
     return settings;
 }
 
-/** a fresh heap and a world over the two layers; `tune` adjusts the settings first */
+/** a world over the two layers; `tune` adjusts the settings first */
 inline WorldScene make_world_scene(TestCtx &ctx, void (*tune)(world_settings::WorldSettings &) = nullptr) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     WorldScene scene = {};
     world_settings::WorldSettings settings = make_world_test_settings(scene.moving, scene.not_moving);

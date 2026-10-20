@@ -25,7 +25,6 @@ RigidBody *add_thin_wall(WorldScene &scene) {
 }  // namespace
 
 void test_ccd_reset_and_swept_aabb(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     ccd::CCDBody ccd_body;
     ccd_body.fraction = 0.3f;
     ccd_body.contact_settings.inv_mass_scale_1 = 0.0f;

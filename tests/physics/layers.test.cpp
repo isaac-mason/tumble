@@ -1,11 +1,10 @@
-#include "tumble/instance.h"
+#include "tumble/util/error.h"
 #include "tumble/physics/filter.h"
 #include "tumble/physics/layers.h"
 #include "test.h"
 #include "test_math.h"
 
 void test_layers(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     layers::Layers l = layers::create();
     // two broadphase layers: moving and static; three object layers: player and debris move, terrain is static
     const uint32_t bp_moving = layers::add_broadphase_layer(l);

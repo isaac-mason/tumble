@@ -19,6 +19,7 @@ using convex_hull_builder::ConvexHullBuilder;
 /** everything create allocates, released on every way out */
 struct CreateScratch {
     Vec3f *input_points;
+    uint32_t num_input_points;
     ConvexHullBuilder builder;
     bool has_builder;
     collections::Vec<int32_t> vertex_map;
@@ -41,12 +42,12 @@ static void release_data(ConvexHullData *data) {
 }
 
 static void release_scratch(CreateScratch &scratch) {
-    util::free(scratch.input_points);
+    util::free(scratch.input_points, scratch.num_input_points);
     if (scratch.has_builder) convex_hull_builder::release(scratch.builder);
     scratch.vertex_map.release();
     scratch.neighboring_faces.release();
     for (uint32_t i = 0; i < scratch.num_neighbor_sets; i++) scratch.neighbor_sets[i].release();
-    util::free(scratch.neighbor_sets);
+    util::free(scratch.neighbor_sets, scratch.num_neighbor_sets);
 }
 
 static ConvexHullData *fail(BuildResult *out_result, BuildResult result, CreateScratch &scratch, ConvexHullData *data) {
@@ -78,6 +79,7 @@ ConvexHullData *build(const ConvexHullBuildSettings &settings, BuildResult *out_
     if (num_input_points > 0) {
         scratch.input_points = util::alloc<Vec3f>(num_input_points);
         if (scratch.input_points == nullptr) return fail(out_result, BUILD_OUT_OF_MEMORY, scratch, nullptr);
+        scratch.num_input_points = num_input_points;
         for (uint32_t i = 0; i < num_input_points; i++) scratch.input_points[i] = vec3f::load(settings.positions, i * 3);
     }
     const Vec3f *input_points = scratch.input_points;

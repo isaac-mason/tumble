@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
@@ -64,7 +63,6 @@ void test_collide_shape_vs_shape_default_settings(TestCtx &ctx) {
 }
 
 void test_collide_shape_vs_shape_sphere_vs_sphere(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *one = sphere::create({.radius = 1.0f});
     shapes::Shape *two = sphere::create({.radius = 2.0f});
@@ -86,7 +84,6 @@ void test_collide_shape_vs_shape_sphere_vs_sphere(TestCtx &ctx) {
 }
 
 void test_collide_shape_vs_shape_box_vs_box(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *unit = box::create({.half_extents = {1, 1, 1}});
     shapes::Shape *big = box::create({.half_extents = {2, 2, 2}});
@@ -116,7 +113,6 @@ void test_collide_shape_vs_shape_box_vs_box(TestCtx &ctx) {
 }
 
 void test_collide_shape_vs_shape_sphere_vs_box(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *ball = sphere::create({.radius = 1.0f});
     shapes::Shape *unit = box::create({.half_extents = {1, 1, 1}});
@@ -131,7 +127,6 @@ void test_collide_shape_vs_shape_sphere_vs_box(TestCtx &ctx) {
 }
 
 void test_collide_shape_vs_shape_supporting_faces(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *ball = sphere::create({.radius = 1.0f});
     shapes::Shape *unit = box::create({.half_extents = {1, 1, 1}});
@@ -182,7 +177,6 @@ void test_collide_shape_vs_shape_supporting_faces(TestCtx &ctx) {
 }
 
 void test_collide_shape_vs_shape_convex_hulls(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     const float box_points[] = {-1, -1, -1, 1, -1, -1, -1, -1, 1, 1, -1, 1, -1, 1, -1, 1, 1, -1, -1, 1, 1, 1, 1, 1};
     const float tetrahedron_points[] = {-1, 0, -1, 0, 0, 1, 1, 0, -1, 0, -1, 0};
@@ -230,7 +224,6 @@ void test_collide_shape_vs_shape_convex_hulls(TestCtx &ctx) {
 }
 
 void test_collide_shape_vs_shape_cylinders(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *ball = sphere::create({.radius = 1.0f});
     shapes::Shape *unit = box::create({.half_extents = {1, 1, 1}});
@@ -249,7 +242,6 @@ void test_collide_shape_vs_shape_cylinders(TestCtx &ctx) {
 }
 
 void test_collide_shape_vs_shape_reversed_pair_materials(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // sphere vs box runs the specialised handler; box vs sphere runs it reversed, and the hit's materials must follow
     // the shape order like its points and sub shape ids do
@@ -308,7 +300,6 @@ static void init_counting(CountingCollector &counting, collector::CollectorKind 
 }
 
 void test_collide_shape_vs_shape_closest_collector_early_out(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *unit = box::create({.half_extents = {1, 1, 1}});
     CountingCollector counting;
@@ -339,7 +330,6 @@ void test_collide_shape_vs_shape_closest_collector_early_out(TestCtx &ctx) {
 }
 
 void test_collide_shape_vs_shape_any_collector_early_out(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *thin = cylinder::create({.half_height = 1.0f, .radius = 0.5f});
     CountingCollector counting;
@@ -364,7 +354,6 @@ void test_collide_shape_vs_shape_any_collector_early_out(TestCtx &ctx) {
 }
 
 void test_collide_shape_vs_shape_sort(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     shapes::Shape *shape = sphere::create({.radius = 1.0f});
     CollideShapeCollector collector = collide_shape::create_collector(collector::COLLECT_ALL);

@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/shapes/utils/convex_hull_builder_2d.h"
@@ -59,7 +58,6 @@ static const Vec3f *as_vec3f(Vec3f *out, const Float3 *points, uint32_t count) {
 }
 
 void test_convex_hull_builder_2d_square(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     const Float3 points[4] = {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}};
     Vec3f vec_points[4];
     hull_2d::ConvexHullBuilder2D builder = hull_2d::create(as_vec3f(vec_points, points, 4), 4);
@@ -76,7 +74,6 @@ void test_convex_hull_builder_2d_square(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_2d_square_with_interior_points(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     // the corners first, counter clockwise, then a grid strictly inside
     Float3 points[4 + 49];
     Vec3f vec_points[4 + 49];
@@ -106,7 +103,6 @@ void test_convex_hull_builder_2d_square_with_interior_points(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_2d_collinear_points_keep_only_ends(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     // a triangle with points along each of its edges: only the three ends survive
     Float3 points[3 + 3 * 9];
     Vec3f vec_points[3 + 3 * 9];
@@ -138,7 +134,6 @@ void test_convex_hull_builder_2d_collinear_points_keep_only_ends(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_2d_random_points(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     uint32_t rng = 7;
     for (uint32_t round = 0; round < 8; round++) {
         Float3 points[300];
@@ -165,7 +160,6 @@ void test_convex_hull_builder_2d_random_points(TestCtx &ctx) {
 }
 
 void test_convex_hull_builder_2d_max_vertices(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     // a regular 16-gon: capped at 5 vertices the builder stops with 5 of them
     Float3 points[16];
     Vec3f vec_points[16];

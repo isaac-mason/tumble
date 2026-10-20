@@ -1,6 +1,5 @@
 #include "tumble/physics/shapes/dispatch.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
@@ -77,7 +76,6 @@ void test_dispatch_empty_has_no_pairs(TestCtx &ctx) {
 }
 
 void test_dispatch_defs(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     Shape *b = box::create({.half_extents = {1, 2, 3}});
@@ -138,7 +136,6 @@ void test_dispatch_init_is_idempotent(TestCtx &ctx) {
 /* collisions through the tables */
 
 void test_dispatch_sphere_vs_sphere(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *a = sphere::create({.radius = 1.0f, .material_id = 3});
     Shape *b = sphere::create({.radius = 0.5f, .material_id = 7});
@@ -182,7 +179,6 @@ void test_dispatch_sphere_vs_sphere(TestCtx &ctx) {
 }
 
 void test_dispatch_sphere_vs_box(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 0.5f, .material_id = 2});
     Shape *b = box::create({.half_extents = {1, 1, 1}, .material_id = 5});
@@ -251,7 +247,6 @@ void test_dispatch_sphere_vs_box(TestCtx &ctx) {
 }
 
 void test_dispatch_box_vs_box(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *a = box::create({.half_extents = {1, 1, 1}});
     Shape *b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
@@ -271,7 +266,6 @@ void test_dispatch_box_vs_box(TestCtx &ctx) {
 }
 
 void test_dispatch_cast_sphere_onto_box(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 0.5f});
     Shape *b = box::create({.half_extents = {1, 1, 1}});
@@ -292,7 +286,6 @@ void test_dispatch_cast_sphere_onto_box(TestCtx &ctx) {
 }
 
 void test_dispatch_ray_vs_box(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *b = box::create({.half_extents = {1, 2, 3}, .material_id = 4});
     const cast_ray::CastRaySettings settings = cast_ray::default_settings();
@@ -351,7 +344,6 @@ void test_dispatch_ray_vs_box(TestCtx &ctx) {
 }
 
 void test_dispatch_ray_vs_box_back_faces(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *b = box::create({.half_extents = {1, 2, 3}});
     // scaled by 2 along x and moved: x from 8 to 12
@@ -401,7 +393,6 @@ void test_dispatch_ray_vs_box_back_faces(TestCtx &ctx) {
 }
 
 void test_dispatch_point_vs_sphere_and_box(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f, .material_id = 6});
     Shape *b = box::create({.half_extents = {1, 2, 3}});

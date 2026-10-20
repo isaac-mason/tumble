@@ -10,7 +10,7 @@ using rigid_body::RigidBody;
 static const Float3 GRAVITY = {0.0f, -9.81f, 0.0f};
 
 void test_point_constraint_create(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 2.0f, 3.0f}, stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), scalar::PI / 2.0f));
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {4.0f, 2.0f, 3.0f});
 
@@ -57,7 +57,7 @@ void test_point_constraint_create(TestCtx &ctx) {
 }
 
 void test_point_constraint_remove(TestCtx &ctx) {
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
     const constraint_id::ConstraintId first = point_constraint::create(scene.constraints, scene.bodies, a, b, {});
@@ -84,7 +84,7 @@ void test_point_constraint_remove(TestCtx &ctx) {
 
 void test_point_constraint_total_lambda(TestCtx &ctx) {
     // a static anchor holding a body against gravity: the impulse per step is m g dt, upward on b
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *anchor = add_body(scene, motion_type::MOTION_STATIC, {0.0f, 0.0f, 0.0f});
     RigidBody *body = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     const constraint_id::ConstraintId id = point_constraint::create(scene.constraints, scene.bodies, anchor, body, {});
@@ -101,7 +101,7 @@ void test_point_constraint_total_lambda(TestCtx &ctx) {
 
 void test_point_constraint_holds_anchor(TestCtx &ctx) {
     // a pendulum: a static pivot at (0, 10, 0) and a ball at (2, 10, 0) attached at the pivot
-    ConstraintScene scene = make_constraint_scene(ctx);
+    ConstraintScene scene = make_constraint_scene();
     RigidBody *pivot = add_body(scene, motion_type::MOTION_STATIC, {0.0f, 10.0f, 0.0f});
     RigidBody *ball = add_body(scene, motion_type::MOTION_DYNAMIC, {2.0f, 10.0f, 0.0f});
     const Float3 anchor = {0.0f, 10.0f, 0.0f};
@@ -129,7 +129,7 @@ void test_point_constraint_holds_anchor(TestCtx &ctx) {
 void test_point_constraint_joins_two_dynamic_bodies(TestCtx &ctx) {
     const float dt = 1.0f / 60.0f;
     // two dynamic bodies thrown apart stay joined at the point, and momentum is kept
-    ConstraintScene pair = make_constraint_scene(ctx);
+    ConstraintScene pair = make_constraint_scene();
     RigidBody *a = add_body(pair, motion_type::MOTION_DYNAMIC, {-0.5f, 0.0f, 0.0f});
     RigidBody *b = add_body(pair, motion_type::MOTION_DYNAMIC, {0.5f, 0.0f, 0.0f});
     a->motion_properties.linear_velocity = {-3.0f, 1.0f, 0.0f};

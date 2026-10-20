@@ -1,11 +1,10 @@
 // (C) Sebastian Aaltonen 2023
 // MIT License (see file: OFFSET_ALLOCATOR_LICENSE)
 
-#include "tumble/util/offset_allocator.h"
+#include "wasm/runtime/offset_allocator.h"
 
 #include "tumble/util/assert.h"
 #include "tumble/util/mem.h"
-#include "tumble/util/object.h"
 
 TUMBLE_NAMESPACE_BEGIN
 

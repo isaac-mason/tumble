@@ -1,4 +1,3 @@
-#include "tumble/instance.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
@@ -77,7 +76,6 @@ static bool run_epa(penetration::PenetrationDepth &depth, support::Support &whol
 }
 
 void test_penetration_zeroed_and_reset(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     penetration::PenetrationDepth depth = {};
     CHECK(ctx, depth.status == penetration::NOT_COLLIDING);
     CHECK(ctx, vec3f::exact_equals(depth.penetration_axis, vec3f::zero()) && vec3f::exact_equals(depth.point_a, vec3f::zero()) && vec3f::exact_equals(depth.point_b, vec3f::zero()));
@@ -89,7 +87,6 @@ void test_penetration_zeroed_and_reset(TestCtx &ctx) {
 }
 
 void test_penetration_spheres_overlapping(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     penetration::PenetrationDepth depth = {};
 
     const float radius_a = 1.0f, radius_b = 0.5f;
@@ -147,7 +144,6 @@ void test_penetration_spheres_overlapping(TestCtx &ctx) {
 }
 
 void test_penetration_box_resting_in_box(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     penetration::PenetrationDepth depth = {};
     penetration::PenetrationDepth epa = {};
 
@@ -195,7 +191,6 @@ void test_penetration_box_resting_in_box(TestCtx &ctx) {
 }
 
 void test_penetration_epa_coplanar_box_faces(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     penetration::PenetrationDepth depth = {};
 
     // unit boxes, b sunk 0.3 into a's top: the minkowski difference has many coplanar support points,
@@ -250,7 +245,6 @@ void test_penetration_epa_coplanar_box_faces(TestCtx &ctx) {
 }
 
 void test_penetration_epa_fills_small_simplices(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     penetration::PenetrationDepth depth = {};
 
     // a small box sunk 0.3 into the top of a big one: whatever simplex epa starts from, the answer is the same
@@ -294,7 +288,6 @@ void test_penetration_epa_fills_small_simplices(TestCtx &ctx) {
 }
 
 void test_penetration_cast_shape_starting_inside(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // a sphere of radius 0.5 (exclude mode: a point core) whose centre is already inside a unit box rounded by 0.05
     support::Support sphere = sphere_support(0.5f, false);
@@ -342,7 +335,6 @@ void test_penetration_cast_shape_starting_inside(TestCtx &ctx) {
 }
 
 void test_penetration_cast_shape_sweep(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // a sphere of radius 0.5 sweeping along +x into a unit box rounded by 0.05, as in the gjk cast test
     const Mat4f a_to_b = translation(vec3f::make(-5.0f, 0.2f, -0.1f));
@@ -402,10 +394,10 @@ static bool deep_boxes_collide(TestCtx &ctx) {
     return hit;
 }
 
-void test_penetration_deep_boxes_across_heap_resets(TestCtx &ctx) {
-    // convex's epa scratch is a static that outlives the heap; it must hold no heap memory
-    CHECK(ctx, util::init(test_heap_begin()));
+void test_penetration_epa_scratch_holds_no_memory(TestCtx &ctx) {
+    // convex's epa scratch is a static that outlives every query; it holds nothing allocated, and serves the next query
+    const size_t blocks = util::allocated_blocks();
     CHECK(ctx, deep_boxes_collide(ctx));
-    CHECK(ctx, util::init(test_heap_begin()));
+    CHECK(ctx, util::allocated_blocks() == blocks);
     CHECK(ctx, deep_boxes_collide(ctx));
 }

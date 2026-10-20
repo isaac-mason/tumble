@@ -20,7 +20,7 @@ struct OffsetCenterOfMassShapeSettings {
     Float3 offset = {0.0f, 0.0f, 0.0f};
 };
 
-/** null when the memory cannot grow */
+/** null when the allocator fails */
 Shape *create(const OffsetCenterOfMassShapeSettings &settings);
 /** frees the shape, not the shape it wraps */
 void destroy(Shape *shape);

@@ -264,7 +264,7 @@ struct UpdateSettings {
     Vec3f walk_stairs_step_down_extra = vec3f::make(0.0f, 0.0f, 0.0f);
 };
 
-/** null when the memory cannot grow; with an inner body, the world sees it only once added */
+/** null when the allocator fails; with an inner body, the world sees it only once added */
 KCC *create(const KCCSettings &settings, Vec3f position, Quatf quaternion);
 /** remove it from the world first if it was added */
 void destroy(KCC *character);

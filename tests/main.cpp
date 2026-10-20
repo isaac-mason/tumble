@@ -1,6 +1,8 @@
 #include "test.h"
 
-#include "export.h"
+#include "wasm/runtime/export.h"
+#include "wasm/heap_begin.h"
+#include "wasm/runtime/instance.h"
 
 // every `void test_<name>(TestCtx &)` in test/*.test.cpp, listed by build-test.sh into the build
 // dir's test_list.inc: once as a declaration, once in the table, once as a name.
@@ -32,9 +34,10 @@ static const char *const TEST_NAMES[] = {
 
 WASM_EXPORT uint32_t test_count() { return sizeof(TESTS) / sizeof(TESTS[0]); }
 
-/** runs test `index` under its name less the test_ prefix; run.mjs gives each test an instance of its own. */
+/** runs test `index` under its name less the test_ prefix, over a fresh heap; run.mjs gives each test an instance of its own. */
 WASM_EXPORT uint32_t test_run_one(uint32_t index) {
     ctx = {TEST_NAMES[index] + 5, 0, 0};
+    CHECK(ctx, runtime::init(heap_begin()));
     TESTS[index](ctx);
     return ctx.failures;
 }

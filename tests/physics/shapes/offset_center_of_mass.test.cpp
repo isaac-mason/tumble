@@ -1,6 +1,5 @@
 #include "tumble/physics/shapes/offset_center_of_mass.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
@@ -46,7 +45,6 @@ static void check_parallel_axis(TestCtx &ctx, const mass_properties::MassPropert
 /* creation */
 
 void test_offset_center_of_mass_create(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     Shape *o = offset_center_of_mass::create({.shape = s, .offset = {0, -2, 0}});
@@ -79,7 +77,6 @@ void test_offset_center_of_mass_create(TestCtx &ctx) {
 }
 
 void test_offset_center_of_mass_mass_properties(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     mass_properties::MassProperties inner, outer;
 
@@ -120,7 +117,6 @@ void test_offset_center_of_mass_mass_properties(TestCtx &ctx) {
 }
 
 void test_offset_center_of_mass_pass_through(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     Shape *s = sphere::create({.radius = 1.0f});
     Shape *o = offset_center_of_mass::create({.shape = s, .offset = {0, -0.5f, 0}});
@@ -171,7 +167,6 @@ void test_offset_center_of_mass_pass_through(TestCtx &ctx) {
 /* collide and cast through dispatch */
 
 void test_offset_center_of_mass_sphere_vs_box(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // a unit sphere with its centre of mass 2 below: collides where the sphere is, not where the mass is. a unit box at
     // (0, 1.5, 0) reaches down to 0.5, 0.5 into the sphere's top
@@ -244,7 +239,6 @@ void test_offset_center_of_mass_dispatch_rows(TestCtx &ctx) {
 /* material by sub shape id */
 
 void test_offset_center_of_mass_material(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     dispatch::init();
     // through the inner shape, sub shape id and all
     Shape *b = box::create({.half_extents = {1, 1, 1}, .material_id = 6});

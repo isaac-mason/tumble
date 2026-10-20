@@ -1,6 +1,5 @@
 #include "tumble/physics/contacts.h"
 
-#include "tumble/instance.h"
 #include "tumble/physics/shapes/box.h"
 #include "tumble/physics/shapes/dispatch.h"
 #include "tumble/physics/shapes/sphere.h"
@@ -26,8 +25,7 @@ struct World {
     shapes::Shape *sphere;
 };
 
-World make_world(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
+World make_world() {
     dispatch::init();
     World world = {};
     const uint32_t broadphase_moving = layers::add_broadphase_layer(world.layers);
@@ -118,7 +116,7 @@ void test_contacts_create_empty(TestCtx &ctx) {
 }
 
 void test_contacts_create_nested_under_record(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     RigidBody *a = make_body(world);
     RigidBody *b = make_body(world);
     const int32_t record = pairs::add_pair_record(world.pairs, *a, *b);
@@ -140,7 +138,7 @@ void test_contacts_create_nested_under_record(TestCtx &ctx) {
 }
 
 void test_contacts_destroy_reports_and_empties_chain(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     RigidBody *a = make_body(world);
     RigidBody *b = make_body(world);
     const int32_t record = pairs::add_pair_record(world.pairs, *a, *b);
@@ -157,7 +155,7 @@ void test_contacts_destroy_reports_and_empties_chain(TestCtx &ctx) {
 }
 
 void test_contacts_reuse_freed_index(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     RigidBody *a = make_body(world);
     RigidBody *b = make_body(world);
     const int32_t record = pairs::add_pair_record(world.pairs, *a, *b);
@@ -178,7 +176,7 @@ void test_contacts_reuse_freed_index(TestCtx &ctx) {
 }
 
 void test_contacts_manifold_double_buffer(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     RigidBody *a = make_body(world);
     RigidBody *b = make_body(world);
     const int32_t record = pairs::add_pair_record(world.pairs, *a, *b);
@@ -196,7 +194,7 @@ void test_contacts_manifold_double_buffer(TestCtx &ctx) {
 }
 
 void test_contacts_chain_middle_destroy(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     RigidBody *a = make_body(world);
     RigidBody *b = make_body(world);
     const int32_t record = pairs::add_pair_record(world.pairs, *a, *b);
@@ -217,7 +215,7 @@ void test_contacts_chain_middle_destroy(TestCtx &ctx) {
 }
 
 void test_contacts_find_in_pair(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     RigidBody *a = make_body(world);
     RigidBody *b = make_body(world);
     const int32_t record = pairs::add_pair_record(world.pairs, *a, *b);
@@ -240,7 +238,7 @@ void test_contacts_find_in_pair(TestCtx &ctx) {
 }
 
 void test_contacts_destroy_stale_in_pair(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     world.contacts.frame_stamp = 5;
     RigidBody *a = make_body(world);
     RigidBody *b = make_body(world);
@@ -264,7 +262,7 @@ void test_contacts_destroy_stale_in_pair(TestCtx &ctx) {
 }
 
 void test_contacts_destroy_pair_chain_immediate_and_queued(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     RigidBody *a = make_body(world);
     RigidBody *b = make_body(world);
     const int32_t record = pairs::add_pair_record(world.pairs, *a, *b);
@@ -289,7 +287,7 @@ void test_contacts_destroy_pair_chain_immediate_and_queued(TestCtx &ctx) {
 }
 
 void test_contacts_chain_integrity_many_pairs(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     RigidBody *hub = make_body(world);
     RigidBody *spokes[6];
     int32_t records[6];
@@ -325,7 +323,7 @@ void test_contacts_chain_integrity_many_pairs(TestCtx &ctx) {
 }
 
 void test_contacts_lifecycle_under_found_pair(TestCtx &ctx) {
-    World world = make_world(ctx);
+    World world = make_world();
     RigidBody *floor = make_body(world, {0, -1, 0}, motion_type::MOTION_STATIC);
     RigidBody *ball = make_body(world, {0, 0.9f, 0});
 

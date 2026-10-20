@@ -44,7 +44,7 @@ struct World {
     float previous_time_step;
 };
 
-/** a world over the settings, which it takes (the layers move in); null when the memory cannot grow */
+/** a world over the settings, which it takes (the layers move in); null when the allocator fails */
 World *create(const world_settings::WorldSettings &settings);
 /** frees every body, constraint, contact and buffer, then the world */
 void destroy(World *world);

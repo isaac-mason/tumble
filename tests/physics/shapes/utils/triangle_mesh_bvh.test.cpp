@@ -1,7 +1,6 @@
 #include "tumble/physics/shapes/utils/triangle_mesh_bvh.h"
 #include "tumble/math/aabox.h"
 
-#include "tumble/instance.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
 #include "test.h"
@@ -267,7 +266,6 @@ static void check_queries(TestCtx &ctx, const collections::Vec<bvh::Node> &tree,
 }
 
 void test_triangle_mesh_bvh_grid(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
     TriangleMeshData *original = make_grid();
 
     const mesh_bvh::BvhSplitStrategy strategies[] = {mesh_bvh::BVH_SPLIT_STRATEGY_CENTER, mesh_bvh::BVH_SPLIT_STRATEGY_AVERAGE,
@@ -300,7 +298,6 @@ void test_triangle_mesh_bvh_grid(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_bvh_small(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // no triangles: no nodes, empty stats
     TriangleMeshData *empty = triangle_mesh_data::create(0, 0, 0);
@@ -371,7 +368,6 @@ static TriangleMeshData *make_strip(const float *xs, uint32_t count) {
 }
 
 void test_triangle_mesh_bvh_sah_small_mode_own_candidates(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // five unit triangles at x = 0, 10, 20, 30, 40: aabb centers x = 0.5, 10.5, 20.5, 30.5, 40.5, y = 0.5,
     // z = 0. the center extent is zero on y and z, so only x is tried. surface areas of flat boxes are
@@ -418,7 +414,6 @@ void test_triangle_mesh_bvh_sah_small_mode_own_candidates(TestCtx &ctx) {
 }
 
 void test_triangle_mesh_bvh_exact_bounds(TestCtx &ctx) {
-    CHECK(ctx, util::init(test_heap_begin()));
 
     // a 9 x 9 vertex grid whose coordinates are sums and products of values with no exact binary form
     const uint32_t side = 9;
