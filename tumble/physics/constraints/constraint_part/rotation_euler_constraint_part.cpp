@@ -29,8 +29,8 @@ Quatf get_inv_initial_orientation_xy(Vec3f axis_x1, Vec3f axis_y1, Vec3f axis_x2
     return quatf::multiply(rotation_of_axes(axis_x2, axis_y2), quatf::conjugate(rotation_of_axes(axis_x1, axis_y1)));
 }
 
-void calculate_constraint_properties(RotationEulerConstraintPart &part, rigid_body::RigidBody &body_a, const Mat4f &,
-                                     rigid_body::RigidBody &body_b, const Mat4f &, uint32_t step_stamp) {
+void calculate_constraint_properties(RotationEulerConstraintPart &part, rigid_body::RigidBody &body_a, rigid_body::RigidBody &body_b,
+                                     uint32_t step_stamp) {
     // world space inverse inertia of both bodies
     part.inv_i1 = body_a.motion_type == motion_type::MOTION_DYNAMIC
                       ? motion_properties::get_world_inverse_inertia(body_a.motion_properties, quatf::load(body_a.quaternion), step_stamp)

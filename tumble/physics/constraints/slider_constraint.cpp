@@ -384,8 +384,7 @@ void setup_velocity(SliderConstraint &constraint, bodies::Bodies &bodies, float 
 
     calculate_r1_r2_u(constraint, body_a, body_b, rotation_a, rotation_b);
     calculate_position_constraint_properties(constraint, body_a, body_b, rotation_a, bodies.step_stamp);
-    rotation_euler_constraint_part::calculate_constraint_properties(constraint.rotation_constraint_part, body_a, rotation_a, body_b,
-                                                                    rotation_b, bodies.step_stamp);
+    rotation_euler_constraint_part::calculate_constraint_properties(constraint.rotation_constraint_part, body_a, body_b, bodies.step_stamp);
     calculate_sliding_axis_and_position(constraint, rotation_a);
     calculate_position_limits_constraint_properties(constraint, body_a, body_b, delta_time, bodies.step_stamp);
     calculate_motor_constraint_properties(constraint, body_a, body_b, delta_time, bodies.step_stamp);
@@ -476,11 +475,8 @@ bool solve_position(SliderConstraint &constraint, bodies::Bodies &bodies, float 
     const bool pos = dual_axis_constraint_part::solve_position_constraint(constraint.position_constraint_part, body_a, body_b,
                                                                           constraint.u, constraint.n1, constraint.n2, baumgarte);
 
-    // the bodies have moved
-    rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
-    rotation_euler_constraint_part::calculate_constraint_properties(constraint.rotation_constraint_part, body_a, rotation_a, body_b,
-                                                                    rotation_b, motion_properties::STEP_STAMP_NONE);
+    rotation_euler_constraint_part::calculate_constraint_properties(constraint.rotation_constraint_part, body_a, body_b,
+                                                                    motion_properties::STEP_STAMP_NONE);
     const bool rot = rotation_euler_constraint_part::solve_position_constraint(constraint.rotation_constraint_part, body_a, body_b,
                                                                                constraint.inv_initial_orientation, baumgarte);
 

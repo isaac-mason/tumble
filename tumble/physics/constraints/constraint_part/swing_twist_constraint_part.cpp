@@ -468,11 +468,8 @@ bool solve_position_constraint(SwingTwistConstraintPart &part, rigid_body::Rigid
             constraint_to_body2, quatf::conjugate(quatf::multiply(quatf::multiply(constraint_to_body1, q_swing), q_twist)));
 
         // a fresh rotation euler part
-        const Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-        const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
         rotation_euler_constraint_part::RotationEulerConstraintPart rotation_part = rotation_euler_constraint_part::create();
-        rotation_euler_constraint_part::calculate_constraint_properties(rotation_part, body_a, rotation_a, body_b, rotation_b,
-                                                                        motion_properties::STEP_STAMP_NONE);
+        rotation_euler_constraint_part::calculate_constraint_properties(rotation_part, body_a, body_b, motion_properties::STEP_STAMP_NONE);
 
         return rotation_euler_constraint_part::solve_position_constraint(rotation_part, body_a, body_b, inv_initial_orientation,
                                                                          baumgarte);

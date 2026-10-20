@@ -16,8 +16,7 @@ static void calculate(RotationEulerConstraintPart &part, RigidBody &a, RigidBody
     Float4x4 rotation_a, rotation_b;
     mat4f::store(rotation_a, mat4f::from_quat(quatf::load(a.quaternion)));
     mat4f::store(rotation_b, mat4f::from_quat(quatf::load(b.quaternion)));
-    rotation_euler_constraint_part::calculate_constraint_properties(part, a, mat4f::load(rotation_a), b, mat4f::load(rotation_b),
-                                                                    motion_properties::STEP_STAMP_NONE);
+    rotation_euler_constraint_part::calculate_constraint_properties(part, a, b, motion_properties::STEP_STAMP_NONE);
 }
 
 /** the angle of q2 * r0^-1 * q1^-1, the drift from the initial relative rotation */

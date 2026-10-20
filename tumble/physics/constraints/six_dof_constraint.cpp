@@ -446,8 +446,8 @@ void setup_velocity(SixDOFConstraint &constraint, bodies::Bodies &bodies, float 
 
     if (is_rotation_fully_constrained(constraint)) {
         // all rotation locked: the rotation euler part
-        rotation_euler_constraint_part::calculate_constraint_properties(constraint.rotation_constraint_part, body_a, rotation_a,
-                                                                        body_b, rotation_b, bodies.step_stamp);
+        rotation_euler_constraint_part::calculate_constraint_properties(constraint.rotation_constraint_part, body_a, body_b,
+                                                                        bodies.step_stamp);
     } else if (is_rotation_constrained(constraint) || constraint.rotation_motor_active) {
         if (is_rotation_constrained(constraint)) {
             swing_twist_constraint_part::calculate_constraint_properties(constraint.swing_twist_constraint_part, body_a, body_b, q,
@@ -702,9 +702,6 @@ bool solve_position(SixDOFConstraint &constraint, bodies::Bodies &bodies, float 
 
     bool impulse = false;
 
-    Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
-
     if (is_rotation_fully_constrained(constraint)) {
         // inverse of the initial rotation from body 1 to body 2 in body 1 space, with the fixed angles applied:
         // r0^-1 = c2 * c1^-1
@@ -714,8 +711,8 @@ bool solve_position(SixDOFConstraint &constraint, bodies::Bodies &bodies, float 
         const Quatf constraint_to_body1 = quatf::multiply(constraint.constraint_to_body1, quatf::from_euler(rotation_limits_min_euler));
         const Quatf inv_initial_orientation = quatf::multiply(constraint.constraint_to_body2, quatf::conjugate(constraint_to_body1));
 
-        rotation_euler_constraint_part::calculate_constraint_properties(constraint.rotation_constraint_part, body_a, rotation_a,
-                                                                        body_b, rotation_b, motion_properties::STEP_STAMP_NONE);
+        rotation_euler_constraint_part::calculate_constraint_properties(constraint.rotation_constraint_part, body_a, body_b,
+                                                                        motion_properties::STEP_STAMP_NONE);
         impulse = rotation_euler_constraint_part::solve_position_constraint(constraint.rotation_constraint_part, body_a, body_b,
                                                                             inv_initial_orientation, baumgarte) ||
                   impulse;
@@ -731,8 +728,8 @@ bool solve_position(SixDOFConstraint &constraint, bodies::Bodies &bodies, float 
     }
 
     // the translation solve takes the rotations as the rotation solve left them
-    rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
+    const Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
+    const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
 
     if (is_translation_fully_constrained(constraint)) {
         // the point part, at the fixed offsets

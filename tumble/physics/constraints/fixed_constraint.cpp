@@ -168,8 +168,7 @@ void setup_velocity(FixedConstraint &constraint, bodies::Bodies &bodies, float d
     const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
 
     // rotation (3 DOF, keeps orientations locked)
-    rotation_euler_constraint_part::calculate_constraint_properties(constraint.rotation_constraint_part, body_a, rotation_a,
-                                                                    body_b, rotation_b, bodies.step_stamp);
+    rotation_euler_constraint_part::calculate_constraint_properties(constraint.rotation_constraint_part, body_a, body_b, bodies.step_stamp);
 
     // translation (3 DOF, keeps positions together)
     point_constraint_part::calculate_constraint_properties(constraint.point_constraint_part, body_a, rotation_a,
@@ -205,18 +204,14 @@ bool solve_position(FixedConstraint &constraint, bodies::Bodies &bodies, float d
     RigidBody &body_a = *bodies.pool[constraint.base.body_index_a];
     RigidBody &body_b = *bodies.pool[constraint.base.body_index_b];
 
-    // recalculate constraint properties (the bodies may have moved)
-    Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
-
-    rotation_euler_constraint_part::calculate_constraint_properties(constraint.rotation_constraint_part, body_a, rotation_a,
-                                                                    body_b, rotation_b, motion_properties::STEP_STAMP_NONE);
+    rotation_euler_constraint_part::calculate_constraint_properties(constraint.rotation_constraint_part, body_a, body_b,
+                                                                    motion_properties::STEP_STAMP_NONE);
     const bool rot = rotation_euler_constraint_part::solve_position_constraint(
         constraint.rotation_constraint_part, body_a, body_b, constraint.inv_initial_orientation, baumgarte);
 
     // the rotation solve moved the bodies
-    rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
+    const Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
+    const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
 
     point_constraint_part::calculate_constraint_properties(constraint.point_constraint_part, body_a, rotation_a,
                                                            constraint.local_space_position1, body_b, rotation_b,

@@ -67,11 +67,11 @@ Quatf get_inv_initial_orientation(Quatf rotation1, Quatf rotation2);
 Quatf get_inv_initial_orientation_xy(Vec3f axis_x1, Vec3f axis_y1, Vec3f axis_x2, Vec3f axis_y2);
 
 /**
- * the 3x3 effective mass: for J = [0, -E, 0, E], K = J M^-1 J^T = I1^-1 + I2^-1, inverted. the rotation matrices are
- * unused: the inertia comes from the body quaternions
+ * the 3x3 effective mass: for J = [0, -E, 0, E], K = J M^-1 J^T = I1^-1 + I2^-1, inverted, the inertia from the body
+ * quaternions
  */
-void calculate_constraint_properties(RotationEulerConstraintPart &part, rigid_body::RigidBody &body_a, const Mat4f &rotation_a,
-                                     rigid_body::RigidBody &body_b, const Mat4f &rotation_b, uint32_t step_stamp);
+void calculate_constraint_properties(RotationEulerConstraintPart &part, rigid_body::RigidBody &body_a, rigid_body::RigidBody &body_b,
+                                     uint32_t step_stamp);
 
 /** warm start by applying the previous frame's impulse scaled by the warm start ratio */
 void warm_start(RotationEulerConstraintPart &part, rigid_body::RigidBody &body_a, rigid_body::RigidBody &body_b,
