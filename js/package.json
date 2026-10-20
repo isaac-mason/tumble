@@ -1,0 +1,33 @@
+{
+    "name": "tumble",
+    "version": "0.0.0",
+    "private": true,
+    "description": "a 3d rigid body physics engine in webassembly",
+    "license": "MIT",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "sideEffects": false,
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsc -p tsconfig.build.json",
+        "typecheck": "tsc --noEmit -p tsconfig.json",
+        "test": "vitest run",
+        "format": "biome format --write src test",
+        "lint": "biome lint src test"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "2.2.0",
+        "@types/node": "24.10.1",
+        "typescript": "5.9.3",
+        "vitest": "3.2.4"
+    }
+}
