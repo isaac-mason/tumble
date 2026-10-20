@@ -28,10 +28,10 @@ inline Mat4f zero() { return {{v4f::zero(), v4f::zero(), v4f::zero(), v4f::zero(
 inline Vec3f axis(const Mat4f &m, int i) { return {vec3f::fix_w(m.c[i])}; }
 
 inline Mat4f transpose(const Mat4f &a) {
-    const v128_t t0 = v4f::shuffle2<0, 4, 1, 5>(a.c[0], a.c[1]);
-    const v128_t t1 = v4f::shuffle2<0, 4, 1, 5>(a.c[2], a.c[3]);
-    const v128_t t2 = v4f::shuffle2<2, 6, 3, 7>(a.c[0], a.c[1]);
-    const v128_t t3 = v4f::shuffle2<2, 6, 3, 7>(a.c[2], a.c[3]);
+    const V128 t0 = v4f::shuffle2<0, 4, 1, 5>(a.c[0], a.c[1]);
+    const V128 t1 = v4f::shuffle2<0, 4, 1, 5>(a.c[2], a.c[3]);
+    const V128 t2 = v4f::shuffle2<2, 6, 3, 7>(a.c[0], a.c[1]);
+    const V128 t3 = v4f::shuffle2<2, 6, 3, 7>(a.c[2], a.c[3]);
     return {{v4f::shuffle2<0, 1, 4, 5>(t0, t1), v4f::shuffle2<2, 3, 6, 7>(t0, t1), v4f::shuffle2<0, 1, 4, 5>(t2, t3),
              v4f::shuffle2<2, 3, 6, 7>(t2, t3)}};
 }
@@ -138,16 +138,16 @@ inline float determinant(const Mat4f &m) {
 }
 
 /** a's columns weighted by the lanes of v: a0 v.x + a1 v.y + a2 v.z + a3 v.w, summed in that order. */
-inline v128_t combine4(const Mat4f &a, v128_t v) {
-    v128_t r = v4f::mul(a.c[0], v4f::shuffle<0, 0, 0, 0>(v));
+inline V128 combine4(const Mat4f &a, V128 v) {
+    V128 r = v4f::mul(a.c[0], v4f::shuffle<0, 0, 0, 0>(v));
     r = v4f::mul_add(a.c[1], v4f::shuffle<1, 1, 1, 1>(v), r);
     r = v4f::mul_add(a.c[2], v4f::shuffle<2, 2, 2, 2>(v), r);
     return v4f::mul_add(a.c[3], v4f::shuffle<3, 3, 3, 3>(v), r);
 }
 
 /** a0 v.x + a1 v.y + a2 v.z, summed in that order. */
-inline v128_t combine3(const Mat4f &a, v128_t v) {
-    v128_t r = v4f::mul(a.c[0], v4f::shuffle<0, 0, 0, 0>(v));
+inline V128 combine3(const Mat4f &a, V128 v) {
+    V128 r = v4f::mul(a.c[0], v4f::shuffle<0, 0, 0, 0>(v));
     r = v4f::mul_add(a.c[1], v4f::shuffle<1, 1, 1, 1>(v), r);
     return v4f::mul_add(a.c[2], v4f::shuffle<2, 2, 2, 2>(v), r);
 }
@@ -188,7 +188,7 @@ inline Mat4f cross_product_matrix(Vec3f v) {
 
 /** a translated by v (a * T(v)). */
 inline Mat4f translate(const Mat4f &a, Vec3f v) {
-    v128_t r = v4f::mul_add(a.c[0], v4f::splat(vec3f::x(v)), a.c[3]);
+    V128 r = v4f::mul_add(a.c[0], v4f::splat(vec3f::x(v)), a.c[3]);
     r = v4f::mul_add(a.c[1], v4f::splat(vec3f::y(v)), r);
     r = v4f::mul_add(a.c[2], v4f::splat(vec3f::z(v)), r);
     return {{a.c[0], a.c[1], a.c[2], r}};
@@ -206,7 +206,7 @@ inline Mat4f from_scaling(Vec3f v) {
 }
 
 /** the three rotation columns of q, lane 3 zero */
-inline void rotation_columns(v128_t &c0, v128_t &c1, v128_t &c2, Quatf q) {
+inline void rotation_columns(V128 &c0, V128 &c1, V128 &c2, Quatf q) {
     const float qx = v4f::lane<0>(q.v), qy = v4f::lane<1>(q.v), qz = v4f::lane<2>(q.v), qw = v4f::lane<3>(q.v);
     const float x2 = qx + qx, y2 = qy + qy, z2 = qz + qz;
     const float xx = qx * x2, xy = qx * y2, xz = qx * z2;
@@ -255,7 +255,7 @@ inline Mat4f subtract(const Mat4f &a, const Mat4f &b) {
 }
 
 inline Mat4f multiply_scalar(const Mat4f &a, float b) {
-    const v128_t s = v4f::splat(b);
+    const V128 s = v4f::splat(b);
     return {{v4f::mul(a.c[0], s), v4f::mul(a.c[1], s), v4f::mul(a.c[2], s), v4f::mul(a.c[3], s)}};
 }
 

@@ -138,10 +138,10 @@ static void compute_compound_child_bounds(collections::Vec<Box3f> &out, const co
 static AABox divide_box_by_scale(const AABox &box, Vec3f scale) {
     if (vec3f::x(scale) == 1.0f && vec3f::y(scale) == 1.0f && vec3f::z(scale) == 1.0f) return box;
 
-    const v128_t lo = v4f::div(box.min.v, scale.v);
-    const v128_t hi = v4f::div(box.max.v, scale.v);
+    const V128 lo = v4f::div(box.min.v, scale.v);
+    const V128 hi = v4f::div(box.max.v, scale.v);
     // lo < hi ? lo : hi, and lo < hi ? hi : lo, per lane
-    const v128_t lo_first = v4f::lt(lo, hi);
+    const V128 lo_first = v4f::lt(lo, hi);
     return {{v4f::select(lo, hi, lo_first)}, {v4f::select(hi, lo, lo_first)}};
 }
 

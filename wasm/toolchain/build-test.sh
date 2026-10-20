@@ -2,6 +2,26 @@
 # run: sh wasm/toolchain/build-test.sh
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
+# every test runs on both simd backends, and their digests must match: the backends compute the same bits
+if [ -z "$SIMD" ]; then
+    LOGS="$(cd "$HERE/../.." && pwd)/build/test-logs-$$"
+    mkdir -p "$LOGS"
+    trap 'rm -rf "$LOGS"' EXIT
+    for backend in 1 0; do
+        status=0
+        SIMD=$backend sh "$0" > "$LOGS/$backend" 2>&1 || status=$?
+        cat "$LOGS/$backend"
+        [ $status = 0 ] || exit $status
+    done
+    simd_digest=$(grep '^digest:' "$LOGS/1" | cut -d' ' -f2)
+    scalar_digest=$(grep '^digest:' "$LOGS/0" | cut -d' ' -f2)
+    if [ -z "$simd_digest" ] || [ "$simd_digest" != "$scalar_digest" ]; then
+        echo "FAIL the backends' digests differ: simd $simd_digest, scalar $scalar_digest"
+        exit 1
+    fi
+    echo "backends agree"
+    exit 0
+fi
 . "$HERE/toolchain.sh"
 
 BUILD="$ROOT/build/test-$$"
@@ -28,4 +48,5 @@ compile_tree "$TESTS" "-DTUMBLE_DEBUG -I$TESTS -I$LIST_DIR"
 compile_c
 link_wasm "$BUILD/tumble-test.wasm" names
 node "$HERE/scripts/check-imports.mjs" "$BUILD/tumble-test.wasm"
+echo "simd backend: $([ "$SIMD" = 0 ] && echo scalar || echo wasm simd128)"
 node "$TESTS/run.mjs" "$BUILD/tumble-test.wasm"

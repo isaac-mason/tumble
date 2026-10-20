@@ -39,11 +39,11 @@ inline Quatf set_axis_angle(Vec3f axis, float rad) {
 
 /** the hamilton product */
 inline Quatf multiply(Quatf a, Quatf b) {
-    const v128_t flip_w = v4f::make(1.0f, 1.0f, 1.0f, -1.0f);
-    const v128_t t0 = v4f::mul(v4f::shuffle<3, 3, 3, 3>(a.v), b.v);
-    const v128_t t1 = v4f::mul(v4f::mul(v4f::shuffle<0, 1, 2, 0>(a.v), flip_w), v4f::shuffle<3, 3, 3, 0>(b.v));
-    const v128_t t2 = v4f::mul(v4f::mul(v4f::shuffle<1, 2, 0, 1>(a.v), flip_w), v4f::shuffle<2, 0, 1, 1>(b.v));
-    const v128_t t3 = v4f::mul(v4f::shuffle<2, 0, 1, 2>(a.v), v4f::shuffle<1, 2, 0, 2>(b.v));
+    const V128 flip_w = v4f::make(1.0f, 1.0f, 1.0f, -1.0f);
+    const V128 t0 = v4f::mul(v4f::shuffle<3, 3, 3, 3>(a.v), b.v);
+    const V128 t1 = v4f::mul(v4f::mul(v4f::shuffle<0, 1, 2, 0>(a.v), flip_w), v4f::shuffle<3, 3, 3, 0>(b.v));
+    const V128 t2 = v4f::mul(v4f::mul(v4f::shuffle<1, 2, 0, 1>(a.v), flip_w), v4f::shuffle<2, 0, 1, 1>(b.v));
+    const V128 t3 = v4f::mul(v4f::shuffle<2, 0, 1, 2>(a.v), v4f::shuffle<1, 2, 0, 2>(b.v));
     return {v4f::sub(v4f::add(v4f::add(t0, t1), t2), t3)};
 }
 
@@ -88,7 +88,7 @@ inline Quatf from_mat3(const Mat3f &m3) {
 
 /** from the rotation part */
 inline Quatf from_mat4(const Mat4f &m) {
-    const v128_t c0 = m.c[0], c1 = m.c[1], c2 = m.c[2];
+    const V128 c0 = m.c[0], c1 = m.c[1], c2 = m.c[2];
     const Mat3f m3 = {{v4f::lane<0>(c0), v4f::lane<1>(c0), v4f::lane<2>(c0), v4f::lane<0>(c1), v4f::lane<1>(c1),
                        v4f::lane<2>(c1), v4f::lane<0>(c2), v4f::lane<1>(c2), v4f::lane<2>(c2)}};
     return from_mat3(m3);

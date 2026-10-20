@@ -4,6 +4,7 @@
 
 #include "tumble/tumble.h"
 #include "tumble/util/assert.h"
+#include "tumble/util/bits.h"
 
 TUMBLE_NAMESPACE_BEGIN
 
@@ -63,7 +64,7 @@ inline void push(SubShapeIdBuilder &out, const SubShapeIdBuilder &source, uint32
 /** bits needed to hold any index below `count`. */
 inline uint32_t bits_for_count(uint32_t count) {
     const uint32_t max_index = count - 1;
-    return max_index == 0 ? 0 : 32 - __builtin_clz(max_index);
+    return max_index == 0 ? 0 : 32 - bits::count_leading_zeros(max_index);
 }
 
 /** pushes an index into a list of `count` entries. */

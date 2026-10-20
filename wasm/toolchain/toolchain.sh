@@ -35,7 +35,10 @@ SRC="$ROOT/tumble"
 # people, or agents, testing in the same tree) never share objects or outputs.
 BUILD="${BUILD:-$ROOT/build/wasm}"
 
-FEATURES="-msimd128 -mbulk-memory -mnontrapping-fptoint -msign-ext"
+# SIMD=0 builds the scalar backend. without the simd128 feature an intrinsic outside math/simd.h does not compile
+SIMD_FEATURE="-msimd128"
+[ "${SIMD:-1}" = 0 ] && SIMD_FEATURE=""
+FEATURES="$SIMD_FEATURE -mbulk-memory -mnontrapping-fptoint -msign-ext"
 # the optimisation level for clang and wasm-opt both; WASM_OPT_LEVEL overrides it. -O3 over -Os:
 # +50 KB gzipped for 7 to 16% on meshing, translucency and light, a few % on physics, the same bits.
 OPT="${WASM_OPT_LEVEL:--O3}"

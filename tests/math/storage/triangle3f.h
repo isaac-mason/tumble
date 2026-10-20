@@ -9,9 +9,9 @@ TUMBLE_NAMESPACE_BEGIN
 namespace triangle3f {
 
 inline Box3f &bounds(Box3f &out, const Float3 &a, const Float3 &b, const Float3 &c) {
-    const v128_t va = v4f::load3(&a.x);
-    const v128_t vb = v4f::load3(&b.x);
-    const v128_t vc = v4f::load3(&c.x);
+    const V128 va = v4f::load3(&a.x);
+    const V128 vb = v4f::load3(&b.x);
+    const V128 vc = v4f::load3(&c.x);
     vec3f::store(out.min, v4f::min(va, v4f::min(vb, vc)));
     vec3f::store(out.max, v4f::max(va, v4f::max(vb, vc)));
     return out;

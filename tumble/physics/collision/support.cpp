@@ -115,27 +115,27 @@ static int32_t hull_brute_scan(const float *vertices, uint32_t vertex_count, Vec
     int32_t best_index = -1;
     uint32_t i = 0;
     if (vertex_count >= 4) {
-        const v128_t direction_x = v4f::splat(dx);
-        const v128_t direction_y = v4f::splat(dy);
-        const v128_t direction_z = v4f::splat(dz);
-        v128_t lane_best_dot = v4f::splat(neg_inf);
-        v128_t lane_best_index = wasm_i32x4_splat(-1);
-        v128_t lane_index = wasm_i32x4_make(0, 1, 2, 3);
-        const v128_t four = wasm_i32x4_splat(4);
+        const V128 direction_x = v4f::splat(dx);
+        const V128 direction_y = v4f::splat(dy);
+        const V128 direction_z = v4f::splat(dz);
+        V128 lane_best_dot = v4f::splat(neg_inf);
+        V128 lane_best_index = v4i::splat(-1);
+        V128 lane_index = v4i::make(0, 1, 2, 3);
+        const V128 four = v4i::splat(4);
         for (; i + 4 <= vertex_count; i += 4) {
-            v128_t x, y, z;
+            V128 x, y, z;
             v4f::load3x4(vertices + i * 3, x, y, z);
             // x·dx + y·dy + z·dz in the scalar order, so lanes and tail agree bit for bit
-            const v128_t dot = v4f::add(v4f::add(v4f::mul(x, direction_x), v4f::mul(y, direction_y)), v4f::mul(z, direction_z));
-            const v128_t better = v4f::gt(dot, lane_best_dot);
+            const V128 dot = v4f::add(v4f::add(v4f::mul(x, direction_x), v4f::mul(y, direction_y)), v4f::mul(z, direction_z));
+            const V128 better = v4f::gt(dot, lane_best_dot);
             lane_best_dot = v4f::select(dot, lane_best_dot, better);
             lane_best_index = v4f::select(lane_index, lane_best_index, better);
-            lane_index = wasm_i32x4_add(lane_index, four);
+            lane_index = v4i::add(lane_index, four);
         }
         const float lane_dots[4] = {v4f::lane<0>(lane_best_dot), v4f::lane<1>(lane_best_dot), v4f::lane<2>(lane_best_dot),
                                     v4f::lane<3>(lane_best_dot)};
-        const int32_t lane_indices[4] = {wasm_i32x4_extract_lane(lane_best_index, 0), wasm_i32x4_extract_lane(lane_best_index, 1),
-                                         wasm_i32x4_extract_lane(lane_best_index, 2), wasm_i32x4_extract_lane(lane_best_index, 3)};
+        const int32_t lane_indices[4] = {v4i::lane<0>(lane_best_index), v4i::lane<1>(lane_best_index), v4i::lane<2>(lane_best_index),
+                                         v4i::lane<3>(lane_best_index)};
         for (uint32_t lane = 0; lane < 4; lane++) {
             if (lane_indices[lane] < 0) continue;
             if (lane_dots[lane] > best_dot || (lane_dots[lane] == best_dot && lane_indices[lane] < best_index)) {

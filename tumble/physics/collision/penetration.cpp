@@ -94,11 +94,11 @@ static bool any_triangle_facing_origin(const hull::EpaConvexHullBuilderState &st
         const hull::Triangle *tris[4];
         for (uint32_t lane = 0; lane < 4; lane++) tris[lane] = &state.triangles[triangles.values[base + (lane < count ? lane : 0)]];
 
-        v128_t nx, ny, nz, cx, cy, cz;
+        V128 nx, ny, nz, cx, cy, cz;
         v4f::transpose3x4(tris[0]->normal.v, tris[1]->normal.v, tris[2]->normal.v, tris[3]->normal.v, nx, ny, nz);
         v4f::transpose3x4(tris[0]->centroid.v, tris[1]->centroid.v, tris[2]->centroid.v, tris[3]->centroid.v, cx, cy, cz);
 
-        const v128_t dot = v4f::add(v4f::add(v4f::mul(nx, cx), v4f::mul(ny, cy)), v4f::mul(nz, cz));
+        const V128 dot = v4f::add(v4f::add(v4f::mul(nx, cx), v4f::mul(ny, cy)), v4f::mul(nz, cz));
         // the padding lanes repeat the first triangle of the group, so they cannot change the answer
         if (v4f::any_true(v4f::lt(dot, v4f::zero()))) return true;
     }

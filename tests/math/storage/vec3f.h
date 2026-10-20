@@ -17,7 +17,7 @@ inline Float3 &set(Float3 &out, float x, float y, float z) {
 
 inline Float3 &zero(Float3 &out) { return set(out, 0.0f, 0.0f, 0.0f); }
 
-inline Float3 &store(Float3 &out, v128_t v) {
+inline Float3 &store(Float3 &out, V128 v) {
     v4f::store3(&out.x, v);
     return out;
 }
@@ -70,13 +70,13 @@ inline Float3 &perpendicular(Float3 &out, const Float3 &a) {
 }
 
 inline Float3 &lerp(Float3 &out, const Float3 &a, const Float3 &b, float t) {
-    const v128_t va = v4f::load3(&a.x);
+    const V128 va = v4f::load3(&a.x);
     return store(out, v4f::mul_add(v4f::sub(v4f::load3(&b.x), va), v4f::splat(t), va));
 }
 
 /** a as a point through m, with the perspective divide; a zero or nan w divides by one */
 inline Float3 &transform_mat4(Float3 &out, const Float3 &a, const Float4x4 &m) {
-    v128_t r = v4f::mul(v4f::load4(&m.m[0]), v4f::splat(a.x));
+    V128 r = v4f::mul(v4f::load4(&m.m[0]), v4f::splat(a.x));
     r = v4f::mul_add(v4f::load4(&m.m[4]), v4f::splat(a.y), r);
     r = v4f::mul_add(v4f::load4(&m.m[8]), v4f::splat(a.z), r);
     r = v4f::add(r, v4f::load4(&m.m[12]));
@@ -87,11 +87,11 @@ inline Float3 &transform_mat4(Float3 &out, const Float3 &a, const Float4x4 &m) {
 
 /** rotates a by q: a + 2w (q x a) + 2 (q x (q x a)). */
 inline Float3 &transform_quat(Float3 &out, const Float3 &a, const Float4 &q) {
-    const v128_t qv = v4f::load4(&q.x);
-    const v128_t va = v4f::load3(&a.x);
-    const v128_t uv = cross_lanes(qv, va);
-    const v128_t uuv = cross_lanes(qv, uv);
-    v128_t r = v4f::mul_add(uv, v4f::splat(q.w * 2.0f), va);
+    const V128 qv = v4f::load4(&q.x);
+    const V128 va = v4f::load3(&a.x);
+    const V128 uv = cross_lanes(qv, va);
+    const V128 uuv = cross_lanes(qv, uv);
+    V128 r = v4f::mul_add(uv, v4f::splat(q.w * 2.0f), va);
     r = v4f::mul_add(uuv, v4f::splat(2.0f), r);
     return store(out, r);
 }
@@ -102,7 +102,7 @@ inline bool exact_equals(const Float3 &a, const Float3 &b) { return a.x == b.x &
 /** an odd number of negative components flips handedness. */
 inline bool is_scale_inside_out(const Float3 &scale) {
     const uint32_t mask = (scale.x < 0.0f ? 1u : 0u) | (scale.y < 0.0f ? 2u : 0u) | (scale.z < 0.0f ? 4u : 0u);
-    return (__builtin_popcount(mask) & 1u) != 0u;
+    return (bits::count_ones(mask) & 1u) != 0u;
 }
 
 // the math package's short names, kept so a ported file reads like its source

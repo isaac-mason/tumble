@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stdint.h>
-#include <wasm_simd128.h>
 #include "tumble/tumble.h"
+#include "tumble/math/simd.h"
 
 TUMBLE_NAMESPACE_BEGIN
 
@@ -20,28 +20,28 @@ struct Float4 {
 
 /** lane 3 holds a copy of z, so a whole-register divide or sqrt makes nothing in it that z does not. */
 struct Vec3f {
-    v128_t v;
-    // not an aggregate, so `{0, 1, 0}` is an error rather than three integer lanes of the i32x4 v128_t
+    V128 v;
+    // not an aggregate, so `{0, 1, 0}` is an error rather than lanes made from integers
     Vec3f() = default;
-    constexpr Vec3f(v128_t value) : v(value) {}
+    constexpr Vec3f(V128 value) : v(value) {}
 };
 
 struct Vec4f {
-    v128_t v;
+    V128 v;
     Vec4f() = default;
-    constexpr Vec4f(v128_t value) : v(value) {}
+    constexpr Vec4f(V128 value) : v(value) {}
 };
 
 /** x, y, z, w in lanes 0..3. */
 struct Quatf {
-    v128_t v;
+    V128 v;
     Quatf() = default;
-    constexpr Quatf(v128_t value) : v(value) {}
+    constexpr Quatf(V128 value) : v(value) {}
 };
 
 /** columns */
 struct Mat4f {
-    v128_t c[4];
+    V128 c[4];
 };
 
 /** empty is +inf min, -inf max */

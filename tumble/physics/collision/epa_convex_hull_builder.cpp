@@ -249,9 +249,9 @@ int32_t find_facing_triangle(const EpaConvexHullBuilderState &state, Vec3f posit
     const int32_t *queue = state.queue;
     const uint32_t queue_length = state.queue_size;
 
-    const v128_t px = v4f::splat(vec3f::x(position));
-    const v128_t py = v4f::splat(vec3f::y(position));
-    const v128_t pz = v4f::splat(vec3f::z(position));
+    const V128 px = v4f::splat(vec3f::x(position));
+    const V128 py = v4f::splat(vec3f::y(position));
+    const V128 pz = v4f::splat(vec3f::z(position));
 
     // four triangles at a time: the plane distance per lane, then the scalar pick in queue order
     for (uint32_t base = 0; base < queue_length; base += 4) {
@@ -263,16 +263,16 @@ int32_t find_facing_triangle(const EpaConvexHullBuilderState &state, Vec3f posit
             tris[lane] = &state.triangles[indices[lane]];
         }
 
-        v128_t nx, ny, nz, cx, cy, cz;
+        V128 nx, ny, nz, cx, cy, cz;
         v4f::transpose3x4(tris[0]->normal.v, tris[1]->normal.v, tris[2]->normal.v, tris[3]->normal.v, nx, ny, nz);
         v4f::transpose3x4(tris[0]->centroid.v, tris[1]->centroid.v, tris[2]->centroid.v, tris[3]->centroid.v, cx, cy, cz);
 
-        const v128_t abx = v4f::sub(px, cx);
-        const v128_t aby = v4f::sub(py, cy);
-        const v128_t abz = v4f::sub(pz, cz);
-        const v128_t dot = v4f::add(v4f::add(v4f::mul(nx, abx), v4f::mul(ny, aby)), v4f::mul(nz, abz));
-        const v128_t normal_len_sq = v4f::add(v4f::add(v4f::mul(nx, nx), v4f::mul(ny, ny)), v4f::mul(nz, nz));
-        const v128_t dist_sq = v4f::div(v4f::mul(dot, dot), normal_len_sq);
+        const V128 abx = v4f::sub(px, cx);
+        const V128 aby = v4f::sub(py, cy);
+        const V128 abz = v4f::sub(pz, cz);
+        const V128 dot = v4f::add(v4f::add(v4f::mul(nx, abx), v4f::mul(ny, aby)), v4f::mul(nz, abz));
+        const V128 normal_len_sq = v4f::add(v4f::add(v4f::mul(nx, nx), v4f::mul(ny, ny)), v4f::mul(nz, nz));
+        const V128 dist_sq = v4f::div(v4f::mul(dot, dot), normal_len_sq);
 
         float dots[4], dist_sqs[4];
         v4f::store4(dots, dot);

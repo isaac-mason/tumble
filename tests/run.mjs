@@ -39,6 +39,10 @@ for (let index = 0, count = wasm.test_count(); index < count; index++) {
 console.log(`harness: ${checks} checks, ${failures} failures`);
 failed += failures;
 
+// build-test.sh compares this line between the simd backends
+const digest = (await instantiate()).wasm.test_digest();
+console.log(`digest: ${(digest >>> 0).toString(16).padStart(8, '0')}`);
+
 // the transcendental probes against node's Math, which is correctly rounded enough to serve as
 // the reference at these tolerances. musl's single-precision routines are within 1 ulp; we assert
 // a relative 2e-6 (a few ulps at f32) over sweeps that cross every reduction branch.

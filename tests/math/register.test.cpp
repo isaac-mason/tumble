@@ -73,7 +73,7 @@ bool same3(Vec3f r, const Float3 &s) {
     return same(vec3f::x(r), s.x) && same(vec3f::y(r), s.y) && same(vec3f::z(r), s.z) &&
            same(v4f::lane<3>(r.v), v4f::lane<2>(r.v));
 }
-bool same4(v128_t r, const Float4 &s) {
+bool same4(V128 r, const Float4 &s) {
     return same(v4f::lane<0>(r), s.x) && same(v4f::lane<1>(r), s.y) && same(v4f::lane<2>(r), s.z) && same(v4f::lane<3>(r), s.w);
 }
 bool same16(const Mat4f &r, const Float4x4 &s) {

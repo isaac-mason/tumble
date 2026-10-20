@@ -28,7 +28,7 @@ uint32_t abi_version() { return 1; }
 
 float simd_check() {
     const float a[3] = {1.0f, 2.0f, 3.0f};
-    const v128_t v = v4f::load3(a);
+    const V128 v = v4f::load3(a);
     return v4f::dot3(v, v);
 }
 

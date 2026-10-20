@@ -4,6 +4,7 @@
 #include "test.h"
 #include "test_math.h"
 #include "tumble/util/alloc.h"
+#include "tumble/util/bits.h"
 
 using triangle_mesh_data::TriangleMeshData;
 using triangle_mesh_data::get_active_edges;
@@ -493,7 +494,7 @@ void test_triangle_mesh_builder_flat_grid(TestCtx &ctx) {
 
     // the border is 4 * SIDE unit edges, each on exactly one triangle
     uint32_t active_edge_count = 0;
-    for (uint32_t t = 0; t < data->triangle_count; t++) active_edge_count += (uint32_t)__builtin_popcount(data->triangles[t].active_edges);
+    for (uint32_t t = 0; t < data->triangle_count; t++) active_edge_count += bits::count_ones(data->triangles[t].active_edges);
     CHECK(ctx, active_edge_count == 4 * SIDE);
 
     // the default settings: a center-split bvh, at most 8 triangles a leaf, the root over the grid

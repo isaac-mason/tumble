@@ -346,7 +346,7 @@ Mat4f get_inverse_inertia_for_rotation(const MotionProperties &motion_properties
         const Vec3f mask = vec3f::make((allowed_rotation_axis & 0b001) ? 1.0f : 0.0f, (allowed_rotation_axis & 0b010) ? 1.0f : 0.0f,
                                        (allowed_rotation_axis & 0b100) ? 1.0f : 0.0f);
         out = mat4f::scale(out, mask);
-        const v128_t row_mask = v4f::set_lane<3>(mask.v, 1.0f);
+        const V128 row_mask = v4f::set_lane<3>(mask.v, 1.0f);
         for (uint32_t i = 0; i < 3; i++) out.c[i] = v4f::mul(out.c[i], row_mask);
     }
 
@@ -467,7 +467,7 @@ static Vec3f keep_axes(Vec3f v, uint32_t axes) {
     const int32_t x = (axes & 0b001) ? -1 : 0;
     const int32_t y = (axes & 0b010) ? -1 : 0;
     const int32_t z = (axes & 0b100) ? -1 : 0;
-    return {wasm_v128_and(v.v, wasm_i32x4_make(x, y, z, z))};
+    return {v4f::bit_and(v.v, v4i::make(x, y, z, z))};
 }
 
 Vec3f apply_translation_dof_constraint(Vec3f velocity, uint32_t allowed_dofs) { return keep_axes(velocity, allowed_dofs & 0b111); }
@@ -493,7 +493,7 @@ void apply_gyroscopic_force(MotionProperties &motion_properties, Quatf body_quat
     // calculate local space inertia tensor (a diagonal in local space); avoid dividing by zero, inertia in an axis
     // with no inverse inertia is zero
     const Vec3f inv_inertia = vec3f::load(motion_properties.inv_inertia_diagonal);
-    const v128_t reciprocal = v4f::div(v4f::splat(1.0f), inv_inertia.v);
+    const V128 reciprocal = v4f::div(v4f::splat(1.0f), inv_inertia.v);
     const Vec3f local_inertia = {v4f::select(v4f::zero(), reciprocal, v4f::eq(inv_inertia.v, v4f::zero()))};
 
     // calculate local space angular momentum

@@ -5,6 +5,7 @@
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/body/rigid_body.h"
 #include "tumble/util/assert.h"
+#include "tumble/util/bits.h"
 
 TUMBLE_NAMESPACE_BEGIN
 
@@ -51,19 +52,19 @@ static void invalidate_child_bounds(Node &node, uint32_t child_index) {
 }
 
 static AABox get_node_bounds(const Node &node) {
-    const v128_t min_x = v4f::load4(node.bounds_min_x);
-    const v128_t min_y = v4f::load4(node.bounds_min_y);
-    const v128_t min_z = v4f::load4(node.bounds_min_z);
-    const v128_t max_x = v4f::load4(node.bounds_max_x);
-    const v128_t max_y = v4f::load4(node.bounds_max_y);
-    const v128_t max_z = v4f::load4(node.bounds_max_z);
+    const V128 min_x = v4f::load4(node.bounds_min_x);
+    const V128 min_y = v4f::load4(node.bounds_min_y);
+    const V128 min_z = v4f::load4(node.bounds_min_z);
+    const V128 max_x = v4f::load4(node.bounds_max_x);
+    const V128 max_y = v4f::load4(node.bounds_max_y);
+    const V128 max_z = v4f::load4(node.bounds_max_z);
     // across the four lanes in two shuffles; bounds hold no nan, so the lane min and max are exact
-    const auto hmin = [](v128_t v) {
-        const v128_t pairs = v4f::min(v, v4f::shuffle<2, 3, 0, 1>(v));
+    const auto hmin = [](V128 v) {
+        const V128 pairs = v4f::min(v, v4f::shuffle<2, 3, 0, 1>(v));
         return v4f::lane<0>(v4f::min(pairs, v4f::shuffle<1, 0, 3, 2>(pairs)));
     };
-    const auto hmax = [](v128_t v) {
-        const v128_t pairs = v4f::max(v, v4f::shuffle<2, 3, 0, 1>(v));
+    const auto hmax = [](V128 v) {
+        const V128 pairs = v4f::max(v, v4f::shuffle<2, 3, 0, 1>(v));
         return v4f::lane<0>(v4f::max(pairs, v4f::shuffle<1, 0, 3, 2>(pairs)));
     };
     return {vec3f::make(hmin(min_x), hmin(min_y), hmin(min_z)), vec3f::make(hmax(max_x), hmax(max_y), hmax(max_z))};
@@ -514,20 +515,20 @@ static NodeId *reserve_stack(QuadTree &tree, uint32_t top) {
 }
 
 /** the closed overlap of the query box with the four children: a lane mask in the low four bits */
-static inline uint32_t overlap4(const Node &node, v128_t query_min_x, v128_t query_min_y, v128_t query_min_z, v128_t query_max_x, v128_t query_max_y,
-                                v128_t query_max_z) {
-    const v128_t x = wasm_v128_and(v4f::le(v4f::load4(node.bounds_min_x), query_max_x), v4f::ge(v4f::load4(node.bounds_max_x), query_min_x));
-    const v128_t y = wasm_v128_and(v4f::le(v4f::load4(node.bounds_min_y), query_max_y), v4f::ge(v4f::load4(node.bounds_max_y), query_min_y));
-    const v128_t z = wasm_v128_and(v4f::le(v4f::load4(node.bounds_min_z), query_max_z), v4f::ge(v4f::load4(node.bounds_max_z), query_min_z));
-    return v4f::bitmask(wasm_v128_and(wasm_v128_and(x, y), z));
+static inline uint32_t overlap4(const Node &node, V128 query_min_x, V128 query_min_y, V128 query_min_z, V128 query_max_x, V128 query_max_y,
+                                V128 query_max_z) {
+    const V128 x = v4f::bit_and(v4f::le(v4f::load4(node.bounds_min_x), query_max_x), v4f::ge(v4f::load4(node.bounds_max_x), query_min_x));
+    const V128 y = v4f::bit_and(v4f::le(v4f::load4(node.bounds_min_y), query_max_y), v4f::ge(v4f::load4(node.bounds_max_y), query_min_y));
+    const V128 z = v4f::bit_and(v4f::le(v4f::load4(node.bounds_min_z), query_max_z), v4f::ge(v4f::load4(node.bounds_max_z), query_min_z));
+    return v4f::bitmask(v4f::bit_and(v4f::bit_and(x, y), z));
 }
 
 /** whether the point lies in each of the four children, faces included */
-static inline uint32_t contains4(const Node &node, v128_t px, v128_t py, v128_t pz) {
-    const v128_t x = wasm_v128_and(v4f::ge(px, v4f::load4(node.bounds_min_x)), v4f::le(px, v4f::load4(node.bounds_max_x)));
-    const v128_t y = wasm_v128_and(v4f::ge(py, v4f::load4(node.bounds_min_y)), v4f::le(py, v4f::load4(node.bounds_max_y)));
-    const v128_t z = wasm_v128_and(v4f::ge(pz, v4f::load4(node.bounds_min_z)), v4f::le(pz, v4f::load4(node.bounds_max_z)));
-    return v4f::bitmask(wasm_v128_and(wasm_v128_and(x, y), z));
+static inline uint32_t contains4(const Node &node, V128 px, V128 py, V128 pz) {
+    const V128 x = v4f::bit_and(v4f::ge(px, v4f::load4(node.bounds_min_x)), v4f::le(px, v4f::load4(node.bounds_max_x)));
+    const V128 y = v4f::bit_and(v4f::ge(py, v4f::load4(node.bounds_min_y)), v4f::le(py, v4f::load4(node.bounds_max_y)));
+    const V128 z = v4f::bit_and(v4f::ge(pz, v4f::load4(node.bounds_min_z)), v4f::le(pz, v4f::load4(node.bounds_max_z)));
+    return v4f::bitmask(v4f::bit_and(v4f::bit_and(x, y), z));
 }
 
 /**
@@ -550,7 +551,7 @@ static void walk_tree(QuadTree &tree, const bodies::Bodies &bodies, Test test, L
             const Node &node = tree.nodes[node_index(id)];
             uint32_t mask = test(node) & 0xfu;
             while (mask != 0) {
-                const uint32_t lane = (uint32_t)__builtin_ctz(mask);
+                const uint32_t lane = bits::count_trailing_zeros(mask);
                 mask &= mask - 1;
                 stack[top++] = node.child_node_id[lane];
             }
@@ -564,27 +565,27 @@ static void walk_tree(QuadTree &tree, const bodies::Bodies &bodies, Test test, L
  * ray runs parallel to) and the segment's end in t.
  */
 struct SlabRay {
-    v128_t origin;
-    v128_t inv;
-    v128_t parallel;
+    V128 origin;
+    V128 inv;
+    V128 parallel;
     float t_max;
 };
 
-static inline SlabRay slab_ray(v128_t origin, v128_t inv, float t_max) { return {origin, inv, v4f::eq(inv, v4f::zero()), t_max}; }
+static inline SlabRay slab_ray(V128 origin, V128 inv, float t_max) { return {origin, inv, v4f::eq(inv, v4f::zero()), t_max}; }
 
 /**
  * entry t of the segment into a box, in [0, t_max], or infinity when the segment misses the box or
  * the box lies entirely behind the origin. the three slabs side by side in the lanes.
  */
-static inline float slab_entry(const SlabRay &ray, v128_t min, v128_t max) {
+static inline float slab_entry(const SlabRay &ray, V128 min, V128 max) {
     // parallel to a slab: the segment stays at the origin there, which must lie inside it
     const uint32_t outside = v4f::bitmask(v4f::lt(ray.origin, min)) | v4f::bitmask(v4f::gt(ray.origin, max));
     if (outside & v4f::bitmask(ray.parallel) & 7u) return scalar::INF;
-    const v128_t t0 = v4f::mul(v4f::sub(min, ray.origin), ray.inv);
-    const v128_t t1 = v4f::mul(v4f::sub(max, ray.origin), ray.inv);
-    const v128_t ordered = v4f::lt(t0, t1);
-    const v128_t near = v4f::select(v4f::zero(), v4f::select(t0, t1, ordered), ray.parallel);
-    const v128_t far = v4f::select(v4f::splat(ray.t_max), v4f::select(t1, t0, ordered), ray.parallel);
+    const V128 t0 = v4f::mul(v4f::sub(min, ray.origin), ray.inv);
+    const V128 t1 = v4f::mul(v4f::sub(max, ray.origin), ray.inv);
+    const V128 ordered = v4f::lt(t0, t1);
+    const V128 near = v4f::select(v4f::zero(), v4f::select(t0, t1, ordered), ray.parallel);
+    const V128 far = v4f::select(v4f::splat(ray.t_max), v4f::select(t1, t0, ordered), ray.parallel);
     const float t_min = scalar::max(scalar::max(0.0f, v4f::lane<0>(near)), scalar::max(v4f::lane<1>(near), v4f::lane<2>(near)));
     const float t_max = scalar::min(scalar::min(ray.t_max, v4f::lane<0>(far)), scalar::min(v4f::lane<1>(far), v4f::lane<2>(far)));
     return t_max < t_min ? scalar::INF : t_min;
@@ -605,8 +606,8 @@ static bool filter_body(const filter::Filter &query_filter, const RigidBody *bod
 
 void intersect_aabb_fat_leaves(const bodies::Bodies &bodies, QuadTree &tree, const Box3f &aabb, BodyVisitor &visitor) {
     if (tree.num_bodies == 0) return;
-    const v128_t min_x = v4f::splat(aabb.min.x), min_y = v4f::splat(aabb.min.y), min_z = v4f::splat(aabb.min.z);
-    const v128_t max_x = v4f::splat(aabb.max.x), max_y = v4f::splat(aabb.max.y), max_z = v4f::splat(aabb.max.z);
+    const V128 min_x = v4f::splat(aabb.min.x), min_y = v4f::splat(aabb.min.y), min_z = v4f::splat(aabb.min.z);
+    const V128 max_x = v4f::splat(aabb.max.x), max_y = v4f::splat(aabb.max.y), max_z = v4f::splat(aabb.max.z);
     walk_tree(
         tree, bodies, [&](const Node &node) { return overlap4(node, min_x, min_y, min_z, max_x, max_y, max_z); },
         [&](RigidBody *body) {
@@ -617,8 +618,8 @@ void intersect_aabb_fat_leaves(const bodies::Bodies &bodies, QuadTree &tree, con
 
 void intersect_aabb(const bodies::Bodies &bodies, QuadTree &tree, const Box3f &aabb, const filter::Filter &query_filter, BodyVisitor &visitor) {
     if (tree.num_bodies == 0) return;
-    const v128_t min_x = v4f::splat(aabb.min.x), min_y = v4f::splat(aabb.min.y), min_z = v4f::splat(aabb.min.z);
-    const v128_t max_x = v4f::splat(aabb.max.x), max_y = v4f::splat(aabb.max.y), max_z = v4f::splat(aabb.max.z);
+    const V128 min_x = v4f::splat(aabb.min.x), min_y = v4f::splat(aabb.min.y), min_z = v4f::splat(aabb.min.z);
+    const V128 max_x = v4f::splat(aabb.max.x), max_y = v4f::splat(aabb.max.y), max_z = v4f::splat(aabb.max.z);
     const AABox query = aabox::load(aabb);
     walk_tree(
         tree, bodies, [&](const Node &node) { return overlap4(node, min_x, min_y, min_z, max_x, max_y, max_z); },
@@ -633,7 +634,7 @@ void intersect_aabb(const bodies::Bodies &bodies, QuadTree &tree, const Box3f &a
 
 void intersect_point(const bodies::Bodies &bodies, QuadTree &tree, Vec3f point, const filter::Filter &query_filter, BodyVisitor &visitor) {
     if (tree.num_bodies == 0) return;
-    const v128_t px = v4f::splat(vec3f::x(point)), py = v4f::splat(vec3f::y(point)), pz = v4f::splat(vec3f::z(point));
+    const V128 px = v4f::splat(vec3f::x(point)), py = v4f::splat(vec3f::y(point)), pz = v4f::splat(vec3f::z(point));
     walk_tree(
         tree, bodies, [&](const Node &node) { return contains4(node, px, py, pz); },
         [&](RigidBody *body) {
@@ -663,30 +664,30 @@ void walk(const bodies::Bodies &bodies, QuadTree &tree, BodyVisitor &visitor) {
  * slab_entry for the four children at once: each lane's entry t of the segment into the child grown by
  * expand, in [0, t_max], or infinity when it misses, lies behind the origin, or the child is empty
  */
-static inline v128_t slab_entry4(const SlabRay &ray, v128_t expand, const Node &node) {
-    const v128_t ex = v4f::shuffle<0, 0, 0, 0>(expand), ey = v4f::shuffle<1, 1, 1, 1>(expand), ez = v4f::shuffle<2, 2, 2, 2>(expand);
-    const v128_t min_x = v4f::sub(v4f::load4(node.bounds_min_x), ex), max_x = v4f::add(v4f::load4(node.bounds_max_x), ex);
-    const v128_t min_y = v4f::sub(v4f::load4(node.bounds_min_y), ey), max_y = v4f::add(v4f::load4(node.bounds_max_y), ey);
-    const v128_t min_z = v4f::sub(v4f::load4(node.bounds_min_z), ez), max_z = v4f::add(v4f::load4(node.bounds_max_z), ez);
-    const v128_t seg_max = v4f::splat(ray.t_max);
-    const v128_t zero = v4f::zero();
+static inline V128 slab_entry4(const SlabRay &ray, V128 expand, const Node &node) {
+    const V128 ex = v4f::shuffle<0, 0, 0, 0>(expand), ey = v4f::shuffle<1, 1, 1, 1>(expand), ez = v4f::shuffle<2, 2, 2, 2>(expand);
+    const V128 min_x = v4f::sub(v4f::load4(node.bounds_min_x), ex), max_x = v4f::add(v4f::load4(node.bounds_max_x), ex);
+    const V128 min_y = v4f::sub(v4f::load4(node.bounds_min_y), ey), max_y = v4f::add(v4f::load4(node.bounds_max_y), ey);
+    const V128 min_z = v4f::sub(v4f::load4(node.bounds_min_z), ez), max_z = v4f::add(v4f::load4(node.bounds_max_z), ez);
+    const V128 seg_max = v4f::splat(ray.t_max);
+    const V128 zero = v4f::zero();
 
-    v128_t miss = wasm_v128_or(wasm_v128_or(v4f::gt(min_x, max_x), v4f::gt(min_y, max_y)), v4f::gt(min_z, max_z));
-    v128_t near = zero;
-    v128_t far = seg_max;
-    const auto slab = [&](v128_t origin, v128_t inv, v128_t parallel, v128_t lo, v128_t hi) {
+    V128 miss = v4f::bit_or(v4f::bit_or(v4f::gt(min_x, max_x), v4f::gt(min_y, max_y)), v4f::gt(min_z, max_z));
+    V128 near = zero;
+    V128 far = seg_max;
+    const auto slab = [&](V128 origin, V128 inv, V128 parallel, V128 lo, V128 hi) {
         // parallel to the slab: the segment stays at the origin there, which must lie inside it
-        miss = wasm_v128_or(miss, wasm_v128_and(parallel, wasm_v128_or(v4f::lt(origin, lo), v4f::gt(origin, hi))));
-        const v128_t t0 = v4f::mul(v4f::sub(lo, origin), inv);
-        const v128_t t1 = v4f::mul(v4f::sub(hi, origin), inv);
-        const v128_t ordered = v4f::lt(t0, t1);
+        miss = v4f::bit_or(miss, v4f::bit_and(parallel, v4f::bit_or(v4f::lt(origin, lo), v4f::gt(origin, hi))));
+        const V128 t0 = v4f::mul(v4f::sub(lo, origin), inv);
+        const V128 t1 = v4f::mul(v4f::sub(hi, origin), inv);
+        const V128 ordered = v4f::lt(t0, t1);
         near = v4f::max(near, v4f::select(zero, v4f::select(t0, t1, ordered), parallel));
         far = v4f::min(far, v4f::select(seg_max, v4f::select(t1, t0, ordered), parallel));
     };
     slab(v4f::shuffle<0, 0, 0, 0>(ray.origin), v4f::shuffle<0, 0, 0, 0>(ray.inv), v4f::shuffle<0, 0, 0, 0>(ray.parallel), min_x, max_x);
     slab(v4f::shuffle<1, 1, 1, 1>(ray.origin), v4f::shuffle<1, 1, 1, 1>(ray.inv), v4f::shuffle<1, 1, 1, 1>(ray.parallel), min_y, max_y);
     slab(v4f::shuffle<2, 2, 2, 2>(ray.origin), v4f::shuffle<2, 2, 2, 2>(ray.inv), v4f::shuffle<2, 2, 2, 2>(ray.parallel), min_z, max_z);
-    miss = wasm_v128_or(miss, v4f::lt(far, near));
+    miss = v4f::bit_or(miss, v4f::lt(far, near));
     return v4f::select(v4f::splat(scalar::INF), near, miss);
 }
 
@@ -695,7 +696,7 @@ static inline v128_t slab_entry4(const SlabRay &ray, v128_t expand, const Node &
  * hit so far culled. children are grown by expand (a cast shape's half extents, zero for a ray); the body's own box is
  * tested at the leaf
  */
-static void cast_walk(const bodies::Bodies &bodies, QuadTree &tree, const SlabRay &ray, v128_t expand, const filter::Filter &query_filter,
+static void cast_walk(const bodies::Bodies &bodies, QuadTree &tree, const SlabRay &ray, V128 expand, const filter::Filter &query_filter,
                       BodyVisitor &visitor) {
     NodeId *stack = reserve_stack(tree, 0);
     if (stack == nullptr || !grow_keeping(tree.fraction_stack, tree.node_stack.capacity)) return;
@@ -721,7 +722,7 @@ static void cast_walk(const bodies::Bodies &bodies, QuadTree &tree, const SlabRa
             if (stack == nullptr || !grow_keeping(tree.fraction_stack, tree.node_stack.capacity)) return;
             fractions = tree.fraction_stack.data;
             const Node &node = tree.nodes[node_index(id)];
-            const v128_t entry = slab_entry4(ray, expand, node);
+            const V128 entry = slab_entry4(ray, expand, node);
             float lane_fraction[4];
             v4f::store4(lane_fraction, entry);
 
@@ -766,10 +767,10 @@ void cast_aabb(const bodies::Bodies &bodies, QuadTree &tree, const Box3f &cast_b
     if (tree.num_bodies == 0) return;
 
     // the box shrunk to its centre and every child grown by its half extents, then cast as a point
-    const v128_t cast_min = v4f::load3(&cast_bounds.min.x);
-    const v128_t cast_max = v4f::load3(&cast_bounds.max.x);
-    const v128_t origin = v4f::mul(v4f::add(cast_min, cast_max), v4f::splat(0.5f));
-    const v128_t half = v4f::mul(v4f::sub(cast_max, cast_min), v4f::splat(0.5f));
+    const V128 cast_min = v4f::load3(&cast_bounds.min.x);
+    const V128 cast_max = v4f::load3(&cast_bounds.max.x);
+    const V128 origin = v4f::mul(v4f::add(cast_min, cast_max), v4f::splat(0.5f));
+    const V128 half = v4f::mul(v4f::sub(cast_max, cast_min), v4f::splat(0.5f));
 
     // reciprocals of the displacement, once per query, for the fraction-space slab tests; a still cast is an overlap test,
     // its entries 0 or infinity

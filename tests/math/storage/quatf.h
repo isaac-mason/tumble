@@ -18,7 +18,7 @@ inline Float4 &set(Float4 &out, float x, float y, float z, float w) {
 
 inline Float4 &identity(Float4 &out) { return set(out, 0.0f, 0.0f, 0.0f, 1.0f); }
 
-inline Float4 &store(Float4 &out, v128_t v) {
+inline Float4 &store(Float4 &out, V128 v) {
     v4f::store4(&out.x, v);
     return out;
 }
@@ -36,15 +36,15 @@ inline Float4 &set_axis_angle(Float4 &out, const Float3 &axis, float rad) {
 
 /** a * b: the hamilton product, one lane. */
 inline Float4 &multiply(Float4 &out, const Float4 &a, const Float4 &b) {
-    const v128_t va = v4f::load4(&a.x);
-    const v128_t vb = v4f::load4(&b.x);
-    const v128_t flip_w = v4f::make(1.0f, 1.0f, 1.0f, -1.0f);
+    const V128 va = v4f::load4(&a.x);
+    const V128 vb = v4f::load4(&b.x);
+    const V128 flip_w = v4f::make(1.0f, 1.0f, 1.0f, -1.0f);
     // lane i of each term, written out: x: aw bx + ax bw + ay bz - az by, and so on round to
     // w: aw bw - ax bx - ay by - az bz
-    const v128_t t0 = v4f::mul(v4f::splat(a.w), vb);
-    const v128_t t1 = v4f::mul(v4f::mul(v4f::shuffle<0, 1, 2, 0>(va), flip_w), v4f::shuffle<3, 3, 3, 0>(vb));
-    const v128_t t2 = v4f::mul(v4f::mul(v4f::shuffle<1, 2, 0, 1>(va), flip_w), v4f::shuffle<2, 0, 1, 1>(vb));
-    const v128_t t3 = v4f::mul(v4f::shuffle<2, 0, 1, 2>(va), v4f::shuffle<1, 2, 0, 2>(vb));
+    const V128 t0 = v4f::mul(v4f::splat(a.w), vb);
+    const V128 t1 = v4f::mul(v4f::mul(v4f::shuffle<0, 1, 2, 0>(va), flip_w), v4f::shuffle<3, 3, 3, 0>(vb));
+    const V128 t2 = v4f::mul(v4f::mul(v4f::shuffle<1, 2, 0, 1>(va), flip_w), v4f::shuffle<2, 0, 1, 1>(vb));
+    const V128 t3 = v4f::mul(v4f::shuffle<2, 0, 1, 2>(va), v4f::shuffle<1, 2, 0, 2>(vb));
     return store(out, v4f::sub(v4f::add(v4f::add(t0, t1), t2), t3));
 }
 

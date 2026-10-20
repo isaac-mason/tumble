@@ -4,18 +4,17 @@
 #include "tumble/math/simd.h"
 #include "tumble/math/types.h"
 #include "tumble/tumble.h"
+#include "tumble/util/bits.h"
 
 TUMBLE_NAMESPACE_BEGIN
 
 namespace vec3f {
 
 /** lanes (x, y, z, z) from a value whose lanes 0..2 are x, y, z */
-inline v128_t fix_w(v128_t v) { return v4f::shuffle<0, 1, 2, 2>(v); }
+inline V128 fix_w(V128 v) { return v4f::shuffle<0, 1, 2, 2>(v); }
 
 inline Vec3f load(const Float3 &a) {
-    const v128_t xy = wasm_v128_load64_zero(&a.x);
-    const v128_t zz = wasm_v128_load32_splat(&a.z);
-    return {v4f::shuffle2<0, 1, 4, 4>(xy, zz)};
+    return {v4f::load3_xyzz(&a.x)};
 }
 inline Float3 &store(Float3 &out, Vec3f a) {
     v4f::store3(&out.x, a.v);
@@ -55,7 +54,7 @@ inline Vec3f scale_and_add(Vec3f a, Vec3f b, float s) { return {v4f::mul_add(b.v
 inline Vec3f inverse(Vec3f a) { return {v4f::div(v4f::splat(1.0f), a.v)}; }
 
 inline float dot(Vec3f a, Vec3f b) {
-    const v128_t m = v4f::mul(a.v, b.v);
+    const V128 m = v4f::mul(a.v, b.v);
     return v4f::lane<0>(m) + v4f::lane<1>(m) + v4f::lane<2>(m);
 }
 /** (x + y) + z */
@@ -76,7 +75,7 @@ inline Vec3f normalize(Vec3f a) {
 }
 
 /** lane 3 a copy of z */
-inline v128_t cross_lanes(v128_t a, v128_t b) {
+inline V128 cross_lanes(V128 a, V128 b) {
     return v4f::sub(v4f::mul(v4f::shuffle<1, 2, 0, 0>(a), v4f::shuffle<2, 0, 1, 1>(b)),
                     v4f::mul(v4f::shuffle<2, 0, 1, 1>(a), v4f::shuffle<1, 2, 0, 0>(b)));
 }
@@ -110,7 +109,7 @@ inline Vec3f lerp(Vec3f a, Vec3f b, float t) { return {v4f::mul_add(v4f::sub(b.v
 
 /** a as a point through m, with the perspective divide; a zero or nan w divides by one */
 inline Vec3f transform_mat4(Vec3f a, const Mat4f &m) {
-    v128_t r = v4f::mul(m.c[0], v4f::splat(x(a)));
+    V128 r = v4f::mul(m.c[0], v4f::splat(x(a)));
     r = v4f::mul_add(m.c[1], v4f::splat(y(a)), r);
     r = v4f::mul_add(m.c[2], v4f::splat(z(a)), r);
     r = v4f::add(r, m.c[3]);
@@ -121,9 +120,9 @@ inline Vec3f transform_mat4(Vec3f a, const Mat4f &m) {
 
 /** a + 2w (q x a) + 2 (q x (q x a)) */
 inline Vec3f transform_quat(Vec3f a, Quatf q) {
-    const v128_t uv = cross_lanes(q.v, a.v);
-    const v128_t uuv = cross_lanes(q.v, uv);
-    v128_t r = v4f::mul_add(uv, v4f::splat(v4f::lane<3>(q.v) * 2.0f), a.v);
+    const V128 uv = cross_lanes(q.v, a.v);
+    const V128 uuv = cross_lanes(q.v, uv);
+    V128 r = v4f::mul_add(uv, v4f::splat(v4f::lane<3>(q.v) * 2.0f), a.v);
     r = v4f::mul_add(uuv, v4f::splat(2.0f), r);
     return {r};
 }
@@ -132,7 +131,7 @@ inline bool exact_equals(Vec3f a, Vec3f b) { return v4f::all_true(v4f::eq(a.v, b
 
 /** an odd number of negative components flips handedness */
 inline bool is_scale_inside_out(Vec3f scale) {
-    return (__builtin_popcount(v4f::bitmask(v4f::lt(scale.v, v4f::zero())) & 7u) & 1u) != 0u;
+    return (bits::count_ones(v4f::bitmask(v4f::lt(scale.v, v4f::zero())) & 7u) & 1u) != 0u;
 }
 
 }  // namespace vec3f

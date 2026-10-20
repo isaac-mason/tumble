@@ -1,6 +1,7 @@
 #include "wasm/runtime/heap.h"
 
 #include "tumble/util/assert.h"
+#include "tumble/util/bits.h"
 #include "tumble/util/error.h"
 #include "tumble/util/mem.h"
 #include "wasm/runtime/offset_allocator.h"
@@ -50,7 +51,7 @@ static T *ptr(uint32_t address) {
 
 static uint32_t address_of(const void *p) { return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(p)); }
 
-static uint32_t small_class_of(uint32_t bytes) { return bytes <= SMALL_MIN ? 0 : 32 - (uint32_t)__builtin_clz(bytes - 1) - 4; }
+static uint32_t small_class_of(uint32_t bytes) { return bytes <= SMALL_MIN ? 0 : 32 - bits::count_leading_zeros(bytes - 1) - 4; }
 
 struct Heap {
     Allocator allocator = {};

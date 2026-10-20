@@ -12,7 +12,7 @@ bool init(uint32_t heap_begin);
 
 uint32_t abi_version();
 
-/** dot((1, 2, 3), (1, 2, 3)) through the simd path: 14 when simd runs */
+/** dot((1, 2, 3), (1, 2, 3)) through the simd backend: 14 */
 float simd_check();
 
 }  // namespace runtime

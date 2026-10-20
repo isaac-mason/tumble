@@ -6,7 +6,7 @@ TUMBLE_NAMESPACE_BEGIN
 
 namespace vec4f {
 
-inline Float4 &store(Float4 &out, v128_t v) {
+inline Float4 &store(Float4 &out, V128 v) {
     v4f::store4(&out.x, v);
     return out;
 }

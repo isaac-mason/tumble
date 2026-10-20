@@ -49,39 +49,39 @@ inline float surface_area(const AABox &box) {
 
 /** scales about the origin; a negative scale swaps the faces back into order. */
 inline AABox scale(const AABox &box, Vec3f s) {
-    const v128_t lo = v4f::mul(box.min.v, s.v);
-    const v128_t hi = v4f::mul(box.max.v, s.v);
+    const V128 lo = v4f::mul(box.min.v, s.v);
+    const V128 hi = v4f::mul(box.max.v, s.v);
     return {{v4f::min(lo, hi)}, {v4f::max(lo, hi)}};
 }
 
 /** centre through the matrix, extents through its absolute upper 3x3; empty stays empty */
 inline AABox transform_mat4(const AABox &box, const Mat4f &mat) {
     if (is_empty(box)) return empty();
-    const v128_t c = v4f::mul(v4f::add(box.min.v, box.max.v), v4f::splat(0.5f));
-    const v128_t e = v4f::mul(v4f::sub(box.max.v, box.min.v), v4f::splat(0.5f));
-    v128_t tc = v4f::mul_add(mat.c[0], v4f::splat(v4f::lane<0>(c)), mat.c[3]);
+    const V128 c = v4f::mul(v4f::add(box.min.v, box.max.v), v4f::splat(0.5f));
+    const V128 e = v4f::mul(v4f::sub(box.max.v, box.min.v), v4f::splat(0.5f));
+    V128 tc = v4f::mul_add(mat.c[0], v4f::splat(v4f::lane<0>(c)), mat.c[3]);
     tc = v4f::mul_add(mat.c[1], v4f::splat(v4f::lane<1>(c)), tc);
     tc = v4f::mul_add(mat.c[2], v4f::splat(v4f::lane<2>(c)), tc);
-    v128_t te = v4f::mul(v4f::abs(mat.c[0]), v4f::splat(v4f::lane<0>(e)));
+    V128 te = v4f::mul(v4f::abs(mat.c[0]), v4f::splat(v4f::lane<0>(e)));
     te = v4f::mul_add(v4f::abs(mat.c[1]), v4f::splat(v4f::lane<1>(e)), te);
     te = v4f::mul_add(v4f::abs(mat.c[2]), v4f::splat(v4f::lane<2>(e)), te);
     return {{vec3f::fix_w(v4f::sub(tc, te))}, {vec3f::fix_w(v4f::add(tc, te))}};
 }
 
 inline bool contains_point(const AABox &box, Vec3f point) {
-    const v128_t inside = wasm_v128_and(v4f::ge(point.v, box.min.v), v4f::le(point.v, box.max.v));
+    const V128 inside = v4f::bit_and(v4f::ge(point.v, box.min.v), v4f::le(point.v, box.max.v));
     return (v4f::bitmask(inside) & 7u) == 7u;
 }
 
 inline bool contains(const AABox &container, const AABox &contained) {
-    const v128_t inside = wasm_v128_and(v4f::ge(contained.min.v, container.min.v), v4f::le(contained.max.v, container.max.v));
+    const V128 inside = v4f::bit_and(v4f::ge(contained.min.v, container.min.v), v4f::le(contained.max.v, container.max.v));
     return (v4f::bitmask(inside) & 7u) == 7u;
 }
 
 /** closed overlap: touching faces count. */
 inline bool intersects(const AABox &a, const AABox &b) {
-    const v128_t lo = v4f::le(a.min.v, b.max.v);
-    const v128_t hi = v4f::ge(a.max.v, b.min.v);
+    const V128 lo = v4f::le(a.min.v, b.max.v);
+    const V128 hi = v4f::ge(a.max.v, b.min.v);
     return (v4f::bitmask(lo) & v4f::bitmask(hi) & 7u) == 7u;
 }
 

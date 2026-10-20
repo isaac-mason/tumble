@@ -19,7 +19,7 @@ static void move_center_of_mass(rigid_body::RigidBody *body, Vec3f moved) {
     const int32_t y = (allowed & 0b010) ? -1 : 0;
     const int32_t z = (allowed & 0b100) ? -1 : 0;
     const Vec3f before = vec3f::load(body->center_of_mass_position);
-    vec3f::store(body->center_of_mass_position, {v4f::select(moved.v, before.v, wasm_i32x4_make(x, y, z, z))});
+    vec3f::store(body->center_of_mass_position, {v4f::select(moved.v, before.v, v4i::make(x, y, z, z))});
 }
 
 void add_position_step(rigid_body::RigidBody *body, Vec3f linear_velocity_times_delta_time) {

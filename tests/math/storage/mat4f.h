@@ -45,8 +45,8 @@ inline Float4x4 &identity(Float4x4 &out) { return set(out, 1, 0, 0, 0, 0, 1, 0, 
 inline Float4x4 &zero(Float4x4 &out) { return set(out, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0); }
 
 /** column i as a lane. */
-inline v128_t col(const Float4x4 &a, int i) { return v4f::load4(&a.m[i * 4]); }
-inline void set_col(Float4x4 &out, int i, v128_t v) { v4f::store4(&out.m[i * 4], v); }
+inline V128 col(const Float4x4 &a, int i) { return v4f::load4(&a.m[i * 4]); }
+inline void set_col(Float4x4 &out, int i, V128 v) { v4f::store4(&out.m[i * 4], v); }
 
 inline Float4x4 &transpose(Float4x4 &out, const Float4x4 &a) {
     if (&out == &a) {
@@ -172,10 +172,10 @@ inline float determinant(const Float4x4 &a) {
 
 /** a * b; out may alias either. */
 inline Float4x4 &multiply(Float4x4 &out, const Float4x4 &a, const Float4x4 &b) {
-    const v128_t a0 = col(a, 0), a1 = col(a, 1), a2 = col(a, 2), a3 = col(a, 3);
+    const V128 a0 = col(a, 0), a1 = col(a, 1), a2 = col(a, 2), a3 = col(a, 3);
     for (int j = 0; j < 4; j++) {
         const float *bj = &b.m[j * 4];
-        v128_t r = v4f::mul(a0, v4f::splat(bj[0]));
+        V128 r = v4f::mul(a0, v4f::splat(bj[0]));
         r = v4f::mul_add(a1, v4f::splat(bj[1]), r);
         r = v4f::mul_add(a2, v4f::splat(bj[2]), r);
         r = v4f::mul_add(a3, v4f::splat(bj[3]), r);
@@ -186,10 +186,10 @@ inline Float4x4 &multiply(Float4x4 &out, const Float4x4 &a, const Float4x4 &b) {
 
 /** the upper 3x3 of a times the upper 3x3 of b, the rest identity. */
 inline Float4x4 &multiply3x3(Float4x4 &out, const Float4x4 &a, const Float4x4 &b) {
-    const v128_t a0 = col(a, 0), a1 = col(a, 1), a2 = col(a, 2);
+    const V128 a0 = col(a, 0), a1 = col(a, 1), a2 = col(a, 2);
     for (int j = 0; j < 3; j++) {
         const float *bj = &b.m[j * 4];
-        v128_t r = v4f::mul(a0, v4f::splat(bj[0]));
+        V128 r = v4f::mul(a0, v4f::splat(bj[0]));
         r = v4f::mul_add(a1, v4f::splat(bj[1]), r);
         r = v4f::mul_add(a2, v4f::splat(bj[2]), r);
         set_col(out, j, v4f::set_lane<3>(r, 0.0f));
@@ -200,9 +200,9 @@ inline Float4x4 &multiply3x3(Float4x4 &out, const Float4x4 &a, const Float4x4 &b
 
 /** the upper 3x3 of a times the transpose of the upper 3x3 of b, the rest identity. */
 inline Float4x4 &multiply3x3_right_transposed(Float4x4 &out, const Float4x4 &a, const Float4x4 &b) {
-    const v128_t a0 = col(a, 0), a1 = col(a, 1), a2 = col(a, 2);
+    const V128 a0 = col(a, 0), a1 = col(a, 1), a2 = col(a, 2);
     for (int j = 0; j < 3; j++) {
-        v128_t r = v4f::mul(a0, v4f::splat(b.m[j]));
+        V128 r = v4f::mul(a0, v4f::splat(b.m[j]));
         r = v4f::mul_add(a1, v4f::splat(b.m[4 + j]), r);
         r = v4f::mul_add(a2, v4f::splat(b.m[8 + j]), r);
         set_col(out, j, v4f::set_lane<3>(r, 0.0f));
@@ -221,7 +221,7 @@ inline Float3 &multiply3x3_transposed_vec(Float3 &out, const Float4x4 &mat, cons
 
 /** the upper 3x3 of mat times vec. */
 inline Float3 &multiply3x3_vec(Float3 &out, const Float4x4 &mat, const Float3 &vec) {
-    v128_t r = v4f::mul(col(mat, 0), v4f::splat(vec.x));
+    V128 r = v4f::mul(col(mat, 0), v4f::splat(vec.x));
     r = v4f::mul_add(col(mat, 1), v4f::splat(vec.y), r);
     r = v4f::mul_add(col(mat, 2), v4f::splat(vec.z), r);
     v4f::store3(&out.x, r);
@@ -235,13 +235,13 @@ inline Float4x4 &cross_product_matrix(Float4x4 &out, const Float3 &v) {
 
 /** a translated by v (a * T(v)). */
 inline Float4x4 &translate(Float4x4 &out, const Float4x4 &a, const Float3 &v) {
-    const v128_t a0 = col(a, 0), a1 = col(a, 1), a2 = col(a, 2), a3 = col(a, 3);
+    const V128 a0 = col(a, 0), a1 = col(a, 1), a2 = col(a, 2), a3 = col(a, 3);
     if (&a != &out) {
         set_col(out, 0, a0);
         set_col(out, 1, a1);
         set_col(out, 2, a2);
     }
-    v128_t r = v4f::mul_add(a0, v4f::splat(v.x), a3);
+    V128 r = v4f::mul_add(a0, v4f::splat(v.x), a3);
     r = v4f::mul_add(a1, v4f::splat(v.y), r);
     r = v4f::mul_add(a2, v4f::splat(v.z), r);
     set_col(out, 3, r);
@@ -309,7 +309,7 @@ inline Float4x4 &subtract(Float4x4 &out, const Float4x4 &a, const Float4x4 &b) {
 }
 
 inline Float4x4 &multiply_scalar(Float4x4 &out, const Float4x4 &a, float b) {
-    const v128_t s = v4f::splat(b);
+    const V128 s = v4f::splat(b);
     for (int i = 0; i < 4; i++) set_col(out, i, v4f::mul(col(a, i), s));
     return out;
 }

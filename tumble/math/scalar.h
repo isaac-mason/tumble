@@ -26,8 +26,21 @@ inline float sqrt(float x) { return __builtin_sqrtf(x); }
 inline float abs(float x) { return __builtin_fabsf(x); }
 inline float floor(float x) { return __builtin_floorf(x); }
 // nan propagates and -0 orders below +0; fminf / fmaxf would drop the nan
+#ifdef __wasm__
 inline float min(float a, float b) { return __builtin_wasm_min_f32(a, b); }
 inline float max(float a, float b) { return __builtin_wasm_max_f32(a, b); }
+#else
+inline float min(float a, float b) {
+    if (a != a || b != b) return a + b;
+    if (a == b) return __builtin_bit_cast(uint32_t, a) >> 31 ? a : b;
+    return a < b ? a : b;
+}
+inline float max(float a, float b) {
+    if (a != a || b != b) return a + b;
+    if (a == b) return __builtin_bit_cast(uint32_t, a) >> 31 ? b : a;
+    return a < b ? b : a;
+}
+#endif
 inline float sign(float x) { return x > 0.0f ? 1.0f : (x < 0.0f ? -1.0f : 0.0f); }
 
 inline float sin(float x) { return sinf(x); }
