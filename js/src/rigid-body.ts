@@ -1,5 +1,5 @@
 import * as Low from './generated/tumble';
-import type { Box3, Quat, Vec3 } from './math';
+import { type Box3, copied, type Quat, type Vec3 } from './math';
 import type { MassProperties, Shape } from './shapes';
 import type { World } from './world';
 
@@ -69,12 +69,6 @@ const native: Low.BodySettings = Low.BodySettings.create();
 const vec3: Vec3 = [0, 0, 0];
 const quat: Quat = [0, 0, 0, 1];
 const box3: Box3 = { min: [0, 0, 0], max: [0, 0, 0] };
-
-/** out filled only when the read succeeded */
-function copied<T extends number[]>(out: T, read: T, ok: boolean): boolean {
-    if (ok) for (let i = 0; i < out.length; i++) out[i] = read[i]!;
-    return ok;
-}
 
 function nativeSettings(settings: RigidBodySettings): Low.BodySettings {
     if (defaults === null) defaults = Low.RigidBody.defaultSettings(Low.BodySettings.create());

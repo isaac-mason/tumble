@@ -263,7 +263,7 @@ function leavesOf(s: StructDesc, base: number, path: string): Leaf[] {
         if (t.kind === 'scalar') {
             if (t.scalar === 'void') throw new Error(`${where}: void field`);
             for (let k = 0; k < t.count; k++) {
-                const expr = s.tuple ? `${path}[${index++}]` : t.count === 1 ? `${path}.${js}` : `${path}.${js}[${k}]`;
+                const expr = s.tuple ? `${path}[${index++}]` : t.count === 1 ? `${path}.${js}` : `${path}.${js}[${k}]!`;
                 out.push({ offset: base + f.offset + k * scalarBytes(t.scalar), scalar: t.scalar, expr });
             }
         } else if (t.kind === 'value') {

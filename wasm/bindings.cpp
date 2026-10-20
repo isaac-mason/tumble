@@ -423,4 +423,259 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::offset_center_of_mass::default_settings), names("out"));
     bind::fn(b, BIND(adapters::offset_center_of_mass::create), names("settings"), GROWS);
     bind::fn(b, BIND(adapters::offset_center_of_mass::destroy), names("shape"));
+
+    TUPLE_AS(Vec2f, "Vec2").field(FIELD(Vec2f, x)).field(FIELD(Vec2f, y));
+    bind::enumeration<uint32_t>(b, "ConstraintType")
+        .doc("a constraint's type, encoded in its id.")
+        .value("POINT", constraint_id::POINT)
+        .value("DISTANCE", constraint_id::DISTANCE)
+        .value("HINGE", constraint_id::HINGE)
+        .value("SLIDER", constraint_id::SLIDER)
+        .value("FIXED", constraint_id::FIXED)
+        .value("CONE", constraint_id::CONE)
+        .value("SWING_TWIST", constraint_id::SWING_TWIST)
+        .value("SIX_DOF", constraint_id::SIX_DOF);
+    bind::enumeration<uint32_t>(b, "ConstraintSpace")
+        .doc("the space a constraint's points and axes are given in.")
+        .value("WORLD", constraints::SPACE_WORLD)
+        .value("LOCAL", constraints::SPACE_LOCAL, "relative to each body: its centre of mass and orientation.");
+    bind::enumeration<uint32_t>(b, "SpringMode")
+        .value("FREQUENCY_AND_DAMPING", spring_settings::FREQUENCY_AND_DAMPING,
+               "frequencyOrStiffness is the oscillation frequency in hz, damping the damping ratio (0 none, 1 critical).")
+        .value("STIFFNESS_AND_DAMPING", spring_settings::STIFFNESS_AND_DAMPING, "frequencyOrStiffness is k and damping is c in F = -k x - c v.");
+    bind::enumeration<uint32_t>(b, "MotorState")
+        .value("OFF", motor_settings::OFF, "free, apart from any friction.")
+        .value("VELOCITY", motor_settings::VELOCITY, "drives to the target velocity.")
+        .value("POSITION", motor_settings::POSITION, "drives to the target position through the motor's spring.")
+        .value("POSITION_AND_VELOCITY", motor_settings::POSITION_AND_VELOCITY, "drives to both targets.");
+    bind::enumeration<uint32_t>(b, "SwingType")
+        .doc("the shape that limits a swing.")
+        .value("CONE", swing_twist_constraint_part::CONE, "symmetric about 0.")
+        .value("PYRAMID", swing_twist_constraint_part::PYRAMID, "asymmetric limits allowed.");
+    bind::enumeration<uint32_t>(b, "SixDOFAxis")
+        .doc("a six dof constraint's axes, in its constraint space.")
+        .value("TRANSLATION_X", six_dof_constraint::TRANSLATION_X)
+        .value("TRANSLATION_Y", six_dof_constraint::TRANSLATION_Y)
+        .value("TRANSLATION_Z", six_dof_constraint::TRANSLATION_Z)
+        .value("ROTATION_X", six_dof_constraint::ROTATION_X)
+        .value("ROTATION_Y", six_dof_constraint::ROTATION_Y)
+        .value("ROTATION_Z", six_dof_constraint::ROTATION_Z);
+    VALUE_AS(spring_settings::SpringSettings, "SpringSettings")
+        .field(FIELD(spring_settings::SpringSettings, mode))
+        .field(FIELD(spring_settings::SpringSettings, frequency_or_stiffness))
+        .field(FIELD(spring_settings::SpringSettings, damping));
+    VALUE_AS(motor_settings::MotorSettings, "MotorSettings")
+        .field(FIELD(motor_settings::MotorSettings, spring))
+        .field(FIELD(motor_settings::MotorSettings, min_force_limit))
+        .field(FIELD(motor_settings::MotorSettings, max_force_limit))
+        .field(FIELD(motor_settings::MotorSettings, min_torque_limit))
+        .field(FIELD(motor_settings::MotorSettings, max_torque_limit));
+
+    bind::fn(b, BIND(adapters::constraint::get_type), names("constraint"));
+    bind::fn(b, BIND(adapters::constraint::exists), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::constraint::set_enabled), names("world", "constraint", "enabled"));
+    bind::fn(b, BIND(adapters::constraint::is_enabled), names("world", "constraint"));
+
+    VALUE_AS(point_constraint::PointConstraintSettings, "PointConstraintSettings")
+        .field(FIELD(point_constraint::PointConstraintSettings, point_a))
+        .field(FIELD(point_constraint::PointConstraintSettings, point_b))
+        .field(FIELD(point_constraint::PointConstraintSettings, space))
+        .field(FIELD(point_constraint::PointConstraintSettings, constraint_priority))
+        .field(FIELD(point_constraint::PointConstraintSettings, num_velocity_steps_override))
+        .field(FIELD(point_constraint::PointConstraintSettings, num_position_steps_override));
+    bind::fn(b, BIND(adapters::point_constraint::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::point_constraint::create), names("world", "bodyA", "bodyB", "settings"), GROWS);
+    bind::fn(b, BIND(adapters::point_constraint::remove), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::point_constraint::get_total_lambda), names("out", "world", "constraint"));
+
+    VALUE_AS(distance_constraint::DistanceConstraintSettings, "DistanceConstraintSettings")
+        .field(FIELD(distance_constraint::DistanceConstraintSettings, point_a))
+        .field(FIELD(distance_constraint::DistanceConstraintSettings, point_b))
+        .field(FIELD(distance_constraint::DistanceConstraintSettings, min_distance))
+        .field(FIELD(distance_constraint::DistanceConstraintSettings, max_distance))
+        .field(FIELD(distance_constraint::DistanceConstraintSettings, spring_settings))
+        .field(FIELD(distance_constraint::DistanceConstraintSettings, space))
+        .field(FIELD(distance_constraint::DistanceConstraintSettings, constraint_priority))
+        .field(FIELD(distance_constraint::DistanceConstraintSettings, num_velocity_steps_override))
+        .field(FIELD(distance_constraint::DistanceConstraintSettings, num_position_steps_override));
+    bind::fn(b, BIND(adapters::distance_constraint::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::distance_constraint::create), names("world", "bodyA", "bodyB", "settings"), GROWS);
+    bind::fn(b, BIND(adapters::distance_constraint::remove), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::distance_constraint::get_total_lambda), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::distance_constraint::set_distance), names("world", "constraint", "minDistance", "maxDistance"));
+    bind::fn(b, BIND(adapters::distance_constraint::set_limits_spring_settings), names("world", "constraint", "settings"));
+
+    VALUE_AS(hinge_constraint::HingeConstraintSettings, "HingeConstraintSettings")
+        .field(FIELD(hinge_constraint::HingeConstraintSettings, point_a))
+        .field(FIELD(hinge_constraint::HingeConstraintSettings, point_b))
+        .field(FIELD(hinge_constraint::HingeConstraintSettings, hinge_axis_a))
+        .field(FIELD(hinge_constraint::HingeConstraintSettings, hinge_axis_b))
+        .field(FIELD(hinge_constraint::HingeConstraintSettings, normal_axis_a))
+        .field(FIELD(hinge_constraint::HingeConstraintSettings, normal_axis_b))
+        .field(FIELD(hinge_constraint::HingeConstraintSettings, space))
+        .field(FIELD(hinge_constraint::HingeConstraintSettings, limits_min))
+        .field(FIELD(hinge_constraint::HingeConstraintSettings, limits_max))
+        .field(FIELD(hinge_constraint::HingeConstraintSettings, limits_spring_settings))
+        .field(FIELD(hinge_constraint::HingeConstraintSettings, max_friction_torque))
+        .field(FIELD(hinge_constraint::HingeConstraintSettings, motor_settings))
+        .field(FIELD(hinge_constraint::HingeConstraintSettings, constraint_priority))
+        .field(FIELD(hinge_constraint::HingeConstraintSettings, num_velocity_steps_override))
+        .field(FIELD(hinge_constraint::HingeConstraintSettings, num_position_steps_override));
+    bind::fn(b, BIND(adapters::hinge_constraint::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::hinge_constraint::create), names("world", "bodyA", "bodyB", "settings"), GROWS);
+    bind::fn(b, BIND(adapters::hinge_constraint::remove), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::hinge_constraint::set_limits), names("world", "constraint", "min", "max"));
+    bind::fn(b, BIND(adapters::hinge_constraint::set_limits_spring_settings), names("world", "constraint", "settings"));
+    bind::fn(b, BIND(adapters::hinge_constraint::set_max_friction_torque), names("world", "constraint", "torque"));
+    bind::fn(b, BIND(adapters::hinge_constraint::set_motor_settings), names("world", "constraint", "settings"));
+    bind::fn(b, BIND(adapters::hinge_constraint::set_motor_state), names("world", "constraint", "state"));
+    bind::fn(b, BIND(adapters::hinge_constraint::set_target_angular_velocity), names("world", "constraint", "velocity"));
+    bind::fn(b, BIND(adapters::hinge_constraint::set_target_angle), names("world", "constraint", "angle"));
+    bind::fn(b, BIND(adapters::hinge_constraint::get_current_angle), names("world", "constraint"));
+
+    VALUE_AS(slider_constraint::SliderConstraintSettings, "SliderConstraintSettings")
+        .field(FIELD(slider_constraint::SliderConstraintSettings, point_a))
+        .field(FIELD(slider_constraint::SliderConstraintSettings, point_b))
+        .field(FIELD(slider_constraint::SliderConstraintSettings, slider_axis_a))
+        .field(FIELD(slider_constraint::SliderConstraintSettings, slider_axis_b))
+        .field(FIELD(slider_constraint::SliderConstraintSettings, normal_axis_a))
+        .field(FIELD(slider_constraint::SliderConstraintSettings, normal_axis_b))
+        .field(FIELD(slider_constraint::SliderConstraintSettings, space))
+        .field(FIELD(slider_constraint::SliderConstraintSettings, auto_detect_point))
+        .field(FIELD(slider_constraint::SliderConstraintSettings, limits_min))
+        .field(FIELD(slider_constraint::SliderConstraintSettings, limits_max))
+        .field(FIELD(slider_constraint::SliderConstraintSettings, limits_spring_settings))
+        .field(FIELD(slider_constraint::SliderConstraintSettings, max_friction_force))
+        .field(FIELD(slider_constraint::SliderConstraintSettings, motor_settings))
+        .field(FIELD(slider_constraint::SliderConstraintSettings, constraint_priority))
+        .field(FIELD(slider_constraint::SliderConstraintSettings, num_velocity_steps_override))
+        .field(FIELD(slider_constraint::SliderConstraintSettings, num_position_steps_override));
+    bind::fn(b, BIND(adapters::slider_constraint::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::slider_constraint::create), names("world", "bodyA", "bodyB", "settings"), GROWS);
+    bind::fn(b, BIND(adapters::slider_constraint::remove), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::slider_constraint::get_current_position), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::slider_constraint::set_limits), names("world", "constraint", "min", "max"));
+    bind::fn(b, BIND(adapters::slider_constraint::set_limits_spring_settings), names("world", "constraint", "settings"));
+    bind::fn(b, BIND(adapters::slider_constraint::set_motor_settings), names("world", "constraint", "settings"));
+    bind::fn(b, BIND(adapters::slider_constraint::set_motor_state), names("world", "constraint", "state"));
+    bind::fn(b, BIND(adapters::slider_constraint::set_target_velocity), names("world", "constraint", "velocity"));
+    bind::fn(b, BIND(adapters::slider_constraint::set_target_position), names("world", "constraint", "position"));
+    bind::fn(b, BIND(adapters::slider_constraint::set_max_friction_force), names("world", "constraint", "force"));
+    bind::fn(b, BIND(adapters::slider_constraint::get_max_friction_force), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::slider_constraint::get_total_lambda_position), names("out", "world", "constraint"));
+    bind::fn(b, BIND(adapters::slider_constraint::get_total_lambda_position_limits), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::slider_constraint::get_total_lambda_rotation), names("out", "world", "constraint"));
+    bind::fn(b, BIND(adapters::slider_constraint::get_total_lambda_motor), names("world", "constraint"));
+
+    VALUE_AS(fixed_constraint::FixedConstraintSettings, "FixedConstraintSettings")
+        .field(FIELD(fixed_constraint::FixedConstraintSettings, point_a))
+        .field(FIELD(fixed_constraint::FixedConstraintSettings, axis_x_a))
+        .field(FIELD(fixed_constraint::FixedConstraintSettings, axis_y_a))
+        .field(FIELD(fixed_constraint::FixedConstraintSettings, point_b))
+        .field(FIELD(fixed_constraint::FixedConstraintSettings, axis_x_b))
+        .field(FIELD(fixed_constraint::FixedConstraintSettings, axis_y_b))
+        .field(FIELD(fixed_constraint::FixedConstraintSettings, space))
+        .field(FIELD(fixed_constraint::FixedConstraintSettings, auto_detect_point))
+        .field(FIELD(fixed_constraint::FixedConstraintSettings, constraint_priority))
+        .field(FIELD(fixed_constraint::FixedConstraintSettings, num_velocity_steps_override))
+        .field(FIELD(fixed_constraint::FixedConstraintSettings, num_position_steps_override));
+    bind::fn(b, BIND(adapters::fixed_constraint::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::fixed_constraint::create), names("world", "bodyA", "bodyB", "settings"), GROWS);
+    bind::fn(b, BIND(adapters::fixed_constraint::remove), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::fixed_constraint::get_total_lambda_position), names("out", "world", "constraint"));
+    bind::fn(b, BIND(adapters::fixed_constraint::get_total_lambda_rotation), names("out", "world", "constraint"));
+
+    VALUE_AS(cone_constraint::ConeConstraintSettings, "ConeConstraintSettings")
+        .field(FIELD(cone_constraint::ConeConstraintSettings, point_a))
+        .field(FIELD(cone_constraint::ConeConstraintSettings, twist_axis_a))
+        .field(FIELD(cone_constraint::ConeConstraintSettings, point_b))
+        .field(FIELD(cone_constraint::ConeConstraintSettings, twist_axis_b))
+        .field(FIELD(cone_constraint::ConeConstraintSettings, half_cone_angle))
+        .field(FIELD(cone_constraint::ConeConstraintSettings, space))
+        .field(FIELD(cone_constraint::ConeConstraintSettings, constraint_priority))
+        .field(FIELD(cone_constraint::ConeConstraintSettings, num_velocity_steps_override))
+        .field(FIELD(cone_constraint::ConeConstraintSettings, num_position_steps_override));
+    bind::fn(b, BIND(adapters::cone_constraint::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::cone_constraint::create), names("world", "bodyA", "bodyB", "settings"), GROWS);
+    bind::fn(b, BIND(adapters::cone_constraint::remove), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::cone_constraint::set_half_cone_angle), names("world", "constraint", "halfConeAngle"));
+    bind::fn(b, BIND(adapters::cone_constraint::get_half_cone_angle), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::cone_constraint::get_cos_half_cone_angle), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::cone_constraint::get_total_lambda_position), names("out", "world", "constraint"));
+    bind::fn(b, BIND(adapters::cone_constraint::get_total_lambda_rotation), names("world", "constraint"));
+
+    VALUE_AS(swing_twist_constraint::SwingTwistConstraintSettings, "SwingTwistConstraintSettings")
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, point_a))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, point_b))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, twist_axis_a))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, plane_axis_a))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, twist_axis_b))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, plane_axis_b))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, space))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, swing_type))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, normal_half_cone_angle))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, plane_half_cone_angle))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, twist_min_angle))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, twist_max_angle))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, max_friction_torque))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, swing_motor_settings))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, twist_motor_settings))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, constraint_priority))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, num_velocity_steps_override))
+        .field(FIELD(swing_twist_constraint::SwingTwistConstraintSettings, num_position_steps_override));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::create), names("world", "bodyA", "bodyB", "settings"), GROWS);
+    bind::fn(b, BIND(adapters::swing_twist_constraint::remove), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::set_normal_half_cone_angle), names("world", "constraint", "angle"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::set_plane_half_cone_angle), names("world", "constraint", "angle"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::set_twist_min_angle), names("world", "constraint", "angle"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::set_twist_max_angle), names("world", "constraint", "angle"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::set_max_friction_torque), names("world", "constraint", "torque"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::set_swing_motor_settings), names("world", "constraint", "settings"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::set_twist_motor_settings), names("world", "constraint", "settings"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::set_swing_motor_state), names("world", "constraint", "state"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::set_twist_motor_state), names("world", "constraint", "state"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::set_target_angular_velocity_cs), names("world", "constraint", "velocity"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::set_target_orientation_cs), names("world", "constraint", "orientation"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::set_target_orientation_bs), names("world", "constraint", "orientation"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::get_rotation_in_constraint_space), names("out", "world", "constraint"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::get_total_lambda_position), names("out", "world", "constraint"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::get_total_lambda_twist), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::get_total_lambda_swing_y), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::get_total_lambda_swing_z), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::get_total_lambda_motor), names("out", "world", "constraint"));
+
+    VALUE_AS(six_dof_constraint::SixDOFConstraintSettings, "SixDOFConstraintSettings")
+        .field(FIELD(six_dof_constraint::SixDOFConstraintSettings, point_a))
+        .field(FIELD(six_dof_constraint::SixDOFConstraintSettings, point_b))
+        .field(FIELD(six_dof_constraint::SixDOFConstraintSettings, axis_x_a))
+        .field(FIELD(six_dof_constraint::SixDOFConstraintSettings, axis_y_a))
+        .field(FIELD(six_dof_constraint::SixDOFConstraintSettings, axis_x_b))
+        .field(FIELD(six_dof_constraint::SixDOFConstraintSettings, axis_y_b))
+        .field(FIELD(six_dof_constraint::SixDOFConstraintSettings, space))
+        .field(FIELD(six_dof_constraint::SixDOFConstraintSettings, swing_type))
+        .field(FIELD(six_dof_constraint::SixDOFConstraintSettings, limit_min))
+        .field(FIELD(six_dof_constraint::SixDOFConstraintSettings, limit_max))
+        .field(FIELD(six_dof_constraint::SixDOFConstraintSettings, max_friction))
+        .field(FIELD(six_dof_constraint::SixDOFConstraintSettings, limits_spring_settings))
+        .field(FIELD(six_dof_constraint::SixDOFConstraintSettings, motor_settings))
+        .field(FIELD(six_dof_constraint::SixDOFConstraintSettings, constraint_priority))
+        .field(FIELD(six_dof_constraint::SixDOFConstraintSettings, num_velocity_steps_override))
+        .field(FIELD(six_dof_constraint::SixDOFConstraintSettings, num_position_steps_override));
+    bind::fn(b, BIND(adapters::six_dof_constraint::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::six_dof_constraint::create), names("world", "bodyA", "bodyB", "settings"), GROWS);
+    bind::fn(b, BIND(adapters::six_dof_constraint::remove), names("world", "constraint"));
+    bind::fn(b, BIND(adapters::six_dof_constraint::set_translation_limits), names("world", "constraint", "limitMin", "limitMax"));
+    bind::fn(b, BIND(adapters::six_dof_constraint::set_rotation_limits), names("world", "constraint", "limitMin", "limitMax"));
+    bind::fn(b, BIND(adapters::six_dof_constraint::set_limits_spring_settings), names("world", "constraint", "axis", "settings"));
+    bind::fn(b, BIND(adapters::six_dof_constraint::set_motor_settings), names("world", "constraint", "axis", "settings"));
+    bind::fn(b, BIND(adapters::six_dof_constraint::set_motor_state), names("world", "constraint", "axis", "state"));
+    bind::fn(b, BIND(adapters::six_dof_constraint::set_target_velocity_cs), names("world", "constraint", "velocity"));
+    bind::fn(b, BIND(adapters::six_dof_constraint::set_target_angular_velocity_cs), names("world", "constraint", "velocity"));
+    bind::fn(b, BIND(adapters::six_dof_constraint::set_target_position_cs), names("world", "constraint", "position"));
+    bind::fn(b, BIND(adapters::six_dof_constraint::set_target_orientation_cs), names("world", "constraint", "orientation"));
+    bind::fn(b, BIND(adapters::six_dof_constraint::set_max_friction), names("world", "constraint", "axis", "friction"));
+    bind::fn(b, BIND(adapters::six_dof_constraint::make_free_axis), names("world", "constraint", "axis"));
+    bind::fn(b, BIND(adapters::six_dof_constraint::make_fixed_axis), names("world", "constraint", "axis"));
+    bind::fn(b, BIND(adapters::six_dof_constraint::set_limited_axis), names("world", "constraint", "axis", "min", "max"));
 }

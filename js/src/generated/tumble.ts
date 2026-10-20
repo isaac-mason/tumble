@@ -7,9 +7,9 @@
 import type { Instance } from '../module';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x21c46301;
+export const SCHEMA_HASH = 0x53a6bbd8;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
-export const SCRATCH_BYTES = 208;
+export const SCRATCH_BYTES = 368;
 
 /** the address of an object the wasm owns, typed by what it is; 0 never occurs, null stands for no object. */
 export type Handle<Name extends string> = number & { readonly [HANDLE_OF]: Name };
@@ -146,6 +146,67 @@ export const BvhSplitStrategy = {
     SAH: 2,
 } as const;
 export type BvhSplitStrategy = (typeof BvhSplitStrategy)[keyof typeof BvhSplitStrategy];
+
+/** a constraint's type, encoded in its id. */
+export const ConstraintType = {
+    POINT: 0,
+    DISTANCE: 1,
+    HINGE: 2,
+    SLIDER: 3,
+    FIXED: 4,
+    CONE: 5,
+    SWING_TWIST: 6,
+    SIX_DOF: 7,
+} as const;
+export type ConstraintType = (typeof ConstraintType)[keyof typeof ConstraintType];
+
+/** the space a constraint's points and axes are given in. */
+export const ConstraintSpace = {
+    WORLD: 0,
+    /** relative to each body: its centre of mass and orientation. */
+    LOCAL: 1,
+} as const;
+export type ConstraintSpace = (typeof ConstraintSpace)[keyof typeof ConstraintSpace];
+
+export const SpringMode = {
+    /** frequencyOrStiffness is the oscillation frequency in hz, damping the damping ratio (0 none, 1 critical). */
+    FREQUENCY_AND_DAMPING: 0,
+    /** frequencyOrStiffness is k and damping is c in F = -k x - c v. */
+    STIFFNESS_AND_DAMPING: 1,
+} as const;
+export type SpringMode = (typeof SpringMode)[keyof typeof SpringMode];
+
+export const MotorState = {
+    /** free, apart from any friction. */
+    OFF: 0,
+    /** drives to the target velocity. */
+    VELOCITY: 1,
+    /** drives to the target position through the motor's spring. */
+    POSITION: 2,
+    /** drives to both targets. */
+    POSITION_AND_VELOCITY: 3,
+} as const;
+export type MotorState = (typeof MotorState)[keyof typeof MotorState];
+
+/** the shape that limits a swing. */
+export const SwingType = {
+    /** symmetric about 0. */
+    CONE: 0,
+    /** asymmetric limits allowed. */
+    PYRAMID: 1,
+} as const;
+export type SwingType = (typeof SwingType)[keyof typeof SwingType];
+
+/** a six dof constraint's axes, in its constraint space. */
+export const SixDOFAxis = {
+    TRANSLATION_X: 0,
+    TRANSLATION_Y: 1,
+    TRANSLATION_Z: 2,
+    ROTATION_X: 3,
+    ROTATION_Y: 4,
+    ROTATION_Z: 5,
+} as const;
+export type SixDOFAxis = (typeof SixDOFAxis)[keyof typeof SixDOFAxis];
 
 export type Vec3 = [x: number, y: number, z: number];
 export const Vec3 = {
@@ -2189,6 +2250,1620 @@ export const OffsetCenterOfMassSettings = {
     },
 };
 
+export type Vec2 = [x: number, y: number];
+export const Vec2 = {
+    size: 8,
+    create(): Vec2 {
+        return [0, 0];
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: Vec2, address: number): Vec2 {
+        const mem = wasm.mem;
+        out[0] = mem.f32[(address + 0) >> 2]!;
+        out[1] = mem.f32[(address + 4) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: Vec2): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value[0];
+        mem.f32[(address + 4) >> 2] = value[1];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: Vec2): void {
+        view.setFloat32(offset + 0, value[0], true);
+        view.setFloat32(offset + 4, value[1], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: Vec2, view: DataView, offset: number): Vec2 {
+        out[0] = view.getFloat32(offset + 0, true);
+        out[1] = view.getFloat32(offset + 4, true);
+        return out;
+    },
+};
+
+export type SpringSettings = { mode: number; frequencyOrStiffness: number; damping: number };
+export const SpringSettings = {
+    size: 12,
+    create(): SpringSettings {
+        return { mode: 0, frequencyOrStiffness: 0, damping: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: SpringSettings, address: number): SpringSettings {
+        const mem = wasm.mem;
+        out.mode = mem.u32[(address + 0) >> 2]!;
+        out.frequencyOrStiffness = mem.f32[(address + 4) >> 2]!;
+        out.damping = mem.f32[(address + 8) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: SpringSettings): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.mode;
+        mem.f32[(address + 4) >> 2] = value.frequencyOrStiffness;
+        mem.f32[(address + 8) >> 2] = value.damping;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: SpringSettings): void {
+        view.setUint32(offset + 0, value.mode, true);
+        view.setFloat32(offset + 4, value.frequencyOrStiffness, true);
+        view.setFloat32(offset + 8, value.damping, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: SpringSettings, view: DataView, offset: number): SpringSettings {
+        out.mode = view.getUint32(offset + 0, true);
+        out.frequencyOrStiffness = view.getFloat32(offset + 4, true);
+        out.damping = view.getFloat32(offset + 8, true);
+        return out;
+    },
+};
+
+export type MotorSettings = {
+    spring: SpringSettings;
+    minForceLimit: number;
+    maxForceLimit: number;
+    minTorqueLimit: number;
+    maxTorqueLimit: number;
+};
+export const MotorSettings = {
+    size: 28,
+    create(): MotorSettings {
+        return { spring: SpringSettings.create(), minForceLimit: 0, maxForceLimit: 0, minTorqueLimit: 0, maxTorqueLimit: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: MotorSettings, address: number): MotorSettings {
+        const mem = wasm.mem;
+        out.spring.mode = mem.u32[(address + 0) >> 2]!;
+        out.spring.frequencyOrStiffness = mem.f32[(address + 4) >> 2]!;
+        out.spring.damping = mem.f32[(address + 8) >> 2]!;
+        out.minForceLimit = mem.f32[(address + 12) >> 2]!;
+        out.maxForceLimit = mem.f32[(address + 16) >> 2]!;
+        out.minTorqueLimit = mem.f32[(address + 20) >> 2]!;
+        out.maxTorqueLimit = mem.f32[(address + 24) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: MotorSettings): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.spring.mode;
+        mem.f32[(address + 4) >> 2] = value.spring.frequencyOrStiffness;
+        mem.f32[(address + 8) >> 2] = value.spring.damping;
+        mem.f32[(address + 12) >> 2] = value.minForceLimit;
+        mem.f32[(address + 16) >> 2] = value.maxForceLimit;
+        mem.f32[(address + 20) >> 2] = value.minTorqueLimit;
+        mem.f32[(address + 24) >> 2] = value.maxTorqueLimit;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: MotorSettings): void {
+        view.setUint32(offset + 0, value.spring.mode, true);
+        view.setFloat32(offset + 4, value.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 8, value.spring.damping, true);
+        view.setFloat32(offset + 12, value.minForceLimit, true);
+        view.setFloat32(offset + 16, value.maxForceLimit, true);
+        view.setFloat32(offset + 20, value.minTorqueLimit, true);
+        view.setFloat32(offset + 24, value.maxTorqueLimit, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: MotorSettings, view: DataView, offset: number): MotorSettings {
+        out.spring.mode = view.getUint32(offset + 0, true);
+        out.spring.frequencyOrStiffness = view.getFloat32(offset + 4, true);
+        out.spring.damping = view.getFloat32(offset + 8, true);
+        out.minForceLimit = view.getFloat32(offset + 12, true);
+        out.maxForceLimit = view.getFloat32(offset + 16, true);
+        out.minTorqueLimit = view.getFloat32(offset + 20, true);
+        out.maxTorqueLimit = view.getFloat32(offset + 24, true);
+        return out;
+    },
+};
+
+export type PointConstraintSettings = {
+    pointA: Vec3;
+    pointB: Vec3;
+    space: number;
+    constraintPriority: number;
+    numVelocityStepsOverride: number;
+    numPositionStepsOverride: number;
+};
+export const PointConstraintSettings = {
+    size: 40,
+    create(): PointConstraintSettings {
+        return {
+            pointA: Vec3.create(),
+            pointB: Vec3.create(),
+            space: 0,
+            constraintPriority: 0,
+            numVelocityStepsOverride: 0,
+            numPositionStepsOverride: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: PointConstraintSettings, address: number): PointConstraintSettings {
+        const mem = wasm.mem;
+        out.pointA[0] = mem.f32[(address + 0) >> 2]!;
+        out.pointA[1] = mem.f32[(address + 4) >> 2]!;
+        out.pointA[2] = mem.f32[(address + 8) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 12) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 16) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 20) >> 2]!;
+        out.space = mem.u32[(address + 24) >> 2]!;
+        out.constraintPriority = mem.i32[(address + 28) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 32) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 36) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: PointConstraintSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.pointA[0];
+        mem.f32[(address + 4) >> 2] = value.pointA[1];
+        mem.f32[(address + 8) >> 2] = value.pointA[2];
+        mem.f32[(address + 12) >> 2] = value.pointB[0];
+        mem.f32[(address + 16) >> 2] = value.pointB[1];
+        mem.f32[(address + 20) >> 2] = value.pointB[2];
+        mem.u32[(address + 24) >> 2] = value.space;
+        mem.i32[(address + 28) >> 2] = value.constraintPriority;
+        mem.u32[(address + 32) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 36) >> 2] = value.numPositionStepsOverride;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: PointConstraintSettings): void {
+        view.setFloat32(offset + 0, value.pointA[0], true);
+        view.setFloat32(offset + 4, value.pointA[1], true);
+        view.setFloat32(offset + 8, value.pointA[2], true);
+        view.setFloat32(offset + 12, value.pointB[0], true);
+        view.setFloat32(offset + 16, value.pointB[1], true);
+        view.setFloat32(offset + 20, value.pointB[2], true);
+        view.setUint32(offset + 24, value.space, true);
+        view.setInt32(offset + 28, value.constraintPriority, true);
+        view.setUint32(offset + 32, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 36, value.numPositionStepsOverride, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: PointConstraintSettings, view: DataView, offset: number): PointConstraintSettings {
+        out.pointA[0] = view.getFloat32(offset + 0, true);
+        out.pointA[1] = view.getFloat32(offset + 4, true);
+        out.pointA[2] = view.getFloat32(offset + 8, true);
+        out.pointB[0] = view.getFloat32(offset + 12, true);
+        out.pointB[1] = view.getFloat32(offset + 16, true);
+        out.pointB[2] = view.getFloat32(offset + 20, true);
+        out.space = view.getUint32(offset + 24, true);
+        out.constraintPriority = view.getInt32(offset + 28, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 32, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 36, true);
+        return out;
+    },
+};
+
+export type DistanceConstraintSettings = {
+    pointA: Vec3;
+    pointB: Vec3;
+    minDistance: number;
+    maxDistance: number;
+    springSettings: SpringSettings;
+    space: number;
+    constraintPriority: number;
+    numVelocityStepsOverride: number;
+    numPositionStepsOverride: number;
+};
+export const DistanceConstraintSettings = {
+    size: 60,
+    create(): DistanceConstraintSettings {
+        return {
+            pointA: Vec3.create(),
+            pointB: Vec3.create(),
+            minDistance: 0,
+            maxDistance: 0,
+            springSettings: SpringSettings.create(),
+            space: 0,
+            constraintPriority: 0,
+            numVelocityStepsOverride: 0,
+            numPositionStepsOverride: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: DistanceConstraintSettings, address: number): DistanceConstraintSettings {
+        const mem = wasm.mem;
+        out.pointA[0] = mem.f32[(address + 0) >> 2]!;
+        out.pointA[1] = mem.f32[(address + 4) >> 2]!;
+        out.pointA[2] = mem.f32[(address + 8) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 12) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 16) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 20) >> 2]!;
+        out.minDistance = mem.f32[(address + 24) >> 2]!;
+        out.maxDistance = mem.f32[(address + 28) >> 2]!;
+        out.springSettings.mode = mem.u32[(address + 32) >> 2]!;
+        out.springSettings.frequencyOrStiffness = mem.f32[(address + 36) >> 2]!;
+        out.springSettings.damping = mem.f32[(address + 40) >> 2]!;
+        out.space = mem.u32[(address + 44) >> 2]!;
+        out.constraintPriority = mem.i32[(address + 48) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 52) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 56) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: DistanceConstraintSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.pointA[0];
+        mem.f32[(address + 4) >> 2] = value.pointA[1];
+        mem.f32[(address + 8) >> 2] = value.pointA[2];
+        mem.f32[(address + 12) >> 2] = value.pointB[0];
+        mem.f32[(address + 16) >> 2] = value.pointB[1];
+        mem.f32[(address + 20) >> 2] = value.pointB[2];
+        mem.f32[(address + 24) >> 2] = value.minDistance;
+        mem.f32[(address + 28) >> 2] = value.maxDistance;
+        mem.u32[(address + 32) >> 2] = value.springSettings.mode;
+        mem.f32[(address + 36) >> 2] = value.springSettings.frequencyOrStiffness;
+        mem.f32[(address + 40) >> 2] = value.springSettings.damping;
+        mem.u32[(address + 44) >> 2] = value.space;
+        mem.i32[(address + 48) >> 2] = value.constraintPriority;
+        mem.u32[(address + 52) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 56) >> 2] = value.numPositionStepsOverride;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: DistanceConstraintSettings): void {
+        view.setFloat32(offset + 0, value.pointA[0], true);
+        view.setFloat32(offset + 4, value.pointA[1], true);
+        view.setFloat32(offset + 8, value.pointA[2], true);
+        view.setFloat32(offset + 12, value.pointB[0], true);
+        view.setFloat32(offset + 16, value.pointB[1], true);
+        view.setFloat32(offset + 20, value.pointB[2], true);
+        view.setFloat32(offset + 24, value.minDistance, true);
+        view.setFloat32(offset + 28, value.maxDistance, true);
+        view.setUint32(offset + 32, value.springSettings.mode, true);
+        view.setFloat32(offset + 36, value.springSettings.frequencyOrStiffness, true);
+        view.setFloat32(offset + 40, value.springSettings.damping, true);
+        view.setUint32(offset + 44, value.space, true);
+        view.setInt32(offset + 48, value.constraintPriority, true);
+        view.setUint32(offset + 52, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 56, value.numPositionStepsOverride, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: DistanceConstraintSettings, view: DataView, offset: number): DistanceConstraintSettings {
+        out.pointA[0] = view.getFloat32(offset + 0, true);
+        out.pointA[1] = view.getFloat32(offset + 4, true);
+        out.pointA[2] = view.getFloat32(offset + 8, true);
+        out.pointB[0] = view.getFloat32(offset + 12, true);
+        out.pointB[1] = view.getFloat32(offset + 16, true);
+        out.pointB[2] = view.getFloat32(offset + 20, true);
+        out.minDistance = view.getFloat32(offset + 24, true);
+        out.maxDistance = view.getFloat32(offset + 28, true);
+        out.springSettings.mode = view.getUint32(offset + 32, true);
+        out.springSettings.frequencyOrStiffness = view.getFloat32(offset + 36, true);
+        out.springSettings.damping = view.getFloat32(offset + 40, true);
+        out.space = view.getUint32(offset + 44, true);
+        out.constraintPriority = view.getInt32(offset + 48, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 52, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 56, true);
+        return out;
+    },
+};
+
+export type HingeConstraintSettings = {
+    pointA: Vec3;
+    pointB: Vec3;
+    hingeAxisA: Vec3;
+    hingeAxisB: Vec3;
+    normalAxisA: Vec3;
+    normalAxisB: Vec3;
+    space: number;
+    limitsMin: number;
+    limitsMax: number;
+    limitsSpringSettings: SpringSettings;
+    maxFrictionTorque: number;
+    motorSettings: MotorSettings;
+    constraintPriority: number;
+    numVelocityStepsOverride: number;
+    numPositionStepsOverride: number;
+};
+export const HingeConstraintSettings = {
+    size: 140,
+    create(): HingeConstraintSettings {
+        return {
+            pointA: Vec3.create(),
+            pointB: Vec3.create(),
+            hingeAxisA: Vec3.create(),
+            hingeAxisB: Vec3.create(),
+            normalAxisA: Vec3.create(),
+            normalAxisB: Vec3.create(),
+            space: 0,
+            limitsMin: 0,
+            limitsMax: 0,
+            limitsSpringSettings: SpringSettings.create(),
+            maxFrictionTorque: 0,
+            motorSettings: MotorSettings.create(),
+            constraintPriority: 0,
+            numVelocityStepsOverride: 0,
+            numPositionStepsOverride: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: HingeConstraintSettings, address: number): HingeConstraintSettings {
+        const mem = wasm.mem;
+        out.pointA[0] = mem.f32[(address + 0) >> 2]!;
+        out.pointA[1] = mem.f32[(address + 4) >> 2]!;
+        out.pointA[2] = mem.f32[(address + 8) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 12) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 16) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 20) >> 2]!;
+        out.hingeAxisA[0] = mem.f32[(address + 24) >> 2]!;
+        out.hingeAxisA[1] = mem.f32[(address + 28) >> 2]!;
+        out.hingeAxisA[2] = mem.f32[(address + 32) >> 2]!;
+        out.hingeAxisB[0] = mem.f32[(address + 36) >> 2]!;
+        out.hingeAxisB[1] = mem.f32[(address + 40) >> 2]!;
+        out.hingeAxisB[2] = mem.f32[(address + 44) >> 2]!;
+        out.normalAxisA[0] = mem.f32[(address + 48) >> 2]!;
+        out.normalAxisA[1] = mem.f32[(address + 52) >> 2]!;
+        out.normalAxisA[2] = mem.f32[(address + 56) >> 2]!;
+        out.normalAxisB[0] = mem.f32[(address + 60) >> 2]!;
+        out.normalAxisB[1] = mem.f32[(address + 64) >> 2]!;
+        out.normalAxisB[2] = mem.f32[(address + 68) >> 2]!;
+        out.space = mem.u32[(address + 72) >> 2]!;
+        out.limitsMin = mem.f32[(address + 76) >> 2]!;
+        out.limitsMax = mem.f32[(address + 80) >> 2]!;
+        out.limitsSpringSettings.mode = mem.u32[(address + 84) >> 2]!;
+        out.limitsSpringSettings.frequencyOrStiffness = mem.f32[(address + 88) >> 2]!;
+        out.limitsSpringSettings.damping = mem.f32[(address + 92) >> 2]!;
+        out.maxFrictionTorque = mem.f32[(address + 96) >> 2]!;
+        out.motorSettings.spring.mode = mem.u32[(address + 100) >> 2]!;
+        out.motorSettings.spring.frequencyOrStiffness = mem.f32[(address + 104) >> 2]!;
+        out.motorSettings.spring.damping = mem.f32[(address + 108) >> 2]!;
+        out.motorSettings.minForceLimit = mem.f32[(address + 112) >> 2]!;
+        out.motorSettings.maxForceLimit = mem.f32[(address + 116) >> 2]!;
+        out.motorSettings.minTorqueLimit = mem.f32[(address + 120) >> 2]!;
+        out.motorSettings.maxTorqueLimit = mem.f32[(address + 124) >> 2]!;
+        out.constraintPriority = mem.i32[(address + 128) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 132) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 136) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: HingeConstraintSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.pointA[0];
+        mem.f32[(address + 4) >> 2] = value.pointA[1];
+        mem.f32[(address + 8) >> 2] = value.pointA[2];
+        mem.f32[(address + 12) >> 2] = value.pointB[0];
+        mem.f32[(address + 16) >> 2] = value.pointB[1];
+        mem.f32[(address + 20) >> 2] = value.pointB[2];
+        mem.f32[(address + 24) >> 2] = value.hingeAxisA[0];
+        mem.f32[(address + 28) >> 2] = value.hingeAxisA[1];
+        mem.f32[(address + 32) >> 2] = value.hingeAxisA[2];
+        mem.f32[(address + 36) >> 2] = value.hingeAxisB[0];
+        mem.f32[(address + 40) >> 2] = value.hingeAxisB[1];
+        mem.f32[(address + 44) >> 2] = value.hingeAxisB[2];
+        mem.f32[(address + 48) >> 2] = value.normalAxisA[0];
+        mem.f32[(address + 52) >> 2] = value.normalAxisA[1];
+        mem.f32[(address + 56) >> 2] = value.normalAxisA[2];
+        mem.f32[(address + 60) >> 2] = value.normalAxisB[0];
+        mem.f32[(address + 64) >> 2] = value.normalAxisB[1];
+        mem.f32[(address + 68) >> 2] = value.normalAxisB[2];
+        mem.u32[(address + 72) >> 2] = value.space;
+        mem.f32[(address + 76) >> 2] = value.limitsMin;
+        mem.f32[(address + 80) >> 2] = value.limitsMax;
+        mem.u32[(address + 84) >> 2] = value.limitsSpringSettings.mode;
+        mem.f32[(address + 88) >> 2] = value.limitsSpringSettings.frequencyOrStiffness;
+        mem.f32[(address + 92) >> 2] = value.limitsSpringSettings.damping;
+        mem.f32[(address + 96) >> 2] = value.maxFrictionTorque;
+        mem.u32[(address + 100) >> 2] = value.motorSettings.spring.mode;
+        mem.f32[(address + 104) >> 2] = value.motorSettings.spring.frequencyOrStiffness;
+        mem.f32[(address + 108) >> 2] = value.motorSettings.spring.damping;
+        mem.f32[(address + 112) >> 2] = value.motorSettings.minForceLimit;
+        mem.f32[(address + 116) >> 2] = value.motorSettings.maxForceLimit;
+        mem.f32[(address + 120) >> 2] = value.motorSettings.minTorqueLimit;
+        mem.f32[(address + 124) >> 2] = value.motorSettings.maxTorqueLimit;
+        mem.i32[(address + 128) >> 2] = value.constraintPriority;
+        mem.u32[(address + 132) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 136) >> 2] = value.numPositionStepsOverride;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: HingeConstraintSettings): void {
+        view.setFloat32(offset + 0, value.pointA[0], true);
+        view.setFloat32(offset + 4, value.pointA[1], true);
+        view.setFloat32(offset + 8, value.pointA[2], true);
+        view.setFloat32(offset + 12, value.pointB[0], true);
+        view.setFloat32(offset + 16, value.pointB[1], true);
+        view.setFloat32(offset + 20, value.pointB[2], true);
+        view.setFloat32(offset + 24, value.hingeAxisA[0], true);
+        view.setFloat32(offset + 28, value.hingeAxisA[1], true);
+        view.setFloat32(offset + 32, value.hingeAxisA[2], true);
+        view.setFloat32(offset + 36, value.hingeAxisB[0], true);
+        view.setFloat32(offset + 40, value.hingeAxisB[1], true);
+        view.setFloat32(offset + 44, value.hingeAxisB[2], true);
+        view.setFloat32(offset + 48, value.normalAxisA[0], true);
+        view.setFloat32(offset + 52, value.normalAxisA[1], true);
+        view.setFloat32(offset + 56, value.normalAxisA[2], true);
+        view.setFloat32(offset + 60, value.normalAxisB[0], true);
+        view.setFloat32(offset + 64, value.normalAxisB[1], true);
+        view.setFloat32(offset + 68, value.normalAxisB[2], true);
+        view.setUint32(offset + 72, value.space, true);
+        view.setFloat32(offset + 76, value.limitsMin, true);
+        view.setFloat32(offset + 80, value.limitsMax, true);
+        view.setUint32(offset + 84, value.limitsSpringSettings.mode, true);
+        view.setFloat32(offset + 88, value.limitsSpringSettings.frequencyOrStiffness, true);
+        view.setFloat32(offset + 92, value.limitsSpringSettings.damping, true);
+        view.setFloat32(offset + 96, value.maxFrictionTorque, true);
+        view.setUint32(offset + 100, value.motorSettings.spring.mode, true);
+        view.setFloat32(offset + 104, value.motorSettings.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 108, value.motorSettings.spring.damping, true);
+        view.setFloat32(offset + 112, value.motorSettings.minForceLimit, true);
+        view.setFloat32(offset + 116, value.motorSettings.maxForceLimit, true);
+        view.setFloat32(offset + 120, value.motorSettings.minTorqueLimit, true);
+        view.setFloat32(offset + 124, value.motorSettings.maxTorqueLimit, true);
+        view.setInt32(offset + 128, value.constraintPriority, true);
+        view.setUint32(offset + 132, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 136, value.numPositionStepsOverride, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: HingeConstraintSettings, view: DataView, offset: number): HingeConstraintSettings {
+        out.pointA[0] = view.getFloat32(offset + 0, true);
+        out.pointA[1] = view.getFloat32(offset + 4, true);
+        out.pointA[2] = view.getFloat32(offset + 8, true);
+        out.pointB[0] = view.getFloat32(offset + 12, true);
+        out.pointB[1] = view.getFloat32(offset + 16, true);
+        out.pointB[2] = view.getFloat32(offset + 20, true);
+        out.hingeAxisA[0] = view.getFloat32(offset + 24, true);
+        out.hingeAxisA[1] = view.getFloat32(offset + 28, true);
+        out.hingeAxisA[2] = view.getFloat32(offset + 32, true);
+        out.hingeAxisB[0] = view.getFloat32(offset + 36, true);
+        out.hingeAxisB[1] = view.getFloat32(offset + 40, true);
+        out.hingeAxisB[2] = view.getFloat32(offset + 44, true);
+        out.normalAxisA[0] = view.getFloat32(offset + 48, true);
+        out.normalAxisA[1] = view.getFloat32(offset + 52, true);
+        out.normalAxisA[2] = view.getFloat32(offset + 56, true);
+        out.normalAxisB[0] = view.getFloat32(offset + 60, true);
+        out.normalAxisB[1] = view.getFloat32(offset + 64, true);
+        out.normalAxisB[2] = view.getFloat32(offset + 68, true);
+        out.space = view.getUint32(offset + 72, true);
+        out.limitsMin = view.getFloat32(offset + 76, true);
+        out.limitsMax = view.getFloat32(offset + 80, true);
+        out.limitsSpringSettings.mode = view.getUint32(offset + 84, true);
+        out.limitsSpringSettings.frequencyOrStiffness = view.getFloat32(offset + 88, true);
+        out.limitsSpringSettings.damping = view.getFloat32(offset + 92, true);
+        out.maxFrictionTorque = view.getFloat32(offset + 96, true);
+        out.motorSettings.spring.mode = view.getUint32(offset + 100, true);
+        out.motorSettings.spring.frequencyOrStiffness = view.getFloat32(offset + 104, true);
+        out.motorSettings.spring.damping = view.getFloat32(offset + 108, true);
+        out.motorSettings.minForceLimit = view.getFloat32(offset + 112, true);
+        out.motorSettings.maxForceLimit = view.getFloat32(offset + 116, true);
+        out.motorSettings.minTorqueLimit = view.getFloat32(offset + 120, true);
+        out.motorSettings.maxTorqueLimit = view.getFloat32(offset + 124, true);
+        out.constraintPriority = view.getInt32(offset + 128, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 132, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 136, true);
+        return out;
+    },
+};
+
+export type SliderConstraintSettings = {
+    pointA: Vec3;
+    pointB: Vec3;
+    sliderAxisA: Vec3;
+    sliderAxisB: Vec3;
+    normalAxisA: Vec3;
+    normalAxisB: Vec3;
+    space: number;
+    autoDetectPoint: boolean;
+    limitsMin: number;
+    limitsMax: number;
+    limitsSpringSettings: SpringSettings;
+    maxFrictionForce: number;
+    motorSettings: MotorSettings;
+    constraintPriority: number;
+    numVelocityStepsOverride: number;
+    numPositionStepsOverride: number;
+};
+export const SliderConstraintSettings = {
+    size: 144,
+    create(): SliderConstraintSettings {
+        return {
+            pointA: Vec3.create(),
+            pointB: Vec3.create(),
+            sliderAxisA: Vec3.create(),
+            sliderAxisB: Vec3.create(),
+            normalAxisA: Vec3.create(),
+            normalAxisB: Vec3.create(),
+            space: 0,
+            autoDetectPoint: false,
+            limitsMin: 0,
+            limitsMax: 0,
+            limitsSpringSettings: SpringSettings.create(),
+            maxFrictionForce: 0,
+            motorSettings: MotorSettings.create(),
+            constraintPriority: 0,
+            numVelocityStepsOverride: 0,
+            numPositionStepsOverride: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: SliderConstraintSettings, address: number): SliderConstraintSettings {
+        const mem = wasm.mem;
+        out.pointA[0] = mem.f32[(address + 0) >> 2]!;
+        out.pointA[1] = mem.f32[(address + 4) >> 2]!;
+        out.pointA[2] = mem.f32[(address + 8) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 12) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 16) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 20) >> 2]!;
+        out.sliderAxisA[0] = mem.f32[(address + 24) >> 2]!;
+        out.sliderAxisA[1] = mem.f32[(address + 28) >> 2]!;
+        out.sliderAxisA[2] = mem.f32[(address + 32) >> 2]!;
+        out.sliderAxisB[0] = mem.f32[(address + 36) >> 2]!;
+        out.sliderAxisB[1] = mem.f32[(address + 40) >> 2]!;
+        out.sliderAxisB[2] = mem.f32[(address + 44) >> 2]!;
+        out.normalAxisA[0] = mem.f32[(address + 48) >> 2]!;
+        out.normalAxisA[1] = mem.f32[(address + 52) >> 2]!;
+        out.normalAxisA[2] = mem.f32[(address + 56) >> 2]!;
+        out.normalAxisB[0] = mem.f32[(address + 60) >> 2]!;
+        out.normalAxisB[1] = mem.f32[(address + 64) >> 2]!;
+        out.normalAxisB[2] = mem.f32[(address + 68) >> 2]!;
+        out.space = mem.u32[(address + 72) >> 2]!;
+        out.autoDetectPoint = mem.u8[address + 76]! !== 0;
+        out.limitsMin = mem.f32[(address + 80) >> 2]!;
+        out.limitsMax = mem.f32[(address + 84) >> 2]!;
+        out.limitsSpringSettings.mode = mem.u32[(address + 88) >> 2]!;
+        out.limitsSpringSettings.frequencyOrStiffness = mem.f32[(address + 92) >> 2]!;
+        out.limitsSpringSettings.damping = mem.f32[(address + 96) >> 2]!;
+        out.maxFrictionForce = mem.f32[(address + 100) >> 2]!;
+        out.motorSettings.spring.mode = mem.u32[(address + 104) >> 2]!;
+        out.motorSettings.spring.frequencyOrStiffness = mem.f32[(address + 108) >> 2]!;
+        out.motorSettings.spring.damping = mem.f32[(address + 112) >> 2]!;
+        out.motorSettings.minForceLimit = mem.f32[(address + 116) >> 2]!;
+        out.motorSettings.maxForceLimit = mem.f32[(address + 120) >> 2]!;
+        out.motorSettings.minTorqueLimit = mem.f32[(address + 124) >> 2]!;
+        out.motorSettings.maxTorqueLimit = mem.f32[(address + 128) >> 2]!;
+        out.constraintPriority = mem.i32[(address + 132) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 136) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 140) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: SliderConstraintSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.pointA[0];
+        mem.f32[(address + 4) >> 2] = value.pointA[1];
+        mem.f32[(address + 8) >> 2] = value.pointA[2];
+        mem.f32[(address + 12) >> 2] = value.pointB[0];
+        mem.f32[(address + 16) >> 2] = value.pointB[1];
+        mem.f32[(address + 20) >> 2] = value.pointB[2];
+        mem.f32[(address + 24) >> 2] = value.sliderAxisA[0];
+        mem.f32[(address + 28) >> 2] = value.sliderAxisA[1];
+        mem.f32[(address + 32) >> 2] = value.sliderAxisA[2];
+        mem.f32[(address + 36) >> 2] = value.sliderAxisB[0];
+        mem.f32[(address + 40) >> 2] = value.sliderAxisB[1];
+        mem.f32[(address + 44) >> 2] = value.sliderAxisB[2];
+        mem.f32[(address + 48) >> 2] = value.normalAxisA[0];
+        mem.f32[(address + 52) >> 2] = value.normalAxisA[1];
+        mem.f32[(address + 56) >> 2] = value.normalAxisA[2];
+        mem.f32[(address + 60) >> 2] = value.normalAxisB[0];
+        mem.f32[(address + 64) >> 2] = value.normalAxisB[1];
+        mem.f32[(address + 68) >> 2] = value.normalAxisB[2];
+        mem.u32[(address + 72) >> 2] = value.space;
+        mem.u8[address + 76] = value.autoDetectPoint ? 1 : 0;
+        mem.f32[(address + 80) >> 2] = value.limitsMin;
+        mem.f32[(address + 84) >> 2] = value.limitsMax;
+        mem.u32[(address + 88) >> 2] = value.limitsSpringSettings.mode;
+        mem.f32[(address + 92) >> 2] = value.limitsSpringSettings.frequencyOrStiffness;
+        mem.f32[(address + 96) >> 2] = value.limitsSpringSettings.damping;
+        mem.f32[(address + 100) >> 2] = value.maxFrictionForce;
+        mem.u32[(address + 104) >> 2] = value.motorSettings.spring.mode;
+        mem.f32[(address + 108) >> 2] = value.motorSettings.spring.frequencyOrStiffness;
+        mem.f32[(address + 112) >> 2] = value.motorSettings.spring.damping;
+        mem.f32[(address + 116) >> 2] = value.motorSettings.minForceLimit;
+        mem.f32[(address + 120) >> 2] = value.motorSettings.maxForceLimit;
+        mem.f32[(address + 124) >> 2] = value.motorSettings.minTorqueLimit;
+        mem.f32[(address + 128) >> 2] = value.motorSettings.maxTorqueLimit;
+        mem.i32[(address + 132) >> 2] = value.constraintPriority;
+        mem.u32[(address + 136) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 140) >> 2] = value.numPositionStepsOverride;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: SliderConstraintSettings): void {
+        view.setFloat32(offset + 0, value.pointA[0], true);
+        view.setFloat32(offset + 4, value.pointA[1], true);
+        view.setFloat32(offset + 8, value.pointA[2], true);
+        view.setFloat32(offset + 12, value.pointB[0], true);
+        view.setFloat32(offset + 16, value.pointB[1], true);
+        view.setFloat32(offset + 20, value.pointB[2], true);
+        view.setFloat32(offset + 24, value.sliderAxisA[0], true);
+        view.setFloat32(offset + 28, value.sliderAxisA[1], true);
+        view.setFloat32(offset + 32, value.sliderAxisA[2], true);
+        view.setFloat32(offset + 36, value.sliderAxisB[0], true);
+        view.setFloat32(offset + 40, value.sliderAxisB[1], true);
+        view.setFloat32(offset + 44, value.sliderAxisB[2], true);
+        view.setFloat32(offset + 48, value.normalAxisA[0], true);
+        view.setFloat32(offset + 52, value.normalAxisA[1], true);
+        view.setFloat32(offset + 56, value.normalAxisA[2], true);
+        view.setFloat32(offset + 60, value.normalAxisB[0], true);
+        view.setFloat32(offset + 64, value.normalAxisB[1], true);
+        view.setFloat32(offset + 68, value.normalAxisB[2], true);
+        view.setUint32(offset + 72, value.space, true);
+        view.setUint8(offset + 76, value.autoDetectPoint ? 1 : 0);
+        view.setFloat32(offset + 80, value.limitsMin, true);
+        view.setFloat32(offset + 84, value.limitsMax, true);
+        view.setUint32(offset + 88, value.limitsSpringSettings.mode, true);
+        view.setFloat32(offset + 92, value.limitsSpringSettings.frequencyOrStiffness, true);
+        view.setFloat32(offset + 96, value.limitsSpringSettings.damping, true);
+        view.setFloat32(offset + 100, value.maxFrictionForce, true);
+        view.setUint32(offset + 104, value.motorSettings.spring.mode, true);
+        view.setFloat32(offset + 108, value.motorSettings.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 112, value.motorSettings.spring.damping, true);
+        view.setFloat32(offset + 116, value.motorSettings.minForceLimit, true);
+        view.setFloat32(offset + 120, value.motorSettings.maxForceLimit, true);
+        view.setFloat32(offset + 124, value.motorSettings.minTorqueLimit, true);
+        view.setFloat32(offset + 128, value.motorSettings.maxTorqueLimit, true);
+        view.setInt32(offset + 132, value.constraintPriority, true);
+        view.setUint32(offset + 136, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 140, value.numPositionStepsOverride, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: SliderConstraintSettings, view: DataView, offset: number): SliderConstraintSettings {
+        out.pointA[0] = view.getFloat32(offset + 0, true);
+        out.pointA[1] = view.getFloat32(offset + 4, true);
+        out.pointA[2] = view.getFloat32(offset + 8, true);
+        out.pointB[0] = view.getFloat32(offset + 12, true);
+        out.pointB[1] = view.getFloat32(offset + 16, true);
+        out.pointB[2] = view.getFloat32(offset + 20, true);
+        out.sliderAxisA[0] = view.getFloat32(offset + 24, true);
+        out.sliderAxisA[1] = view.getFloat32(offset + 28, true);
+        out.sliderAxisA[2] = view.getFloat32(offset + 32, true);
+        out.sliderAxisB[0] = view.getFloat32(offset + 36, true);
+        out.sliderAxisB[1] = view.getFloat32(offset + 40, true);
+        out.sliderAxisB[2] = view.getFloat32(offset + 44, true);
+        out.normalAxisA[0] = view.getFloat32(offset + 48, true);
+        out.normalAxisA[1] = view.getFloat32(offset + 52, true);
+        out.normalAxisA[2] = view.getFloat32(offset + 56, true);
+        out.normalAxisB[0] = view.getFloat32(offset + 60, true);
+        out.normalAxisB[1] = view.getFloat32(offset + 64, true);
+        out.normalAxisB[2] = view.getFloat32(offset + 68, true);
+        out.space = view.getUint32(offset + 72, true);
+        out.autoDetectPoint = view.getUint8(offset + 76) !== 0;
+        out.limitsMin = view.getFloat32(offset + 80, true);
+        out.limitsMax = view.getFloat32(offset + 84, true);
+        out.limitsSpringSettings.mode = view.getUint32(offset + 88, true);
+        out.limitsSpringSettings.frequencyOrStiffness = view.getFloat32(offset + 92, true);
+        out.limitsSpringSettings.damping = view.getFloat32(offset + 96, true);
+        out.maxFrictionForce = view.getFloat32(offset + 100, true);
+        out.motorSettings.spring.mode = view.getUint32(offset + 104, true);
+        out.motorSettings.spring.frequencyOrStiffness = view.getFloat32(offset + 108, true);
+        out.motorSettings.spring.damping = view.getFloat32(offset + 112, true);
+        out.motorSettings.minForceLimit = view.getFloat32(offset + 116, true);
+        out.motorSettings.maxForceLimit = view.getFloat32(offset + 120, true);
+        out.motorSettings.minTorqueLimit = view.getFloat32(offset + 124, true);
+        out.motorSettings.maxTorqueLimit = view.getFloat32(offset + 128, true);
+        out.constraintPriority = view.getInt32(offset + 132, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 136, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 140, true);
+        return out;
+    },
+};
+
+export type FixedConstraintSettings = {
+    pointA: Vec3;
+    axisXA: Vec3;
+    axisYA: Vec3;
+    pointB: Vec3;
+    axisXB: Vec3;
+    axisYB: Vec3;
+    space: number;
+    autoDetectPoint: boolean;
+    constraintPriority: number;
+    numVelocityStepsOverride: number;
+    numPositionStepsOverride: number;
+};
+export const FixedConstraintSettings = {
+    size: 92,
+    create(): FixedConstraintSettings {
+        return {
+            pointA: Vec3.create(),
+            axisXA: Vec3.create(),
+            axisYA: Vec3.create(),
+            pointB: Vec3.create(),
+            axisXB: Vec3.create(),
+            axisYB: Vec3.create(),
+            space: 0,
+            autoDetectPoint: false,
+            constraintPriority: 0,
+            numVelocityStepsOverride: 0,
+            numPositionStepsOverride: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: FixedConstraintSettings, address: number): FixedConstraintSettings {
+        const mem = wasm.mem;
+        out.pointA[0] = mem.f32[(address + 0) >> 2]!;
+        out.pointA[1] = mem.f32[(address + 4) >> 2]!;
+        out.pointA[2] = mem.f32[(address + 8) >> 2]!;
+        out.axisXA[0] = mem.f32[(address + 12) >> 2]!;
+        out.axisXA[1] = mem.f32[(address + 16) >> 2]!;
+        out.axisXA[2] = mem.f32[(address + 20) >> 2]!;
+        out.axisYA[0] = mem.f32[(address + 24) >> 2]!;
+        out.axisYA[1] = mem.f32[(address + 28) >> 2]!;
+        out.axisYA[2] = mem.f32[(address + 32) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 36) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 40) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 44) >> 2]!;
+        out.axisXB[0] = mem.f32[(address + 48) >> 2]!;
+        out.axisXB[1] = mem.f32[(address + 52) >> 2]!;
+        out.axisXB[2] = mem.f32[(address + 56) >> 2]!;
+        out.axisYB[0] = mem.f32[(address + 60) >> 2]!;
+        out.axisYB[1] = mem.f32[(address + 64) >> 2]!;
+        out.axisYB[2] = mem.f32[(address + 68) >> 2]!;
+        out.space = mem.u32[(address + 72) >> 2]!;
+        out.autoDetectPoint = mem.u8[address + 76]! !== 0;
+        out.constraintPriority = mem.i32[(address + 80) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 84) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 88) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: FixedConstraintSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.pointA[0];
+        mem.f32[(address + 4) >> 2] = value.pointA[1];
+        mem.f32[(address + 8) >> 2] = value.pointA[2];
+        mem.f32[(address + 12) >> 2] = value.axisXA[0];
+        mem.f32[(address + 16) >> 2] = value.axisXA[1];
+        mem.f32[(address + 20) >> 2] = value.axisXA[2];
+        mem.f32[(address + 24) >> 2] = value.axisYA[0];
+        mem.f32[(address + 28) >> 2] = value.axisYA[1];
+        mem.f32[(address + 32) >> 2] = value.axisYA[2];
+        mem.f32[(address + 36) >> 2] = value.pointB[0];
+        mem.f32[(address + 40) >> 2] = value.pointB[1];
+        mem.f32[(address + 44) >> 2] = value.pointB[2];
+        mem.f32[(address + 48) >> 2] = value.axisXB[0];
+        mem.f32[(address + 52) >> 2] = value.axisXB[1];
+        mem.f32[(address + 56) >> 2] = value.axisXB[2];
+        mem.f32[(address + 60) >> 2] = value.axisYB[0];
+        mem.f32[(address + 64) >> 2] = value.axisYB[1];
+        mem.f32[(address + 68) >> 2] = value.axisYB[2];
+        mem.u32[(address + 72) >> 2] = value.space;
+        mem.u8[address + 76] = value.autoDetectPoint ? 1 : 0;
+        mem.i32[(address + 80) >> 2] = value.constraintPriority;
+        mem.u32[(address + 84) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 88) >> 2] = value.numPositionStepsOverride;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: FixedConstraintSettings): void {
+        view.setFloat32(offset + 0, value.pointA[0], true);
+        view.setFloat32(offset + 4, value.pointA[1], true);
+        view.setFloat32(offset + 8, value.pointA[2], true);
+        view.setFloat32(offset + 12, value.axisXA[0], true);
+        view.setFloat32(offset + 16, value.axisXA[1], true);
+        view.setFloat32(offset + 20, value.axisXA[2], true);
+        view.setFloat32(offset + 24, value.axisYA[0], true);
+        view.setFloat32(offset + 28, value.axisYA[1], true);
+        view.setFloat32(offset + 32, value.axisYA[2], true);
+        view.setFloat32(offset + 36, value.pointB[0], true);
+        view.setFloat32(offset + 40, value.pointB[1], true);
+        view.setFloat32(offset + 44, value.pointB[2], true);
+        view.setFloat32(offset + 48, value.axisXB[0], true);
+        view.setFloat32(offset + 52, value.axisXB[1], true);
+        view.setFloat32(offset + 56, value.axisXB[2], true);
+        view.setFloat32(offset + 60, value.axisYB[0], true);
+        view.setFloat32(offset + 64, value.axisYB[1], true);
+        view.setFloat32(offset + 68, value.axisYB[2], true);
+        view.setUint32(offset + 72, value.space, true);
+        view.setUint8(offset + 76, value.autoDetectPoint ? 1 : 0);
+        view.setInt32(offset + 80, value.constraintPriority, true);
+        view.setUint32(offset + 84, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 88, value.numPositionStepsOverride, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: FixedConstraintSettings, view: DataView, offset: number): FixedConstraintSettings {
+        out.pointA[0] = view.getFloat32(offset + 0, true);
+        out.pointA[1] = view.getFloat32(offset + 4, true);
+        out.pointA[2] = view.getFloat32(offset + 8, true);
+        out.axisXA[0] = view.getFloat32(offset + 12, true);
+        out.axisXA[1] = view.getFloat32(offset + 16, true);
+        out.axisXA[2] = view.getFloat32(offset + 20, true);
+        out.axisYA[0] = view.getFloat32(offset + 24, true);
+        out.axisYA[1] = view.getFloat32(offset + 28, true);
+        out.axisYA[2] = view.getFloat32(offset + 32, true);
+        out.pointB[0] = view.getFloat32(offset + 36, true);
+        out.pointB[1] = view.getFloat32(offset + 40, true);
+        out.pointB[2] = view.getFloat32(offset + 44, true);
+        out.axisXB[0] = view.getFloat32(offset + 48, true);
+        out.axisXB[1] = view.getFloat32(offset + 52, true);
+        out.axisXB[2] = view.getFloat32(offset + 56, true);
+        out.axisYB[0] = view.getFloat32(offset + 60, true);
+        out.axisYB[1] = view.getFloat32(offset + 64, true);
+        out.axisYB[2] = view.getFloat32(offset + 68, true);
+        out.space = view.getUint32(offset + 72, true);
+        out.autoDetectPoint = view.getUint8(offset + 76) !== 0;
+        out.constraintPriority = view.getInt32(offset + 80, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 84, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 88, true);
+        return out;
+    },
+};
+
+export type ConeConstraintSettings = {
+    pointA: Vec3;
+    twistAxisA: Vec3;
+    pointB: Vec3;
+    twistAxisB: Vec3;
+    halfConeAngle: number;
+    space: number;
+    constraintPriority: number;
+    numVelocityStepsOverride: number;
+    numPositionStepsOverride: number;
+};
+export const ConeConstraintSettings = {
+    size: 68,
+    create(): ConeConstraintSettings {
+        return {
+            pointA: Vec3.create(),
+            twistAxisA: Vec3.create(),
+            pointB: Vec3.create(),
+            twistAxisB: Vec3.create(),
+            halfConeAngle: 0,
+            space: 0,
+            constraintPriority: 0,
+            numVelocityStepsOverride: 0,
+            numPositionStepsOverride: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: ConeConstraintSettings, address: number): ConeConstraintSettings {
+        const mem = wasm.mem;
+        out.pointA[0] = mem.f32[(address + 0) >> 2]!;
+        out.pointA[1] = mem.f32[(address + 4) >> 2]!;
+        out.pointA[2] = mem.f32[(address + 8) >> 2]!;
+        out.twistAxisA[0] = mem.f32[(address + 12) >> 2]!;
+        out.twistAxisA[1] = mem.f32[(address + 16) >> 2]!;
+        out.twistAxisA[2] = mem.f32[(address + 20) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 24) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 28) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 32) >> 2]!;
+        out.twistAxisB[0] = mem.f32[(address + 36) >> 2]!;
+        out.twistAxisB[1] = mem.f32[(address + 40) >> 2]!;
+        out.twistAxisB[2] = mem.f32[(address + 44) >> 2]!;
+        out.halfConeAngle = mem.f32[(address + 48) >> 2]!;
+        out.space = mem.u32[(address + 52) >> 2]!;
+        out.constraintPriority = mem.i32[(address + 56) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 60) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 64) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: ConeConstraintSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.pointA[0];
+        mem.f32[(address + 4) >> 2] = value.pointA[1];
+        mem.f32[(address + 8) >> 2] = value.pointA[2];
+        mem.f32[(address + 12) >> 2] = value.twistAxisA[0];
+        mem.f32[(address + 16) >> 2] = value.twistAxisA[1];
+        mem.f32[(address + 20) >> 2] = value.twistAxisA[2];
+        mem.f32[(address + 24) >> 2] = value.pointB[0];
+        mem.f32[(address + 28) >> 2] = value.pointB[1];
+        mem.f32[(address + 32) >> 2] = value.pointB[2];
+        mem.f32[(address + 36) >> 2] = value.twistAxisB[0];
+        mem.f32[(address + 40) >> 2] = value.twistAxisB[1];
+        mem.f32[(address + 44) >> 2] = value.twistAxisB[2];
+        mem.f32[(address + 48) >> 2] = value.halfConeAngle;
+        mem.u32[(address + 52) >> 2] = value.space;
+        mem.i32[(address + 56) >> 2] = value.constraintPriority;
+        mem.u32[(address + 60) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 64) >> 2] = value.numPositionStepsOverride;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: ConeConstraintSettings): void {
+        view.setFloat32(offset + 0, value.pointA[0], true);
+        view.setFloat32(offset + 4, value.pointA[1], true);
+        view.setFloat32(offset + 8, value.pointA[2], true);
+        view.setFloat32(offset + 12, value.twistAxisA[0], true);
+        view.setFloat32(offset + 16, value.twistAxisA[1], true);
+        view.setFloat32(offset + 20, value.twistAxisA[2], true);
+        view.setFloat32(offset + 24, value.pointB[0], true);
+        view.setFloat32(offset + 28, value.pointB[1], true);
+        view.setFloat32(offset + 32, value.pointB[2], true);
+        view.setFloat32(offset + 36, value.twistAxisB[0], true);
+        view.setFloat32(offset + 40, value.twistAxisB[1], true);
+        view.setFloat32(offset + 44, value.twistAxisB[2], true);
+        view.setFloat32(offset + 48, value.halfConeAngle, true);
+        view.setUint32(offset + 52, value.space, true);
+        view.setInt32(offset + 56, value.constraintPriority, true);
+        view.setUint32(offset + 60, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 64, value.numPositionStepsOverride, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: ConeConstraintSettings, view: DataView, offset: number): ConeConstraintSettings {
+        out.pointA[0] = view.getFloat32(offset + 0, true);
+        out.pointA[1] = view.getFloat32(offset + 4, true);
+        out.pointA[2] = view.getFloat32(offset + 8, true);
+        out.twistAxisA[0] = view.getFloat32(offset + 12, true);
+        out.twistAxisA[1] = view.getFloat32(offset + 16, true);
+        out.twistAxisA[2] = view.getFloat32(offset + 20, true);
+        out.pointB[0] = view.getFloat32(offset + 24, true);
+        out.pointB[1] = view.getFloat32(offset + 28, true);
+        out.pointB[2] = view.getFloat32(offset + 32, true);
+        out.twistAxisB[0] = view.getFloat32(offset + 36, true);
+        out.twistAxisB[1] = view.getFloat32(offset + 40, true);
+        out.twistAxisB[2] = view.getFloat32(offset + 44, true);
+        out.halfConeAngle = view.getFloat32(offset + 48, true);
+        out.space = view.getUint32(offset + 52, true);
+        out.constraintPriority = view.getInt32(offset + 56, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 60, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 64, true);
+        return out;
+    },
+};
+
+export type SwingTwistConstraintSettings = {
+    pointA: Vec3;
+    pointB: Vec3;
+    twistAxisA: Vec3;
+    planeAxisA: Vec3;
+    twistAxisB: Vec3;
+    planeAxisB: Vec3;
+    space: number;
+    swingType: number;
+    normalHalfConeAngle: number;
+    planeHalfConeAngle: number;
+    twistMinAngle: number;
+    twistMaxAngle: number;
+    maxFrictionTorque: number;
+    swingMotorSettings: MotorSettings;
+    twistMotorSettings: MotorSettings;
+    constraintPriority: number;
+    numVelocityStepsOverride: number;
+    numPositionStepsOverride: number;
+};
+export const SwingTwistConstraintSettings = {
+    size: 168,
+    create(): SwingTwistConstraintSettings {
+        return {
+            pointA: Vec3.create(),
+            pointB: Vec3.create(),
+            twistAxisA: Vec3.create(),
+            planeAxisA: Vec3.create(),
+            twistAxisB: Vec3.create(),
+            planeAxisB: Vec3.create(),
+            space: 0,
+            swingType: 0,
+            normalHalfConeAngle: 0,
+            planeHalfConeAngle: 0,
+            twistMinAngle: 0,
+            twistMaxAngle: 0,
+            maxFrictionTorque: 0,
+            swingMotorSettings: MotorSettings.create(),
+            twistMotorSettings: MotorSettings.create(),
+            constraintPriority: 0,
+            numVelocityStepsOverride: 0,
+            numPositionStepsOverride: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: SwingTwistConstraintSettings, address: number): SwingTwistConstraintSettings {
+        const mem = wasm.mem;
+        out.pointA[0] = mem.f32[(address + 0) >> 2]!;
+        out.pointA[1] = mem.f32[(address + 4) >> 2]!;
+        out.pointA[2] = mem.f32[(address + 8) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 12) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 16) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 20) >> 2]!;
+        out.twistAxisA[0] = mem.f32[(address + 24) >> 2]!;
+        out.twistAxisA[1] = mem.f32[(address + 28) >> 2]!;
+        out.twistAxisA[2] = mem.f32[(address + 32) >> 2]!;
+        out.planeAxisA[0] = mem.f32[(address + 36) >> 2]!;
+        out.planeAxisA[1] = mem.f32[(address + 40) >> 2]!;
+        out.planeAxisA[2] = mem.f32[(address + 44) >> 2]!;
+        out.twistAxisB[0] = mem.f32[(address + 48) >> 2]!;
+        out.twistAxisB[1] = mem.f32[(address + 52) >> 2]!;
+        out.twistAxisB[2] = mem.f32[(address + 56) >> 2]!;
+        out.planeAxisB[0] = mem.f32[(address + 60) >> 2]!;
+        out.planeAxisB[1] = mem.f32[(address + 64) >> 2]!;
+        out.planeAxisB[2] = mem.f32[(address + 68) >> 2]!;
+        out.space = mem.u32[(address + 72) >> 2]!;
+        out.swingType = mem.u32[(address + 76) >> 2]!;
+        out.normalHalfConeAngle = mem.f32[(address + 80) >> 2]!;
+        out.planeHalfConeAngle = mem.f32[(address + 84) >> 2]!;
+        out.twistMinAngle = mem.f32[(address + 88) >> 2]!;
+        out.twistMaxAngle = mem.f32[(address + 92) >> 2]!;
+        out.maxFrictionTorque = mem.f32[(address + 96) >> 2]!;
+        out.swingMotorSettings.spring.mode = mem.u32[(address + 100) >> 2]!;
+        out.swingMotorSettings.spring.frequencyOrStiffness = mem.f32[(address + 104) >> 2]!;
+        out.swingMotorSettings.spring.damping = mem.f32[(address + 108) >> 2]!;
+        out.swingMotorSettings.minForceLimit = mem.f32[(address + 112) >> 2]!;
+        out.swingMotorSettings.maxForceLimit = mem.f32[(address + 116) >> 2]!;
+        out.swingMotorSettings.minTorqueLimit = mem.f32[(address + 120) >> 2]!;
+        out.swingMotorSettings.maxTorqueLimit = mem.f32[(address + 124) >> 2]!;
+        out.twistMotorSettings.spring.mode = mem.u32[(address + 128) >> 2]!;
+        out.twistMotorSettings.spring.frequencyOrStiffness = mem.f32[(address + 132) >> 2]!;
+        out.twistMotorSettings.spring.damping = mem.f32[(address + 136) >> 2]!;
+        out.twistMotorSettings.minForceLimit = mem.f32[(address + 140) >> 2]!;
+        out.twistMotorSettings.maxForceLimit = mem.f32[(address + 144) >> 2]!;
+        out.twistMotorSettings.minTorqueLimit = mem.f32[(address + 148) >> 2]!;
+        out.twistMotorSettings.maxTorqueLimit = mem.f32[(address + 152) >> 2]!;
+        out.constraintPriority = mem.i32[(address + 156) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 160) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 164) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: SwingTwistConstraintSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.pointA[0];
+        mem.f32[(address + 4) >> 2] = value.pointA[1];
+        mem.f32[(address + 8) >> 2] = value.pointA[2];
+        mem.f32[(address + 12) >> 2] = value.pointB[0];
+        mem.f32[(address + 16) >> 2] = value.pointB[1];
+        mem.f32[(address + 20) >> 2] = value.pointB[2];
+        mem.f32[(address + 24) >> 2] = value.twistAxisA[0];
+        mem.f32[(address + 28) >> 2] = value.twistAxisA[1];
+        mem.f32[(address + 32) >> 2] = value.twistAxisA[2];
+        mem.f32[(address + 36) >> 2] = value.planeAxisA[0];
+        mem.f32[(address + 40) >> 2] = value.planeAxisA[1];
+        mem.f32[(address + 44) >> 2] = value.planeAxisA[2];
+        mem.f32[(address + 48) >> 2] = value.twistAxisB[0];
+        mem.f32[(address + 52) >> 2] = value.twistAxisB[1];
+        mem.f32[(address + 56) >> 2] = value.twistAxisB[2];
+        mem.f32[(address + 60) >> 2] = value.planeAxisB[0];
+        mem.f32[(address + 64) >> 2] = value.planeAxisB[1];
+        mem.f32[(address + 68) >> 2] = value.planeAxisB[2];
+        mem.u32[(address + 72) >> 2] = value.space;
+        mem.u32[(address + 76) >> 2] = value.swingType;
+        mem.f32[(address + 80) >> 2] = value.normalHalfConeAngle;
+        mem.f32[(address + 84) >> 2] = value.planeHalfConeAngle;
+        mem.f32[(address + 88) >> 2] = value.twistMinAngle;
+        mem.f32[(address + 92) >> 2] = value.twistMaxAngle;
+        mem.f32[(address + 96) >> 2] = value.maxFrictionTorque;
+        mem.u32[(address + 100) >> 2] = value.swingMotorSettings.spring.mode;
+        mem.f32[(address + 104) >> 2] = value.swingMotorSettings.spring.frequencyOrStiffness;
+        mem.f32[(address + 108) >> 2] = value.swingMotorSettings.spring.damping;
+        mem.f32[(address + 112) >> 2] = value.swingMotorSettings.minForceLimit;
+        mem.f32[(address + 116) >> 2] = value.swingMotorSettings.maxForceLimit;
+        mem.f32[(address + 120) >> 2] = value.swingMotorSettings.minTorqueLimit;
+        mem.f32[(address + 124) >> 2] = value.swingMotorSettings.maxTorqueLimit;
+        mem.u32[(address + 128) >> 2] = value.twistMotorSettings.spring.mode;
+        mem.f32[(address + 132) >> 2] = value.twistMotorSettings.spring.frequencyOrStiffness;
+        mem.f32[(address + 136) >> 2] = value.twistMotorSettings.spring.damping;
+        mem.f32[(address + 140) >> 2] = value.twistMotorSettings.minForceLimit;
+        mem.f32[(address + 144) >> 2] = value.twistMotorSettings.maxForceLimit;
+        mem.f32[(address + 148) >> 2] = value.twistMotorSettings.minTorqueLimit;
+        mem.f32[(address + 152) >> 2] = value.twistMotorSettings.maxTorqueLimit;
+        mem.i32[(address + 156) >> 2] = value.constraintPriority;
+        mem.u32[(address + 160) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 164) >> 2] = value.numPositionStepsOverride;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: SwingTwistConstraintSettings): void {
+        view.setFloat32(offset + 0, value.pointA[0], true);
+        view.setFloat32(offset + 4, value.pointA[1], true);
+        view.setFloat32(offset + 8, value.pointA[2], true);
+        view.setFloat32(offset + 12, value.pointB[0], true);
+        view.setFloat32(offset + 16, value.pointB[1], true);
+        view.setFloat32(offset + 20, value.pointB[2], true);
+        view.setFloat32(offset + 24, value.twistAxisA[0], true);
+        view.setFloat32(offset + 28, value.twistAxisA[1], true);
+        view.setFloat32(offset + 32, value.twistAxisA[2], true);
+        view.setFloat32(offset + 36, value.planeAxisA[0], true);
+        view.setFloat32(offset + 40, value.planeAxisA[1], true);
+        view.setFloat32(offset + 44, value.planeAxisA[2], true);
+        view.setFloat32(offset + 48, value.twistAxisB[0], true);
+        view.setFloat32(offset + 52, value.twistAxisB[1], true);
+        view.setFloat32(offset + 56, value.twistAxisB[2], true);
+        view.setFloat32(offset + 60, value.planeAxisB[0], true);
+        view.setFloat32(offset + 64, value.planeAxisB[1], true);
+        view.setFloat32(offset + 68, value.planeAxisB[2], true);
+        view.setUint32(offset + 72, value.space, true);
+        view.setUint32(offset + 76, value.swingType, true);
+        view.setFloat32(offset + 80, value.normalHalfConeAngle, true);
+        view.setFloat32(offset + 84, value.planeHalfConeAngle, true);
+        view.setFloat32(offset + 88, value.twistMinAngle, true);
+        view.setFloat32(offset + 92, value.twistMaxAngle, true);
+        view.setFloat32(offset + 96, value.maxFrictionTorque, true);
+        view.setUint32(offset + 100, value.swingMotorSettings.spring.mode, true);
+        view.setFloat32(offset + 104, value.swingMotorSettings.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 108, value.swingMotorSettings.spring.damping, true);
+        view.setFloat32(offset + 112, value.swingMotorSettings.minForceLimit, true);
+        view.setFloat32(offset + 116, value.swingMotorSettings.maxForceLimit, true);
+        view.setFloat32(offset + 120, value.swingMotorSettings.minTorqueLimit, true);
+        view.setFloat32(offset + 124, value.swingMotorSettings.maxTorqueLimit, true);
+        view.setUint32(offset + 128, value.twistMotorSettings.spring.mode, true);
+        view.setFloat32(offset + 132, value.twistMotorSettings.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 136, value.twistMotorSettings.spring.damping, true);
+        view.setFloat32(offset + 140, value.twistMotorSettings.minForceLimit, true);
+        view.setFloat32(offset + 144, value.twistMotorSettings.maxForceLimit, true);
+        view.setFloat32(offset + 148, value.twistMotorSettings.minTorqueLimit, true);
+        view.setFloat32(offset + 152, value.twistMotorSettings.maxTorqueLimit, true);
+        view.setInt32(offset + 156, value.constraintPriority, true);
+        view.setUint32(offset + 160, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 164, value.numPositionStepsOverride, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: SwingTwistConstraintSettings, view: DataView, offset: number): SwingTwistConstraintSettings {
+        out.pointA[0] = view.getFloat32(offset + 0, true);
+        out.pointA[1] = view.getFloat32(offset + 4, true);
+        out.pointA[2] = view.getFloat32(offset + 8, true);
+        out.pointB[0] = view.getFloat32(offset + 12, true);
+        out.pointB[1] = view.getFloat32(offset + 16, true);
+        out.pointB[2] = view.getFloat32(offset + 20, true);
+        out.twistAxisA[0] = view.getFloat32(offset + 24, true);
+        out.twistAxisA[1] = view.getFloat32(offset + 28, true);
+        out.twistAxisA[2] = view.getFloat32(offset + 32, true);
+        out.planeAxisA[0] = view.getFloat32(offset + 36, true);
+        out.planeAxisA[1] = view.getFloat32(offset + 40, true);
+        out.planeAxisA[2] = view.getFloat32(offset + 44, true);
+        out.twistAxisB[0] = view.getFloat32(offset + 48, true);
+        out.twistAxisB[1] = view.getFloat32(offset + 52, true);
+        out.twistAxisB[2] = view.getFloat32(offset + 56, true);
+        out.planeAxisB[0] = view.getFloat32(offset + 60, true);
+        out.planeAxisB[1] = view.getFloat32(offset + 64, true);
+        out.planeAxisB[2] = view.getFloat32(offset + 68, true);
+        out.space = view.getUint32(offset + 72, true);
+        out.swingType = view.getUint32(offset + 76, true);
+        out.normalHalfConeAngle = view.getFloat32(offset + 80, true);
+        out.planeHalfConeAngle = view.getFloat32(offset + 84, true);
+        out.twistMinAngle = view.getFloat32(offset + 88, true);
+        out.twistMaxAngle = view.getFloat32(offset + 92, true);
+        out.maxFrictionTorque = view.getFloat32(offset + 96, true);
+        out.swingMotorSettings.spring.mode = view.getUint32(offset + 100, true);
+        out.swingMotorSettings.spring.frequencyOrStiffness = view.getFloat32(offset + 104, true);
+        out.swingMotorSettings.spring.damping = view.getFloat32(offset + 108, true);
+        out.swingMotorSettings.minForceLimit = view.getFloat32(offset + 112, true);
+        out.swingMotorSettings.maxForceLimit = view.getFloat32(offset + 116, true);
+        out.swingMotorSettings.minTorqueLimit = view.getFloat32(offset + 120, true);
+        out.swingMotorSettings.maxTorqueLimit = view.getFloat32(offset + 124, true);
+        out.twistMotorSettings.spring.mode = view.getUint32(offset + 128, true);
+        out.twistMotorSettings.spring.frequencyOrStiffness = view.getFloat32(offset + 132, true);
+        out.twistMotorSettings.spring.damping = view.getFloat32(offset + 136, true);
+        out.twistMotorSettings.minForceLimit = view.getFloat32(offset + 140, true);
+        out.twistMotorSettings.maxForceLimit = view.getFloat32(offset + 144, true);
+        out.twistMotorSettings.minTorqueLimit = view.getFloat32(offset + 148, true);
+        out.twistMotorSettings.maxTorqueLimit = view.getFloat32(offset + 152, true);
+        out.constraintPriority = view.getInt32(offset + 156, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 160, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 164, true);
+        return out;
+    },
+};
+
+export type SixDOFConstraintSettings = {
+    pointA: Vec3;
+    pointB: Vec3;
+    axisXA: Vec3;
+    axisYA: Vec3;
+    axisXB: Vec3;
+    axisYB: Vec3;
+    space: number;
+    swingType: number;
+    limitMin: number[];
+    limitMax: number[];
+    maxFriction: number[];
+    limitsSpringSettings: SpringSettings[];
+    motorSettings: MotorSettings[];
+    constraintPriority: number;
+    numVelocityStepsOverride: number;
+    numPositionStepsOverride: number;
+};
+export const SixDOFConstraintSettings = {
+    size: 368,
+    create(): SixDOFConstraintSettings {
+        return {
+            pointA: Vec3.create(),
+            pointB: Vec3.create(),
+            axisXA: Vec3.create(),
+            axisYA: Vec3.create(),
+            axisXB: Vec3.create(),
+            axisYB: Vec3.create(),
+            space: 0,
+            swingType: 0,
+            limitMin: [0, 0, 0, 0, 0, 0],
+            limitMax: [0, 0, 0, 0, 0, 0],
+            maxFriction: [0, 0, 0, 0, 0, 0],
+            limitsSpringSettings: Array.from({ length: 3 }, () => SpringSettings.create()),
+            motorSettings: Array.from({ length: 6 }, () => MotorSettings.create()),
+            constraintPriority: 0,
+            numVelocityStepsOverride: 0,
+            numPositionStepsOverride: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: SixDOFConstraintSettings, address: number): SixDOFConstraintSettings {
+        const mem = wasm.mem;
+        out.pointA[0] = mem.f32[(address + 0) >> 2]!;
+        out.pointA[1] = mem.f32[(address + 4) >> 2]!;
+        out.pointA[2] = mem.f32[(address + 8) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 12) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 16) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 20) >> 2]!;
+        out.axisXA[0] = mem.f32[(address + 24) >> 2]!;
+        out.axisXA[1] = mem.f32[(address + 28) >> 2]!;
+        out.axisXA[2] = mem.f32[(address + 32) >> 2]!;
+        out.axisYA[0] = mem.f32[(address + 36) >> 2]!;
+        out.axisYA[1] = mem.f32[(address + 40) >> 2]!;
+        out.axisYA[2] = mem.f32[(address + 44) >> 2]!;
+        out.axisXB[0] = mem.f32[(address + 48) >> 2]!;
+        out.axisXB[1] = mem.f32[(address + 52) >> 2]!;
+        out.axisXB[2] = mem.f32[(address + 56) >> 2]!;
+        out.axisYB[0] = mem.f32[(address + 60) >> 2]!;
+        out.axisYB[1] = mem.f32[(address + 64) >> 2]!;
+        out.axisYB[2] = mem.f32[(address + 68) >> 2]!;
+        out.space = mem.u32[(address + 72) >> 2]!;
+        out.swingType = mem.u32[(address + 76) >> 2]!;
+        out.limitMin[0]! = mem.f32[(address + 80) >> 2]!;
+        out.limitMin[1]! = mem.f32[(address + 84) >> 2]!;
+        out.limitMin[2]! = mem.f32[(address + 88) >> 2]!;
+        out.limitMin[3]! = mem.f32[(address + 92) >> 2]!;
+        out.limitMin[4]! = mem.f32[(address + 96) >> 2]!;
+        out.limitMin[5]! = mem.f32[(address + 100) >> 2]!;
+        out.limitMax[0]! = mem.f32[(address + 104) >> 2]!;
+        out.limitMax[1]! = mem.f32[(address + 108) >> 2]!;
+        out.limitMax[2]! = mem.f32[(address + 112) >> 2]!;
+        out.limitMax[3]! = mem.f32[(address + 116) >> 2]!;
+        out.limitMax[4]! = mem.f32[(address + 120) >> 2]!;
+        out.limitMax[5]! = mem.f32[(address + 124) >> 2]!;
+        out.maxFriction[0]! = mem.f32[(address + 128) >> 2]!;
+        out.maxFriction[1]! = mem.f32[(address + 132) >> 2]!;
+        out.maxFriction[2]! = mem.f32[(address + 136) >> 2]!;
+        out.maxFriction[3]! = mem.f32[(address + 140) >> 2]!;
+        out.maxFriction[4]! = mem.f32[(address + 144) >> 2]!;
+        out.maxFriction[5]! = mem.f32[(address + 148) >> 2]!;
+        out.limitsSpringSettings[0]!.mode = mem.u32[(address + 152) >> 2]!;
+        out.limitsSpringSettings[0]!.frequencyOrStiffness = mem.f32[(address + 156) >> 2]!;
+        out.limitsSpringSettings[0]!.damping = mem.f32[(address + 160) >> 2]!;
+        out.limitsSpringSettings[1]!.mode = mem.u32[(address + 164) >> 2]!;
+        out.limitsSpringSettings[1]!.frequencyOrStiffness = mem.f32[(address + 168) >> 2]!;
+        out.limitsSpringSettings[1]!.damping = mem.f32[(address + 172) >> 2]!;
+        out.limitsSpringSettings[2]!.mode = mem.u32[(address + 176) >> 2]!;
+        out.limitsSpringSettings[2]!.frequencyOrStiffness = mem.f32[(address + 180) >> 2]!;
+        out.limitsSpringSettings[2]!.damping = mem.f32[(address + 184) >> 2]!;
+        out.motorSettings[0]!.spring.mode = mem.u32[(address + 188) >> 2]!;
+        out.motorSettings[0]!.spring.frequencyOrStiffness = mem.f32[(address + 192) >> 2]!;
+        out.motorSettings[0]!.spring.damping = mem.f32[(address + 196) >> 2]!;
+        out.motorSettings[0]!.minForceLimit = mem.f32[(address + 200) >> 2]!;
+        out.motorSettings[0]!.maxForceLimit = mem.f32[(address + 204) >> 2]!;
+        out.motorSettings[0]!.minTorqueLimit = mem.f32[(address + 208) >> 2]!;
+        out.motorSettings[0]!.maxTorqueLimit = mem.f32[(address + 212) >> 2]!;
+        out.motorSettings[1]!.spring.mode = mem.u32[(address + 216) >> 2]!;
+        out.motorSettings[1]!.spring.frequencyOrStiffness = mem.f32[(address + 220) >> 2]!;
+        out.motorSettings[1]!.spring.damping = mem.f32[(address + 224) >> 2]!;
+        out.motorSettings[1]!.minForceLimit = mem.f32[(address + 228) >> 2]!;
+        out.motorSettings[1]!.maxForceLimit = mem.f32[(address + 232) >> 2]!;
+        out.motorSettings[1]!.minTorqueLimit = mem.f32[(address + 236) >> 2]!;
+        out.motorSettings[1]!.maxTorqueLimit = mem.f32[(address + 240) >> 2]!;
+        out.motorSettings[2]!.spring.mode = mem.u32[(address + 244) >> 2]!;
+        out.motorSettings[2]!.spring.frequencyOrStiffness = mem.f32[(address + 248) >> 2]!;
+        out.motorSettings[2]!.spring.damping = mem.f32[(address + 252) >> 2]!;
+        out.motorSettings[2]!.minForceLimit = mem.f32[(address + 256) >> 2]!;
+        out.motorSettings[2]!.maxForceLimit = mem.f32[(address + 260) >> 2]!;
+        out.motorSettings[2]!.minTorqueLimit = mem.f32[(address + 264) >> 2]!;
+        out.motorSettings[2]!.maxTorqueLimit = mem.f32[(address + 268) >> 2]!;
+        out.motorSettings[3]!.spring.mode = mem.u32[(address + 272) >> 2]!;
+        out.motorSettings[3]!.spring.frequencyOrStiffness = mem.f32[(address + 276) >> 2]!;
+        out.motorSettings[3]!.spring.damping = mem.f32[(address + 280) >> 2]!;
+        out.motorSettings[3]!.minForceLimit = mem.f32[(address + 284) >> 2]!;
+        out.motorSettings[3]!.maxForceLimit = mem.f32[(address + 288) >> 2]!;
+        out.motorSettings[3]!.minTorqueLimit = mem.f32[(address + 292) >> 2]!;
+        out.motorSettings[3]!.maxTorqueLimit = mem.f32[(address + 296) >> 2]!;
+        out.motorSettings[4]!.spring.mode = mem.u32[(address + 300) >> 2]!;
+        out.motorSettings[4]!.spring.frequencyOrStiffness = mem.f32[(address + 304) >> 2]!;
+        out.motorSettings[4]!.spring.damping = mem.f32[(address + 308) >> 2]!;
+        out.motorSettings[4]!.minForceLimit = mem.f32[(address + 312) >> 2]!;
+        out.motorSettings[4]!.maxForceLimit = mem.f32[(address + 316) >> 2]!;
+        out.motorSettings[4]!.minTorqueLimit = mem.f32[(address + 320) >> 2]!;
+        out.motorSettings[4]!.maxTorqueLimit = mem.f32[(address + 324) >> 2]!;
+        out.motorSettings[5]!.spring.mode = mem.u32[(address + 328) >> 2]!;
+        out.motorSettings[5]!.spring.frequencyOrStiffness = mem.f32[(address + 332) >> 2]!;
+        out.motorSettings[5]!.spring.damping = mem.f32[(address + 336) >> 2]!;
+        out.motorSettings[5]!.minForceLimit = mem.f32[(address + 340) >> 2]!;
+        out.motorSettings[5]!.maxForceLimit = mem.f32[(address + 344) >> 2]!;
+        out.motorSettings[5]!.minTorqueLimit = mem.f32[(address + 348) >> 2]!;
+        out.motorSettings[5]!.maxTorqueLimit = mem.f32[(address + 352) >> 2]!;
+        out.constraintPriority = mem.i32[(address + 356) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 360) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 364) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: SixDOFConstraintSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.pointA[0];
+        mem.f32[(address + 4) >> 2] = value.pointA[1];
+        mem.f32[(address + 8) >> 2] = value.pointA[2];
+        mem.f32[(address + 12) >> 2] = value.pointB[0];
+        mem.f32[(address + 16) >> 2] = value.pointB[1];
+        mem.f32[(address + 20) >> 2] = value.pointB[2];
+        mem.f32[(address + 24) >> 2] = value.axisXA[0];
+        mem.f32[(address + 28) >> 2] = value.axisXA[1];
+        mem.f32[(address + 32) >> 2] = value.axisXA[2];
+        mem.f32[(address + 36) >> 2] = value.axisYA[0];
+        mem.f32[(address + 40) >> 2] = value.axisYA[1];
+        mem.f32[(address + 44) >> 2] = value.axisYA[2];
+        mem.f32[(address + 48) >> 2] = value.axisXB[0];
+        mem.f32[(address + 52) >> 2] = value.axisXB[1];
+        mem.f32[(address + 56) >> 2] = value.axisXB[2];
+        mem.f32[(address + 60) >> 2] = value.axisYB[0];
+        mem.f32[(address + 64) >> 2] = value.axisYB[1];
+        mem.f32[(address + 68) >> 2] = value.axisYB[2];
+        mem.u32[(address + 72) >> 2] = value.space;
+        mem.u32[(address + 76) >> 2] = value.swingType;
+        mem.f32[(address + 80) >> 2] = value.limitMin[0]!;
+        mem.f32[(address + 84) >> 2] = value.limitMin[1]!;
+        mem.f32[(address + 88) >> 2] = value.limitMin[2]!;
+        mem.f32[(address + 92) >> 2] = value.limitMin[3]!;
+        mem.f32[(address + 96) >> 2] = value.limitMin[4]!;
+        mem.f32[(address + 100) >> 2] = value.limitMin[5]!;
+        mem.f32[(address + 104) >> 2] = value.limitMax[0]!;
+        mem.f32[(address + 108) >> 2] = value.limitMax[1]!;
+        mem.f32[(address + 112) >> 2] = value.limitMax[2]!;
+        mem.f32[(address + 116) >> 2] = value.limitMax[3]!;
+        mem.f32[(address + 120) >> 2] = value.limitMax[4]!;
+        mem.f32[(address + 124) >> 2] = value.limitMax[5]!;
+        mem.f32[(address + 128) >> 2] = value.maxFriction[0]!;
+        mem.f32[(address + 132) >> 2] = value.maxFriction[1]!;
+        mem.f32[(address + 136) >> 2] = value.maxFriction[2]!;
+        mem.f32[(address + 140) >> 2] = value.maxFriction[3]!;
+        mem.f32[(address + 144) >> 2] = value.maxFriction[4]!;
+        mem.f32[(address + 148) >> 2] = value.maxFriction[5]!;
+        mem.u32[(address + 152) >> 2] = value.limitsSpringSettings[0]!.mode;
+        mem.f32[(address + 156) >> 2] = value.limitsSpringSettings[0]!.frequencyOrStiffness;
+        mem.f32[(address + 160) >> 2] = value.limitsSpringSettings[0]!.damping;
+        mem.u32[(address + 164) >> 2] = value.limitsSpringSettings[1]!.mode;
+        mem.f32[(address + 168) >> 2] = value.limitsSpringSettings[1]!.frequencyOrStiffness;
+        mem.f32[(address + 172) >> 2] = value.limitsSpringSettings[1]!.damping;
+        mem.u32[(address + 176) >> 2] = value.limitsSpringSettings[2]!.mode;
+        mem.f32[(address + 180) >> 2] = value.limitsSpringSettings[2]!.frequencyOrStiffness;
+        mem.f32[(address + 184) >> 2] = value.limitsSpringSettings[2]!.damping;
+        mem.u32[(address + 188) >> 2] = value.motorSettings[0]!.spring.mode;
+        mem.f32[(address + 192) >> 2] = value.motorSettings[0]!.spring.frequencyOrStiffness;
+        mem.f32[(address + 196) >> 2] = value.motorSettings[0]!.spring.damping;
+        mem.f32[(address + 200) >> 2] = value.motorSettings[0]!.minForceLimit;
+        mem.f32[(address + 204) >> 2] = value.motorSettings[0]!.maxForceLimit;
+        mem.f32[(address + 208) >> 2] = value.motorSettings[0]!.minTorqueLimit;
+        mem.f32[(address + 212) >> 2] = value.motorSettings[0]!.maxTorqueLimit;
+        mem.u32[(address + 216) >> 2] = value.motorSettings[1]!.spring.mode;
+        mem.f32[(address + 220) >> 2] = value.motorSettings[1]!.spring.frequencyOrStiffness;
+        mem.f32[(address + 224) >> 2] = value.motorSettings[1]!.spring.damping;
+        mem.f32[(address + 228) >> 2] = value.motorSettings[1]!.minForceLimit;
+        mem.f32[(address + 232) >> 2] = value.motorSettings[1]!.maxForceLimit;
+        mem.f32[(address + 236) >> 2] = value.motorSettings[1]!.minTorqueLimit;
+        mem.f32[(address + 240) >> 2] = value.motorSettings[1]!.maxTorqueLimit;
+        mem.u32[(address + 244) >> 2] = value.motorSettings[2]!.spring.mode;
+        mem.f32[(address + 248) >> 2] = value.motorSettings[2]!.spring.frequencyOrStiffness;
+        mem.f32[(address + 252) >> 2] = value.motorSettings[2]!.spring.damping;
+        mem.f32[(address + 256) >> 2] = value.motorSettings[2]!.minForceLimit;
+        mem.f32[(address + 260) >> 2] = value.motorSettings[2]!.maxForceLimit;
+        mem.f32[(address + 264) >> 2] = value.motorSettings[2]!.minTorqueLimit;
+        mem.f32[(address + 268) >> 2] = value.motorSettings[2]!.maxTorqueLimit;
+        mem.u32[(address + 272) >> 2] = value.motorSettings[3]!.spring.mode;
+        mem.f32[(address + 276) >> 2] = value.motorSettings[3]!.spring.frequencyOrStiffness;
+        mem.f32[(address + 280) >> 2] = value.motorSettings[3]!.spring.damping;
+        mem.f32[(address + 284) >> 2] = value.motorSettings[3]!.minForceLimit;
+        mem.f32[(address + 288) >> 2] = value.motorSettings[3]!.maxForceLimit;
+        mem.f32[(address + 292) >> 2] = value.motorSettings[3]!.minTorqueLimit;
+        mem.f32[(address + 296) >> 2] = value.motorSettings[3]!.maxTorqueLimit;
+        mem.u32[(address + 300) >> 2] = value.motorSettings[4]!.spring.mode;
+        mem.f32[(address + 304) >> 2] = value.motorSettings[4]!.spring.frequencyOrStiffness;
+        mem.f32[(address + 308) >> 2] = value.motorSettings[4]!.spring.damping;
+        mem.f32[(address + 312) >> 2] = value.motorSettings[4]!.minForceLimit;
+        mem.f32[(address + 316) >> 2] = value.motorSettings[4]!.maxForceLimit;
+        mem.f32[(address + 320) >> 2] = value.motorSettings[4]!.minTorqueLimit;
+        mem.f32[(address + 324) >> 2] = value.motorSettings[4]!.maxTorqueLimit;
+        mem.u32[(address + 328) >> 2] = value.motorSettings[5]!.spring.mode;
+        mem.f32[(address + 332) >> 2] = value.motorSettings[5]!.spring.frequencyOrStiffness;
+        mem.f32[(address + 336) >> 2] = value.motorSettings[5]!.spring.damping;
+        mem.f32[(address + 340) >> 2] = value.motorSettings[5]!.minForceLimit;
+        mem.f32[(address + 344) >> 2] = value.motorSettings[5]!.maxForceLimit;
+        mem.f32[(address + 348) >> 2] = value.motorSettings[5]!.minTorqueLimit;
+        mem.f32[(address + 352) >> 2] = value.motorSettings[5]!.maxTorqueLimit;
+        mem.i32[(address + 356) >> 2] = value.constraintPriority;
+        mem.u32[(address + 360) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 364) >> 2] = value.numPositionStepsOverride;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: SixDOFConstraintSettings): void {
+        view.setFloat32(offset + 0, value.pointA[0], true);
+        view.setFloat32(offset + 4, value.pointA[1], true);
+        view.setFloat32(offset + 8, value.pointA[2], true);
+        view.setFloat32(offset + 12, value.pointB[0], true);
+        view.setFloat32(offset + 16, value.pointB[1], true);
+        view.setFloat32(offset + 20, value.pointB[2], true);
+        view.setFloat32(offset + 24, value.axisXA[0], true);
+        view.setFloat32(offset + 28, value.axisXA[1], true);
+        view.setFloat32(offset + 32, value.axisXA[2], true);
+        view.setFloat32(offset + 36, value.axisYA[0], true);
+        view.setFloat32(offset + 40, value.axisYA[1], true);
+        view.setFloat32(offset + 44, value.axisYA[2], true);
+        view.setFloat32(offset + 48, value.axisXB[0], true);
+        view.setFloat32(offset + 52, value.axisXB[1], true);
+        view.setFloat32(offset + 56, value.axisXB[2], true);
+        view.setFloat32(offset + 60, value.axisYB[0], true);
+        view.setFloat32(offset + 64, value.axisYB[1], true);
+        view.setFloat32(offset + 68, value.axisYB[2], true);
+        view.setUint32(offset + 72, value.space, true);
+        view.setUint32(offset + 76, value.swingType, true);
+        view.setFloat32(offset + 80, value.limitMin[0]!, true);
+        view.setFloat32(offset + 84, value.limitMin[1]!, true);
+        view.setFloat32(offset + 88, value.limitMin[2]!, true);
+        view.setFloat32(offset + 92, value.limitMin[3]!, true);
+        view.setFloat32(offset + 96, value.limitMin[4]!, true);
+        view.setFloat32(offset + 100, value.limitMin[5]!, true);
+        view.setFloat32(offset + 104, value.limitMax[0]!, true);
+        view.setFloat32(offset + 108, value.limitMax[1]!, true);
+        view.setFloat32(offset + 112, value.limitMax[2]!, true);
+        view.setFloat32(offset + 116, value.limitMax[3]!, true);
+        view.setFloat32(offset + 120, value.limitMax[4]!, true);
+        view.setFloat32(offset + 124, value.limitMax[5]!, true);
+        view.setFloat32(offset + 128, value.maxFriction[0]!, true);
+        view.setFloat32(offset + 132, value.maxFriction[1]!, true);
+        view.setFloat32(offset + 136, value.maxFriction[2]!, true);
+        view.setFloat32(offset + 140, value.maxFriction[3]!, true);
+        view.setFloat32(offset + 144, value.maxFriction[4]!, true);
+        view.setFloat32(offset + 148, value.maxFriction[5]!, true);
+        view.setUint32(offset + 152, value.limitsSpringSettings[0]!.mode, true);
+        view.setFloat32(offset + 156, value.limitsSpringSettings[0]!.frequencyOrStiffness, true);
+        view.setFloat32(offset + 160, value.limitsSpringSettings[0]!.damping, true);
+        view.setUint32(offset + 164, value.limitsSpringSettings[1]!.mode, true);
+        view.setFloat32(offset + 168, value.limitsSpringSettings[1]!.frequencyOrStiffness, true);
+        view.setFloat32(offset + 172, value.limitsSpringSettings[1]!.damping, true);
+        view.setUint32(offset + 176, value.limitsSpringSettings[2]!.mode, true);
+        view.setFloat32(offset + 180, value.limitsSpringSettings[2]!.frequencyOrStiffness, true);
+        view.setFloat32(offset + 184, value.limitsSpringSettings[2]!.damping, true);
+        view.setUint32(offset + 188, value.motorSettings[0]!.spring.mode, true);
+        view.setFloat32(offset + 192, value.motorSettings[0]!.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 196, value.motorSettings[0]!.spring.damping, true);
+        view.setFloat32(offset + 200, value.motorSettings[0]!.minForceLimit, true);
+        view.setFloat32(offset + 204, value.motorSettings[0]!.maxForceLimit, true);
+        view.setFloat32(offset + 208, value.motorSettings[0]!.minTorqueLimit, true);
+        view.setFloat32(offset + 212, value.motorSettings[0]!.maxTorqueLimit, true);
+        view.setUint32(offset + 216, value.motorSettings[1]!.spring.mode, true);
+        view.setFloat32(offset + 220, value.motorSettings[1]!.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 224, value.motorSettings[1]!.spring.damping, true);
+        view.setFloat32(offset + 228, value.motorSettings[1]!.minForceLimit, true);
+        view.setFloat32(offset + 232, value.motorSettings[1]!.maxForceLimit, true);
+        view.setFloat32(offset + 236, value.motorSettings[1]!.minTorqueLimit, true);
+        view.setFloat32(offset + 240, value.motorSettings[1]!.maxTorqueLimit, true);
+        view.setUint32(offset + 244, value.motorSettings[2]!.spring.mode, true);
+        view.setFloat32(offset + 248, value.motorSettings[2]!.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 252, value.motorSettings[2]!.spring.damping, true);
+        view.setFloat32(offset + 256, value.motorSettings[2]!.minForceLimit, true);
+        view.setFloat32(offset + 260, value.motorSettings[2]!.maxForceLimit, true);
+        view.setFloat32(offset + 264, value.motorSettings[2]!.minTorqueLimit, true);
+        view.setFloat32(offset + 268, value.motorSettings[2]!.maxTorqueLimit, true);
+        view.setUint32(offset + 272, value.motorSettings[3]!.spring.mode, true);
+        view.setFloat32(offset + 276, value.motorSettings[3]!.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 280, value.motorSettings[3]!.spring.damping, true);
+        view.setFloat32(offset + 284, value.motorSettings[3]!.minForceLimit, true);
+        view.setFloat32(offset + 288, value.motorSettings[3]!.maxForceLimit, true);
+        view.setFloat32(offset + 292, value.motorSettings[3]!.minTorqueLimit, true);
+        view.setFloat32(offset + 296, value.motorSettings[3]!.maxTorqueLimit, true);
+        view.setUint32(offset + 300, value.motorSettings[4]!.spring.mode, true);
+        view.setFloat32(offset + 304, value.motorSettings[4]!.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 308, value.motorSettings[4]!.spring.damping, true);
+        view.setFloat32(offset + 312, value.motorSettings[4]!.minForceLimit, true);
+        view.setFloat32(offset + 316, value.motorSettings[4]!.maxForceLimit, true);
+        view.setFloat32(offset + 320, value.motorSettings[4]!.minTorqueLimit, true);
+        view.setFloat32(offset + 324, value.motorSettings[4]!.maxTorqueLimit, true);
+        view.setUint32(offset + 328, value.motorSettings[5]!.spring.mode, true);
+        view.setFloat32(offset + 332, value.motorSettings[5]!.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 336, value.motorSettings[5]!.spring.damping, true);
+        view.setFloat32(offset + 340, value.motorSettings[5]!.minForceLimit, true);
+        view.setFloat32(offset + 344, value.motorSettings[5]!.maxForceLimit, true);
+        view.setFloat32(offset + 348, value.motorSettings[5]!.minTorqueLimit, true);
+        view.setFloat32(offset + 352, value.motorSettings[5]!.maxTorqueLimit, true);
+        view.setInt32(offset + 356, value.constraintPriority, true);
+        view.setUint32(offset + 360, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 364, value.numPositionStepsOverride, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: SixDOFConstraintSettings, view: DataView, offset: number): SixDOFConstraintSettings {
+        out.pointA[0] = view.getFloat32(offset + 0, true);
+        out.pointA[1] = view.getFloat32(offset + 4, true);
+        out.pointA[2] = view.getFloat32(offset + 8, true);
+        out.pointB[0] = view.getFloat32(offset + 12, true);
+        out.pointB[1] = view.getFloat32(offset + 16, true);
+        out.pointB[2] = view.getFloat32(offset + 20, true);
+        out.axisXA[0] = view.getFloat32(offset + 24, true);
+        out.axisXA[1] = view.getFloat32(offset + 28, true);
+        out.axisXA[2] = view.getFloat32(offset + 32, true);
+        out.axisYA[0] = view.getFloat32(offset + 36, true);
+        out.axisYA[1] = view.getFloat32(offset + 40, true);
+        out.axisYA[2] = view.getFloat32(offset + 44, true);
+        out.axisXB[0] = view.getFloat32(offset + 48, true);
+        out.axisXB[1] = view.getFloat32(offset + 52, true);
+        out.axisXB[2] = view.getFloat32(offset + 56, true);
+        out.axisYB[0] = view.getFloat32(offset + 60, true);
+        out.axisYB[1] = view.getFloat32(offset + 64, true);
+        out.axisYB[2] = view.getFloat32(offset + 68, true);
+        out.space = view.getUint32(offset + 72, true);
+        out.swingType = view.getUint32(offset + 76, true);
+        out.limitMin[0]! = view.getFloat32(offset + 80, true);
+        out.limitMin[1]! = view.getFloat32(offset + 84, true);
+        out.limitMin[2]! = view.getFloat32(offset + 88, true);
+        out.limitMin[3]! = view.getFloat32(offset + 92, true);
+        out.limitMin[4]! = view.getFloat32(offset + 96, true);
+        out.limitMin[5]! = view.getFloat32(offset + 100, true);
+        out.limitMax[0]! = view.getFloat32(offset + 104, true);
+        out.limitMax[1]! = view.getFloat32(offset + 108, true);
+        out.limitMax[2]! = view.getFloat32(offset + 112, true);
+        out.limitMax[3]! = view.getFloat32(offset + 116, true);
+        out.limitMax[4]! = view.getFloat32(offset + 120, true);
+        out.limitMax[5]! = view.getFloat32(offset + 124, true);
+        out.maxFriction[0]! = view.getFloat32(offset + 128, true);
+        out.maxFriction[1]! = view.getFloat32(offset + 132, true);
+        out.maxFriction[2]! = view.getFloat32(offset + 136, true);
+        out.maxFriction[3]! = view.getFloat32(offset + 140, true);
+        out.maxFriction[4]! = view.getFloat32(offset + 144, true);
+        out.maxFriction[5]! = view.getFloat32(offset + 148, true);
+        out.limitsSpringSettings[0]!.mode = view.getUint32(offset + 152, true);
+        out.limitsSpringSettings[0]!.frequencyOrStiffness = view.getFloat32(offset + 156, true);
+        out.limitsSpringSettings[0]!.damping = view.getFloat32(offset + 160, true);
+        out.limitsSpringSettings[1]!.mode = view.getUint32(offset + 164, true);
+        out.limitsSpringSettings[1]!.frequencyOrStiffness = view.getFloat32(offset + 168, true);
+        out.limitsSpringSettings[1]!.damping = view.getFloat32(offset + 172, true);
+        out.limitsSpringSettings[2]!.mode = view.getUint32(offset + 176, true);
+        out.limitsSpringSettings[2]!.frequencyOrStiffness = view.getFloat32(offset + 180, true);
+        out.limitsSpringSettings[2]!.damping = view.getFloat32(offset + 184, true);
+        out.motorSettings[0]!.spring.mode = view.getUint32(offset + 188, true);
+        out.motorSettings[0]!.spring.frequencyOrStiffness = view.getFloat32(offset + 192, true);
+        out.motorSettings[0]!.spring.damping = view.getFloat32(offset + 196, true);
+        out.motorSettings[0]!.minForceLimit = view.getFloat32(offset + 200, true);
+        out.motorSettings[0]!.maxForceLimit = view.getFloat32(offset + 204, true);
+        out.motorSettings[0]!.minTorqueLimit = view.getFloat32(offset + 208, true);
+        out.motorSettings[0]!.maxTorqueLimit = view.getFloat32(offset + 212, true);
+        out.motorSettings[1]!.spring.mode = view.getUint32(offset + 216, true);
+        out.motorSettings[1]!.spring.frequencyOrStiffness = view.getFloat32(offset + 220, true);
+        out.motorSettings[1]!.spring.damping = view.getFloat32(offset + 224, true);
+        out.motorSettings[1]!.minForceLimit = view.getFloat32(offset + 228, true);
+        out.motorSettings[1]!.maxForceLimit = view.getFloat32(offset + 232, true);
+        out.motorSettings[1]!.minTorqueLimit = view.getFloat32(offset + 236, true);
+        out.motorSettings[1]!.maxTorqueLimit = view.getFloat32(offset + 240, true);
+        out.motorSettings[2]!.spring.mode = view.getUint32(offset + 244, true);
+        out.motorSettings[2]!.spring.frequencyOrStiffness = view.getFloat32(offset + 248, true);
+        out.motorSettings[2]!.spring.damping = view.getFloat32(offset + 252, true);
+        out.motorSettings[2]!.minForceLimit = view.getFloat32(offset + 256, true);
+        out.motorSettings[2]!.maxForceLimit = view.getFloat32(offset + 260, true);
+        out.motorSettings[2]!.minTorqueLimit = view.getFloat32(offset + 264, true);
+        out.motorSettings[2]!.maxTorqueLimit = view.getFloat32(offset + 268, true);
+        out.motorSettings[3]!.spring.mode = view.getUint32(offset + 272, true);
+        out.motorSettings[3]!.spring.frequencyOrStiffness = view.getFloat32(offset + 276, true);
+        out.motorSettings[3]!.spring.damping = view.getFloat32(offset + 280, true);
+        out.motorSettings[3]!.minForceLimit = view.getFloat32(offset + 284, true);
+        out.motorSettings[3]!.maxForceLimit = view.getFloat32(offset + 288, true);
+        out.motorSettings[3]!.minTorqueLimit = view.getFloat32(offset + 292, true);
+        out.motorSettings[3]!.maxTorqueLimit = view.getFloat32(offset + 296, true);
+        out.motorSettings[4]!.spring.mode = view.getUint32(offset + 300, true);
+        out.motorSettings[4]!.spring.frequencyOrStiffness = view.getFloat32(offset + 304, true);
+        out.motorSettings[4]!.spring.damping = view.getFloat32(offset + 308, true);
+        out.motorSettings[4]!.minForceLimit = view.getFloat32(offset + 312, true);
+        out.motorSettings[4]!.maxForceLimit = view.getFloat32(offset + 316, true);
+        out.motorSettings[4]!.minTorqueLimit = view.getFloat32(offset + 320, true);
+        out.motorSettings[4]!.maxTorqueLimit = view.getFloat32(offset + 324, true);
+        out.motorSettings[5]!.spring.mode = view.getUint32(offset + 328, true);
+        out.motorSettings[5]!.spring.frequencyOrStiffness = view.getFloat32(offset + 332, true);
+        out.motorSettings[5]!.spring.damping = view.getFloat32(offset + 336, true);
+        out.motorSettings[5]!.minForceLimit = view.getFloat32(offset + 340, true);
+        out.motorSettings[5]!.maxForceLimit = view.getFloat32(offset + 344, true);
+        out.motorSettings[5]!.minTorqueLimit = view.getFloat32(offset + 348, true);
+        out.motorSettings[5]!.maxTorqueLimit = view.getFloat32(offset + 352, true);
+        out.constraintPriority = view.getInt32(offset + 356, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 360, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 364, true);
+        return out;
+    },
+};
+
 export type WorldSettings = Handle<'WorldSettings'>;
 /** WorldSettings's fields as a plain object, for WorldSettings.writeTo / readFrom over another realm's buffer. */
 export type WorldSettingsValue = {
@@ -3234,6 +4909,575 @@ export const OffsetCenterOfMass = {
     },
 };
 
+export const Constraint = {
+    getType(constraint: number): number {
+        const r = wasm.exports.tumble_constraint_get_type(constraint);
+        return r >>> 0;
+    },
+
+    exists(world: World, constraint: number): boolean {
+        const r = wasm.exports.tumble_constraint_exists(world, constraint);
+        return r !== 0;
+    },
+
+    setEnabled(world: World, constraint: number, enabled: boolean): boolean {
+        const r = wasm.exports.tumble_constraint_set_enabled(world, constraint, enabled ? 1 : 0);
+        return r !== 0;
+    },
+
+    isEnabled(world: World, constraint: number): boolean {
+        const r = wasm.exports.tumble_constraint_is_enabled(world, constraint);
+        return r !== 0;
+    },
+};
+
+export const PointConstraint = {
+    defaultSettings(out: PointConstraintSettings): PointConstraintSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_point_constraint_default_settings(scratch + 0);
+        PointConstraintSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(world: World, bodyA: number, bodyB: number, settings: PointConstraintSettings): number {
+        const scratch = wasm.scratch;
+        PointConstraintSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_point_constraint_create(world, bodyA, bodyB, scratch + 0);
+        wasm.grew();
+        return r >>> 0;
+    },
+
+    remove(world: World, constraint: number): boolean {
+        const r = wasm.exports.tumble_point_constraint_remove(world, constraint);
+        return r !== 0;
+    },
+
+    getTotalLambda(out: Vec3, world: World, constraint: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_point_constraint_get_total_lambda(scratch + 0, world, constraint);
+        Vec3.read(out, scratch + 0);
+        return r !== 0;
+    },
+};
+
+export const DistanceConstraint = {
+    defaultSettings(out: DistanceConstraintSettings): DistanceConstraintSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_distance_constraint_default_settings(scratch + 0);
+        DistanceConstraintSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(world: World, bodyA: number, bodyB: number, settings: DistanceConstraintSettings): number {
+        const scratch = wasm.scratch;
+        DistanceConstraintSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_distance_constraint_create(world, bodyA, bodyB, scratch + 0);
+        wasm.grew();
+        return r >>> 0;
+    },
+
+    remove(world: World, constraint: number): boolean {
+        const r = wasm.exports.tumble_distance_constraint_remove(world, constraint);
+        return r !== 0;
+    },
+
+    getTotalLambda(world: World, constraint: number): number {
+        const r = wasm.exports.tumble_distance_constraint_get_total_lambda(world, constraint);
+        return r;
+    },
+
+    setDistance(world: World, constraint: number, minDistance: number, maxDistance: number): boolean {
+        const r = wasm.exports.tumble_distance_constraint_set_distance(world, constraint, minDistance, maxDistance);
+        return r !== 0;
+    },
+
+    setLimitsSpringSettings(world: World, constraint: number, settings: SpringSettings): boolean {
+        const scratch = wasm.scratch;
+        SpringSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_distance_constraint_set_limits_spring_settings(world, constraint, scratch + 0);
+        return r !== 0;
+    },
+};
+
+export const HingeConstraint = {
+    defaultSettings(out: HingeConstraintSettings): HingeConstraintSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_hinge_constraint_default_settings(scratch + 0);
+        HingeConstraintSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(world: World, bodyA: number, bodyB: number, settings: HingeConstraintSettings): number {
+        const scratch = wasm.scratch;
+        HingeConstraintSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_hinge_constraint_create(world, bodyA, bodyB, scratch + 0);
+        wasm.grew();
+        return r >>> 0;
+    },
+
+    remove(world: World, constraint: number): boolean {
+        const r = wasm.exports.tumble_hinge_constraint_remove(world, constraint);
+        return r !== 0;
+    },
+
+    setLimits(world: World, constraint: number, min: number, max: number): boolean {
+        const r = wasm.exports.tumble_hinge_constraint_set_limits(world, constraint, min, max);
+        return r !== 0;
+    },
+
+    setLimitsSpringSettings(world: World, constraint: number, settings: SpringSettings): boolean {
+        const scratch = wasm.scratch;
+        SpringSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_hinge_constraint_set_limits_spring_settings(world, constraint, scratch + 0);
+        return r !== 0;
+    },
+
+    setMaxFrictionTorque(world: World, constraint: number, torque: number): boolean {
+        const r = wasm.exports.tumble_hinge_constraint_set_max_friction_torque(world, constraint, torque);
+        return r !== 0;
+    },
+
+    setMotorSettings(world: World, constraint: number, settings: MotorSettings): boolean {
+        const scratch = wasm.scratch;
+        MotorSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_hinge_constraint_set_motor_settings(world, constraint, scratch + 0);
+        return r !== 0;
+    },
+
+    setMotorState(world: World, constraint: number, state: number): boolean {
+        const r = wasm.exports.tumble_hinge_constraint_set_motor_state(world, constraint, state);
+        return r !== 0;
+    },
+
+    setTargetAngularVelocity(world: World, constraint: number, velocity: number): boolean {
+        const r = wasm.exports.tumble_hinge_constraint_set_target_angular_velocity(world, constraint, velocity);
+        return r !== 0;
+    },
+
+    setTargetAngle(world: World, constraint: number, angle: number): boolean {
+        const r = wasm.exports.tumble_hinge_constraint_set_target_angle(world, constraint, angle);
+        return r !== 0;
+    },
+
+    getCurrentAngle(world: World, constraint: number): number {
+        const r = wasm.exports.tumble_hinge_constraint_get_current_angle(world, constraint);
+        return r;
+    },
+};
+
+export const SliderConstraint = {
+    defaultSettings(out: SliderConstraintSettings): SliderConstraintSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_slider_constraint_default_settings(scratch + 0);
+        SliderConstraintSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(world: World, bodyA: number, bodyB: number, settings: SliderConstraintSettings): number {
+        const scratch = wasm.scratch;
+        SliderConstraintSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_slider_constraint_create(world, bodyA, bodyB, scratch + 0);
+        wasm.grew();
+        return r >>> 0;
+    },
+
+    remove(world: World, constraint: number): boolean {
+        const r = wasm.exports.tumble_slider_constraint_remove(world, constraint);
+        return r !== 0;
+    },
+
+    getCurrentPosition(world: World, constraint: number): number {
+        const r = wasm.exports.tumble_slider_constraint_get_current_position(world, constraint);
+        return r;
+    },
+
+    setLimits(world: World, constraint: number, min: number, max: number): boolean {
+        const r = wasm.exports.tumble_slider_constraint_set_limits(world, constraint, min, max);
+        return r !== 0;
+    },
+
+    setLimitsSpringSettings(world: World, constraint: number, settings: SpringSettings): boolean {
+        const scratch = wasm.scratch;
+        SpringSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_slider_constraint_set_limits_spring_settings(world, constraint, scratch + 0);
+        return r !== 0;
+    },
+
+    setMotorSettings(world: World, constraint: number, settings: MotorSettings): boolean {
+        const scratch = wasm.scratch;
+        MotorSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_slider_constraint_set_motor_settings(world, constraint, scratch + 0);
+        return r !== 0;
+    },
+
+    setMotorState(world: World, constraint: number, state: number): boolean {
+        const r = wasm.exports.tumble_slider_constraint_set_motor_state(world, constraint, state);
+        return r !== 0;
+    },
+
+    setTargetVelocity(world: World, constraint: number, velocity: number): boolean {
+        const r = wasm.exports.tumble_slider_constraint_set_target_velocity(world, constraint, velocity);
+        return r !== 0;
+    },
+
+    setTargetPosition(world: World, constraint: number, position: number): boolean {
+        const r = wasm.exports.tumble_slider_constraint_set_target_position(world, constraint, position);
+        return r !== 0;
+    },
+
+    setMaxFrictionForce(world: World, constraint: number, force: number): boolean {
+        const r = wasm.exports.tumble_slider_constraint_set_max_friction_force(world, constraint, force);
+        return r !== 0;
+    },
+
+    getMaxFrictionForce(world: World, constraint: number): number {
+        const r = wasm.exports.tumble_slider_constraint_get_max_friction_force(world, constraint);
+        return r;
+    },
+
+    getTotalLambdaPosition(out: Vec2, world: World, constraint: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_slider_constraint_get_total_lambda_position(scratch + 0, world, constraint);
+        Vec2.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    getTotalLambdaPositionLimits(world: World, constraint: number): number {
+        const r = wasm.exports.tumble_slider_constraint_get_total_lambda_position_limits(world, constraint);
+        return r;
+    },
+
+    getTotalLambdaRotation(out: Vec3, world: World, constraint: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_slider_constraint_get_total_lambda_rotation(scratch + 0, world, constraint);
+        Vec3.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    getTotalLambdaMotor(world: World, constraint: number): number {
+        const r = wasm.exports.tumble_slider_constraint_get_total_lambda_motor(world, constraint);
+        return r;
+    },
+};
+
+export const FixedConstraint = {
+    defaultSettings(out: FixedConstraintSettings): FixedConstraintSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_fixed_constraint_default_settings(scratch + 0);
+        FixedConstraintSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(world: World, bodyA: number, bodyB: number, settings: FixedConstraintSettings): number {
+        const scratch = wasm.scratch;
+        FixedConstraintSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_fixed_constraint_create(world, bodyA, bodyB, scratch + 0);
+        wasm.grew();
+        return r >>> 0;
+    },
+
+    remove(world: World, constraint: number): boolean {
+        const r = wasm.exports.tumble_fixed_constraint_remove(world, constraint);
+        return r !== 0;
+    },
+
+    getTotalLambdaPosition(out: Vec3, world: World, constraint: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_fixed_constraint_get_total_lambda_position(scratch + 0, world, constraint);
+        Vec3.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    getTotalLambdaRotation(out: Vec3, world: World, constraint: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_fixed_constraint_get_total_lambda_rotation(scratch + 0, world, constraint);
+        Vec3.read(out, scratch + 0);
+        return r !== 0;
+    },
+};
+
+export const ConeConstraint = {
+    defaultSettings(out: ConeConstraintSettings): ConeConstraintSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_cone_constraint_default_settings(scratch + 0);
+        ConeConstraintSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(world: World, bodyA: number, bodyB: number, settings: ConeConstraintSettings): number {
+        const scratch = wasm.scratch;
+        ConeConstraintSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_cone_constraint_create(world, bodyA, bodyB, scratch + 0);
+        wasm.grew();
+        return r >>> 0;
+    },
+
+    remove(world: World, constraint: number): boolean {
+        const r = wasm.exports.tumble_cone_constraint_remove(world, constraint);
+        return r !== 0;
+    },
+
+    setHalfConeAngle(world: World, constraint: number, halfConeAngle: number): boolean {
+        const r = wasm.exports.tumble_cone_constraint_set_half_cone_angle(world, constraint, halfConeAngle);
+        return r !== 0;
+    },
+
+    getHalfConeAngle(world: World, constraint: number): number {
+        const r = wasm.exports.tumble_cone_constraint_get_half_cone_angle(world, constraint);
+        return r;
+    },
+
+    getCosHalfConeAngle(world: World, constraint: number): number {
+        const r = wasm.exports.tumble_cone_constraint_get_cos_half_cone_angle(world, constraint);
+        return r;
+    },
+
+    getTotalLambdaPosition(out: Vec3, world: World, constraint: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_cone_constraint_get_total_lambda_position(scratch + 0, world, constraint);
+        Vec3.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    getTotalLambdaRotation(world: World, constraint: number): number {
+        const r = wasm.exports.tumble_cone_constraint_get_total_lambda_rotation(world, constraint);
+        return r;
+    },
+};
+
+export const SwingTwistConstraint = {
+    defaultSettings(out: SwingTwistConstraintSettings): SwingTwistConstraintSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_swing_twist_constraint_default_settings(scratch + 0);
+        SwingTwistConstraintSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(world: World, bodyA: number, bodyB: number, settings: SwingTwistConstraintSettings): number {
+        const scratch = wasm.scratch;
+        SwingTwistConstraintSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_swing_twist_constraint_create(world, bodyA, bodyB, scratch + 0);
+        wasm.grew();
+        return r >>> 0;
+    },
+
+    remove(world: World, constraint: number): boolean {
+        const r = wasm.exports.tumble_swing_twist_constraint_remove(world, constraint);
+        return r !== 0;
+    },
+
+    setNormalHalfConeAngle(world: World, constraint: number, angle: number): boolean {
+        const r = wasm.exports.tumble_swing_twist_constraint_set_normal_half_cone_angle(world, constraint, angle);
+        return r !== 0;
+    },
+
+    setPlaneHalfConeAngle(world: World, constraint: number, angle: number): boolean {
+        const r = wasm.exports.tumble_swing_twist_constraint_set_plane_half_cone_angle(world, constraint, angle);
+        return r !== 0;
+    },
+
+    setTwistMinAngle(world: World, constraint: number, angle: number): boolean {
+        const r = wasm.exports.tumble_swing_twist_constraint_set_twist_min_angle(world, constraint, angle);
+        return r !== 0;
+    },
+
+    setTwistMaxAngle(world: World, constraint: number, angle: number): boolean {
+        const r = wasm.exports.tumble_swing_twist_constraint_set_twist_max_angle(world, constraint, angle);
+        return r !== 0;
+    },
+
+    setMaxFrictionTorque(world: World, constraint: number, torque: number): boolean {
+        const r = wasm.exports.tumble_swing_twist_constraint_set_max_friction_torque(world, constraint, torque);
+        return r !== 0;
+    },
+
+    setSwingMotorSettings(world: World, constraint: number, settings: MotorSettings): boolean {
+        const scratch = wasm.scratch;
+        MotorSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_swing_twist_constraint_set_swing_motor_settings(world, constraint, scratch + 0);
+        return r !== 0;
+    },
+
+    setTwistMotorSettings(world: World, constraint: number, settings: MotorSettings): boolean {
+        const scratch = wasm.scratch;
+        MotorSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_swing_twist_constraint_set_twist_motor_settings(world, constraint, scratch + 0);
+        return r !== 0;
+    },
+
+    setSwingMotorState(world: World, constraint: number, state: number): boolean {
+        const r = wasm.exports.tumble_swing_twist_constraint_set_swing_motor_state(world, constraint, state);
+        return r !== 0;
+    },
+
+    setTwistMotorState(world: World, constraint: number, state: number): boolean {
+        const r = wasm.exports.tumble_swing_twist_constraint_set_twist_motor_state(world, constraint, state);
+        return r !== 0;
+    },
+
+    setTargetAngularVelocityCs(world: World, constraint: number, velocity: Vec3): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, velocity);
+        const r = wasm.exports.tumble_swing_twist_constraint_set_target_angular_velocity_cs(world, constraint, scratch + 0);
+        return r !== 0;
+    },
+
+    setTargetOrientationCs(world: World, constraint: number, orientation: Quat): boolean {
+        const scratch = wasm.scratch;
+        Quat.write(scratch + 0, orientation);
+        const r = wasm.exports.tumble_swing_twist_constraint_set_target_orientation_cs(world, constraint, scratch + 0);
+        return r !== 0;
+    },
+
+    setTargetOrientationBs(world: World, constraint: number, orientation: Quat): boolean {
+        const scratch = wasm.scratch;
+        Quat.write(scratch + 0, orientation);
+        const r = wasm.exports.tumble_swing_twist_constraint_set_target_orientation_bs(world, constraint, scratch + 0);
+        return r !== 0;
+    },
+
+    getRotationInConstraintSpace(out: Quat, world: World, constraint: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_swing_twist_constraint_get_rotation_in_constraint_space(scratch + 0, world, constraint);
+        Quat.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    getTotalLambdaPosition(out: Vec3, world: World, constraint: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_swing_twist_constraint_get_total_lambda_position(scratch + 0, world, constraint);
+        Vec3.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    getTotalLambdaTwist(world: World, constraint: number): number {
+        const r = wasm.exports.tumble_swing_twist_constraint_get_total_lambda_twist(world, constraint);
+        return r;
+    },
+
+    getTotalLambdaSwingY(world: World, constraint: number): number {
+        const r = wasm.exports.tumble_swing_twist_constraint_get_total_lambda_swing_y(world, constraint);
+        return r;
+    },
+
+    getTotalLambdaSwingZ(world: World, constraint: number): number {
+        const r = wasm.exports.tumble_swing_twist_constraint_get_total_lambda_swing_z(world, constraint);
+        return r;
+    },
+
+    getTotalLambdaMotor(out: Vec3, world: World, constraint: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_swing_twist_constraint_get_total_lambda_motor(scratch + 0, world, constraint);
+        Vec3.read(out, scratch + 0);
+        return r !== 0;
+    },
+};
+
+export const SixDofConstraint = {
+    defaultSettings(out: SixDOFConstraintSettings): SixDOFConstraintSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_six_dof_constraint_default_settings(scratch + 0);
+        SixDOFConstraintSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(world: World, bodyA: number, bodyB: number, settings: SixDOFConstraintSettings): number {
+        const scratch = wasm.scratch;
+        SixDOFConstraintSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_six_dof_constraint_create(world, bodyA, bodyB, scratch + 0);
+        wasm.grew();
+        return r >>> 0;
+    },
+
+    remove(world: World, constraint: number): boolean {
+        const r = wasm.exports.tumble_six_dof_constraint_remove(world, constraint);
+        return r !== 0;
+    },
+
+    setTranslationLimits(world: World, constraint: number, limitMin: Vec3, limitMax: Vec3): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, limitMin);
+        Vec3.write(scratch + 16, limitMax);
+        const r = wasm.exports.tumble_six_dof_constraint_set_translation_limits(world, constraint, scratch + 0, scratch + 16);
+        return r !== 0;
+    },
+
+    setRotationLimits(world: World, constraint: number, limitMin: Vec3, limitMax: Vec3): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, limitMin);
+        Vec3.write(scratch + 16, limitMax);
+        const r = wasm.exports.tumble_six_dof_constraint_set_rotation_limits(world, constraint, scratch + 0, scratch + 16);
+        return r !== 0;
+    },
+
+    setLimitsSpringSettings(world: World, constraint: number, axis: number, settings: SpringSettings): boolean {
+        const scratch = wasm.scratch;
+        SpringSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_six_dof_constraint_set_limits_spring_settings(world, constraint, axis, scratch + 0);
+        return r !== 0;
+    },
+
+    setMotorSettings(world: World, constraint: number, axis: number, settings: MotorSettings): boolean {
+        const scratch = wasm.scratch;
+        MotorSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_six_dof_constraint_set_motor_settings(world, constraint, axis, scratch + 0);
+        return r !== 0;
+    },
+
+    setMotorState(world: World, constraint: number, axis: number, state: number): boolean {
+        const r = wasm.exports.tumble_six_dof_constraint_set_motor_state(world, constraint, axis, state);
+        return r !== 0;
+    },
+
+    setTargetVelocityCs(world: World, constraint: number, velocity: Vec3): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, velocity);
+        const r = wasm.exports.tumble_six_dof_constraint_set_target_velocity_cs(world, constraint, scratch + 0);
+        return r !== 0;
+    },
+
+    setTargetAngularVelocityCs(world: World, constraint: number, velocity: Vec3): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, velocity);
+        const r = wasm.exports.tumble_six_dof_constraint_set_target_angular_velocity_cs(world, constraint, scratch + 0);
+        return r !== 0;
+    },
+
+    setTargetPositionCs(world: World, constraint: number, position: Vec3): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, position);
+        const r = wasm.exports.tumble_six_dof_constraint_set_target_position_cs(world, constraint, scratch + 0);
+        return r !== 0;
+    },
+
+    setTargetOrientationCs(world: World, constraint: number, orientation: Quat): boolean {
+        const scratch = wasm.scratch;
+        Quat.write(scratch + 0, orientation);
+        const r = wasm.exports.tumble_six_dof_constraint_set_target_orientation_cs(world, constraint, scratch + 0);
+        return r !== 0;
+    },
+
+    setMaxFriction(world: World, constraint: number, axis: number, friction: number): boolean {
+        const r = wasm.exports.tumble_six_dof_constraint_set_max_friction(world, constraint, axis, friction);
+        return r !== 0;
+    },
+
+    makeFreeAxis(world: World, constraint: number, axis: number): boolean {
+        const r = wasm.exports.tumble_six_dof_constraint_make_free_axis(world, constraint, axis);
+        return r !== 0;
+    },
+
+    makeFixedAxis(world: World, constraint: number, axis: number): boolean {
+        const r = wasm.exports.tumble_six_dof_constraint_make_fixed_axis(world, constraint, axis);
+        return r !== 0;
+    },
+
+    setLimitedAxis(world: World, constraint: number, axis: number, min: number, max: number): boolean {
+        const r = wasm.exports.tumble_six_dof_constraint_set_limited_axis(world, constraint, axis, min, max);
+        return r !== 0;
+    },
+};
+
 /** the extern "C" surface, every function taking and returning numbers; the namespaces above call these. */
 export type WasmExports = {
     __heap_base: WebAssembly.Global;
@@ -3380,4 +5624,105 @@ export type WasmExports = {
     tumble_offset_center_of_mass_default_settings(out: number): void;
     tumble_offset_center_of_mass_create(settings: number): number;
     tumble_offset_center_of_mass_destroy(shape: number): void;
+    tumble_constraint_get_type(constraint: number): number;
+    tumble_constraint_exists(world: number, constraint: number): number;
+    tumble_constraint_set_enabled(world: number, constraint: number, enabled: number): number;
+    tumble_constraint_is_enabled(world: number, constraint: number): number;
+    tumble_point_constraint_default_settings(out: number): void;
+    tumble_point_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
+    tumble_point_constraint_remove(world: number, constraint: number): number;
+    tumble_point_constraint_get_total_lambda(out: number, world: number, constraint: number): number;
+    tumble_distance_constraint_default_settings(out: number): void;
+    tumble_distance_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
+    tumble_distance_constraint_remove(world: number, constraint: number): number;
+    tumble_distance_constraint_get_total_lambda(world: number, constraint: number): number;
+    tumble_distance_constraint_set_distance(world: number, constraint: number, minDistance: number, maxDistance: number): number;
+    tumble_distance_constraint_set_limits_spring_settings(world: number, constraint: number, settings: number): number;
+    tumble_hinge_constraint_default_settings(out: number): void;
+    tumble_hinge_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
+    tumble_hinge_constraint_remove(world: number, constraint: number): number;
+    tumble_hinge_constraint_set_limits(world: number, constraint: number, min: number, max: number): number;
+    tumble_hinge_constraint_set_limits_spring_settings(world: number, constraint: number, settings: number): number;
+    tumble_hinge_constraint_set_max_friction_torque(world: number, constraint: number, torque: number): number;
+    tumble_hinge_constraint_set_motor_settings(world: number, constraint: number, settings: number): number;
+    tumble_hinge_constraint_set_motor_state(world: number, constraint: number, state: number): number;
+    tumble_hinge_constraint_set_target_angular_velocity(world: number, constraint: number, velocity: number): number;
+    tumble_hinge_constraint_set_target_angle(world: number, constraint: number, angle: number): number;
+    tumble_hinge_constraint_get_current_angle(world: number, constraint: number): number;
+    tumble_slider_constraint_default_settings(out: number): void;
+    tumble_slider_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
+    tumble_slider_constraint_remove(world: number, constraint: number): number;
+    tumble_slider_constraint_get_current_position(world: number, constraint: number): number;
+    tumble_slider_constraint_set_limits(world: number, constraint: number, min: number, max: number): number;
+    tumble_slider_constraint_set_limits_spring_settings(world: number, constraint: number, settings: number): number;
+    tumble_slider_constraint_set_motor_settings(world: number, constraint: number, settings: number): number;
+    tumble_slider_constraint_set_motor_state(world: number, constraint: number, state: number): number;
+    tumble_slider_constraint_set_target_velocity(world: number, constraint: number, velocity: number): number;
+    tumble_slider_constraint_set_target_position(world: number, constraint: number, position: number): number;
+    tumble_slider_constraint_set_max_friction_force(world: number, constraint: number, force: number): number;
+    tumble_slider_constraint_get_max_friction_force(world: number, constraint: number): number;
+    tumble_slider_constraint_get_total_lambda_position(out: number, world: number, constraint: number): number;
+    tumble_slider_constraint_get_total_lambda_position_limits(world: number, constraint: number): number;
+    tumble_slider_constraint_get_total_lambda_rotation(out: number, world: number, constraint: number): number;
+    tumble_slider_constraint_get_total_lambda_motor(world: number, constraint: number): number;
+    tumble_fixed_constraint_default_settings(out: number): void;
+    tumble_fixed_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
+    tumble_fixed_constraint_remove(world: number, constraint: number): number;
+    tumble_fixed_constraint_get_total_lambda_position(out: number, world: number, constraint: number): number;
+    tumble_fixed_constraint_get_total_lambda_rotation(out: number, world: number, constraint: number): number;
+    tumble_cone_constraint_default_settings(out: number): void;
+    tumble_cone_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
+    tumble_cone_constraint_remove(world: number, constraint: number): number;
+    tumble_cone_constraint_set_half_cone_angle(world: number, constraint: number, halfConeAngle: number): number;
+    tumble_cone_constraint_get_half_cone_angle(world: number, constraint: number): number;
+    tumble_cone_constraint_get_cos_half_cone_angle(world: number, constraint: number): number;
+    tumble_cone_constraint_get_total_lambda_position(out: number, world: number, constraint: number): number;
+    tumble_cone_constraint_get_total_lambda_rotation(world: number, constraint: number): number;
+    tumble_swing_twist_constraint_default_settings(out: number): void;
+    tumble_swing_twist_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
+    tumble_swing_twist_constraint_remove(world: number, constraint: number): number;
+    tumble_swing_twist_constraint_set_normal_half_cone_angle(world: number, constraint: number, angle: number): number;
+    tumble_swing_twist_constraint_set_plane_half_cone_angle(world: number, constraint: number, angle: number): number;
+    tumble_swing_twist_constraint_set_twist_min_angle(world: number, constraint: number, angle: number): number;
+    tumble_swing_twist_constraint_set_twist_max_angle(world: number, constraint: number, angle: number): number;
+    tumble_swing_twist_constraint_set_max_friction_torque(world: number, constraint: number, torque: number): number;
+    tumble_swing_twist_constraint_set_swing_motor_settings(world: number, constraint: number, settings: number): number;
+    tumble_swing_twist_constraint_set_twist_motor_settings(world: number, constraint: number, settings: number): number;
+    tumble_swing_twist_constraint_set_swing_motor_state(world: number, constraint: number, state: number): number;
+    tumble_swing_twist_constraint_set_twist_motor_state(world: number, constraint: number, state: number): number;
+    tumble_swing_twist_constraint_set_target_angular_velocity_cs(world: number, constraint: number, velocity: number): number;
+    tumble_swing_twist_constraint_set_target_orientation_cs(world: number, constraint: number, orientation: number): number;
+    tumble_swing_twist_constraint_set_target_orientation_bs(world: number, constraint: number, orientation: number): number;
+    tumble_swing_twist_constraint_get_rotation_in_constraint_space(out: number, world: number, constraint: number): number;
+    tumble_swing_twist_constraint_get_total_lambda_position(out: number, world: number, constraint: number): number;
+    tumble_swing_twist_constraint_get_total_lambda_twist(world: number, constraint: number): number;
+    tumble_swing_twist_constraint_get_total_lambda_swing_y(world: number, constraint: number): number;
+    tumble_swing_twist_constraint_get_total_lambda_swing_z(world: number, constraint: number): number;
+    tumble_swing_twist_constraint_get_total_lambda_motor(out: number, world: number, constraint: number): number;
+    tumble_six_dof_constraint_default_settings(out: number): void;
+    tumble_six_dof_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
+    tumble_six_dof_constraint_remove(world: number, constraint: number): number;
+    tumble_six_dof_constraint_set_translation_limits(
+        world: number,
+        constraint: number,
+        limitMin: number,
+        limitMax: number,
+    ): number;
+    tumble_six_dof_constraint_set_rotation_limits(world: number, constraint: number, limitMin: number, limitMax: number): number;
+    tumble_six_dof_constraint_set_limits_spring_settings(
+        world: number,
+        constraint: number,
+        axis: number,
+        settings: number,
+    ): number;
+    tumble_six_dof_constraint_set_motor_settings(world: number, constraint: number, axis: number, settings: number): number;
+    tumble_six_dof_constraint_set_motor_state(world: number, constraint: number, axis: number, state: number): number;
+    tumble_six_dof_constraint_set_target_velocity_cs(world: number, constraint: number, velocity: number): number;
+    tumble_six_dof_constraint_set_target_angular_velocity_cs(world: number, constraint: number, velocity: number): number;
+    tumble_six_dof_constraint_set_target_position_cs(world: number, constraint: number, position: number): number;
+    tumble_six_dof_constraint_set_target_orientation_cs(world: number, constraint: number, orientation: number): number;
+    tumble_six_dof_constraint_set_max_friction(world: number, constraint: number, axis: number, friction: number): number;
+    tumble_six_dof_constraint_make_free_axis(world: number, constraint: number, axis: number): number;
+    tumble_six_dof_constraint_make_fixed_axis(world: number, constraint: number, axis: number): number;
+    tumble_six_dof_constraint_set_limited_axis(world: number, constraint: number, axis: number, min: number, max: number): number;
 };

@@ -1,6 +1,7 @@
 import { withCopies } from './arrays';
 import * as Low from './generated/tumble';
 import type { Box3, Quat, Vec3 } from './math';
+import { defaultsOf, over } from './settings';
 
 /** a shape, yours to free with its type's destroy once no body or other shape uses it */
 export type Shape = Low.Shape;
@@ -10,25 +11,6 @@ export type ShapeType = Low.ShapeType;
 
 /** mass and inertia about the centre of mass; the inertia is the upper 3x3 of a column-major 4x4, kg m2 */
 export type MassProperties = Low.MassProperties;
-
-/** the given settings over the defaults, an undefined field taking the default */
-function over<T extends object>(defaults: T, given: Partial<T>): T {
-    const merged = { ...defaults };
-    for (const key in given) if (given[key] !== undefined) merged[key] = given[key] as T[typeof key];
-    return merged;
-}
-
-/** the defaults the C++ gives, read once */
-function defaultsOf<T>(read: (out: T) => void, create: () => T): () => T {
-    let value: T | null = null;
-    return () => {
-        if (value === null) {
-            value = create();
-            read(value);
-        }
-        return value;
-    };
-}
 
 /** what every shape has */
 export const Shape = {

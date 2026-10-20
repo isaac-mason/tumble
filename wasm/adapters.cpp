@@ -739,4 +739,580 @@ void destroy(shapes::Shape *shape) { tumble::offset_center_of_mass::destroy(shap
 
 }  // namespace offset_center_of_mass
 
+using tumble::constraint_id::ConstraintId;
+
+/** the constraint record a get found, or null with the error set */
+template <typename Record>
+static Record *found(Record *record) {
+    if (record == nullptr) util::set_error(util::ERROR_BAD_HANDLE);
+    return record;
+}
+
+template <typename Settings>
+static ConstraintId create_between(tumble::world::World *world, body_id::BodyId body_a, body_id::BodyId body_b, const Settings &settings,
+                                   ConstraintId (*create)(tumble::world::World &, tumble::rigid_body::RigidBody *,
+                                                          tumble::rigid_body::RigidBody *, const Settings &)) {
+    tumble::rigid_body::RigidBody *a = rigid_body::resolve(world, body_a);
+    tumble::rigid_body::RigidBody *b = rigid_body::resolve(world, body_b);
+    if (a == nullptr || b == nullptr) return tumble::constraint_id::INVALID_CONSTRAINT_ID;
+    return create(*world, a, b, settings);
+}
+
+namespace constraint {
+
+uint32_t get_type(ConstraintId id) { return tumble::constraint_id::type(id); }
+
+bool exists(tumble::world::World *world, ConstraintId id) { return constraints::get(world->constraints, id) != nullptr; }
+
+bool set_enabled(tumble::world::World *world, ConstraintId id, bool enabled) {
+    constraints::ConstraintBase *base = found(constraints::get(world->constraints, id));
+    if (base == nullptr) return false;
+    base->enabled = enabled;
+    return true;
+}
+
+bool is_enabled(tumble::world::World *world, ConstraintId id) {
+    const constraints::ConstraintBase *base = found(constraints::get(world->constraints, id));
+    return base != nullptr && base->enabled;
+}
+
+}  // namespace constraint
+
+namespace point_constraint {
+
+void default_settings(tumble::point_constraint::PointConstraintSettings &out) { out = {}; }
+
+ConstraintId create(tumble::world::World *world, body_id::BodyId body_a, body_id::BodyId body_b,
+                    const tumble::point_constraint::PointConstraintSettings &settings) {
+    return create_between(world, body_a, body_b, settings, tumble::point_constraint::create);
+}
+
+bool remove(tumble::world::World *world, ConstraintId id) { return found(tumble::point_constraint::get(*world, id)) && tumble::point_constraint::remove(*world, id); }
+
+bool get_total_lambda(Float3 &out, tumble::world::World *world, ConstraintId id) {
+    const tumble::point_constraint::PointConstraint *constraint = found(tumble::point_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    vec3f::store(out, tumble::point_constraint::get_total_lambda(*constraint));
+    return true;
+}
+
+}  // namespace point_constraint
+
+namespace distance_constraint {
+
+void default_settings(tumble::distance_constraint::DistanceConstraintSettings &out) { out = {}; }
+
+ConstraintId create(tumble::world::World *world, body_id::BodyId body_a, body_id::BodyId body_b,
+                    const tumble::distance_constraint::DistanceConstraintSettings &settings) {
+    return create_between(world, body_a, body_b, settings, tumble::distance_constraint::create);
+}
+
+bool remove(tumble::world::World *world, ConstraintId id) {
+    return found(tumble::distance_constraint::get(*world, id)) && tumble::distance_constraint::remove(*world, id);
+}
+
+float get_total_lambda(tumble::world::World *world, ConstraintId id) {
+    const tumble::distance_constraint::DistanceConstraint *constraint = found(tumble::distance_constraint::get(*world, id));
+    return constraint == nullptr ? 0.0f : tumble::distance_constraint::get_total_lambda(*constraint);
+}
+
+bool set_distance(tumble::world::World *world, ConstraintId id, float min_distance, float max_distance) {
+    tumble::distance_constraint::DistanceConstraint *constraint = found(tumble::distance_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::distance_constraint::set_distance(*constraint, min_distance, max_distance);
+    return true;
+}
+
+bool set_limits_spring_settings(tumble::world::World *world, ConstraintId id, const spring_settings::SpringSettings &settings) {
+    tumble::distance_constraint::DistanceConstraint *constraint = found(tumble::distance_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    constraint->limits_spring_settings = settings;
+    return true;
+}
+
+}  // namespace distance_constraint
+
+namespace hinge_constraint {
+
+void default_settings(tumble::hinge_constraint::HingeConstraintSettings &out) { out = {}; }
+
+ConstraintId create(tumble::world::World *world, body_id::BodyId body_a, body_id::BodyId body_b,
+                    const tumble::hinge_constraint::HingeConstraintSettings &settings) {
+    return create_between(world, body_a, body_b, settings, tumble::hinge_constraint::create);
+}
+
+bool remove(tumble::world::World *world, ConstraintId id) { return found(tumble::hinge_constraint::get(*world, id)) && tumble::hinge_constraint::remove(*world, id); }
+
+bool set_limits(tumble::world::World *world, ConstraintId id, float min, float max) {
+    tumble::hinge_constraint::HingeConstraint *constraint = found(tumble::hinge_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::hinge_constraint::set_limits(*constraint, min, max);
+    return true;
+}
+
+bool set_limits_spring_settings(tumble::world::World *world, ConstraintId id, const spring_settings::SpringSettings &settings) {
+    tumble::hinge_constraint::HingeConstraint *constraint = found(tumble::hinge_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    constraint->limits_spring_settings = settings;
+    return true;
+}
+
+bool set_max_friction_torque(tumble::world::World *world, ConstraintId id, float torque) {
+    tumble::hinge_constraint::HingeConstraint *constraint = found(tumble::hinge_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    constraint->max_friction_torque = torque;
+    return true;
+}
+
+bool set_motor_settings(tumble::world::World *world, ConstraintId id, const motor_settings::MotorSettings &settings) {
+    tumble::hinge_constraint::HingeConstraint *constraint = found(tumble::hinge_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    constraint->motor_settings = settings;
+    return true;
+}
+
+bool set_motor_state(tumble::world::World *world, ConstraintId id, uint32_t state) {
+    tumble::hinge_constraint::HingeConstraint *constraint = found(tumble::hinge_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::hinge_constraint::set_motor_state(*constraint, (motor_settings::MotorState)state);
+    return true;
+}
+
+bool set_target_angular_velocity(tumble::world::World *world, ConstraintId id, float velocity) {
+    tumble::hinge_constraint::HingeConstraint *constraint = found(tumble::hinge_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::hinge_constraint::set_target_angular_velocity(*constraint, velocity);
+    return true;
+}
+
+bool set_target_angle(tumble::world::World *world, ConstraintId id, float angle) {
+    tumble::hinge_constraint::HingeConstraint *constraint = found(tumble::hinge_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::hinge_constraint::set_target_angle(*constraint, angle);
+    return true;
+}
+
+float get_current_angle(tumble::world::World *world, ConstraintId id) {
+    const tumble::hinge_constraint::HingeConstraint *constraint = found(tumble::hinge_constraint::get(*world, id));
+    return constraint == nullptr ? 0.0f : tumble::hinge_constraint::get_current_angle(*constraint);
+}
+
+}  // namespace hinge_constraint
+
+namespace slider_constraint {
+
+void default_settings(tumble::slider_constraint::SliderConstraintSettings &out) { out = {}; }
+
+ConstraintId create(tumble::world::World *world, body_id::BodyId body_a, body_id::BodyId body_b,
+                    const tumble::slider_constraint::SliderConstraintSettings &settings) {
+    return create_between(world, body_a, body_b, settings, tumble::slider_constraint::create);
+}
+
+bool remove(tumble::world::World *world, ConstraintId id) {
+    return found(tumble::slider_constraint::get(*world, id)) && tumble::slider_constraint::remove(*world, id);
+}
+
+float get_current_position(tumble::world::World *world, ConstraintId id) {
+    const tumble::slider_constraint::SliderConstraint *constraint = found(tumble::slider_constraint::get(*world, id));
+    return constraint == nullptr ? 0.0f : tumble::slider_constraint::get_current_position(*world, *constraint);
+}
+
+bool set_limits(tumble::world::World *world, ConstraintId id, float min, float max) {
+    tumble::slider_constraint::SliderConstraint *constraint = found(tumble::slider_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::slider_constraint::set_limits(*constraint, min, max);
+    return true;
+}
+
+bool set_limits_spring_settings(tumble::world::World *world, ConstraintId id, const spring_settings::SpringSettings &settings) {
+    tumble::slider_constraint::SliderConstraint *constraint = found(tumble::slider_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    constraint->limits_spring_settings = settings;
+    return true;
+}
+
+bool set_motor_settings(tumble::world::World *world, ConstraintId id, const motor_settings::MotorSettings &settings) {
+    tumble::slider_constraint::SliderConstraint *constraint = found(tumble::slider_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    constraint->motor_settings = settings;
+    return true;
+}
+
+bool set_motor_state(tumble::world::World *world, ConstraintId id, uint32_t state) {
+    tumble::slider_constraint::SliderConstraint *constraint = found(tumble::slider_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::slider_constraint::set_motor_state(*constraint, (motor_settings::MotorState)state);
+    return true;
+}
+
+bool set_target_velocity(tumble::world::World *world, ConstraintId id, float velocity) {
+    tumble::slider_constraint::SliderConstraint *constraint = found(tumble::slider_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::slider_constraint::set_target_velocity(*constraint, velocity);
+    return true;
+}
+
+bool set_target_position(tumble::world::World *world, ConstraintId id, float position) {
+    tumble::slider_constraint::SliderConstraint *constraint = found(tumble::slider_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::slider_constraint::set_target_position(*constraint, position);
+    return true;
+}
+
+bool set_max_friction_force(tumble::world::World *world, ConstraintId id, float force) {
+    tumble::slider_constraint::SliderConstraint *constraint = found(tumble::slider_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::slider_constraint::set_max_friction_force(*constraint, force);
+    return true;
+}
+
+float get_max_friction_force(tumble::world::World *world, ConstraintId id) {
+    const tumble::slider_constraint::SliderConstraint *constraint = found(tumble::slider_constraint::get(*world, id));
+    return constraint == nullptr ? 0.0f : tumble::slider_constraint::get_max_friction_force(*constraint);
+}
+
+bool get_total_lambda_position(Vec2f &out, tumble::world::World *world, ConstraintId id) {
+    const tumble::slider_constraint::SliderConstraint *constraint = found(tumble::slider_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::slider_constraint::get_total_lambda_position(out, *constraint);
+    return true;
+}
+
+float get_total_lambda_position_limits(tumble::world::World *world, ConstraintId id) {
+    const tumble::slider_constraint::SliderConstraint *constraint = found(tumble::slider_constraint::get(*world, id));
+    return constraint == nullptr ? 0.0f : tumble::slider_constraint::get_total_lambda_position_limits(*constraint);
+}
+
+bool get_total_lambda_rotation(Float3 &out, tumble::world::World *world, ConstraintId id) {
+    const tumble::slider_constraint::SliderConstraint *constraint = found(tumble::slider_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    vec3f::store(out, tumble::slider_constraint::get_total_lambda_rotation(*constraint));
+    return true;
+}
+
+float get_total_lambda_motor(tumble::world::World *world, ConstraintId id) {
+    const tumble::slider_constraint::SliderConstraint *constraint = found(tumble::slider_constraint::get(*world, id));
+    return constraint == nullptr ? 0.0f : tumble::slider_constraint::get_total_lambda_motor(*constraint);
+}
+
+}  // namespace slider_constraint
+
+namespace fixed_constraint {
+
+void default_settings(tumble::fixed_constraint::FixedConstraintSettings &out) { out = {}; }
+
+ConstraintId create(tumble::world::World *world, body_id::BodyId body_a, body_id::BodyId body_b,
+                    const tumble::fixed_constraint::FixedConstraintSettings &settings) {
+    return create_between(world, body_a, body_b, settings, tumble::fixed_constraint::create);
+}
+
+bool remove(tumble::world::World *world, ConstraintId id) { return found(tumble::fixed_constraint::get(*world, id)) && tumble::fixed_constraint::remove(*world, id); }
+
+bool get_total_lambda_position(Float3 &out, tumble::world::World *world, ConstraintId id) {
+    const tumble::fixed_constraint::FixedConstraint *constraint = found(tumble::fixed_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    vec3f::store(out, tumble::fixed_constraint::get_total_lambda_position(*constraint));
+    return true;
+}
+
+bool get_total_lambda_rotation(Float3 &out, tumble::world::World *world, ConstraintId id) {
+    const tumble::fixed_constraint::FixedConstraint *constraint = found(tumble::fixed_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    vec3f::store(out, tumble::fixed_constraint::get_total_lambda_rotation(*constraint));
+    return true;
+}
+
+}  // namespace fixed_constraint
+
+namespace cone_constraint {
+
+void default_settings(tumble::cone_constraint::ConeConstraintSettings &out) { out = {}; }
+
+ConstraintId create(tumble::world::World *world, body_id::BodyId body_a, body_id::BodyId body_b,
+                    const tumble::cone_constraint::ConeConstraintSettings &settings) {
+    return create_between(world, body_a, body_b, settings, tumble::cone_constraint::create);
+}
+
+bool remove(tumble::world::World *world, ConstraintId id) { return found(tumble::cone_constraint::get(*world, id)) && tumble::cone_constraint::remove(*world, id); }
+
+bool set_half_cone_angle(tumble::world::World *world, ConstraintId id, float half_cone_angle) {
+    tumble::cone_constraint::ConeConstraint *constraint = found(tumble::cone_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::cone_constraint::set_half_cone_angle(*constraint, half_cone_angle);
+    return true;
+}
+
+float get_half_cone_angle(tumble::world::World *world, ConstraintId id) {
+    const tumble::cone_constraint::ConeConstraint *constraint = found(tumble::cone_constraint::get(*world, id));
+    return constraint == nullptr ? 0.0f : tumble::cone_constraint::get_half_cone_angle(*constraint);
+}
+
+float get_cos_half_cone_angle(tumble::world::World *world, ConstraintId id) {
+    const tumble::cone_constraint::ConeConstraint *constraint = found(tumble::cone_constraint::get(*world, id));
+    return constraint == nullptr ? 0.0f : tumble::cone_constraint::get_cos_half_cone_angle(*constraint);
+}
+
+bool get_total_lambda_position(Float3 &out, tumble::world::World *world, ConstraintId id) {
+    const tumble::cone_constraint::ConeConstraint *constraint = found(tumble::cone_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    vec3f::store(out, tumble::cone_constraint::get_total_lambda_position(*constraint));
+    return true;
+}
+
+float get_total_lambda_rotation(tumble::world::World *world, ConstraintId id) {
+    const tumble::cone_constraint::ConeConstraint *constraint = found(tumble::cone_constraint::get(*world, id));
+    return constraint == nullptr ? 0.0f : tumble::cone_constraint::get_total_lambda_rotation(*constraint);
+}
+
+}  // namespace cone_constraint
+
+namespace swing_twist_constraint {
+
+void default_settings(tumble::swing_twist_constraint::SwingTwistConstraintSettings &out) { out = {}; }
+
+ConstraintId create(tumble::world::World *world, body_id::BodyId body_a, body_id::BodyId body_b,
+                    const tumble::swing_twist_constraint::SwingTwistConstraintSettings &settings) {
+    return create_between(world, body_a, body_b, settings, tumble::swing_twist_constraint::create);
+}
+
+bool remove(tumble::world::World *world, ConstraintId id) {
+    return found(tumble::swing_twist_constraint::get(*world, id)) && tumble::swing_twist_constraint::remove(*world, id);
+}
+
+bool set_normal_half_cone_angle(tumble::world::World *world, ConstraintId id, float angle) {
+    tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::swing_twist_constraint::set_normal_half_cone_angle(*constraint, angle);
+    return true;
+}
+
+bool set_plane_half_cone_angle(tumble::world::World *world, ConstraintId id, float angle) {
+    tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::swing_twist_constraint::set_plane_half_cone_angle(*constraint, angle);
+    return true;
+}
+
+bool set_twist_min_angle(tumble::world::World *world, ConstraintId id, float angle) {
+    tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::swing_twist_constraint::set_twist_min_angle(*constraint, angle);
+    return true;
+}
+
+bool set_twist_max_angle(tumble::world::World *world, ConstraintId id, float angle) {
+    tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::swing_twist_constraint::set_twist_max_angle(*constraint, angle);
+    return true;
+}
+
+bool set_max_friction_torque(tumble::world::World *world, ConstraintId id, float torque) {
+    tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::swing_twist_constraint::set_max_friction_torque(*constraint, torque);
+    return true;
+}
+
+bool set_swing_motor_settings(tumble::world::World *world, ConstraintId id, const motor_settings::MotorSettings &settings) {
+    tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    constraint->swing_motor_settings = settings;
+    return true;
+}
+
+bool set_twist_motor_settings(tumble::world::World *world, ConstraintId id, const motor_settings::MotorSettings &settings) {
+    tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    constraint->twist_motor_settings = settings;
+    return true;
+}
+
+bool set_swing_motor_state(tumble::world::World *world, ConstraintId id, uint32_t state) {
+    tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::swing_twist_constraint::set_swing_motor_state(*constraint, (motor_settings::MotorState)state);
+    return true;
+}
+
+bool set_twist_motor_state(tumble::world::World *world, ConstraintId id, uint32_t state) {
+    tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::swing_twist_constraint::set_twist_motor_state(*constraint, (motor_settings::MotorState)state);
+    return true;
+}
+
+bool set_target_angular_velocity_cs(tumble::world::World *world, ConstraintId id, const Float3 &velocity) {
+    tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::swing_twist_constraint::set_target_angular_velocity_cs(*constraint, vec3f::load(velocity));
+    return true;
+}
+
+bool set_target_orientation_cs(tumble::world::World *world, ConstraintId id, const Float4 &orientation) {
+    tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::swing_twist_constraint::set_target_orientation_cs(*constraint, quatf::load(orientation));
+    return true;
+}
+
+bool set_target_orientation_bs(tumble::world::World *world, ConstraintId id, const Float4 &orientation) {
+    tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::swing_twist_constraint::set_target_orientation_bs(*constraint, quatf::load(orientation));
+    return true;
+}
+
+bool get_rotation_in_constraint_space(Float4 &out, tumble::world::World *world, ConstraintId id) {
+    const tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    quatf::store(out, tumble::swing_twist_constraint::get_rotation_in_constraint_space(*constraint, world->bodies));
+    return true;
+}
+
+bool get_total_lambda_position(Float3 &out, tumble::world::World *world, ConstraintId id) {
+    const tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    vec3f::store(out, tumble::swing_twist_constraint::get_total_lambda_position(*constraint));
+    return true;
+}
+
+float get_total_lambda_twist(tumble::world::World *world, ConstraintId id) {
+    const tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    return constraint == nullptr ? 0.0f : tumble::swing_twist_constraint::get_total_lambda_twist(*constraint);
+}
+
+float get_total_lambda_swing_y(tumble::world::World *world, ConstraintId id) {
+    const tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    return constraint == nullptr ? 0.0f : tumble::swing_twist_constraint::get_total_lambda_swing_y(*constraint);
+}
+
+float get_total_lambda_swing_z(tumble::world::World *world, ConstraintId id) {
+    const tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    return constraint == nullptr ? 0.0f : tumble::swing_twist_constraint::get_total_lambda_swing_z(*constraint);
+}
+
+bool get_total_lambda_motor(Float3 &out, tumble::world::World *world, ConstraintId id) {
+    const tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    vec3f::store(out, tumble::swing_twist_constraint::get_total_lambda_motor(*constraint));
+    return true;
+}
+
+}  // namespace swing_twist_constraint
+
+namespace six_dof_constraint {
+
+using tumble::six_dof_constraint::SixDOFConstraint;
+
+/** the constraint, or null: with the error set for a bad id, without it for an axis past the last */
+static SixDOFConstraint *found_axis(tumble::world::World *world, ConstraintId id, uint32_t axis, uint32_t axes) {
+    SixDOFConstraint *constraint = found(tumble::six_dof_constraint::get(*world, id));
+    return axis < axes ? constraint : nullptr;
+}
+
+void default_settings(tumble::six_dof_constraint::SixDOFConstraintSettings &out) { out = {}; }
+
+ConstraintId create(tumble::world::World *world, body_id::BodyId body_a, body_id::BodyId body_b,
+                    const tumble::six_dof_constraint::SixDOFConstraintSettings &settings) {
+    return create_between(world, body_a, body_b, settings, tumble::six_dof_constraint::create);
+}
+
+bool remove(tumble::world::World *world, ConstraintId id) {
+    return found(tumble::six_dof_constraint::get(*world, id)) && tumble::six_dof_constraint::remove(*world, id);
+}
+
+bool set_translation_limits(tumble::world::World *world, ConstraintId id, const Float3 &limit_min, const Float3 &limit_max) {
+    SixDOFConstraint *constraint = found(tumble::six_dof_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::six_dof_constraint::set_translation_limits(*constraint, vec3f::load(limit_min), vec3f::load(limit_max));
+    return true;
+}
+
+bool set_rotation_limits(tumble::world::World *world, ConstraintId id, const Float3 &limit_min, const Float3 &limit_max) {
+    SixDOFConstraint *constraint = found(tumble::six_dof_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::six_dof_constraint::set_rotation_limits(*constraint, vec3f::load(limit_min), vec3f::load(limit_max));
+    return true;
+}
+
+bool set_limits_spring_settings(tumble::world::World *world, ConstraintId id, uint32_t axis, const spring_settings::SpringSettings &settings) {
+    SixDOFConstraint *constraint = found_axis(world, id, axis, tumble::six_dof_constraint::NUM_TRANSLATION);
+    if (constraint == nullptr) return false;
+    constraint->limits_spring_settings[axis] = settings;
+    return true;
+}
+
+bool set_motor_settings(tumble::world::World *world, ConstraintId id, uint32_t axis, const motor_settings::MotorSettings &settings) {
+    SixDOFConstraint *constraint = found_axis(world, id, axis, tumble::six_dof_constraint::NUM);
+    if (constraint == nullptr) return false;
+    constraint->motor_settings[axis] = settings;
+    return true;
+}
+
+bool set_motor_state(tumble::world::World *world, ConstraintId id, uint32_t axis, uint32_t state) {
+    SixDOFConstraint *constraint = found_axis(world, id, axis, tumble::six_dof_constraint::NUM);
+    if (constraint == nullptr) return false;
+    tumble::six_dof_constraint::set_motor_state(*constraint, (tumble::six_dof_constraint::SixDOFAxis)axis, (motor_settings::MotorState)state);
+    return true;
+}
+
+bool set_target_velocity_cs(tumble::world::World *world, ConstraintId id, const Float3 &velocity) {
+    SixDOFConstraint *constraint = found(tumble::six_dof_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::six_dof_constraint::set_target_velocity_cs(*constraint, vec3f::load(velocity));
+    return true;
+}
+
+bool set_target_angular_velocity_cs(tumble::world::World *world, ConstraintId id, const Float3 &velocity) {
+    SixDOFConstraint *constraint = found(tumble::six_dof_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::six_dof_constraint::set_target_angular_velocity_cs(*constraint, vec3f::load(velocity));
+    return true;
+}
+
+bool set_target_position_cs(tumble::world::World *world, ConstraintId id, const Float3 &position) {
+    SixDOFConstraint *constraint = found(tumble::six_dof_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::six_dof_constraint::set_target_position_cs(*constraint, vec3f::load(position));
+    return true;
+}
+
+bool set_target_orientation_cs(tumble::world::World *world, ConstraintId id, const Float4 &orientation) {
+    SixDOFConstraint *constraint = found(tumble::six_dof_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    tumble::six_dof_constraint::set_target_orientation_cs(*constraint, quatf::load(orientation));
+    return true;
+}
+
+bool set_max_friction(tumble::world::World *world, ConstraintId id, uint32_t axis, float friction) {
+    SixDOFConstraint *constraint = found_axis(world, id, axis, tumble::six_dof_constraint::NUM);
+    if (constraint == nullptr) return false;
+    tumble::six_dof_constraint::set_max_friction(*constraint, axis, friction);
+    return true;
+}
+
+bool make_free_axis(tumble::world::World *world, ConstraintId id, uint32_t axis) {
+    SixDOFConstraint *constraint = found_axis(world, id, axis, tumble::six_dof_constraint::NUM);
+    if (constraint == nullptr) return false;
+    tumble::six_dof_constraint::make_free_axis(*constraint, axis);
+    return true;
+}
+
+bool make_fixed_axis(tumble::world::World *world, ConstraintId id, uint32_t axis) {
+    SixDOFConstraint *constraint = found_axis(world, id, axis, tumble::six_dof_constraint::NUM);
+    if (constraint == nullptr) return false;
+    tumble::six_dof_constraint::make_fixed_axis(*constraint, axis);
+    return true;
+}
+
+bool set_limited_axis(tumble::world::World *world, ConstraintId id, uint32_t axis, float min, float max) {
+    SixDOFConstraint *constraint = found_axis(world, id, axis, tumble::six_dof_constraint::NUM);
+    if (constraint == nullptr) return false;
+    tumble::six_dof_constraint::set_limited_axis(*constraint, axis, min, max);
+    return true;
+}
+
+}  // namespace six_dof_constraint
+
 }  // namespace adapters

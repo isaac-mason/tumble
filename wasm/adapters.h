@@ -6,7 +6,15 @@
 #include "tumble/physics/body/body_id.h"
 #include "tumble/physics/body/dof.h"
 #include "tumble/physics/body/mass_properties.h"
+#include "tumble/physics/constraints/cone_constraint.h"
 #include "tumble/physics/constraints/contact_settings.h"
+#include "tumble/physics/constraints/distance_constraint.h"
+#include "tumble/physics/constraints/fixed_constraint.h"
+#include "tumble/physics/constraints/hinge_constraint.h"
+#include "tumble/physics/constraints/point_constraint.h"
+#include "tumble/physics/constraints/six_dof_constraint.h"
+#include "tumble/physics/constraints/slider_constraint.h"
+#include "tumble/physics/constraints/swing_twist_constraint.h"
 #include "tumble/physics/manifold/manifold.h"
 #include "tumble/physics/shapes/box.h"
 #include "tumble/physics/shapes/capsule.h"
@@ -413,5 +421,168 @@ tumble::shapes::Shape *create(const tumble::offset_center_of_mass::OffsetCenterO
 void destroy(tumble::shapes::Shape *shape);
 
 }  // namespace offset_center_of_mass
+
+// constraints by id: an id naming no live constraint of the type sets ERROR_BAD_HANDLE and the call does nothing,
+// returning false, or 0 from a reader of one number. each type's create takes its bodies by id, and gives
+// INVALID_CONSTRAINT_ID (error set) for an id naming no body or when the allocator fails. the setters past the C++
+// api's write the record's field, as C++ does
+
+// what every constraint has
+namespace constraint {
+
+/** the type the id encodes, whether or not it names a live constraint */
+uint32_t get_type(tumble::constraint_id::ConstraintId id);
+/** whether the id names a live constraint */
+bool exists(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+/** a disabled constraint is skipped by the solve and does not join its bodies' islands */
+bool set_enabled(tumble::world::World *world, tumble::constraint_id::ConstraintId id, bool enabled);
+bool is_enabled(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+
+}  // namespace constraint
+
+namespace point_constraint {
+
+void default_settings(tumble::point_constraint::PointConstraintSettings &out);
+tumble::constraint_id::ConstraintId create(tumble::world::World *world, tumble::body_id::BodyId body_a, tumble::body_id::BodyId body_b,
+                                           const tumble::point_constraint::PointConstraintSettings &settings);
+bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+bool get_total_lambda(tumble::Float3 &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+
+}  // namespace point_constraint
+
+namespace distance_constraint {
+
+void default_settings(tumble::distance_constraint::DistanceConstraintSettings &out);
+tumble::constraint_id::ConstraintId create(tumble::world::World *world, tumble::body_id::BodyId body_a, tumble::body_id::BodyId body_b,
+                                           const tumble::distance_constraint::DistanceConstraintSettings &settings);
+bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+float get_total_lambda(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+bool set_distance(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float min_distance, float max_distance);
+bool set_limits_spring_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id,
+                                const tumble::spring_settings::SpringSettings &settings);
+
+}  // namespace distance_constraint
+
+namespace hinge_constraint {
+
+void default_settings(tumble::hinge_constraint::HingeConstraintSettings &out);
+tumble::constraint_id::ConstraintId create(tumble::world::World *world, tumble::body_id::BodyId body_a, tumble::body_id::BodyId body_b,
+                                           const tumble::hinge_constraint::HingeConstraintSettings &settings);
+bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+bool set_limits(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float min, float max);
+bool set_limits_spring_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id,
+                                const tumble::spring_settings::SpringSettings &settings);
+bool set_max_friction_torque(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float torque);
+bool set_motor_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::motor_settings::MotorSettings &settings);
+bool set_motor_state(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t state);
+bool set_target_angular_velocity(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float velocity);
+bool set_target_angle(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float angle);
+float get_current_angle(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+
+}  // namespace hinge_constraint
+
+namespace slider_constraint {
+
+void default_settings(tumble::slider_constraint::SliderConstraintSettings &out);
+tumble::constraint_id::ConstraintId create(tumble::world::World *world, tumble::body_id::BodyId body_a, tumble::body_id::BodyId body_b,
+                                           const tumble::slider_constraint::SliderConstraintSettings &settings);
+bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+float get_current_position(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+bool set_limits(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float min, float max);
+bool set_limits_spring_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id,
+                                const tumble::spring_settings::SpringSettings &settings);
+bool set_motor_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::motor_settings::MotorSettings &settings);
+bool set_motor_state(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t state);
+bool set_target_velocity(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float velocity);
+bool set_target_position(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float position);
+bool set_max_friction_force(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float force);
+float get_max_friction_force(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+bool get_total_lambda_position(tumble::Vec2f &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+float get_total_lambda_position_limits(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+bool get_total_lambda_rotation(tumble::Float3 &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+float get_total_lambda_motor(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+
+}  // namespace slider_constraint
+
+namespace fixed_constraint {
+
+void default_settings(tumble::fixed_constraint::FixedConstraintSettings &out);
+tumble::constraint_id::ConstraintId create(tumble::world::World *world, tumble::body_id::BodyId body_a, tumble::body_id::BodyId body_b,
+                                           const tumble::fixed_constraint::FixedConstraintSettings &settings);
+bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+bool get_total_lambda_position(tumble::Float3 &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+bool get_total_lambda_rotation(tumble::Float3 &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+
+}  // namespace fixed_constraint
+
+namespace cone_constraint {
+
+void default_settings(tumble::cone_constraint::ConeConstraintSettings &out);
+tumble::constraint_id::ConstraintId create(tumble::world::World *world, tumble::body_id::BodyId body_a, tumble::body_id::BodyId body_b,
+                                           const tumble::cone_constraint::ConeConstraintSettings &settings);
+bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+bool set_half_cone_angle(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float half_cone_angle);
+float get_half_cone_angle(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+float get_cos_half_cone_angle(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+bool get_total_lambda_position(tumble::Float3 &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+float get_total_lambda_rotation(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+
+}  // namespace cone_constraint
+
+namespace swing_twist_constraint {
+
+void default_settings(tumble::swing_twist_constraint::SwingTwistConstraintSettings &out);
+tumble::constraint_id::ConstraintId create(tumble::world::World *world, tumble::body_id::BodyId body_a, tumble::body_id::BodyId body_b,
+                                           const tumble::swing_twist_constraint::SwingTwistConstraintSettings &settings);
+bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+bool set_normal_half_cone_angle(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float angle);
+bool set_plane_half_cone_angle(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float angle);
+bool set_twist_min_angle(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float angle);
+bool set_twist_max_angle(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float angle);
+bool set_max_friction_torque(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float torque);
+bool set_swing_motor_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id,
+                              const tumble::motor_settings::MotorSettings &settings);
+bool set_twist_motor_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id,
+                              const tumble::motor_settings::MotorSettings &settings);
+bool set_swing_motor_state(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t state);
+bool set_twist_motor_state(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t state);
+bool set_target_angular_velocity_cs(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::Float3 &velocity);
+bool set_target_orientation_cs(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::Float4 &orientation);
+bool set_target_orientation_bs(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::Float4 &orientation);
+bool get_rotation_in_constraint_space(tumble::Float4 &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+bool get_total_lambda_position(tumble::Float3 &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+float get_total_lambda_twist(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+float get_total_lambda_swing_y(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+float get_total_lambda_swing_z(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+bool get_total_lambda_motor(tumble::Float3 &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+
+}  // namespace swing_twist_constraint
+
+namespace six_dof_constraint {
+
+void default_settings(tumble::six_dof_constraint::SixDOFConstraintSettings &out);
+tumble::constraint_id::ConstraintId create(tumble::world::World *world, tumble::body_id::BodyId body_a, tumble::body_id::BodyId body_b,
+                                           const tumble::six_dof_constraint::SixDOFConstraintSettings &settings);
+bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+bool set_translation_limits(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::Float3 &limit_min,
+                            const tumble::Float3 &limit_max);
+bool set_rotation_limits(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::Float3 &limit_min,
+                         const tumble::Float3 &limit_max);
+/** translation axes only */
+bool set_limits_spring_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t axis,
+                                const tumble::spring_settings::SpringSettings &settings);
+bool set_motor_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t axis,
+                        const tumble::motor_settings::MotorSettings &settings);
+bool set_motor_state(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t axis, uint32_t state);
+bool set_target_velocity_cs(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::Float3 &velocity);
+bool set_target_angular_velocity_cs(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::Float3 &velocity);
+bool set_target_position_cs(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::Float3 &position);
+bool set_target_orientation_cs(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::Float4 &orientation);
+bool set_max_friction(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t axis, float friction);
+bool make_free_axis(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t axis);
+bool make_fixed_axis(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t axis);
+bool set_limited_axis(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t axis, float min, float max);
+
+}  // namespace six_dof_constraint
 
 }  // namespace adapters
