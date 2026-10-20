@@ -25,12 +25,12 @@ let failed = 0;
 const { wasm } = await instantiate();
 let failures = 0;
 let checks = 0;
-for (let index = 0, count = wasm.test_count(); index < count; index++) {
+for (let index = 0, count = wasm.tests_count(); index < count; index++) {
     const run = await instantiate();
-    failures += run.wasm.test_run_one(index);
-    checks += run.wasm.test_checks();
-    const recorded = run.wasm.test_failure_count();
-    const table = new Uint32Array(run.memory.buffer, run.wasm.test_failures(), recorded * 4);
+    failures += run.wasm.tests_run_one(index);
+    checks += run.wasm.tests_checks();
+    const recorded = run.wasm.tests_failure_count();
+    const table = new Uint32Array(run.memory.buffer, run.wasm.tests_failures(), recorded * 4);
     for (let i = 0; i < recorded; i++) {
         const [file, line, expr, test] = table.subarray(i * 4, i * 4 + 4);
         console.error(`FAIL ${cstr(run.memory, test)}: ${cstr(run.memory, file)}:${line}: ${cstr(run.memory, expr)}`);
@@ -39,8 +39,8 @@ for (let index = 0, count = wasm.test_count(); index < count; index++) {
 console.log(`harness: ${checks} checks, ${failures} failures`);
 failed += failures;
 
-// build-test.sh compares this line between the simd backends
-const digest = (await instantiate()).wasm.test_digest();
+// build-test.sh compares this line between the simd backends; test_digest_matches_the_pin holds it to the pin
+const digest = (await instantiate()).wasm.tests_digest();
 console.log(`digest: ${(digest >>> 0).toString(16).padStart(8, '0')}`);
 
 // the transcendental probes against node's Math, which is correctly rounded enough to serve as

@@ -7,12 +7,8 @@
 #include "tumble/physics/shapes/convex_hull.h"
 #include "tumble/physics/shapes/triangle_mesh.h"
 #include "tumble/physics/shapes/utils/triangle_mesh_builder.h"
-#include "wasm/heap_begin.h"
-#include "wasm/runtime/export.h"
-#include "wasm/runtime/instance.h"
+#include "digest.h"
 
-// one hash over the simd primitives on awkward inputs and over a simulated pile; build-test.sh checks that every
-// backend gives the same one
 
 namespace {
 
@@ -199,10 +195,14 @@ void hash_pile(Hash &hash) {
 
 }  // namespace
 
-WASM_EXPORT uint32_t test_digest() {
-    if (!runtime::init(heap_begin())) return 0;
+uint32_t digest() {
     Hash hash;
     hash_primitives(hash);
     hash_pile(hash);
     return hash.value;
 }
+
+/** a change that moves any bit of the primitives or the pile changes this; the runners print the new value */
+constexpr uint32_t PINNED_DIGEST = 0xf510af7cu;
+
+void test_digest_matches_the_pin(TestCtx &ctx) { CHECK(ctx, digest() == PINNED_DIGEST); }
