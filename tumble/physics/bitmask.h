@@ -1,7 +1,5 @@
 #pragma once
 
-// crashcat's bitmask.ts: flag helpers over a u32.
-
 #include <stdint.h>
 #include "tumble/tumble.h"
 

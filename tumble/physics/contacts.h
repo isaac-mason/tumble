@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's contacts.ts, the types: the contacts of a world, each nested under one pair record in a
-// doubly linked chain, with a double-buffered cached manifold for warm starting. the chain and cache
-// logic is contacts.cpp. the listener's onContactRemoved is the contacts_removed event buffer.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -18,6 +14,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// a world's contacts, each in its pair record's doubly linked chain, with a double buffered manifold for warm starting
 namespace contacts {
 
 /** the end of a pair's contact chain, and a freed contact's index */
@@ -82,8 +79,8 @@ struct Contacts {
     /** which manifold buffer holds the step before's data; flipped once per step after the solver stores impulses */
     uint32_t read_index;
     /**
-     * removals queued as [body_id_a, body_id_b, sub_shape_id_a, sub_shape_id_b] to report at the start of the next
-     * step (jolt reports a removed body's contacts the update after), body ids as two u32 each
+     * a removed body's contacts, reported at the start of the next step: [body_id_a, body_id_b, sub_shape_id_a,
+     * sub_shape_id_b] each
      */
     collections::Vec<uint32_t> pending_contact_removed;
     /** incremented at the top of every step; a contact is fresh this step iff last_processed_frame == frame_stamp */

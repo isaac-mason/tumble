@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's pairs.ts, the types: the persistent overlapping-pair set of a world (found by the
-// broadphase move set), each record's relative-pose cache, and the pairs emitted to the narrowphase
-// each step. records chain into each body's intrusive pair list through packed edge keys.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -21,6 +17,7 @@ namespace contacts {
 struct Contacts;
 }
 
+// the persistent overlapping pairs, found from the move set; records chain into each body's pair list by edge keys
 namespace pairs {
 
 /** the end of a body's pair list, and a free record's body_index[0] */
@@ -68,7 +65,7 @@ struct Pairs {
     collections::Vec<uint32_t> moved;
     /** whether find_colliding_pairs ran this step (the step clears it): the step's later pair finding is find_woken_body_pairs */
     bool swept;
-    /** how far into the active list this step's pairs are found (jolt's mActiveBodyReadIdx): bodies woken past it still need theirs */
+    /** how far into the active list this step's pairs are found: bodies woken past it still need theirs */
     uint32_t active_read_index;
     /** the colliding pairs before it have run the narrowphase this step */
     uint32_t narrowphase_index;
@@ -95,19 +92,17 @@ void purge_body_pairs(Pairs &pairs, contacts::Contacts &contacts, bodies::Bodies
                       events::PhysicsEvents &events);
 
 /**
- * physics_find_pairs: the move set queries the trees with its fat leaves expanded by the speculative distance and
- * registers new records; then every live record whose bodies still overlap is emitted to colliding_pairs and to
- * events.pairs, where js may reject it (was onBodyPairValidate). the records it drops, and the ones it keeps but does not
- * emit, lose their contact chains, which is why it takes the contacts. appends to events.pairs: the step clears it first.
+ * the move set queries the trees with its fat leaves expanded by the speculative distance and registers new records;
+ * then every live record whose bodies still overlap is emitted to colliding_pairs and to events.pairs, where the caller
+ * may reject it. the records it drops, and the ones it keeps but does not emit, lose their contact chains
  */
 void find_colliding_pairs(Pairs &pairs, contacts::Contacts &contacts, broadphase::Broadphase &broadphase, const layers::Layers &layers,
                           bodies::Bodies &bodies, float speculative_contact_distance, events::PhysicsEvents &events);
 
 /**
- * after find_colliding_pairs, the pairs of the bodies a contact woke since (jolt finds a newly activated body's pairs before
- * its narrowphase ends), appended to colliding_pairs and events.pairs: each such body's records that pass the sweep's
- * overlap tests and that it reports (the other body asleep, or woken after it). a record that no longer overlaps is left
- * for the next sweep to destroy.
+ * after find_colliding_pairs, the pairs of the bodies a contact woke since, appended to colliding_pairs and
+ * events.pairs: each such body's records that pass the sweep's overlap tests and that it reports (the other body
+ * asleep, or woken after it). a record that no longer overlaps is left for the next sweep to destroy
  */
 void find_woken_body_pairs(Pairs &pairs, broadphase::Broadphase &broadphase, const layers::Layers &layers, bodies::Bodies &bodies,
                            float speculative_contact_distance, events::PhysicsEvents &events);

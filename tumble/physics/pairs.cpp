@@ -96,7 +96,6 @@ static void link_pair_edge(Pairs &pairs, int32_t record, int32_t side, RigidBody
     edge.next = body.head_pair_key;
 
     if (body.head_pair_key != INVALID_PAIR_KEY) {
-        // fix the old head's prev pointer
         edge_of(pairs, body.head_pair_key).prev = pair_edge_key(record, side);
     }
 
@@ -114,16 +113,13 @@ static void unlink_pair_edge(Pairs &pairs, bodies::Bodies &bodies, int32_t recor
         // this edge was the head: update the body's head pointer
         bodies.pool[(uint32_t)pair_record.body_index[side]]->head_pair_key = next_key;
     } else {
-        // update the previous edge's next pointer
         edge_of(pairs, prev_key).next = next_key;
     }
 
     if (next_key != INVALID_PAIR_KEY) {
-        // update the next edge's prev pointer
         edge_of(pairs, next_key).prev = prev_key;
     }
 
-    // clear this edge
     edge.prev = INVALID_PAIR_KEY;
     edge.next = INVALID_PAIR_KEY;
 }
@@ -149,7 +145,6 @@ static bool grow_record_slots(Pairs &pairs) {
 }
 
 int32_t add_pair_record(Pairs &pairs, RigidBody &body_a, RigidBody &body_b) {
-    // allocate a record slot from the freelist, or grow
     int32_t record;
     if (pairs.free_records.length > 0) {
         record = pairs.free_records[pairs.free_records.length - 1];
@@ -239,7 +234,6 @@ static void visit_pair_discovery(body_visitor::BodyVisitor *visitor, RigidBody *
     PairDiscovery &discovery = *static_cast<PairDiscovery *>(visitor->context);
     RigidBody &moved_body = *discovery.moved_body;
 
-    // self-skip
     if (other_body->index == moved_body.index) return;
 
     // motion-type gate: two bodies that can't drive a collision (e.g. static-static) never need a persistent record,
@@ -259,7 +253,7 @@ static void visit_pair_discovery(body_visitor::BodyVisitor *visitor, RigidBody *
 
 /**
  * the single emission point: every pair the narrowphase consumes is written here, with its event. the event orders
- * the bodies lower motion type first, then lower id, so js sees a pair the same way round every step; colliding_pairs
+ * the bodies lower motion type first, then lower id, so the caller sees a pair the same way round every step; colliding_pairs
  * keeps the more active body first.
  */
 static void emit_colliding_pair(Pairs &pairs, const RigidBody &more_active, const RigidBody &less_active, int32_t record,
@@ -305,7 +299,6 @@ void find_colliding_pairs(Pairs &pairs, contacts::Contacts &contacts, broadphase
     pairs.swept = true;
     pairs.narrowphase_index = 0;
 
-    // reset this step's output
     pairs.colliding_pairs.length = 0;
 
     // (a) discovery: moved bodies query the trees with their fat leaf aabb (expanded by the speculative distance) and
@@ -350,7 +343,6 @@ void find_colliding_pairs(Pairs &pairs, contacts::Contacts &contacts, broadphase
         const int32_t record = (int32_t)slot;
         const PairRecord &pair_record = pairs.records[slot];
 
-        // skip free slots
         if (pair_record.body_index[0] == INVALID_PAIR_KEY) continue;
 
         RigidBody &body_a = *bodies.pool[(uint32_t)pair_record.body_index[0]];
@@ -388,7 +380,7 @@ void find_colliding_pairs(Pairs &pairs, contacts::Contacts &contacts, broadphase
         // a kept-but-not-emitted pair with a live contact chain has its chain destroyed here, reported now: sleep
         // transitions (both-inactive dedup), teleports that separate tight but not fat boxes, motion / layer / group /
         // mask gates and tight-aabb misses all land here, each destroying a chain exactly once. the empty-chain check
-        // keeps steady-state sleeping pairs O(1) per visit. a pair js rejects after this phase has its chain destroyed
+        // keeps steady-state sleeping pairs O(1) per visit. a pair the caller rejects after this phase has its chain destroyed
         // by the narrowphase.
         if (!emitted && pairs.first_contact[slot] != contacts::INVALID_CONTACT_KEY) {
             contacts::destroy_pair_chain(contacts, pairs, record, events, false);

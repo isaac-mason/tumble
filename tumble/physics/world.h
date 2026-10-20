@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's world.ts: a physics world, the parts crashcat gives it plus the plan's event and answer
-// buffers and the step in flight. created and freed through the heap; the step is update.h.
-
 #include <stdint.h>
 
 #include "tumble/physics/body/bodies.h"

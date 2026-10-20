@@ -45,7 +45,6 @@ void clear(DebugBuffers &buffers) {
     buffers.triangle_count = 0;
 }
 
-// line buffer helpers
 
 static void push_line(DebugBuffers &out, Vec3f a, Vec3f b, Vec3f color) {
     collections::Vec<float> &lines = out.lines;
@@ -255,7 +254,6 @@ static void draw_cylinder(DebugBuffers &out, const Shape *shape, const Transform
     Vec3f bottom = vec3f::scale_and_add(vec3f::load(transform.position), axis, -half_height);
     push_circle(out, top, u, v, radius, 32, color);
     push_circle(out, bottom, u, v, radius, 32, color);
-    // 4 vertical lines
     Vec3f sides[4];
     sides[0] = u;
     sides[1] = vec3f::negate(u);
@@ -280,12 +278,10 @@ static void draw_plane(DebugBuffers &out, const Shape *shape, const Transformf &
     for (int32_t i = -steps; i <= steps; i++) {
         const float t = ((float)i / (float)steps) * size;
         Vec3f local_a, local_b, world_a, world_b;
-        // lines along u
         local_a = vec3f::scale_and_add(origin, u, t);
         local_b = vec3f::scale_and_add(local_a, v, size);
         local_a = vec3f::scale_and_add(local_a, v, -size);
         push_line(out, transform_point(world_a, local_a, transform), transform_point(world_b, local_b, transform), color);
-        // lines along v
         local_a = vec3f::scale_and_add(origin, v, t);
         local_b = vec3f::scale_and_add(local_a, u, size);
         local_a = vec3f::scale_and_add(local_a, u, -size);
@@ -494,7 +490,6 @@ void contact_constraints(DebugBuffers &out, const world::World &world) {
     }
 }
 
-// joints
 
 static void draw_pie(DebugBuffers &out, Vec3f center, float radius, Vec3f normal, Vec3f axis, float min_angle,
                      float max_angle, Vec3f color) {

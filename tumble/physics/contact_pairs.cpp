@@ -26,8 +26,6 @@ void release(ContactPairs &pairs) {
     pairs = create();
 }
 
-/* keys */
-
 static bool side_key_less(const SideKey &a, const SideKey &b) {
     if (a.body_id != b.body_id) return a.body_id < b.body_id;
     return a.sub_shape_id < b.sub_shape_id;
@@ -41,8 +39,6 @@ static PairKey pair_key(const Side &a, const Side &b) {
     key.second = side_key_less(key_b, key_a) ? key_a : key_b;
     return key;
 }
-
-/* the live list, in the order pairs were added */
 
 static void link_at_tail(ContactPairs &pairs, uint32_t handle) {
     ContactPair &pair = pairs.pairs[handle];
@@ -130,8 +126,6 @@ void end(world::World &world) {
         if (pairs.pairs[(uint32_t)handle].seen_stamp != pairs.stamp) pairs.removed.push((uint32_t)handle);
     }
 }
-
-/* the world's contacts */
 
 static Side side_of(const RigidBody &body, sub_shape::SubShapeId sub_shape_id) {
     Side side;

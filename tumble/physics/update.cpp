@@ -22,7 +22,7 @@ namespace update {
 using rigid_body::RigidBody;
 using world::World;
 
-/** a collide collector's bound at which it stops: jolt's -FLT_MAX, below any -penetration */
+/** a collide collector's bound that never stops it: below any -penetration */
 static constexpr float COLLIDE_EARLY_OUT = -scalar::FLOAT_MAX;
 /** the most manifolds the reduction keeps per body pair */
 static constexpr uint32_t MAX_REDUCTION_MANIFOLDS = 32;
@@ -130,7 +130,7 @@ void find_pairs(World &world) {
                                      world.events);
     }
 
-    // an accept bit per pair it added, for js to set
+    // a reject bit per pair it added, for the caller to set
     events::reset_pair_answers(world.answers, world.events, first_pair);
 }
 
@@ -173,7 +173,7 @@ static void start_manifold(manifold::ContactManifold &m, Vec3f base_offset, Vec3
     m.material_id_b = hit.material_id_b;
 }
 
-/** jolt's ReductionCollideShapeCollector::AddHit: the hit's points join the manifold whose first normal it is within the max delta rotation of */
+/** with manifold reduction: the hit's points join the manifold whose first normal it is within the max delta rotation of */
 static void reduction_add_hit(collide_shape::CollideShapeCollector &collector, const collide_shape::CollideShapeHit &hit) {
     NarrowphaseContext &context = *static_cast<NarrowphaseContext *>(collector.context);
     const World &world = *context.world;
@@ -254,7 +254,7 @@ static bool reduction_finalize_and_create_constraints(NarrowphaseContext &contex
     return constraints_created;
 }
 
-/** jolt's NonReductionCollideShapeCollector::AddHit: a manifold and a constraint per hit */
+/** without manifold reduction: a manifold and a constraint per hit */
 static void non_reduction_add_hit(collide_shape::CollideShapeCollector &collector, const collide_shape::CollideShapeHit &hit) {
     NarrowphaseContext &context = *static_cast<NarrowphaseContext *>(collector.context);
     World &world = *context.world;
@@ -390,7 +390,7 @@ void narrowphase(World &world) {
     for (uint32_t i = world.pairs.narrowphase_index; i < colliding_pair_count; i++) {
         const int32_t pair_record = colliding_pairs[i].pair_record;
 
-        // js rejected the pair (was onBodyPairValidate): no contacts, and the ones it had are gone
+        // the caller rejected the pair: no contacts, and the ones it had are gone
         if (events::pair_rejected(world.answers, i)) {
             if (world.pairs.first_contact[(uint32_t)pair_record] != contacts::INVALID_CONTACT_KEY) {
                 contacts::destroy_pair_chain(world.contacts, world.pairs, pair_record, world.events, false);
@@ -444,7 +444,7 @@ void narrowphase(World &world) {
     const uint32_t active_body_count = world.bodies.active_body_count;
     world.events.woken = world.pairs.swept && active_body_count > world.pairs.active_read_index ? active_body_count - world.pairs.active_read_index : 0;
 
-    // an override per contact event it added, for js to write
+    // an override per contact event it added, for the caller to write
     events::reset_contact_answers(world.answers, world.events, first_override);
 }
 
@@ -647,8 +647,8 @@ static void visit_ccd_body(body_visitor::BodyVisitor *visitor, RigidBody *body_b
     // starts from the visitor's best so far
     collector.early_out_fraction = visitor->early_out_fraction;
 
-    // jolt's JobFindCCDContacts settings: faces for the manifold, the deepest point of a start overlap, the shrunken shape
-    // and convex radius, back faces ignored, active edges by the world setting along the relative displacement
+    // faces for the manifold, the deepest point of a start overlap, the shrunken shape and convex radius, back faces
+    // ignored, active edges by the world setting along the relative displacement
     sweep.cast_settings.collect_faces = true;
     sweep.cast_settings.return_deepest_point = true;
     sweep.cast_settings.use_shrunken_shape_and_convex_radius = true;
@@ -703,7 +703,7 @@ static void on_ccd_contact_added(World &world, RigidBody &body_a, RigidBody &bod
     }
     contact->last_processed_frame = world.contacts.frame_stamp;
 
-    // the listener's onContactAdded / onContactPersisted, after js answered this step's overrides: reported only
+    // the ccd contact as an added or persisted event, after the caller answered this step's overrides
     events::ContactEvent event;
     event.contact_index = contact->contact_index;
     event.body_index_a = ordered_a->index;
@@ -778,7 +778,7 @@ static void find_ccd_contacts(World &world, float delta_time) {
             contact_manifold.penetration_depth = hit.penetration_depth;
             contact_manifold.world_space_normal = ccd_body.contact_normal;
 
-            // not pruned (as jolt): every clipped point counts towards the mean below
+            // not pruned: every clipped point counts towards the mean below
             on_ccd_contact_added(world, body_a, body_b, contact_manifold, ccd_body.contact_settings);
 
             if (ccd_body.contact_settings.is_sensor) {
@@ -958,7 +958,7 @@ static void resolve_ccd_contacts(World &world) {
 void solve(World &world) {
     const float delta_time = world.delta_time;
 
-    // js's answers to this step's contacts: a reject drops the constraint, anything else rebuilds it from the settings
+    // the caller's answers to this step's contacts: a reject drops the constraint, anything else rebuilds it from the settings
     contact_constraints::apply_contact_overrides(world.contact_constraints, world.contacts, world.bodies, world.events, world.answers,
                                                  world.settings, delta_time);
 

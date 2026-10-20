@@ -50,7 +50,6 @@ void prepare(Islands &islands, const bodies::Bodies &bodies, uint32_t num_contac
     islands.contact_links.length = num_contact_constraints;
     for (uint32_t i = 0; i < num_contact_constraints; i++) islands.contact_links[i] = INACTIVE_BODY_INDEX;
 
-    // each body starts pointing to itself (its own island)
     for (uint32_t i = 0; i < num_active_bodies; i++) {
         islands.body_links[i] = i;
         islands.body_islands[i] = 0;
@@ -218,7 +217,7 @@ void finalize(Islands &islands, const bodies::Bodies &bodies, const constraints:
         list[islands.body_islands[active_body_index]].constraint_ids.push(islands.constraint_ids[active_constraint_index]);
     }
 
-    // the biggest islands first (jolt: the jobs that take longest run first for better load balancing)
+    // the biggest islands first
     sort_islands_by_size(list);
 
     // the sorted index on each island and on each of its bodies

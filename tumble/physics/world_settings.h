@@ -1,7 +1,5 @@
 #pragma once
 
-// crashcat's world-settings.ts: everything a world is tuned by, with crashcat's defaults.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -90,9 +88,8 @@ struct WorldSettings {
     CcdSettings ccd;
 };
 
-/** crashcat's defaults with empty layers */
+/** the defaults, with empty layers */
 inline WorldSettings create() { return {}; }
-/** frees the layers */
 inline void release(WorldSettings &settings) { layers::release(settings.layers); }
 
 inline uint32_t add_broadphase_layer(WorldSettings &settings) { return layers::add_broadphase_layer(settings.layers); }

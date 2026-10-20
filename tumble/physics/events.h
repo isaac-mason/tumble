@@ -1,11 +1,5 @@
 #pragma once
 
-// the plan's replacement for crashcat's listener: the step is exported as phases, and between them
-// js reads what the core found (event buffers, appended while a phase runs, read after it, cleared by
-// the next phase that fills them; they grow through the heap and never drop an entry) and writes its
-// answers (answer buffers, one entry per event, read by the next phase). the step fills and clears
-// them in update.cpp; this header is the records.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -18,22 +12,23 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// instead of listener callbacks: a phase of the step (update.h) appends events, the caller reads them before the next
+// phase and writes answers (one per event) that the next phase reads. the buffers never drop an entry
 namespace events {
 
-/** a pair the broadphase found this step (was onBodyPairValidate); js may reject it before the narrowphase */
+/** a pair the broadphase found this step; the caller may reject it before the narrowphase */
 struct PairEvent {
     uint32_t body_index_a;
     uint32_t body_index_b;
     body_id::BodyId body_id_a;
     body_id::BodyId body_id_b;
-    /** the bodies' user data */
     uint64_t user_data_a;
     uint64_t user_data_b;
     /** the persistent pair record, stable for the step */
     int32_t pair_record;
 };
 
-/** a contact the narrowphase added or kept this step (was onContactAdded / onContactPersisted), with its manifold */
+/** a contact the narrowphase added or kept this step, with its manifold */
 struct ContactEvent {
     int32_t contact_index;
     uint32_t body_index_a;
@@ -57,7 +52,7 @@ struct ContactEvent {
     contact_constraints::ContactSettings settings;
 };
 
-/** a contact that was there last step and is gone (was onContactRemoved); the bodies may be gone too */
+/** a contact that was there last step and is gone; the bodies may be gone too */
 struct ContactRemovedEvent {
     body_id::BodyId body_id_a;
     body_id::BodyId body_id_b;
@@ -66,23 +61,23 @@ struct ContactRemovedEvent {
 };
 
 struct PhysicsEvents {
-    /** physics_find_pairs */
+    /** by find_pairs */
     collections::Vec<PairEvent> pairs;
-    /** physics_narrowphase */
+    /** by narrowphase */
     collections::Vec<ContactEvent> contacts_added;
     collections::Vec<ContactEvent> contacts_persisted;
-    /** physics_step_end: removals queued during the step and the one before (jolt reports a removed body's contacts the update after) */
+    /** by step_end: this step's removals, and the ones queued by bodies removed since the step before */
     collections::Vec<ContactRemovedEvent> contacts_removed;
-    /** physics_step_end: the indices of the bodies the step moved, for js to drain into its tuples */
+    /** by step_end: the indices of the bodies the step moved */
     collections::Vec<uint32_t> moved;
     /**
-     * physics_narrowphase: the bodies its contacts woke, whose pairs are not found yet. while it is above zero js calls
-     * physics_find_pairs, answers the pairs it appended, and calls physics_narrowphase again
+     * by narrowphase: the bodies its contacts woke, whose pairs are not found yet. while it is above zero the caller runs
+     * find_pairs, answers the pairs it appended, and runs narrowphase again
      */
     uint32_t woken;
 };
 
-/** js's answer to one contacts_added or contacts_persisted entry; `written` says js touched it at all */
+/** the answer to one contacts_added or contacts_persisted entry; `written` when the caller touched it at all */
 struct ContactOverride {
     bool written;
     /** drop the contact before the solve */
@@ -127,8 +122,8 @@ inline bool pair_rejected(const PhysicsAnswers &a, uint32_t pair) {
 }
 
 /**
- * one accept bit per pairs entry: the words the pairs appended since `first_pair` start clear. a word the earlier pairs
- * share is clear past them already, as js sets bits only below the count
+ * one reject bit per pairs entry: the words the pairs appended since `first_pair` start clear. a word the earlier pairs
+ * share is clear past them already, as the caller sets bits only below the count
  */
 inline bool reset_pair_answers(PhysicsAnswers &a, const PhysicsEvents &e, uint32_t first_pair) {
     const uint32_t words = (e.pairs.length + 31) >> 5;
@@ -140,7 +135,7 @@ inline bool reset_pair_answers(PhysicsAnswers &a, const PhysicsEvents &e, uint32
 
 /**
  * one override per contact event, added then persisted: the ones the narrowphase appended since `first_override` start
- * unwritten. js writes them after the step's last narrowphase, so the earlier ones are unwritten still
+ * unwritten. the caller writes them after the step's last narrowphase, so the earlier ones are unwritten still
  */
 inline bool reset_contact_answers(PhysicsAnswers &a, const PhysicsEvents &e, uint32_t first_override) {
     const uint32_t overrides = e.contacts_added.length + e.contacts_persisted.length;

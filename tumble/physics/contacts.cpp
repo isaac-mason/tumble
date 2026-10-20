@@ -102,7 +102,6 @@ static void unlink_contact_from_chain(Contacts &contacts, pairs::Pairs &pairs, C
 
 Contact *create_contact(Contacts &contacts, pairs::Pairs &pairs, int32_t record, const rigid_body::RigidBody &body_a,
                         const rigid_body::RigidBody &body_b, sub_shape::SubShapeId sub_shape_id_a, sub_shape::SubShapeId sub_shape_id_b) {
-    // get contact from pool or create new
     int32_t contact_index;
     if (contacts.free_indices.length > 0) {
         contact_index = contacts.free_indices[contacts.free_indices.length - 1];

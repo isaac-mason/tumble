@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's ccd.ts, the types: the bodies a step sweeps continuously because they move further than a
-// fraction of their inner radius, and what each sweep hit. the sweeps and their resolution are update.cpp.
-
 #include <stdint.h>
 
 #include "tumble/math/aabox.h"
@@ -16,6 +13,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// the bodies a step sweeps continuously, because they move further than a fraction of their inner radius
 namespace ccd {
 
 struct CCDBody {

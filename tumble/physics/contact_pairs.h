@@ -1,10 +1,5 @@
 #pragma once
 
-// the contact pairs a user observes: every pair of body sub shapes in contact, keyed by its two sides, with a stable
-// handle while it lives and added / persisted / removed each step. a pair is recorded only when a side's body observes
-// contacts (RigidBody::observes_contacts). the world's contact events are recorded into it after the phases that
-// append them. keyed so, not by the world's contact cache: world.h says why.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -19,9 +14,10 @@ namespace world {
 struct World;
 }
 
+// the pairs of body sub shapes in contact that a body observing contacts is a side of: a stable handle while a pair
+// lives, added / persisted / removed each step, recorded from the world's contact events
 namespace contact_pairs {
 
-/** one side of a pair: a body's sub shape */
 struct Side {
     body_id::BodyId body_id;
     sub_shape::SubShapeId sub_shape_id;
@@ -29,13 +25,12 @@ struct Side {
     bool is_sensor;
 };
 
-/** what names a side */
 struct SideKey {
     body_id::BodyId body_id;
     sub_shape::SubShapeId sub_shape_id;
 };
 
-/** the two sides' keys, the lesser first, so a pair is one key whichever way round it is recorded */
+/** the lesser side first, so a pair has one key whichever way round it is recorded */
 struct PairKey {
     SideKey first;
     SideKey second;
@@ -55,26 +50,25 @@ inline uint32_t hash_of(const PairKey &key) {
     return h;
 }
 
-/** no pair: the ends of the live list */
 constexpr int32_t NO_PAIR = -1;
 
-/** a pair, its fields as its last record this step left them; a removed pair keeps last step's */
+/** its fields are its last record's; a removed pair keeps last step's */
 struct ContactPair {
     Side a;
     Side b;
     /** the first contact point on a */
     Float3 point;
-    /** unit, a to b */
+    /** a to b */
     Float3 normal;
     float penetration_depth;
-    /** b's linear velocity less a's when recorded */
+    /** b's linear velocity less a's */
     Float3 relative_velocity;
-    /** first recorded this step, not there the step before */
+    /** not there the step before */
     bool added;
     PairKey key;
-    /** ContactPairs::stamp of the step that last recorded it */
+    /** the stamp of the step that last recorded it */
     uint32_t seen_stamp;
-    /** the live pairs in the order they were added */
+    /** the live list, in the order pairs were added */
     int32_t previous;
     int32_t next;
 };
@@ -84,9 +78,9 @@ struct ContactPairs {
     collections::Vec<ContactPair> pairs;
     collections::Vec<uint32_t> free;
     collections::Map<PairKey, uint32_t> index;
-    /** this step's pairs, in the order first recorded; ContactPair::added tells added from persisted */
+    /** this step's pairs, in the order first recorded */
     collections::Vec<uint32_t> active;
-    /** there last step and not recorded this one, in the order they were added; freed by the next begin */
+    /** live last step and not recorded this one, in the order added; freed by the next begin */
     collections::Vec<uint32_t> removed;
     int32_t head;
     int32_t tail;

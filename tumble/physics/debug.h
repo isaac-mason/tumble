@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's debug.ts: wireframes of a world's bodies, contacts and joints, appended to line and
-// triangle buffers js views and draws. js clears the buffers, draws what it wants, then reads them.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -24,9 +21,9 @@ constexpr uint32_t LINE_STRIDE = 2 * VERTEX_STRIDE;
 constexpr uint32_t TRIANGLE_STRIDE = 3 * VERTEX_STRIDE;
 
 /**
- * what a draw appends to. `lines` holds line_count * LINE_STRIDE floats, `triangles` triangle_count *
- * TRIANGLE_STRIDE; both grow through the heap, so js re-reads their data after a draw. clear keeps
- * the memory, so a second draw of the same scene does not grow them.
+ * wireframes of bodies, contacts and joints. `lines` holds line_count * LINE_STRIDE floats, `triangles` triangle_count
+ * * TRIANGLE_STRIDE; a draw may grow them, moving their data. clear keeps the memory, so drawing the same scene again
+ * does not grow them
  */
 struct DebugBuffers {
     collections::Vec<float> lines;

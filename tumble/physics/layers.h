@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's layers.ts: object layers mapped onto broadphase layers, and the three collision
-// tables between them, as flat row-major byte tables that grow as layers are added.
-
 #include <stdint.h>
 
 #include "tumble/tumble.h"

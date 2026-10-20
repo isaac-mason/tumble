@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's query.ts: the world queries, each a broadphase walk under the filter that runs the shape
-// query against every body it reaches, with the collector told which body it is on. query.cpp.
-
 #include "tumble/math/types.h"
 #include "tumble/physics/collision/cast_ray_vs_shape.h"
 #include "tumble/physics/collision/cast_shape_vs_shape.h"
@@ -15,6 +12,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// each a broadphase walk under the filter, the shape query run against every body reached
 namespace query {
 
 void cast_ray(world::World &world, cast_ray::CastRayCollector &collector, const cast_ray::CastRaySettings &settings, const cast_ray::Rayf &ray,

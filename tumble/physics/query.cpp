@@ -117,7 +117,6 @@ static void visit_collide_shape(body_visitor::BodyVisitor *visitor, RigidBody *b
 static void collide_shape_walk(world::World &world, collide_shape::CollideShapeCollector &collector,
                                const collide_shape::CollideShapeSettings &settings, const shapes::Shape *shape, const Transformf &transform,
                                const filter::Filter &filter, bool internal_edge_removal) {
-    // expand by the max separation distance
     Box3f bounds;
     aabox::store(bounds, aabox::expand_by_margin(shape_world_bounds(shape, transform), settings.max_separation_distance));
 

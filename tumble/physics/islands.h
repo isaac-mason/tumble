@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's islands.ts, the types: union-find over the active bodies through their contacts and
-// constraints, finalised into islands the solver runs one at a time. the building is islands.cpp.
-
 #include <stdint.h>
 
 #include "tumble/physics/body/bodies.h"
@@ -20,6 +17,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// union-find over the active bodies through their contacts and constraints; the solver runs one island at a time
 namespace islands {
 
 using constraint_id::ConstraintId;

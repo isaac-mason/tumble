@@ -1,7 +1,5 @@
 #pragma once
 
-// crashcat's filter.ts: which layers, groups and bodies a query or a body sees.
-
 #include <stdint.h>
 
 #include "tumble/physics/body/body_id.h"
