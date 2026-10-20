@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's gjk.ts: closest points, ray casts and shape casts between convex supports, after
-// jolt's GJKClosestPoint and van den bergen's "a fast and robust gjk implementation for collision
-// detection of convex objects".
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -14,6 +10,8 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// closest points, ray casts and shape casts between convex supports (van den bergen, a fast and robust gjk
+// implementation for collision detection of convex objects)
 namespace gjk {
 
 /** the closest point of a simplex to the origin, and which of its points (bit i = point i) span it. */

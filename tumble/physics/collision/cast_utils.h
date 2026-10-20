@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's cast-utils.ts, the types: the ray vs triangle result. the tests themselves (ray vs
-// triangle, ray vs box in three forms) are cast_utils.cpp.
-
 #include <stdint.h>
 
 #include "tumble/math/aabox.h"

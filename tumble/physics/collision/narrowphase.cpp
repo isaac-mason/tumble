@@ -47,7 +47,6 @@ void collide_shape_vs_shape_with_internal_edge_removal(collide_shape::CollideSha
 
     collide_shape_vs_shape(wrapper.collector, modified_settings, shape_a, sub_shape_id_a, transform_a, shape_b, sub_shape_id_b, transform_b);
 
-    // flush the delayed results
     internal_edge_removing::flush(wrapper);
     internal_edge_removing::release(wrapper);
 }

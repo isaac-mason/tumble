@@ -44,7 +44,6 @@ void penetration_depth_step_gjk(PenetrationDepth &out_penetration_depth, simplex
         return;
     }
 
-    // copy results to output
     out_penetration_depth.point_a = closest.point_a;
     out_penetration_depth.point_b = closest.point_b;
     out_penetration_depth.penetration_axis = closest.penetration_axis;
@@ -177,7 +176,6 @@ bool penetration_depth_step_epa(PenetrationDepth &out, support::Support &support
         }
 
         default: {
-            // already have enough points
             break;
         }
     }
@@ -194,7 +192,6 @@ bool penetration_depth_step_epa(PenetrationDepth &out, support::Support &support
     hull::NewTriangles &new_triangles = out.new_triangles;
     hull::initialize(hull_state, 0, 1, 2);
 
-    // add remaining points to hull
     const uint32_t initial_points = support_points.size;
     for (uint32_t i = 3; i < initial_points; i++) {
         float best_dist_sq = -1.0f;
@@ -268,7 +265,6 @@ bool penetration_depth_step_epa(PenetrationDepth &out, support::Support &support
             return false;
         }
 
-        // skip removed triangles
         if ((hull_state.triangles[triangle].flags & hull::TRI_FLAG_REMOVED) != 0) {
             hull::free_triangle(hull_state, triangle);
             continue;

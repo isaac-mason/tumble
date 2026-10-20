@@ -1,15 +1,5 @@
 #pragma once
 
-// crashcat's support.ts, the struct: what gjk and epa evaluate. a shape's fill installs its
-// evaluator on the struct next to its parameters, and the driver calls
-// `support.get_support(support, direction)` many times per pair. the evaluators and the
-// hull search are support.cpp.
-//
-// radius contract, as the ts: `convex_radius` is reported and never added by an evaluator (the
-// driver passes it to gjk/epa); `add_radius` is added along the local direction by the evaluator
-// itself (epa speculative separation, cast convex radius), 0 on the gjk path. the mode (include or
-// exclude the convex radius) is baked into the params by the fill.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -18,6 +8,10 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// what gjk and epa evaluate: a shape's fill installs its evaluator beside its parameters. convex_radius is reported and
+// never added by an evaluator (the driver passes it on); add_radius is added along the direction by the evaluator
+// itself (epa's speculative separation, a cast's convex radius) and is 0 on the gjk path. whether the convex radius is
+// included is baked into the parameters by the fill
 namespace support {
 
 constexpr float DEFAULT_CONVEX_RADIUS = 0.05f;

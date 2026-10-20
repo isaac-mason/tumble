@@ -166,8 +166,7 @@ void get_closest_point_on_triangle(ClosestPointOnTriangleResult &out, Vec3f a, V
     }
 
     // P inside face region.
-    // compute closest point using the more accurate method from jolt:
-    // distance = (centroid - origin) . normal / |normal|
+    // the more accurate distance: (centroid - origin) . normal / |normal|
     // closest = distance * normal / |normal|
     Vec3f sum = vec3f::add(a, b);
     sum = vec3f::add(sum, c);

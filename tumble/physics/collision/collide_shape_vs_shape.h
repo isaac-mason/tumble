@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's collide-shape-vs-shape.ts, the types: a shape collision's hit, settings and
-// collector. the collision itself (dispatch through the collide table, the reversed wrappers) is
-// collide_shape_vs_shape.cpp.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -91,7 +87,7 @@ struct CollideShapeSettings {
 
 constexpr float DEFAULT_INTERNAL_EDGE_REMOVAL_VERTEX_TOLERANCE_SQ = 1e-8f;
 
-/** back faces off, as jolt's CollideShapeSettings */
+/** back faces off */
 inline CollideShapeSettings default_settings() {
     return {0.0f, 1e-4f, 1e-4f, false, true, vec3f::zero(), false, DEFAULT_INTERNAL_EDGE_REMOVAL_VERTEX_TOLERANCE_SQ};
 }
@@ -156,8 +152,8 @@ inline void add_hit(CollideShapeCollector &c, const CollideShapeHit &h) {
             c.early_out_fraction = -collector::UNBOUNDED;
             break;
         case collector::COLLECT_CLOSEST:
-            // the deepest penetration wins; the bound is -penetration, as jolt's GetEarlyOutFraction,
-            // so a shape may skip anything whose -penetration is not below it
+            // the deepest penetration wins; the bound is -penetration, so a shape may skip anything whose
+            // -penetration is not below it
             if (!c.has_hit || h.penetration > c.hits[0].penetration) {
                 keep_one(c, h);
                 c.early_out_fraction = -h.penetration;
@@ -184,7 +180,7 @@ inline bool should_early_out(const CollideShapeCollector &c) {
     }
 }
 
-/** orders the hits deepest first, stable as the ts's sort. */
+/** stable, deepest first */
 inline void sort(CollideShapeCollector &c) {
     sort::insertion_sort(
         c.hits.data, c.hits.data + c.hits.length,

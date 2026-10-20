@@ -243,7 +243,7 @@ void set_point_support(Support &out, Vec3f point) {
     out.point = point;
 }
 
-/** `dst` at least `length` long, as the ts grows its array with zeros */
+/** `dst` at least `length` long, grown with zeros */
 static void grow_to(collections::Vec<float> &dst, uint32_t length) {
     dst.reserve(length);
     while (dst.length < length) dst.push(0.0f);

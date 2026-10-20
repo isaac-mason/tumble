@@ -140,13 +140,12 @@ static void chain_and_void(InternalEdgeRemovingCollector &wrapper, const Collide
 static void add_hit(CollideShapeCollector &collector, const CollideShapeHit &hit) {
     InternalEdgeRemovingCollector &wrapper = wrapper_of(collector);
 
-    // 1. degenerate check - faces with < 3 vertices can't have internal edges
+    // a face of under 3 vertices has no internal edges
     if (hit.face_b.num_vertices < 3) {
         chain_and_void(wrapper, hit);
         return;
     }
 
-    // 2. calculate face normal
     Vec3f triangle_normal;
     calculate_face_normal(triangle_normal, hit.face_b);
     const float normal_length_sq = vec3f::squared_length(triangle_normal);
@@ -157,7 +156,7 @@ static void add_hit(CollideShapeCollector &collector, const CollideShapeHit &hit
         return;
     }
 
-    // 3. check if contact normal aligns with face normal (within 1 degree)
+    // a contact normal within 1 degree of the face normal is a face contact
     // contact normal is opposite of penetration axis
     const Vec3f contact_normal = vec3f::negate(hit.penetration_axis);
 
@@ -172,7 +171,7 @@ static void add_hit(CollideShapeCollector &collector, const CollideShapeHit &hit
         return;
     }
 
-    // 4. edge/vertex contact - delay for processing
+    // an edge or vertex contact waits for flush
     wrapper.delayed_results.push(hit);
 }
 
@@ -207,20 +206,18 @@ void set(InternalEdgeRemovingCollector &wrapper, CollideShapeCollector &chained,
 void flush(InternalEdgeRemovingCollector &wrapper) {
     collections::Vec<CollideShapeHit> &delayed = wrapper.delayed_results;
 
-    // 1. sort by penetration depth (deepest first), stable as the ts's sort
+    // deepest first, stable
     sort::insertion_sort(
         delayed.data, delayed.data + delayed.length,
         [](const CollideShapeHit &a, const CollideShapeHit &b) { return a.penetration > b.penetration; }, collide_shape::copy_hit);
 
-    // 2. process each result
     for (uint32_t i = 0; i < delayed.length; i++) {
         const CollideShapeHit &result = delayed[i];
 
-        // 3. find closest feature (vertex or edge)
+        // the closest feature, a vertex or an edge
         ClosestFeatureResult closest;
         find_closest_feature(closest, result.face_b, result.point_b);
 
-        // 4. check if voided
         bool voided = is_voided(wrapper, result.sub_shape_id_a, result.face_b.vertices[closest.vertex_index_1]);
 
         if (closest.vertex_index_1 != closest.vertex_index_2) {
@@ -228,14 +225,12 @@ void flush(InternalEdgeRemovingCollector &wrapper) {
             if (!is_voided(wrapper, result.sub_shape_id_a, result.face_b.vertices[closest.vertex_index_2])) voided = false;
         }
 
-        // 5. if not voided, forward to chained collector
         if (!voided) chain(wrapper, result);
 
-        // 6. void all features of this face
+        // every feature of this face is voided
         void_features(wrapper, result);
     }
 
-    // 7. clear for next body
     wrapper.voided_features.length = 0;
     delayed.length = 0;
 }

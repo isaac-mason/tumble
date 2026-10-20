@@ -1,13 +1,5 @@
 #pragma once
 
-// crashcat's active-edges.ts: which triangle mesh edges generate collisions.
-//
-// an active edge is an edge that either has no neighbouring edge or if the angle between the two
-// connecting faces is too large. active edges should generate collisions, while inactive edges
-// (coplanar or nearly-coplanar interior edges) should not cause "ghost collisions".
-//
-// a triangle's active edges are a 3-bit mask: bit 0 = edge v0-v1, bit 1 = edge v1-v2, bit 2 = edge v2-v0.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -15,6 +7,9 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// an active edge has no neighbour, or its two faces meet at too large an angle: it collides, while an inactive (nearly
+// coplanar interior) edge would only make ghost collisions. a triangle's active edges are a 3-bit mask: bit 0 is v0-v1,
+// bit 1 v1-v2, bit 2 v2-v0
 namespace active_edges {
 
 /** cos(179 degrees): back-to-back triangle threshold */

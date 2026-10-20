@@ -42,14 +42,12 @@ void compute_closest_point_on_triangle(ClosestPointResult &out, Vec3f in_a, Vec3
     const Vec3f a = swap_ac ? in_c : in_a;
     const Vec3f c = swap_ac ? in_a : in_c;
 
-    // calculate normal
     const Vec3f ab = vec3f::subtract(in_b, a);
     const Vec3f ac = vec3f::subtract(c, a);
     const Vec3f n = vec3f::cross(ab, ac);
 
     const float normal_length_squared = vec3f::dot(n, n);
 
-    // check degenerate
     if (normal_length_squared < 1.0e-10f) {
         // degenerate, fallback to vertices and edges
         uint32_t closest_set = 0b0100;
@@ -428,7 +426,6 @@ void cast_ray(GjkCastRayResult &out, Vec3f ray_origin, Vec3f ray_direction, floa
     while (iterations < GJK_MAX_ITERATIONS) {
         iterations++;
 
-        // get new support point
         p = support.get_support(support, v);
 
         const Vec3f w = vec3f::subtract(x, p);
@@ -514,7 +511,6 @@ void cast_ray(GjkCastRayResult &out, Vec3f ray_origin, Vec3f ray_direction, floa
         if (v_len_sq <= squared_tolerance) break;
     }
 
-    // store hit fraction
     out.is_hit_found = true;
     out.lambda = lambda;
     simplex::copy(out.simplex, simplex);
@@ -754,7 +750,6 @@ void closest_points(GjkClosestPoints &out, support::Support &support_a, support:
             return;
         }
 
-        // store the point for later use
         simplex.y[simplex.size] = w;
         simplex.p[simplex.size] = p;
         simplex.q[simplex.size] = q;
@@ -808,7 +803,6 @@ void closest_points(GjkClosestPoints &out, support::Support &support_a, support:
         previous_squared_distance = closest_point_to_simplex.squared_distance;
     }
 
-    // extract the closest points
     out.point_a = vec3f::zero();
     out.point_b = vec3f::zero();
 

@@ -1,7 +1,5 @@
 #pragma once
 
-// crashcat's triangle.ts: the closest point on a triangle to the origin, and which feature holds it.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -10,6 +8,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// the closest point on a triangle to the origin, and which feature holds it
 namespace triangle {
 
 /** feature bits for get_closest_point_on_triangle: which part of the triangle contains the closest point. */
@@ -42,8 +41,7 @@ struct ClosestPointOnTriangleResult {
 inline ClosestPointOnTriangleResult create_closest_point_on_triangle_result() { return {vec3f::zero(), 0.0f, 0}; }
 
 /**
- * the closest point on a triangle to the origin. based on jolt's ClosestPoint::GetClosestPointOnTriangle
- * and "real-time collision detection" by christer ericson.
+ * the closest point on a triangle to the origin (ericson, real-time collision detection).
  * a, b, c are relative to the query point, i.e. the query point is at the origin.
  */
 void get_closest_point_on_triangle(ClosestPointOnTriangleResult &out, Vec3f a, Vec3f b, Vec3f c);

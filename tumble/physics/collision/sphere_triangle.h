@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's sphere-triangle.ts: the ray tests a swept sphere makes against a triangle's edges and
-// vertices, and the feature-to-active-edge table.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -10,6 +7,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// the ray tests a swept sphere makes against a triangle's edges and vertices, and the feature to active edge table
 namespace sphere_triangle {
 
 /**

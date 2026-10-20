@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's epa-convex-hull-builder.ts: the convex hull epa grows around the origin, after jolt's
-// EPAConvexHullBuilder, with its triangle and edge records. trades accuracy for speed and gives up
-// when the hull forms defects.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -11,6 +7,8 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// the hull epa grows around the origin, with its triangle and edge records; trades accuracy for speed and gives up when
+// the hull forms defects
 namespace epa_convex_hull_builder {
 
 constexpr int32_t EPA_MAX_TRIANGLES = 256;
@@ -63,8 +61,8 @@ struct NewTriangles {
 };
 
 /**
- * the builder's whole state, fixed-capacity inline storage as jolt's StaticArrays: a zeroed (or reset) state is valid
- * and nothing is heap allocated.
+ * the builder's whole state, fixed-capacity inline storage: a zeroed (or reset) state is valid and nothing is heap
+ * allocated.
  */
 struct EpaConvexHullBuilderState {
     Triangle triangles[EPA_MAX_TRIANGLES];

@@ -1,8 +1,5 @@
 #pragma once
 
-// the gjk/epa simplex as jolt's GJKClosestPoint keeps it: up to four support pairs, y = p - q at the
-// same index describing one pair.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -10,6 +7,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// up to four support pairs, y = p - q at one index describing one pair
 namespace simplex {
 
 struct Simplex {

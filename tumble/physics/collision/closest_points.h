@@ -1,14 +1,12 @@
 #pragma once
 
-// crashcat's closest-points.ts: barycentric coordinates of the point on a segment or triangle
-// closest to the origin.
-
 #include "tumble/math/types.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/tumble.h"
 
 TUMBLE_NAMESPACE_BEGIN
 
+// barycentric coordinates of the point on a segment or triangle closest to the origin
 namespace closest_points {
 
 struct BarycentricCoordinatesResult {

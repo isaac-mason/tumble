@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's narrowphase.ts: the query entry points over the shape defs and the dispatch tables. a ray
-// or a point goes to the shape's own def; a pair of shapes goes to the pair's entry in the collide or
-// cast table, and a pair with no entry is no collision. the types are the collision headers'.
-
 #include "tumble/math/types.h"
 #include "tumble/physics/body/sub_shape.h"
 #include "tumble/physics/collision/cast_ray_vs_shape.h"
@@ -18,6 +14,8 @@ namespace shapes {
 struct Shape;
 }
 
+// the query entry points: a ray or a point goes to the shape's own def, a pair of shapes to the pair's entry in the
+// collide or cast table; a pair with no entry is no collision
 namespace narrowphase {
 
 void cast_ray_vs_shape(cast_ray::CastRayCollector &collector, const cast_ray::CastRaySettings &settings, const cast_ray::Rayf &ray,

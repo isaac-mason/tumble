@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's estimate-collision-response.ts, the types: the predicted outcome of a contact before
-// the solver runs, from a few pgs iterations over local copies of the velocities. the estimation is
-// estimate_collision_response.cpp.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -13,6 +9,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// a contact's predicted outcome before the solver runs, from a few pgs iterations over local copies of the velocities
 namespace estimate_collision_response {
 
 struct CollisionEstimationResult {
@@ -39,7 +36,7 @@ inline CollisionEstimationResult create_result() {
 
 /**
  * predicts the velocities and impulses of a contact with `num_iterations` of pgs over the manifold. restitution
- * applies only above min_velocity_for_restitution along the normal (crashcat's defaults: 1 m/s, 10 iterations).
+ * applies only above min_velocity_for_restitution along the normal (typically 1 m/s, 10 iterations).
  */
 void estimate_collision_response(CollisionEstimationResult &result, const rigid_body::RigidBody &body_1, const rigid_body::RigidBody &body_2,
                                  const manifold::ContactManifold &manifold, float combined_friction, float combined_restitution,

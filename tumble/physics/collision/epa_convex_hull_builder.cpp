@@ -91,31 +91,25 @@ int32_t create_triangle(EpaConvexHullBuilderState &state, int32_t idx1, int32_t 
     triangle.lambda[1] = 0.0f;
     triangle.flags = 0;
 
-    // fill in indexes
     triangle.edges[0].start_index = idx1;
     triangle.edges[1].start_index = idx2;
     triangle.edges[2].start_index = idx3;
 
-    // clear links
     triangle.edges[0].neighbour_triangle = -1;
     triangle.edges[1].neighbour_triangle = -1;
     triangle.edges[2].neighbour_triangle = -1;
 
-    // get vertex positions
     const Vec3f y0 = state.positions[idx1];
     const Vec3f y1 = state.positions[idx2];
     const Vec3f y2 = state.positions[idx3];
 
-    // calculate centroid
     const Vec3f centroid = vec3f::divide(vec3f::add(vec3f::add(y0, y1), y2), vec3f::splat(3.0f));
     triangle.centroid = centroid;
 
-    // calculate edges
     const Vec3f y10 = vec3f::subtract(y1, y0);
     const Vec3f y20 = vec3f::subtract(y2, y0);
     const Vec3f y21 = vec3f::subtract(y2, y1);
 
-    // compute triangle normal
     // the most accurate normal is calculated by using the two shortest edges
     const float y20_dot_y20 = vec3f::dot(y20, y20);
     const float y21_dot_y21 = vec3f::dot(y21, y21);
@@ -201,7 +195,6 @@ void initialize(EpaConvexHullBuilderState &state, int32_t idx1, int32_t idx2, in
     const int32_t t2 = create_triangle(state, idx1, idx3, idx2);
     TUMBLE_ASSERT(t1 != -1 && t2 != -1);
 
-    // link triangle edges
     link_triangle(state, t1, 0, t2, 2);
     link_triangle(state, t1, 1, t2, 1);
     link_triangle(state, t1, 2, t2, 0);
@@ -327,10 +320,8 @@ bool find_edge(EpaConvexHullBuilderState &state, int32_t facing_triangle, Vec3f 
     Edge *edges = state.edges;
     StackFrame *stack = state.stack;
 
-    // clear output edges
     state.edges_size = 0;
 
-    // flag as removed
     state.triangles[facing_triangle].flags |= TRI_FLAG_REMOVED;
 
     // build our own stack, starting with the triangle/edge provided
@@ -345,7 +336,6 @@ bool find_edge(EpaConvexHullBuilderState &state, int32_t facing_triangle, Vec3f 
         const int32_t cur_triangle = frame.triangle;
         const int32_t cur_edge = frame.edge;
 
-        // next iteration
         const int32_t cur_iter = frame.iteration + 1;
         frame.iteration = cur_iter;
 
@@ -353,7 +343,6 @@ bool find_edge(EpaConvexHullBuilderState &state, int32_t facing_triangle, Vec3f 
             // this triangle needs to be removed, unlink it now
             unlink_triangle(state, cur_triangle);
 
-            // pop from stack
             if (--cur_stack_pos < 0) break;
         } else {
             // visit neighbour: edge index is (edge + iter) % 3
@@ -370,7 +359,6 @@ bool find_edge(EpaConvexHullBuilderState &state, int32_t facing_triangle, Vec3f 
                     // vertex on front, this triangle needs to be removed
                     state.triangles[n].flags |= TRI_FLAG_REMOVED;
 
-                    // add element to the stack
                     cur_stack_pos++;
                     TUMBLE_ASSERT(cur_stack_pos < EPA_MAX_EDGE_LENGTH);
                     if (cur_stack_pos >= EPA_MAX_EDGE_LENGTH) return false;

@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's cast-ray-vs-shape.ts, the types: a ray cast's hit, settings and collector. the cast
-// itself (dispatch to the shape's cast_ray) is cast_ray_vs_shape.cpp.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -138,7 +135,7 @@ inline bool should_early_out(const CastRayCollector &c) {
     }
 }
 
-/** orders the hits closest first, stable as the ts's sort. */
+/** stable, closest first */
 inline void sort(CastRayCollector &c) {
     sort::insertion_sort(c.hits.data, c.hits.data + c.hits.length,
                          [](const CastRayHit &a, const CastRayHit &b) { return a.fraction < b.fraction; });

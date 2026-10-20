@@ -1,11 +1,5 @@
 #pragma once
 
-// crashcat's internal-edge-removing-collector.ts, the types: a collide collector that wraps another
-// and drops the ghost contacts a convex shape gets from the internal edges of a mesh or compound. it
-// forwards face contacts at once and holds edge and vertex contacts back until `flush`, where the
-// deepest contacts void the features of their faces so a shallower contact on a voided edge is dropped.
-// the behaviour is internal_edge_removing_collector.cpp.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -16,6 +10,9 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// a collide collector that wraps another and drops the ghost contacts a convex shape gets from a mesh's or compound's
+// internal edges: face contacts go through at once, edge and vertex contacts wait for flush, where the deepest contacts
+// void the features of their faces so a shallower contact on a voided edge is dropped
 namespace internal_edge_removing {
 
 /** a vertex a deeper contact has claimed, in world space, for one sub shape of the convex side */

@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's collide-point-vs-shape.ts, the types: a point query's hit, settings and collector.
-// the query itself (dispatch to the shape's collide_point) is collide_point_vs_shape.cpp.
-
 #include <stdint.h>
 
 #include "tumble/physics/body/body_id.h"

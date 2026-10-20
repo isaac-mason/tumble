@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's cast-shape-vs-shape.ts, the types: a shape cast's hit, settings and collector. the
-// cast itself (dispatch through the cast table) is cast_shape_vs_shape.cpp.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -149,7 +146,7 @@ inline void keep_one(CastShapeCollector &c, const CastShapeHit &h) {
 }
 
 /**
- * what a cast hit is ordered by and bounds further searching with, as jolt's GetEarlyOutFraction: the fraction, or
+ * what a cast hit is ordered by and bounds further searching with: the fraction, or
  * for a hit that starts overlapping (fraction 0) the negated penetration depth, so deeper overlaps sort first
  */
 inline float early_out_fraction_of(const CastShapeHit &h) { return h.fraction > 0.0f ? h.fraction : -h.penetration_depth; }
@@ -195,7 +192,7 @@ inline bool should_early_out(const CastShapeCollector &c) {
     }
 }
 
-/** orders the hits closest first by their early-out value (deepest first among those that start overlapping), stable as the ts's sort. */
+/** stable, closest first by their early-out value (deepest first among those that start overlapping) */
 inline void sort(CastShapeCollector &c) {
     sort::insertion_sort(
         c.hits.data, c.hits.data + c.hits.length,

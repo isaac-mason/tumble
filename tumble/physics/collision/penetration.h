@@ -1,9 +1,5 @@
 #pragma once
 
-// crashcat's penetration.ts: penetration depth between convex supports, gjk for the shallow case
-// and epa past the convex radius, plus the penetration-aware shape cast. after jolt's
-// EPAPenetrationDepth.
-
 #include <stdint.h>
 
 #include "tumble/math/types.h"
@@ -15,6 +11,8 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// penetration depth between convex supports, gjk for the shallow case and epa past the convex radius, and the
+// penetration-aware shape cast
 namespace penetration {
 
 constexpr uint32_t EPA_MAX_POINTS_TO_INCLUDE_ORIGIN_IN_HULL = 32;
@@ -27,7 +25,7 @@ enum PenetrationDepthStatus : uint32_t {
     INDETERMINATE = 2,
 };
 
-/** epa's support points, as jolt's EPAPenetrationDepth::SupportPoints: index i is one pair in all three. */
+/** epa's support points: index i is one pair in all three */
 struct EpaSupportPoints {
     /** minkowski difference points p - q */
     Vec3f y[EPA_MAX_POINTS];

@@ -120,7 +120,6 @@ void estimate_collision_response(CollisionEstimationResult &result, const rigid_
     const uint32_t num_contact_points = manifold.num_contact_points;
     result.num_impulses = num_contact_points;
 
-    // zero impulses
     for (uint32_t i = 0; i < num_contact_points; i++) result.contact_impulse[i] = 0.0f;
     result.friction_impulse = vec3f::zero();
     result.angular_friction_impulse = 0.0f;
