@@ -2,7 +2,10 @@
 
 #include <stdint.h>
 
+#include "tumble/math/mat4f.h"
+#include "tumble/math/scalar.h"
 #include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
 #include "tumble/tumble.h"
 #include "tumble/util/collections.h"
 
@@ -80,7 +83,35 @@ struct Support {
         /** warm start: the last winning vertex, carried across calls within one pair; -1 when cold */
         int32_t last_vertex;
     } hull;
+    /** a user shape type's operand: what its set_support leaves for its own evaluator */
+    struct {
+        const void *data;
+        Vec3f scale;
+    } user;
 };
+
+// the steps of every evaluator, a user type's too: the direction into local space, the core's support point there,
+// rounded by add_radius along the local direction, and back into the caller's space
+
+/** the direction into local space (inverse rotation = transposed 3x3) */
+inline Vec3f to_local_direction(const Support &support, Vec3f direction) {
+    return support.has_transform ? mat4f::multiply3x3_transposed_vec(support.transform, direction) : direction;
+}
+
+/** rounds `point` by `radius` along the local direction */
+inline Vec3f add_radius_along(Vec3f point, Vec3f direction, float radius) {
+    if (radius > 0.0f) {
+        const float length_sq = vec3f::squared_length(direction);
+        if (length_sq > 0.0f) return vec3f::scale_and_add(point, direction, radius / scalar::sqrt(length_sq));
+    }
+    return point;
+}
+
+/** the local point back to the caller's space */
+inline Vec3f to_caller_space(const Support &support, Vec3f point) {
+    if (!support.has_transform) return point;
+    return {vec3f::fix_w(v4f::add(mat4f::combine3(support.transform, point.v), support.transform.c[3]))};
+}
 
 /** a support as a zero-radius sphere at the origin. */
 Support create();
