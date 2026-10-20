@@ -206,7 +206,6 @@ bool remove(bodies::Bodies &bodies, RigidBody *body) {
     body->user_data = 0;
     body->shape = shared_empty_shape(bodies);
 
-    // return index to pool
     bodies::remove_slot(bodies, body->id);
 
     return true;
@@ -281,45 +280,36 @@ void update_shape(RigidBody *body) {
 }
 
 void set_position(bodies::Bodies &bodies, RigidBody *body, Vec3f position, bool wake) {
-    // set position
     vec3f::store(body->position, position);
 
-    // update body properties
     update_center_of_mass_position(body);
     update_aabb(body);
 
-    // optionally wake body
     if (wake) {
         sleep::wake(bodies, body);
     }
 }
 
 void set_quaternion(bodies::Bodies &bodies, RigidBody *body, Quatf quaternion, bool wake) {
-    // set quaternion
     quatf::store(body->quaternion, quaternion);
 
-    // update body properties
     body->motion_properties.world_inverse_inertia_stamp = motion_properties::STEP_STAMP_NONE;
     update_center_of_mass_position(body);
     update_aabb(body);
 
-    // optionally wake body
     if (wake) {
         sleep::wake(bodies, body);
     }
 }
 
 void set_transform(bodies::Bodies &bodies, RigidBody *body, Vec3f position, Quatf quaternion, bool wake) {
-    // set transform
     vec3f::store(body->position, position);
     quatf::store(body->quaternion, quaternion);
 
-    // update body properties
     body->motion_properties.world_inverse_inertia_stamp = motion_properties::STEP_STAMP_NONE;
     update_center_of_mass_position(body);
     update_aabb(body);
 
-    // optionally wake body
     if (wake) {
         sleep::wake(bodies, body);
     }
@@ -335,7 +325,6 @@ void set_motion_type(bodies::Bodies &bodies, RigidBody *body, motion_type::Motio
     const motion_type::MotionType old_motion_type = body->motion_type;
     if (old_motion_type == motion_type) return;
 
-    // update motion type
     body->motion_type = motion_type;
 
     // handle active bodies list transitions

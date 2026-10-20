@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's rigid-body-step.ts: the position solver's steps on a body's centre of mass and
-// rotation, and re-deriving the body's position and aabb from them.
-
 #include "tumble/math/types.h"
 #include "tumble/tumble.h"
 

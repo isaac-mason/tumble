@@ -1,17 +1,12 @@
 #pragma once
 
-// a body index and a sequence number packed in one u32, as jolt's BodyID:
-//   bits 0-22: body index
-//   bits 23-30: sequence number, which the slot bumps each time a body takes it
-//   bit 31: jolt's broadphase bit, which no body id sets, so the invalid id (all ones) is never a body's
-// ids are what the broadphase, pairs, constraints and events hold, and the sequence catches a slot reused after its
-// body was destroyed.
-
 #include <stdint.h>
 #include "tumble/tumble.h"
 
 TUMBLE_NAMESPACE_BEGIN
 
+// bits 0-22 the body index, 23-30 a sequence the slot bumps each time a body takes it, so an id of a destroyed body
+// stops resolving; no id sets bit 31, so the invalid id (all ones) is never a body's
 namespace body_id {
 
 typedef uint32_t BodyId;

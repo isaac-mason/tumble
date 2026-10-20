@@ -55,7 +55,6 @@ void add_torque(MotionProperties &motion_properties, Vec3f torque) {
 }
 
 void add_force_at_position(MotionProperties &motion_properties, Vec3f force, Vec3f world_position, Vec3f center_of_mass_position) {
-    // add linear force
     vec3f::store(motion_properties.force, vec3f::add(vec3f::load(motion_properties.force), force));
     // calculate torque: t = r x F, where r is moment arm from center of mass
     const Vec3f torque = vec3f::cross(vec3f::subtract(world_position, center_of_mass_position), force);
@@ -79,7 +78,6 @@ void add_angular_impulse(MotionProperties &motion_properties, Vec3f impulse, Qua
 
 void add_impulse_at_position(MotionProperties &motion_properties, Vec3f impulse, Vec3f world_position,
                              Vec3f center_of_mass_position, Quatf quaternion) {
-    // apply linear impulse
     if (motion_properties.inv_mass > 0.0f) {
         const Vec3f linear_delta = vec3f::scale(impulse, motion_properties.inv_mass);
         vec3f::store(motion_properties.linear_velocity, vec3f::add(vec3f::load(motion_properties.linear_velocity), linear_delta));
@@ -179,7 +177,7 @@ bool decompose_principal_moments_of_inertia(const Mat4f &inertia, Mat4f &out_rot
                     diagonal[ip] -= rotation_h;
                     diagonal[iq] += rotation_h;
 
-                    // jolt's JPH_EVS_ROTATE(a, i, j, k, l): g = a(i,j), h = a(k,l), a(i,j) = g - s*(h + g*tau), a(k,l) = h + s*(g - h*tau)
+                    // the jacobi rotation of a(i,j) and a(k,l): g = a(i,j), h = a(k,l), a(i,j) = g - s*(h + g*tau), a(k,l) = h + s*(g - h*tau)
 
                     // for j in [0, ip): rotate a(j, ip) and a(j, iq)
                     for (int j = 0; j < ip; j++) {
@@ -282,14 +280,12 @@ void set_mass_properties(MotionProperties &motion_properties, uint32_t allowed_d
     // the local inertia is about to change, so a memoised world inverse inertia is stale
     motion_properties.world_inverse_inertia_stamp = STEP_STAMP_NONE;
 
-    // store allowed DOFs
     motion_properties.allowed_degrees_of_freedom = allowed_dofs;
 
     // decompose DOFs
     const uint32_t allowed_translation_axis = allowed_dofs & 0b111;
     const uint32_t allowed_rotation_axis = (allowed_dofs >> 3) & 0b111;
 
-    // set inverse mass
     if (allowed_translation_axis == 0) {
         // no translation possible
         motion_properties.inv_mass = 0.0f;
@@ -304,7 +300,6 @@ void set_mass_properties(MotionProperties &motion_properties, uint32_t allowed_d
         vec3f::store(motion_properties.inv_inertia_diagonal, vec3f::zero());
         quatf::store(motion_properties.inertia_rotation, quatf::identity());
     } else {
-        // set inverse inertia
         Mat4f rotation;
         Vec3f diagonal;
 
@@ -436,7 +431,7 @@ void scale_to_mass(MotionProperties &motion_properties, float new_mass) {
 /** the axis and angle (in [0, pi]) of a unit quaternion, x when it is near identity */
 static float get_axis_angle_from_quat(Vec3f &out_axis, Quatf q) {
     const float qx = quatf::x(q), qy = quatf::y(q), qz = quatf::z(q), qw = quatf::w(q);
-    // q and -q are the same rotation; the w >= 0 twin takes the short way round, as jolt's GetAxisAngle
+    // q and -q are the same rotation; the w >= 0 twin takes the short way round
     const float sign = qw < 0.0f ? -1.0f : 1.0f;
     const float angle = 2.0f * scalar::acos(scalar::min(1.0f, sign * qw));
     // for a unit quaternion q = [x, y, z, w], the axis is [x, y, z] / sin(angle / 2)

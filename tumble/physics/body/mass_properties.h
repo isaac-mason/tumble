@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's mass-properties.ts: the struct and the trivial functions; the solid-shape inertia
-// builders and the scale, rotate and translate operations are mass_properties.cpp.
-
 #include "tumble/math/mat4f.h"
 #include "tumble/math/types.h"
 #include "tumble/tumble.h"

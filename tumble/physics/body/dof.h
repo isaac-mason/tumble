@@ -1,12 +1,11 @@
 #pragma once
 
-// crashcat's dof.ts: degrees of freedom as a 6-bit mask, translation in the low three bits.
-
 #include <stdint.h>
 #include "tumble/tumble.h"
 
 TUMBLE_NAMESPACE_BEGIN
 
+// degrees of freedom as a 6-bit mask, translation in the low three bits
 namespace dof {
 
 constexpr uint32_t TRANSLATION_X = 1u << 0;

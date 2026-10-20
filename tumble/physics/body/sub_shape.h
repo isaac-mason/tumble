@@ -1,10 +1,5 @@
 #pragma once
 
-// crashcat's sub-shape.ts: a path through a compound shape's children packed into 32 bits, pushed
-// a level at a time by the shape that owns the level and popped back out the same way. a function
-// handed a path part-built takes a `const SubShapeIdBuilder &` where the ts passed `subShapeId,
-// subShapeIdBits`.
-
 #include <stdint.h>
 
 #include "tumble/tumble.h"
@@ -12,6 +7,8 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// a path through a compound shape's children packed into 32 bits, pushed a level at a time by the shape that owns the
+// level and popped back out the same way
 namespace sub_shape {
 
 typedef uint32_t SubShapeId;

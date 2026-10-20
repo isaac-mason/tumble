@@ -122,7 +122,6 @@ void reset_sleep_timer(rigid_body::RigidBody *body) {
 }
 
 void add_body_to_active_bodies(bodies::Bodies &bodies, rigid_body::RigidBody *body) {
-    // body already active
     if (body->active_index != INACTIVE_BODY_INDEX) return;
 
     // assign new index at end of array
@@ -132,7 +131,6 @@ void add_body_to_active_bodies(bodies::Bodies &bodies, rigid_body::RigidBody *bo
 }
 
 void remove_body_from_active_bodies(bodies::Bodies &bodies, rigid_body::RigidBody *body) {
-    // body already inactive
     if (body->active_index == INACTIVE_BODY_INDEX) return;
 
     const uint32_t last_index = bodies.active_body_count - 1;
@@ -155,7 +153,6 @@ void remove_body_from_active_bodies(bodies::Bodies &bodies, rigid_body::RigidBod
 }
 
 void sleep(bodies::Bodies &bodies, rigid_body::RigidBody *body) {
-    // exit if body is static
     if (body->motion_type == motion_type::MOTION_STATIC) return;
 
     // exit if already sleeping
@@ -164,28 +161,22 @@ void sleep(bodies::Bodies &bodies, rigid_body::RigidBody *body) {
     // remove from active list
     remove_body_from_active_bodies(bodies, body);
 
-    // mark as sleeping
     body->sleeping = true;
 
-    // reset velocities
     body->motion_properties.linear_velocity = {0.0f, 0.0f, 0.0f};
     body->motion_properties.angular_velocity = {0.0f, 0.0f, 0.0f};
 }
 
 void wake(bodies::Bodies &bodies, rigid_body::RigidBody *body) {
-    // exit if body is static
     if (body->motion_type == motion_type::MOTION_STATIC) return;
 
     // always reset sleep timer
     reset_sleep_timer(body);
 
-    // exit if already awake
     if (!body->sleeping) return;
 
-    // mark as awake
     body->sleeping = false;
 
-    // add to active list
     add_body_to_active_bodies(bodies, body);
 }
 

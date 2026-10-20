@@ -71,7 +71,6 @@ body_id::BodyId add_slot(Bodies &bodies) {
 bool remove_slot(Bodies &bodies, body_id::BodyId id) {
     if (!is_valid(bodies, id)) return false;
     const uint32_t index = body_id::index(id);
-    // return index to pool
     TUMBLE_ASSERT(bodies.free_indices.length < bodies.free_indices.capacity);
     bodies.free_indices.data[bodies.free_indices.length++] = index;
     bodies.sequences[index] = SLOT_FREE;

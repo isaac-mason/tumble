@@ -1,8 +1,5 @@
 #pragma once
 
-// crashcat's bodies.ts: the world's pool of bodies, its active list and its step stamp. a body
-// index is a slot in `pool`; the slot's sequence is what makes a stale BodyId stop resolving.
-
 #include <stdint.h>
 
 #include "tumble/physics/body/body_id.h"
@@ -29,7 +26,7 @@ struct Bodies {
     collections::Vec<rigid_body::RigidBody *> pool;
     /** per slot: the sequence of the id that holds it, SLOT_FREE while the slot is free */
     collections::Vec<uint32_t> sequences;
-    /** per slot: the sequence its last body was given, which the next body to take it bumps (jolt's mBodySequenceNumbers) */
+    /** per slot: the sequence its last body was given, which the next body to take it bumps */
     collections::Vec<uint8_t> slot_sequences;
     /** pool of freed body indices for reuse */
     collections::Vec<uint32_t> free_indices;

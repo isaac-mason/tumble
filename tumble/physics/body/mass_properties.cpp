@@ -9,10 +9,8 @@ TUMBLE_NAMESPACE_BEGIN
 namespace mass_properties {
 
 MassProperties &set_mass_and_inertia_of_solid_box(MassProperties &out, Vec3f box_size, float density) {
-    // calculate mass
     out.mass = vec3f::x(box_size) * vec3f::y(box_size) * vec3f::z(box_size) * density;
 
-    // calculate inertia
     const Vec3f size_sq = vec3f::multiply(box_size, box_size);
     const float sx = vec3f::x(size_sq), sy = vec3f::y(size_sq), sz = vec3f::z(size_sq);
     const Vec3f scale = vec3f::make((sy + sz) * (out.mass / 12.0f), (sx + sz) * (out.mass / 12.0f), (sx + sy) * (out.mass / 12.0f));
