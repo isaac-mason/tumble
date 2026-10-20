@@ -1,0 +1,408 @@
+#include "physics/shapes/scaled.h"
+
+#include "instance.h"
+#include "math/mat4f.h"
+#include "math/quatf.h"
+#include "math/scalar.h"
+#include "math/vec3f.h"
+#include "physics/shapes/box.h"
+#include "physics/shapes/dispatch.h"
+#include "physics/shapes/sphere.h"
+#include "physics/shapes/transformed.h"
+#include "test.h"
+#include "test_math.h"
+
+using shapes::Shape;
+
+static const sub_shape::SubShapeIdBuilder NO_SUB_SHAPE = {sub_shape::EMPTY_SUB_SHAPE_ID, 0};
+static const Float4 IDENTITY = {0, 0, 0, 1};
+
+static void collide(collide_shape::CollideShapeCollector &collector, const Shape *a, const Transformf &transform_a, const Shape *b,
+                    const Transformf &transform_b) {
+    shapes::collide_fn(a->type, b->type)(collector, collide_shape::default_settings(), a, NO_SUB_SHAPE, transform_a, b, NO_SUB_SHAPE,
+                                         transform_b);
+}
+
+/** the closest ray hit's fraction, or -1 for none */
+static float ray_fraction(const Shape *shape, const Transformf &transform, const Float3 &origin, const Float3 &direction, float length) {
+    cast_ray::CastRayCollector collector = cast_ray::create_collector(collector::COLLECT_CLOSEST);
+    const cast_ray::Rayf ray = {vec3f::load(origin), unit(vec3f::load(direction)), length};
+    shapes::def_of(shape).cast_ray(collector, cast_ray::default_settings(), ray, shape, NO_SUB_SHAPE, transform);
+    const float fraction = collector.has_hit ? collector.hits[0].fraction : -1.0f;
+    cast_ray::release(collector);
+    return fraction;
+}
+
+static bool point_inside(const Shape *shape, const Transformf &transform, const Float3 &point) {
+    collide_point::CollidePointCollector collector = collide_point::create_collector(collector::COLLECT_ALL);
+    shapes::def_of(shape).collide_point(collector, collide_point::default_settings(), vec3f::load(point), shape, NO_SUB_SHAPE, transform);
+    const bool inside = collector.hits.length > 0;
+    collide_point::release(collector);
+    return inside;
+}
+
+/* creation, bounds, centre of mass, volume (crashcat's scaled tests) */
+
+void test_scaled_create_and_aabb(TestCtx &ctx) {
+    CHECK(ctx, util::init(test_heap_begin()));
+    dispatch::init();
+    Shape *s = sphere::create({.radius = 1.0f});
+    Shape *ss = scaled::create({.shape = s, .scale = {2, 3, 4}});
+
+    CHECK(ctx, ss->type == shapes::SHAPE_SCALED);
+    CHECK(ctx, ss->scaled.shape == s);
+    CHECK(ctx, ss->scaled.scale.x == 2 && ss->scaled.scale.y == 3 && ss->scaled.scale.z == 4);
+
+    // [-2, -3, -4] to [2, 3, 4]
+    CHECK(ctx, ss->aabb.min.x == -2 && ss->aabb.min.y == -3 && ss->aabb.min.z == -4);
+    CHECK(ctx, ss->aabb.max.x == 2 && ss->aabb.max.y == 3 && ss->aabb.max.z == 4);
+
+    // a symmetric shape's centre of mass stays at the origin
+    CHECK(ctx, ss->center_of_mass.x == 0 && ss->center_of_mass.y == 0 && ss->center_of_mass.z == 0);
+
+    // the volume scales by |sx sy sz|
+    CHECK_NEAR(ctx, ss->volume, s->volume * 24.0f, 1e-4f);
+
+    scaled::destroy(ss);
+    sphere::destroy(s);
+}
+
+void test_scaled_offset_inner_shape(TestCtx &ctx) {
+    CHECK(ctx, util::init(test_heap_begin()));
+    dispatch::init();
+    // an inner shape whose centre of mass and bounds sit off the origin: a unit box moved to (1, 1, 1)
+    Shape *s = box::create({.half_extents = {1, 1, 1}});
+    Shape *moved = transformed::create({.shape = s, .position = {1, 1, 1}, .quaternion = IDENTITY});
+
+    // the centre of mass scales with the inner shape's (crashcat read its own, zero, centre of mass)
+    Shape *ss = scaled::create({.shape = moved, .scale = {2, 3, 4}});
+    CHECK(ctx, near3(ss->center_of_mass, 2, 3, 4, 1e-6f));
+    CHECK(ctx, near3(ss->aabb.min, 0, 0, 0, 1e-6f));
+    CHECK(ctx, near3(ss->aabb.max, 4, 6, 8, 1e-6f));
+
+    // a mirroring scale mirrors the bounds: x over [0, 2] goes to [-4, 0] (crashcat kept [0, 4])
+    Shape *mirrored = scaled::create({.shape = moved, .scale = {-2, 1, 1}});
+    CHECK(ctx, near3(mirrored->aabb.min, -4, 0, 0, 1e-6f));
+    CHECK(ctx, near3(mirrored->aabb.max, 0, 2, 2, 1e-6f));
+    CHECK(ctx, near3(mirrored->center_of_mass, -2, 1, 1, 1e-6f));
+    CHECK_NEAR(ctx, mirrored->volume, s->volume * 2.0f, 1e-4f);
+
+    // the bounds agree with the geometry: a ray along -x from the right meets the mirrored box's face at 0
+    CHECK_NEAR(ctx, ray_fraction(mirrored, pose({0, 0, 0}), {5, 1, 1}, {-1, 0, 0}, 10.0f), 0.5f, 1e-5f);
+
+    scaled::destroy(ss);
+    scaled::destroy(mirrored);
+    transformed::destroy(moved);
+    box::destroy(s);
+}
+
+void test_scaled_mass_properties(TestCtx &ctx) {
+    CHECK(ctx, util::init(test_heap_begin()));
+    dispatch::init();
+
+    // a unit box scaled (2, 1, 1) is a (2, 1, 1) box
+    Shape *b = box::create({.half_extents = {1, 1, 1}});
+    Shape *sb = scaled::create({.shape = b, .scale = {2, 1, 1}});
+    Shape *wide = box::create({.half_extents = {2, 1, 1}});
+    mass_properties::MassProperties scaled_mass, wide_mass;
+    shapes::compute_mass_properties(scaled_mass, sb);
+    shapes::compute_mass_properties(wide_mass, wide);
+    CHECK_NEAR(ctx, scaled_mass.mass, wide_mass.mass, 1e-1f);
+    CHECK_NEAR(ctx, scaled_mass.inertia.m[0], wide_mass.inertia.m[0], 1.0f);
+    CHECK_NEAR(ctx, scaled_mass.inertia.m[5], wide_mass.inertia.m[5], 1.0f);
+    CHECK_NEAR(ctx, scaled_mass.inertia.m[10], wide_mass.inertia.m[10], 1.0f);
+
+    // a sphere scaled by 2: mass x 8, inertia x 32
+    Shape *s = sphere::create({.radius = 1.0f});
+    Shape *ss = scaled::create({.shape = s, .scale = {2, 2, 2}});
+    mass_properties::MassProperties inner, outer;
+    shapes::compute_mass_properties(inner, s);
+    shapes::compute_mass_properties(outer, ss);
+    CHECK_NEAR(ctx, outer.mass, inner.mass * 8.0f, 1e-1f);
+    CHECK_NEAR(ctx, outer.inertia.m[0], inner.inertia.m[0] * 32.0f, 1.0f);
+
+    scaled::destroy(sb);
+    scaled::destroy(ss);
+    box::destroy(b);
+    box::destroy(wide);
+    sphere::destroy(s);
+}
+
+void test_scaled_inner_radius_and_leaf(TestCtx &ctx) {
+    CHECK(ctx, util::init(test_heap_begin()));
+    dispatch::init();
+    Shape *s = sphere::create({.radius = 10.0f});
+
+    // the smallest absolute scale times the inner radius
+    Shape *ss = scaled::create({.shape = s, .scale = {2, 3, 4}});
+    CHECK(ctx, shapes::get_shape_inner_radius(ss) == 20.0f);
+    Shape *negative = scaled::create({.shape = s, .scale = {-2, 3, 4}});
+    CHECK(ctx, shapes::get_shape_inner_radius(negative) == 20.0f);
+
+    // the leaf is the inner shape, the id untouched
+    shapes::GetLeafShapeResult leaf;
+    shapes::get_leaf_shape(leaf, ss, 0x3u);
+    CHECK(ctx, leaf.shape == s && leaf.remainder == 0x3u);
+
+    // the sub shape's transform accumulates the scale
+    shapes::GetSubShapeTransformedShapeResult out = {};
+    out.position = vec3f::make(1, 2, 3);
+    out.rotation = quatf::load(IDENTITY);
+    out.scale = vec3f::make(1, 2, 3);
+    shapes::get_sub_shape_transformed_shape(out, ss, sub_shape::EMPTY_SUB_SHAPE_ID);
+    CHECK(ctx, out.shape == s);
+    CHECK(ctx, near3(out.position, 1, 2, 3, 0.0f));
+    CHECK(ctx, near3(out.scale, 2, 6, 12, 0.0f));
+
+    scaled::destroy(ss);
+    scaled::destroy(negative);
+    sphere::destroy(s);
+}
+
+/* surface normal and supporting face */
+
+void test_scaled_surface_normal(TestCtx &ctx) {
+    CHECK(ctx, util::init(test_heap_begin()));
+    dispatch::init();
+    Float3 normal;
+
+    // outside the +x face of a box scaled (2, 3, 1): still +x
+    Shape *b = box::create({.half_extents = {1, 1, 1}});
+    Shape *sb = scaled::create({.shape = b, .scale = {2, 3, 1}});
+    vec3f::store(normal, shapes::get_shape_surface_normal(sb, vec3f::make(2.1f, 1, 0), sub_shape::EMPTY_SUB_SHAPE_ID));
+    CHECK(ctx, near3(normal, 1, 0, 0, 1e-6f));
+
+    // on a sphere scaled by 2, normalised and outward
+    Shape *s = sphere::create({.radius = 1.0f});
+    Shape *ss = scaled::create({.shape = s, .scale = {2, 2, 2}});
+    vec3f::store(normal, shapes::get_shape_surface_normal(ss, vec3f::make(2, 2, 0), sub_shape::EMPTY_SUB_SHAPE_ID));
+    const float r = 1.0f / scalar::sqrt(2.0f);
+    CHECK(ctx, near3(normal, r, r, 0, 1e-6f));
+
+    // an ellipsoid (a sphere scaled (2, 1, 1)): at (sqrt 2, 1 / sqrt 2, 0) the normal is the inverse-transpose of the sphere's
+    Shape *ellipsoid = scaled::create({.shape = s, .scale = {2, 1, 1}});
+    vec3f::store(normal, shapes::get_shape_surface_normal(ellipsoid, vec3f::make(2.0f * r, r, 0), sub_shape::EMPTY_SUB_SHAPE_ID));
+    CHECK(ctx, near3(normal, unit(vec3f::make(r / 2.0f, r, 0)), 1e-6f));
+
+    scaled::destroy(sb);
+    scaled::destroy(ss);
+    scaled::destroy(ellipsoid);
+    box::destroy(b);
+    sphere::destroy(s);
+}
+
+void test_scaled_supporting_face(TestCtx &ctx) {
+    CHECK(ctx, util::init(test_heap_begin()));
+    dispatch::init();
+    Float4x4 identity;
+    mat4f::store(identity, mat4f::identity());
+    face::Face face;
+
+    // uniform: the face at x = -1 scales to -2, y and z to +-2
+    Shape *b = box::create({.half_extents = {1, 1, 1}});
+    Shape *uniform = scaled::create({.shape = b, .scale = {2, 2, 2}});
+    shapes::get_shape_supporting_face(face, uniform, 0, vec3f::make(1, 0, 0), mat4f::load(identity), vec3f::make(1, 1, 1));
+    CHECK(ctx, face.num_vertices == 4);
+    for (uint32_t i = 0; i < face.num_vertices; i++) {
+        CHECK_NEAR(ctx, vec3f::x(face.vertices[i]), -2.0f, 1e-6f);
+        CHECK_NEAR(ctx, scalar::abs(vec3f::y(face.vertices[i])), 2.0f, 1e-6f);
+        CHECK_NEAR(ctx, scalar::abs(vec3f::z(face.vertices[i])), 2.0f, 1e-6f);
+    }
+
+    // non-uniform
+    Shape *b123 = box::create({.half_extents = {1, 2, 3}});
+    Shape *non_uniform = scaled::create({.shape = b123, .scale = {2, 0.5f, 4}});
+    shapes::get_shape_supporting_face(face, non_uniform, 0, vec3f::make(1, 0, 0), mat4f::load(identity), vec3f::make(1, 1, 1));
+    CHECK(ctx, face.num_vertices == 4);
+    for (uint32_t i = 0; i < face.num_vertices; i++) {
+        CHECK_NEAR(ctx, vec3f::x(face.vertices[i]), -2.0f, 1e-6f);
+        CHECK_NEAR(ctx, scalar::abs(vec3f::y(face.vertices[i])), 1.0f, 1e-6f);
+        CHECK_NEAR(ctx, scalar::abs(vec3f::z(face.vertices[i])), 12.0f, 1e-6f);
+    }
+
+    // a mirrored box is the same box: the face opposite the direction stays at x = -1
+    Shape *mirrored = scaled::create({.shape = b, .scale = {-1, 1, 1}});
+    shapes::get_shape_supporting_face(face, mirrored, 0, vec3f::make(1, 0, 0), mat4f::load(identity), vec3f::make(1, 1, 1));
+    CHECK(ctx, face.num_vertices == 4);
+    for (uint32_t i = 0; i < face.num_vertices; i++) CHECK_NEAR(ctx, vec3f::x(face.vertices[i]), -1.0f, 1e-6f);
+
+    // the shape's scale combines with the world's: x -1 * 2 * 3, y over 2 * 0.5
+    shapes::get_shape_supporting_face(face, uniform, 0, vec3f::make(1, 0, 0), mat4f::load(identity), vec3f::make(3, 0.5f, 1));
+    CHECK(ctx, face.num_vertices == 4);
+    for (uint32_t i = 0; i < face.num_vertices; i++) {
+        CHECK_NEAR(ctx, vec3f::x(face.vertices[i]), -6.0f, 1e-5f);
+        CHECK_NEAR(ctx, scalar::abs(vec3f::y(face.vertices[i])), 1.0f, 1e-6f);
+    }
+
+    // a sphere has none
+    Shape *s = sphere::create({.radius = 2.0f});
+    Shape *ss = scaled::create({.shape = s, .scale = {3, 3, 3}});
+    shapes::get_shape_supporting_face(face, ss, 0, vec3f::make(1, 0, 0), mat4f::load(identity), vec3f::make(1, 1, 1));
+    CHECK(ctx, face.num_vertices == 0);
+
+    scaled::destroy(uniform);
+    scaled::destroy(non_uniform);
+    scaled::destroy(mirrored);
+    scaled::destroy(ss);
+    box::destroy(b);
+    box::destroy(b123);
+    sphere::destroy(s);
+}
+
+/* ray and point */
+
+void test_scaled_cast_ray(TestCtx &ctx) {
+    CHECK(ctx, util::init(test_heap_begin()));
+    dispatch::init();
+
+    // a unit sphere scaled by 2 at x = 5: its surface at 3
+    Shape *s = sphere::create({.radius = 1.0f});
+    Shape *ss = scaled::create({.shape = s, .scale = {2, 2, 2}});
+    CHECK_NEAR(ctx, ray_fraction(ss, pose({5, 0, 0}), {0, 0, 0}, {1, 0, 0}, 10.0f), 0.3f, 1e-5f);
+
+    // a unit box scaled (2, 1, 1) at x = 5: its -x face at 3; from above, its top at 1
+    Shape *b = box::create({.half_extents = {1, 1, 1}});
+    Shape *sb = scaled::create({.shape = b, .scale = {2, 1, 1}});
+    CHECK_NEAR(ctx, ray_fraction(sb, pose({5, 0, 0}), {0, 0, 0}, {1, 0, 0}, 10.0f), 0.3f, 1e-5f);
+    CHECK_NEAR(ctx, ray_fraction(sb, pose({5, 0, 0}), {6.5f, 5, 0}, {0, -1, 0}, 10.0f), 0.4f, 1e-5f);
+    CHECK(ctx, ray_fraction(sb, pose({5, 0, 0}), {7.5f, 5, 0}, {0, -1, 0}, 10.0f) < 0.0f);
+
+    // scaled down too small to reach: a box 0.01 across at x = 5 misses a ray straight down at x = 4.9
+    Shape *tiny = scaled::create({.shape = b, .scale = {0.01f, 0.01f, 0.01f}});
+    CHECK(ctx, ray_fraction(tiny, pose({5, 0, 0}), {4.9f, 5, 0}, {0, -1, 0}, 10.0f) < 0.0f);
+    CHECK_NEAR(ctx, ray_fraction(tiny, pose({5, 0, 0}), {5, 5, 0}, {0, -1, 0}, 10.0f), 0.499f, 1e-5f);
+
+    // nested in a transformed shape moved to 5
+    Shape *moved = transformed::create({.shape = sb, .position = {5, 0, 0}, .quaternion = IDENTITY});
+    CHECK_NEAR(ctx, ray_fraction(moved, pose({0, 0, 0}), {0, 0, 0}, {1, 0, 0}, 10.0f), 0.3f, 1e-5f);
+
+    transformed::destroy(moved);
+    scaled::destroy(ss);
+    scaled::destroy(sb);
+    scaled::destroy(tiny);
+    sphere::destroy(s);
+    box::destroy(b);
+}
+
+void test_scaled_collide_point(TestCtx &ctx) {
+    CHECK(ctx, util::init(test_heap_begin()));
+    dispatch::init();
+    Shape *s = sphere::create({.radius = 1.0f});
+    Shape *ss = scaled::create({.shape = s, .scale = {2, 2, 2}});
+    CHECK(ctx, point_inside(ss, pose({0, 0, 0}), {1.9f, 0, 0}));
+    CHECK(ctx, !point_inside(ss, pose({0, 0, 0}), {2.1f, 0, 0}));
+
+    Shape *b = box::create({.half_extents = {1, 1, 1}});
+    Shape *sb = scaled::create({.shape = b, .scale = {2, 1, 1}});
+    CHECK(ctx, point_inside(sb, pose({0, 0, 0}), {1.9f, 0.9f, 0}));
+    CHECK(ctx, !point_inside(sb, pose({0, 0, 0}), {2.1f, 0, 0}));
+    CHECK(ctx, !point_inside(sb, pose({0, 0, 0}), {0, 1.1f, 0}));
+
+    scaled::destroy(ss);
+    scaled::destroy(sb);
+    sphere::destroy(s);
+    box::destroy(b);
+}
+
+/* collide and cast through dispatch */
+
+void test_scaled_sphere_and_box_vs_sphere(TestCtx &ctx) {
+    CHECK(ctx, util::init(test_heap_begin()));
+    dispatch::init();
+    Shape *s = sphere::create({.radius = 1.0f});
+    collide_shape::CollideShapeCollector collector = collide_shape::create_collector(collector::COLLECT_ALL);
+
+    // a unit sphere scaled by 2 against a unit sphere 2.5 away: 0.5 deep, points on each surface
+    Shape *ss = scaled::create({.shape = s, .scale = {2, 2, 2}});
+    collide(collector, ss, pose({0, 0, 0}), s, pose({2.5f, 0, 0}));
+    CHECK(ctx, collector.hits.length == 1);
+    if (collector.hits.length == 1) {
+        CHECK_NEAR(ctx, collector.hits[0].penetration, 0.5f, 1e-5f);
+        CHECK(ctx, near3(unit(collector.hits[0].penetration_axis), 1, 0, 0, 1e-5f));
+        CHECK(ctx, near3(collector.hits[0].point_a, 2, 0, 0, 1e-5f));
+        CHECK(ctx, near3(collector.hits[0].point_b, 1.5f, 0, 0, 1e-5f));
+    }
+
+    // a unit box scaled (2, 1, 1): 0.5 into its +x face at 2 and into its top at 1
+    Shape *b = box::create({.half_extents = {1, 1, 1}});
+    Shape *sb = scaled::create({.shape = b, .scale = {2, 1, 1}});
+    collide_shape::reset(collector);
+    collide(collector, sb, pose({0, 0, 0}), s, pose({2.5f, 0, 0}));
+    CHECK(ctx, collector.hits.length == 1);
+    if (collector.hits.length == 1) {
+        CHECK_NEAR(ctx, collector.hits[0].penetration, 0.5f, 1e-5f);
+        CHECK(ctx, near3(unit(collector.hits[0].penetration_axis), 1, 0, 0, 1e-5f));
+        CHECK(ctx, near3(collector.hits[0].point_a, 2, 0, 0, 1e-5f));
+    }
+    collide_shape::reset(collector);
+    collide(collector, sb, pose({0, 0, 0}), s, pose({1.5f, 1.5f, 0}));
+    CHECK(ctx, collector.hits.length == 1);
+    if (collector.hits.length == 1) {
+        CHECK_NEAR(ctx, collector.hits[0].penetration, 0.5f, 1e-5f);
+        CHECK(ctx, near3(unit(collector.hits[0].penetration_axis), 0, 1, 0, 1e-5f));
+    }
+    // the sphere first: the same contact seen from the other side
+    collide_shape::reset(collector);
+    collide(collector, s, pose({1.5f, 1.5f, 0}), sb, pose({0, 0, 0}));
+    CHECK(ctx, collector.hits.length == 1);
+    if (collector.hits.length == 1) {
+        CHECK_NEAR(ctx, collector.hits[0].penetration, 0.5f, 1e-5f);
+        CHECK(ctx, near3(unit(collector.hits[0].penetration_axis), 0, -1, 0, 1e-5f));
+    }
+    // past the unscaled box's face but clear of the scaled one's
+    collide_shape::reset(collector);
+    collide(collector, sb, pose({0, 0, 0}), s, pose({3.5f, 0, 0}));
+    CHECK(ctx, collector.hits.length == 0);
+
+    // a sphere swept from -10 by 20 along x meets the scaled box's -x face at -2 after 7
+    cast_shape::CastShapeCollector cast_collector = cast_shape::create_collector(collector::COLLECT_CLOSEST);
+    shapes::cast_fn(s->type, sb->type)(cast_collector, cast_shape::default_settings(), s, NO_SUB_SHAPE, pose({-10, 0, 0}), vec3f::make(20, 0, 0), sb,
+                                       NO_SUB_SHAPE, pose({0, 0, 0}));
+    CHECK(ctx, cast_collector.has_hit);
+    if (cast_collector.has_hit) CHECK_NEAR(ctx, cast_collector.hits[0].fraction, 0.35f, 1e-4f);
+    // and the scaled box swept into the sphere
+    cast_shape::reset(cast_collector);
+    shapes::cast_fn(sb->type, s->type)(cast_collector, cast_shape::default_settings(), sb, NO_SUB_SHAPE, pose({0, 0, 0}), vec3f::make(20, 0, 0), s,
+                                       NO_SUB_SHAPE, pose({10, 0, 0}));
+    CHECK(ctx, cast_collector.has_hit);
+    if (cast_collector.has_hit) CHECK_NEAR(ctx, cast_collector.hits[0].fraction, 0.35f, 1e-4f);
+
+    cast_shape::release(cast_collector);
+    collide_shape::release(collector);
+    scaled::destroy(ss);
+    scaled::destroy(sb);
+    sphere::destroy(s);
+    box::destroy(b);
+}
+
+void test_scaled_dispatch_rows(TestCtx &ctx) {
+    dispatch::init();
+    CHECK(ctx, shapes::collide_fn(shapes::SHAPE_SCALED, shapes::SHAPE_BOX) == scaled::collide_scaled_vs_shape);
+    CHECK(ctx, shapes::collide_fn(shapes::SHAPE_BOX, shapes::SHAPE_SCALED) == scaled::collide_shape_vs_scaled);
+    CHECK(ctx, shapes::cast_fn(shapes::SHAPE_SCALED, shapes::SHAPE_PLANE) == scaled::cast_scaled_vs_shape);
+    CHECK(ctx, shapes::cast_fn(shapes::SHAPE_TRIANGLE_MESH, shapes::SHAPE_SCALED) == scaled::cast_shape_vs_scaled);
+    // a later wrapper than the transformed shape: scaled peels first where the two meet
+    CHECK(ctx, shapes::collide_fn(shapes::SHAPE_TRANSFORMED, shapes::SHAPE_SCALED) == scaled::collide_shape_vs_scaled);
+    CHECK(ctx, shapes::collide_fn(shapes::SHAPE_SCALED, shapes::SHAPE_TRANSFORMED) == scaled::collide_scaled_vs_shape);
+    CHECK(ctx, shapes::cast_fn(shapes::SHAPE_SCALED, shapes::SHAPE_EMPTY) == nullptr);
+}
+
+/* material by sub shape id */
+
+void test_scaled_material(TestCtx &ctx) {
+    CHECK(ctx, util::init(test_heap_begin()));
+    dispatch::init();
+    // through the inner shape, sub shape id and all
+    Shape *b = box::create({.half_extents = {1, 1, 1}, .material_id = 6});
+    Shape *s = sphere::create({.radius = 1.0f, .material_id = 3});
+    Shape *moved = transformed::create({.shape = s, .position = {3, 0, 0}});
+    Shape *scaled_box = scaled::create({.shape = b, .scale = {2, 3, 4}});
+    Shape *scaled_moved = scaled::create({.shape = moved, .scale = {-1, 2, 2}});
+    CHECK(ctx, shapes::get_shape_material(scaled_box, sub_shape::EMPTY_SUB_SHAPE_ID) == 6);
+    CHECK(ctx, shapes::get_shape_material(scaled_moved, sub_shape::EMPTY_SUB_SHAPE_ID) == 3);
+    scaled::destroy(scaled_moved);
+    scaled::destroy(scaled_box);
+    transformed::destroy(moved);
+    sphere::destroy(s);
+    box::destroy(b);
+}

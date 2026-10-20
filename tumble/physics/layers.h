@@ -1,0 +1,42 @@
+#pragma once
+
+// crashcat's layers.ts: object layers mapped onto broadphase layers, and the three collision
+// tables between them, as flat row-major byte tables that grow as layers are added.
+
+#include <stdint.h>
+
+#include "util/collections.h"
+
+namespace layers {
+
+struct Layers {
+    uint32_t broadphase_layers;
+    uint32_t object_layers;
+    /** object layer -> broadphase layer */
+    collections::Vec<uint32_t> object_layer_to_broadphase_layer;
+    /** object layer pairs: i * object_layers + j is 1 when i collides with j */
+    collections::Vec<uint8_t> object_layer_pairs;
+    /** object layer vs broadphase layer: i * broadphase_layers + j */
+    collections::Vec<uint8_t> object_vs_broadphase;
+    /** broadphase layer pairs: i * broadphase_layers + j */
+    collections::Vec<uint8_t> broadphase_pairs;
+};
+
+/** an empty set of layers; a zeroed struct is the same. */
+inline Layers create() { return {}; }
+void release(Layers &layers);
+
+/** adds a broadphase layer and returns its index. */
+uint32_t add_broadphase_layer(Layers &layers);
+/** adds an object layer in `broadphase_layer` and returns its index. */
+uint32_t add_object_layer(Layers &layers, uint32_t broadphase_layer);
+/** lets two object layers collide, both ways, and their broadphase layers with them. */
+void enable_collision(Layers &layers, uint32_t object_layer_a, uint32_t object_layer_b);
+/** stops two object layers colliding, both ways. */
+void disable_collision(Layers &layers, uint32_t object_layer_a, uint32_t object_layer_b);
+
+bool object_layer_collides_with_broadphase_layer(const Layers &layers, uint32_t object_layer, uint32_t broadphase_layer);
+bool broadphase_layer_collides_with_broadphase_layer(const Layers &layers, uint32_t broadphase_layer_a, uint32_t broadphase_layer_b);
+bool object_layer_collides_with_object_layer(const Layers &layers, uint32_t object_layer_a, uint32_t object_layer_b);
+
+}  // namespace layers
