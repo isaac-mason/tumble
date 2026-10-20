@@ -153,3 +153,30 @@ void test_world_one_settings_makes_two_worlds(TestCtx &ctx) {
     world::destroy(first);
     world::destroy(second);
 }
+
+/** the combined friction of the first contact the box makes with the floor, the floor's shape naming material 0 */
+static float first_contact_friction(TestCtx &ctx, const contact_constraints::Material *materials, uint32_t count) {
+    WorldScene scene = make_world_scene(ctx);
+    CHECK(ctx, world::set_materials(*scene.world, materials, count));
+    shapes::Shape *floor_shape = box::create({.half_extents = {10.0f, 0.5f, 10.0f}, .material_id = 0});
+    rigid_body::RigidBodySettings floor = body_settings(floor_shape, scene.not_moving, motion_type::MOTION_STATIC, {0.0f, -0.5f, 0.0f});
+    floor.friction = 0.2f;
+    rigid_body::create(*scene.world, floor);
+    shapes::Shape *box_shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    rigid_body::RigidBodySettings box = body_settings(box_shape, scene.moving, motion_type::MOTION_DYNAMIC, {0.0f, 0.5f, 0.0f});
+    box.friction = 0.25f;
+    rigid_body::create(*scene.world, box);
+    step_world(*scene.world);
+    const float friction = scene.world->events.contacts_added.length > 0 ? scene.world->events.contacts_added[0].settings.combined_friction : -1.0f;
+    release_world_scene(scene);
+    box::destroy(box_shape);
+    box::destroy(floor_shape);
+    return friction;
+}
+
+void test_world_materials_stand_in_for_the_body_on_their_side(TestCtx &ctx) {
+    // geometric means: the box's 0.25 against the material's 0.81, then against the floor body's own 0.2 with no table
+    const contact_constraints::Material rough = {0.81f, 0.0f};
+    CHECK_NEAR(ctx, first_contact_friction(ctx, &rough, 1), 0.45f, 1e-6f);
+    CHECK_NEAR(ctx, first_contact_friction(ctx, nullptr, 0), scalar::sqrt(0.25f * 0.2f), 1e-6f);
+}

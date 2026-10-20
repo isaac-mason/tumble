@@ -55,6 +55,15 @@ void destroy(World *world) {
     util::destroy(world);
 }
 
+bool set_materials(World &world, const contact_constraints::Material *materials, uint32_t count) {
+    collections::Vec<contact_constraints::Material> &table = world.contact_constraints.materials;
+    table.length = 0;
+    if (!table.reserve(count)) return false;
+    for (uint32_t i = 0; i < count; i++) table.data[i] = materials[i];
+    table.length = count;
+    return true;
+}
+
 void step(World &world, float delta_time) {
     update::step_begin(world, delta_time);
     do {

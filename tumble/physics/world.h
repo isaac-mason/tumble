@@ -50,6 +50,13 @@ World *create(const world_settings::WorldSettings &settings);
 void destroy(World *world);
 
 /**
+ * the surfaces material ids name: a shape's or a triangle's material id picks materials[id] for its side of a contact,
+ * in place of the body's friction and restitution; an id past the end, or -1, takes the body's. replaces the table;
+ * false (error set, the table empty) when the allocator fails
+ */
+bool set_materials(World &world, const contact_constraints::Material *materials, uint32_t count);
+
+/**
  * one step answering nothing: update.h's phases in order, finding pairs again while the narrowphase wakes bodies.
  * a caller that rejects pairs or overrides contacts runs the phases itself
  */
