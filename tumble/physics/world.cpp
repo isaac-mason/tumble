@@ -21,7 +21,10 @@ World *create(const world_settings::WorldSettings &settings) {
         util::destroy(world);
         return nullptr;
     }
-    world->broadphase = broadphase::init(world->settings.layers);
+    if (!broadphase::init(world->broadphase, world->settings.layers)) {
+        destroy(world);
+        return nullptr;
+    }
     world->pairs = pairs::create();
     world->bodies = bodies::init();
     // the pool grows only as far as body_id::MAX_BODIES (bodies::add_slot refuses past it)

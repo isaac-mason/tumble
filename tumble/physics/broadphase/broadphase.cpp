@@ -8,15 +8,19 @@ TUMBLE_NAMESPACE_BEGIN
 
 namespace broadphase {
 
-Broadphase init(const layers::Layers &layers) {
-    const uint32_t num_broadphase_layers = layers.broadphase_layers;
-    Broadphase broadphase = {};
-
-    broadphase.trees.reserve(num_broadphase_layers);
-    for (uint32_t i = 0; i < num_broadphase_layers; i++) broadphase.trees.push(quad_tree::create());
-
-    broadphase.next_tree_to_optimize = 0;
-    return broadphase;
+bool init(Broadphase &out, const layers::Layers &layers) {
+    out = {};
+    if (!out.trees.reserve(layers.broadphase_layers)) return false;
+    for (uint32_t i = 0; i < layers.broadphase_layers; i++) {
+        quad_tree::QuadTree tree = quad_tree::create();
+        if (tree.root_node == quad_tree::INVALID_NODE_INDEX) {
+            quad_tree::release(tree);
+            release(out);
+            return false;
+        }
+        out.trees.push(tree);
+    }
+    return true;
 }
 
 void release(Broadphase &broadphase) {

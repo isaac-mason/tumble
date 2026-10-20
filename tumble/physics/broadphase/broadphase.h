@@ -29,7 +29,8 @@ struct Broadphase {
     uint32_t next_tree_to_optimize;
 };
 
-Broadphase init(const layers::Layers &layers);
+/** a tree per broadphase layer into out; false (error set, out empty) when the allocator fails */
+bool init(Broadphase &out, const layers::Layers &layers);
 void release(Broadphase &broadphase);
 
 void add_body(Broadphase &broadphase, rigid_body::RigidBody *body, const layers::Layers &layers);

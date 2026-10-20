@@ -1,6 +1,8 @@
 #include "tumble/physics/world.h"
 
 #include "tumble/util/alloc.h"
+#include "tumble/util/error.h"
+#include "tumble/util/mem.h"
 #include "tumble/util/object.h"
 #include "world_test_scene.h"
 #include "test_math.h"
@@ -179,4 +181,59 @@ void test_world_materials_stand_in_for_the_body_on_their_side(TestCtx &ctx) {
     const contact_constraints::Material rough = {0.81f, 0.0f};
     CHECK_NEAR(ctx, first_contact_friction(ctx, &rough, 1), 0.45f, 1e-6f);
     CHECK_NEAR(ctx, first_contact_friction(ctx, nullptr, 0), scalar::sqrt(0.25f * 0.2f), 1e-6f);
+}
+
+/** a bump allocator over a block of its own that refuses once `remaining` requests are spent */
+struct FailingArena {
+    alignas(64) unsigned char memory[1 << 20];
+    size_t used;
+    uint32_t remaining;
+};
+
+static FailingArena failing_arena;
+
+static void *failing_allocate(size_t size, size_t alignment, void *user) {
+    FailingArena &arena = *static_cast<FailingArena *>(user);
+    if (arena.remaining == 0) return nullptr;
+    arena.remaining--;
+    const size_t at = util::align_up(arena.used, alignment);
+    if (at + size > sizeof(arena.memory)) return nullptr;
+    arena.used = at + size;
+    return arena.memory + at;
+}
+
+static void failing_free(void *, size_t, void *) {}
+
+void test_world_create_backs_out_of_every_failed_allocation(TestCtx &ctx) {
+    dispatch::init();
+    uint32_t moving, not_moving;
+    world_settings::WorldSettings settings = make_world_test_settings(moving, not_moving);
+    const size_t blocks = util::allocated_blocks();
+    const size_t bytes = util::allocated_bytes();
+    util::set_allocator({failing_allocate, failing_free, &failing_arena});
+
+    // refuse the first request, then the second, and so on, until a world is made: each refusal backs out whole
+    bool made = false;
+    bool clean = true;
+    for (uint32_t allowed = 0; allowed < 64 && !made; allowed++) {
+        failing_arena = {};
+        failing_arena.remaining = allowed;
+        world::World *world = world::create(settings);
+        if (world == nullptr) {
+            clean = clean && util::error() == util::ERROR_OUT_OF_MEMORY && util::allocated_blocks() == blocks && util::allocated_bytes() == bytes;
+            util::error_clear();
+        } else {
+            // a world it returns is whole: nothing failed on the way, every broadphase layer has its tree
+            made = true;
+            clean = clean && util::error() == util::ERROR_NONE && world->broadphase.trees.length == settings.layers.broadphase_layers;
+            for (uint32_t i = 0; i < world->broadphase.trees.length; i++) {
+                clean = clean && world->broadphase.trees[i].root_node != quad_tree::INVALID_NODE_INDEX;
+            }
+            world::destroy(world);
+            clean = clean && util::allocated_blocks() == blocks && util::allocated_bytes() == bytes;
+        }
+    }
+    CHECK(ctx, made && clean);
+    failing_arena.remaining = ~0u;
+    world_settings::release(settings);
 }

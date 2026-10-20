@@ -91,6 +91,7 @@ struct QuadTree {
     collections::Vec<BuildEntry> build_stack;
 };
 
+/** an empty tree; its root_node is INVALID_NODE_INDEX (error set) when the allocator fails */
 QuadTree create();
 void release(QuadTree &tree);
 
