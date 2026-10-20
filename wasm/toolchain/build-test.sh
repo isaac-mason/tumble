@@ -45,7 +45,6 @@ cmp -s "$BUILD/test_list.inc" "$LIST_DIR/test_list.inc" || mv "$BUILD/test_list.
 compile_tree "$SRC" "-DTUMBLE_DEBUG"
 compile_tree "$RUNTIME" "-DTUMBLE_DEBUG"
 compile_tree "$TESTS" "-DTUMBLE_DEBUG -I$TESTS -I$LIST_DIR"
-compile_c
 link_wasm "$BUILD/tumble-test.wasm" names
 node "$HERE/scripts/check-imports.mjs" "$BUILD/tumble-test.wasm"
 echo "simd backend: $([ "$SIMD" = 0 ] && echo scalar || echo wasm simd128)"

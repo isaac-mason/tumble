@@ -48,8 +48,6 @@ COMMON="--target=wasm32 $OPT $FEATURES -nostdlib -nostdlibinc -ffreestanding -fv
 # -Wglobal-constructors: a static needing a constructor would put a constructor list in the
 # module, and with no entry point the linker then runs that list on every export call.
 CXXFLAGS="$COMMON -std=c++23 -Wall -Wextra -Werror -Wglobal-constructors -I$ROOT"
-# musl's: compiled quiet, as C.
-CFLAGS="$COMMON -std=c11 -w -I$SRC/math/musl"
 
 LDFLAGS="--no-entry --import-memory --export-dynamic --export=__heap_base --export=__data_end --stack-first -z stack-size=1048576"
 
@@ -94,11 +92,6 @@ compile_set() {
 # compile_tree <dir> <extra cxxflags> : every .cpp under dir
 compile_tree() {
     compile_set "$CXXFLAGS $2" $(find "$1" -name '*.cpp' | sort)
-}
-
-# compile_c : the vendored c files, musl's
-compile_c() {
-    compile_set "$CFLAGS" $(find "$SRC/math/musl" -name '*.c' | sort)
 }
 
 # link_wasm <out> [names] : links $OBJS. "names" is the test and schema builds: the name section is

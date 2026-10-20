@@ -5,14 +5,6 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
-extern "C" {
-float sinf(float x);
-float cosf(float x);
-float atanf(float x);
-float atan2f(float y, float x);
-float acosf(float x);
-}
-
 namespace scalar {
 
 constexpr float PI = 3.14159265358979323846f;
@@ -43,11 +35,12 @@ inline float max(float a, float b) {
 #endif
 inline float sign(float x) { return x > 0.0f ? 1.0f : (x < 0.0f ? -1.0f : 0.0f); }
 
-inline float sin(float x) { return sinf(x); }
-inline float cos(float x) { return cosf(x); }
-inline float atan(float x) { return atanf(x); }
-inline float atan2(float y, float x) { return atan2f(y, x); }
-inline float acos(float x) { return acosf(x); }
+// musl's, the same bits on every host
+float sin(float x);
+float cos(float x);
+float atan(float x);
+float atan2(float y, float x);
+float acos(float x);
 
 inline float clamp(float value, float lo, float hi) { return max(lo, min(hi, value)); }
 
