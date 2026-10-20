@@ -203,8 +203,8 @@ static Quatf constraint_to_body(Vec3f axis_x, Vec3f axis_y) {
 
 ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodies, RigidBody *body_a, RigidBody *body_b,
                     const SixDOFConstraintSettings &settings) {
-    CC_ASSERT(is_body_live(bodies, body_a->index) && bodies.pool[body_a->index] == body_a);
-    CC_ASSERT(is_body_live(bodies, body_b->index) && bodies.pool[body_b->index] == body_b);
+    TUMBLE_ASSERT(is_body_live(bodies, body_a->index) && bodies.pool[body_a->index] == body_a);
+    TUMBLE_ASSERT(is_body_live(bodies, body_b->index) && bodies.pool[body_b->index] == body_b);
     constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::SIX_DOF);
 
     const uint32_t index = constraints::allocate_index(pool);
@@ -809,7 +809,7 @@ void set_rotation_limits(SixDOFConstraint &constraint, Vec3f limit_min, Vec3f li
 }
 
 void set_motor_state(SixDOFConstraint &constraint, SixDOFAxis axis, MotorState state) {
-    CC_ASSERT(state == motor_settings::OFF || motor_settings::is_valid(constraint.motor_settings[axis]));
+    TUMBLE_ASSERT(state == motor_settings::OFF || motor_settings::is_valid(constraint.motor_settings[axis]));
     if (constraint.motor_state[axis] == state) return;
     constraint.motor_state[axis] = state;
     // the motor parts are repurposed between modes: no warm start into the new one

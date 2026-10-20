@@ -1,8 +1,5 @@
 #pragma once
 
-// the math package's mat2.ts over Mat2f, column-major. `invert` returns false where the js returns
-// null, leaving out untouched.
-
 #include "tumble/math/scalar.h"
 #include "tumble/math/types.h"
 #include "tumble/tumble.h"

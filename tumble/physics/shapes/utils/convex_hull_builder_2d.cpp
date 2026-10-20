@@ -217,7 +217,7 @@ EResult initialize(ConvexHullBuilder2D &builder, int32_t idx1, int32_t idx2, int
 
         // take the furthest point
         collections::Vec<int32_t> &furthest_list = pool[edge_with_furthest_point].conflict_list;
-        CC_ASSERT(furthest_list.length > 0);
+        TUMBLE_ASSERT(furthest_list.length > 0);
         const int32_t furthest_point_idx = furthest_list.data[--furthest_list.length];
         const Vec3f furthest_point = builder.positions[furthest_point_idx];
 

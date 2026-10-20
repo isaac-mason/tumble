@@ -1,8 +1,5 @@
 #pragma once
 
-// the register plane (Plane in types.h): normal . p + constant = 0. load and store cross to and from a record's
-// Plane3f; each function gives the bits of its scalar reference (test/math/storage/plane3f.h).
-
 #include "tumble/math/scalar.h"
 #include "tumble/math/types.h"
 #include "tumble/math/vec3f.h"

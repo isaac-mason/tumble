@@ -11,7 +11,7 @@ namespace narrowphase {
 void cast_ray_vs_shape(cast_ray::CastRayCollector &collector, const cast_ray::CastRaySettings &settings, const cast_ray::Rayf &ray,
                        const shapes::Shape *shape, const sub_shape::SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
     const shapes::ShapeDef &def = shapes::def_of(shape);
-    CC_ASSERT(def.cast_ray != nullptr);
+    TUMBLE_ASSERT(def.cast_ray != nullptr);
     def.cast_ray(collector, settings, ray, shape, sub_shape_id, transform);
 }
 
@@ -56,7 +56,7 @@ void collide_point_vs_shape(collide_point::CollidePointCollector &collector, con
                             Vec3f point, const shapes::Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b,
                             const Transformf &transform_b) {
     const shapes::ShapeDef &def = shapes::def_of(shape_b);
-    CC_ASSERT(def.collide_point != nullptr);
+    TUMBLE_ASSERT(def.collide_point != nullptr);
     def.collide_point(collector, settings, point, shape_b, sub_shape_id_b, transform_b);
 }
 

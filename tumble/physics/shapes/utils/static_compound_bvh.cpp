@@ -247,7 +247,7 @@ StaticCompoundBvhStats stats(const bvh::Node *nodes, uint32_t node_count) {
             depth_sum += depth;
             out.total_children += node_child_count(nodes, node);
         } else {
-            CC_ASSERT(stack_size + 2 <= STACK_SIZE + 1);
+            TUMBLE_ASSERT(stack_size + 2 <= STACK_SIZE + 1);
             stack_node[stack_size] = bvh::node_right(nodes, node);
             stack_depth[stack_size] = depth + 1;
             stack_size++;

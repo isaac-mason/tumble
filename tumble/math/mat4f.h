@@ -1,12 +1,5 @@
 #pragma once
 
-// the math package's mat4.ts on Mat4f, four column lanes, column-major: everything but the projection builders
-// (frustum / perspective / ortho), which the renderer makes on its side, and fromQuat2. a matrix's storage is a
-// Float4x4. each function gives the bits of its scalar reference (test/math/storage/mat4f.h): multiply is four
-// column passes; the scalar-shaped ones (invert, adjoint, the decompositions, the view builders) read their entries
-// out and keep the scalar expressions. `invert`, `invert3x3`, `rotate` and `from_rotation` return false where the js
-// returns null, leaving out untouched.
-
 #include "tumble/math/scalar.h"
 #include "tumble/math/simd.h"
 #include "tumble/math/types.h"
@@ -160,7 +153,6 @@ inline v128_t combine3(const Mat4f &a, v128_t v) {
     return v4f::mul_add(a.c[2], v4f::shuffle<2, 2, 2, 2>(v), r);
 }
 
-/** a * b. */
 inline Mat4f multiply(const Mat4f &a, const Mat4f &b) {
     return {{combine4(a, b.c[0]), combine4(a, b.c[1]), combine4(a, b.c[2]), combine4(a, b.c[3])}};
 }
@@ -186,7 +178,7 @@ inline Vec3f multiply3x3_transposed_vec(const Mat4f &mat, Vec3f vec) {
 /** the upper 3x3 of mat times vec. */
 inline Vec3f multiply3x3_vec(const Mat4f &mat, Vec3f vec) { return {vec3f::fix_w(combine3(mat, vec.v))}; }
 
-/** vec as a point through mat, without the perspective divide (jolt's Mat44 * Vec3). */
+/** vec as a point through mat, without the perspective divide */
 inline Vec3f multiply_vec3(const Mat4f &mat, Vec3f vec) { return {vec3f::fix_w(v4f::add(combine3(mat, vec.v), mat.c[3]))}; }
 
 /** the matrix whose product with u is v x u. */

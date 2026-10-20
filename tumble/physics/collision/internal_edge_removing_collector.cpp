@@ -241,7 +241,7 @@ void flush(InternalEdgeRemovingCollector &wrapper) {
 }
 
 void reset(InternalEdgeRemovingCollector &wrapper) {
-    CC_ASSERT(wrapper.chained != nullptr);
+    TUMBLE_ASSERT(wrapper.chained != nullptr);
     collide_shape::reset(*wrapper.chained);
     wrapper.voided_features.length = 0;
     wrapper.delayed_results.length = 0;

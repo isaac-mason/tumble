@@ -295,7 +295,7 @@ void set_mass_properties(MotionProperties &motion_properties, uint32_t allowed_d
         motion_properties.inv_mass = 0.0f;
     } else {
         // some shapes like the triangle mesh cannot calculate mass automatically; those need mass properties provided
-        CC_ASSERT(mass_properties.mass > 0.0f);
+        TUMBLE_ASSERT(mass_properties.mass > 0.0f);
         motion_properties.inv_mass = 1.0f / mass_properties.mass;
     }
 
@@ -335,7 +335,7 @@ void set_mass_properties(MotionProperties &motion_properties, uint32_t allowed_d
     }
 
     // can't lock all axes, use a static body for this; it would divide by zero later
-    CC_ASSERT(motion_properties.inv_mass != 0.0f || vec3f::squared_length(vec3f::load(motion_properties.inv_inertia_diagonal)) != 0.0f);
+    TUMBLE_ASSERT(motion_properties.inv_mass != 0.0f || vec3f::squared_length(vec3f::load(motion_properties.inv_inertia_diagonal)) != 0.0f);
 }
 
 Mat4f get_inverse_inertia_for_rotation(const MotionProperties &motion_properties, const Mat4f &body_rotation) {
@@ -423,8 +423,8 @@ void sub_angular_velocity_step(MotionProperties &motion_properties, Vec3f angula
 
 void scale_to_mass(MotionProperties &motion_properties, float new_mass) {
     // the body must have finite mass to scale, and the new mass must be positive
-    CC_ASSERT(motion_properties.inv_mass > 0.0f);
-    CC_ASSERT(new_mass > 0.0f);
+    TUMBLE_ASSERT(motion_properties.inv_mass > 0.0f);
+    TUMBLE_ASSERT(new_mass > 0.0f);
 
     const float new_inv_mass = 1.0f / new_mass;
     // scale inverse inertia diagonal: I^-1 *= (new_inv_mass / old_inv_mass)

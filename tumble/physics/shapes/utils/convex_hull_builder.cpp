@@ -341,10 +341,10 @@ static int32_t create_triangle(ConvexHullBuilder &builder, int32_t idx0, int32_t
 /** links two edges as neighbours */
 static void link_face(ConvexHullBuilder &builder, int32_t edge1, int32_t edge2) {
     // not connected yet, not on the same face, and the vertices match
-    CC_ASSERT(edge_at(builder, edge1).neighbour_edge == -1 && edge_at(builder, edge2).neighbour_edge == -1);
-    CC_ASSERT(edge_at(builder, edge1).face != edge_at(builder, edge2).face);
-    CC_ASSERT(edge_at(builder, edge1).start_idx == edge_at(builder, edge_at(builder, edge2).next_edge).start_idx);
-    CC_ASSERT(edge_at(builder, edge2).start_idx == edge_at(builder, edge_at(builder, edge1).next_edge).start_idx);
+    TUMBLE_ASSERT(edge_at(builder, edge1).neighbour_edge == -1 && edge_at(builder, edge2).neighbour_edge == -1);
+    TUMBLE_ASSERT(edge_at(builder, edge1).face != edge_at(builder, edge2).face);
+    TUMBLE_ASSERT(edge_at(builder, edge1).start_idx == edge_at(builder, edge_at(builder, edge2).next_edge).start_idx);
+    TUMBLE_ASSERT(edge_at(builder, edge2).start_idx == edge_at(builder, edge_at(builder, edge1).next_edge).start_idx);
 
     edge_at(builder, edge1).neighbour_edge = edge2;
     edge_at(builder, edge2).neighbour_edge = edge1;
@@ -401,10 +401,10 @@ struct StackEntry {
  * as removed, flooding out from facing_face, and returns the edges around them as a loop.
  */
 static void find_edge(ConvexHullBuilder &builder, int32_t facing_face, Vec3f vertex, collections::Vec<FullEdge> &out_edges) {
-    CC_ASSERT(out_edges.length == 0);
+    TUMBLE_ASSERT(out_edges.length == 0);
 
     // should start with a facing face
-    CC_ASSERT(is_facing(face_at(builder, facing_face), vertex));
+    TUMBLE_ASSERT(is_facing(face_at(builder, facing_face), vertex));
 
     // flag as removed
     face_at(builder, facing_face).removed = true;
@@ -414,7 +414,7 @@ static void find_edge(ConvexHullBuilder &builder, int32_t facing_face, Vec3f ver
 
     // start with the face/edge provided
     const int32_t first_edge = face_at(builder, facing_face).first_edge;
-    CC_ASSERT(first_edge != -1);
+    TUMBLE_ASSERT(first_edge != -1);
     stack[0] = {first_edge, first_edge, false};
 
     for (;;) {
@@ -422,7 +422,7 @@ static void find_edge(ConvexHullBuilder &builder, int32_t facing_face, Vec3f ver
 
         // get current edge and advance to next
         const int32_t e = cur_entry.current_edge;
-        CC_ASSERT(edge_at(builder, e).next_edge != -1);
+        TUMBLE_ASSERT(edge_at(builder, e).next_edge != -1);
         cur_entry.current_edge = edge_at(builder, e).next_edge;
 
         // if we're back at the first edge we've completed the face and we're done
@@ -448,8 +448,8 @@ static void find_edge(ConvexHullBuilder &builder, int32_t facing_face, Vec3f ver
 
                         // add element to the stack of elements to visit
                         cur_stack_pos++;
-                        CC_ASSERT(cur_stack_pos < MAX_EDGE_LENGTH);
-                        CC_ASSERT(edge_at(builder, ne).next_edge != -1);
+                        TUMBLE_ASSERT(cur_stack_pos < MAX_EDGE_LENGTH);
+                        TUMBLE_ASSERT(edge_at(builder, ne).next_edge != -1);
 
                         // we don't need to test this edge again since we came from it
                         stack[cur_stack_pos] = {ne, edge_at(builder, ne).next_edge, false};
@@ -464,7 +464,7 @@ static void find_edge(ConvexHullBuilder &builder, int32_t facing_face, Vec3f ver
 
     // validate that we have a fully connected loop
     for (uint32_t i = 0; i < out_edges.length; i++) {
-        CC_ASSERT(out_edges[i].end_idx == out_edges[(i + 1) % out_edges.length].start_idx);
+        TUMBLE_ASSERT(out_edges[i].end_idx == out_edges[(i + 1) % out_edges.length].start_idx);
     }
 }
 
@@ -481,7 +481,7 @@ static bool remove_two_edge_face(ConvexHullBuilder &builder, int32_t face, colle
     // check if this face contains only 2 edges
     const int32_t edge = face_at(builder, face).first_edge;
     const int32_t next_edge = edge_at(builder, edge).next_edge;
-    CC_ASSERT(edge != next_edge);  // 1 edge faces should not exist
+    TUMBLE_ASSERT(edge != next_edge);  // 1 edge faces should not exist
     if (edge_at(builder, next_edge).next_edge == edge) {
         // schedule both neighbours for re-checking
         const int32_t neighbour_edge = edge_at(builder, edge).neighbour_edge;
@@ -604,7 +604,7 @@ static void merge_faces(ConvexHullBuilder &builder, int32_t in_edge) {
     const int32_t other_face = edge_at(builder, other_edge).face;
 
     // cannot merge a face with itself
-    CC_ASSERT(face != other_face);
+    TUMBLE_ASSERT(face != other_face);
 
     // loop over the edges of the other face and make them belong to face
     int32_t edge = edge_at(builder, other_edge).next_edge;
@@ -641,7 +641,7 @@ static void merge_faces(ConvexHullBuilder &builder, int32_t in_edge) {
     collections::Vec<int32_t> &list = merged.conflict_list;
     if (merged.furthest_point_distance_sq > other.furthest_point_distance_sq) {
         // this face has a point that's further away, make sure it remains the last one as we add the other points to this faces list
-        CC_ASSERT(list.length > 0);
+        TUMBLE_ASSERT(list.length > 0);
         const int32_t last_point = list.data[--list.length];
         for (uint32_t i = 0; i < other.conflict_list.length; i++) list.push(other.conflict_list[i]);
         list.push(last_point);
@@ -731,12 +731,12 @@ static void add_point(ConvexHullBuilder &builder, int32_t facing_face, int32_t i
     collections::Vec<FullEdge> &edges = builder.horizon;
     edges.length = 0;
     find_edge(builder, facing_face, pos, edges);
-    CC_ASSERT(edges.length >= 3);
+    TUMBLE_ASSERT(edges.length >= 3);
 
     // create new faces
     out_new_faces.length = 0;
     for (uint32_t i = 0; i < edges.length; i++) {
-        CC_ASSERT(edges[i].start_idx != edges[i].end_idx);
+        TUMBLE_ASSERT(edges[i].start_idx != edges[i].end_idx);
         out_new_faces.push(create_triangle(builder, edges[i].start_idx, edges[i].end_idx, idx));
     }
 
@@ -1009,7 +1009,7 @@ Result initialize(ConvexHullBuilder &builder, int32_t max_vertices, float tolera
         if (face_with_furthest_point != -1) {
             // take the furthest point
             collections::Vec<int32_t> &list = face_at(builder, face_with_furthest_point).conflict_list;
-            CC_ASSERT(list.length > 0);
+            TUMBLE_ASSERT(list.length > 0);
             furthest_point_idx = list.data[--list.length];
         } else if (builder.coplanar_list.length > 0) {
             // try to assign points to faces (this also recalculates the distance to the hull for the coplanar vertices)
@@ -1244,7 +1244,7 @@ MaxError &determine_max_error(MaxError &out, const ConvexHullBuilder &builder) {
 
             // check if point is on or in front of plane
             const float normal_len = vec3f::length(face.normal);
-            CC_ASSERT(normal_len > 0.0f);
+            TUMBLE_ASSERT(normal_len > 0.0f);
             const Vec3f v_minus_centroid = vec3f::subtract(v, face.centroid);
             const float plane_dist = vec3f::dot(face.normal, v_minus_centroid) / normal_len;
             if (plane_dist > -COPLANAR_SLOP_FACTOR * coplanar_distance) {

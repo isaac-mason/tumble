@@ -1,11 +1,5 @@
 #pragma once
 
-// the two containers the core is built from, over the heap. both are plain structs: zeroed
-// memory is an empty container, which is what `util::create<T>` gives an object holding one, and
-// `release` gives the memory back. elements are trivially copyable; nothing is constructed.
-//
-// a Map key needs `uint32_t hash_of(const K &)` and `==`.
-
 #include <stdint.h>
 
 #include "tumble/tumble.h"
@@ -15,6 +9,8 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
+// zeroed memory is an empty container and `release` gives the memory back; elements are trivially copyable and never
+// constructed
 namespace collections {
 
 template <typename T>
@@ -24,11 +20,11 @@ struct Vec {
     uint32_t capacity;
 
     T &operator[](uint32_t i) {
-        CC_ASSERT(i < length);
+        TUMBLE_ASSERT(i < length);
         return data[i];
     }
     const T &operator[](uint32_t i) const {
-        CC_ASSERT(i < length);
+        TUMBLE_ASSERT(i < length);
         return data[i];
     }
 
@@ -68,7 +64,7 @@ struct Vec {
 
     /** removes element i by moving the last one into its place; order is not kept. */
     void swap_remove(uint32_t i) {
-        CC_ASSERT(i < length);
+        TUMBLE_ASSERT(i < length);
         data[i] = data[--length];
     }
 
@@ -90,7 +86,7 @@ struct Owned {
     ~Owned() { v.release(); }
 };
 
-/** open addressing with linear probing and backshift removal, kept at most half full. */
+/** open addressing with linear probing and backshift removal, at most half full; K needs `hash_of(const K &)` and `==` */
 template <typename K, typename V>
 struct Map {
     struct Slot {

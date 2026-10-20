@@ -1,9 +1,5 @@
 #pragma once
 
-// the math package's vec3.ts on Vec3f, by value, in snake case. load and store cross to and from a record's
-// Float3. each function gives the bits of its scalar reference over Float3 (test/math/storage/vec3f.h):
-// component-wise ops are lane ops, horizontal ones keep the scalar order (the dot is (x + y) + z).
-
 #include "tumble/math/scalar.h"
 #include "tumble/math/simd.h"
 #include "tumble/math/types.h"
@@ -49,13 +45,13 @@ inline Vec3f subtract(Vec3f a, Vec3f b) { return {v4f::sub(a.v, b.v)}; }
 inline Vec3f subtract_scalar(Vec3f a, float b) { return {v4f::sub(a.v, v4f::splat(b))}; }
 inline Vec3f multiply(Vec3f a, Vec3f b) { return {v4f::mul(a.v, b.v)}; }
 inline Vec3f divide(Vec3f a, Vec3f b) { return {v4f::div(a.v, b.v)}; }
-/** b < a ? b : a per lane, as the storage min. */
+/** b < a ? b : a per lane */
 inline Vec3f min(Vec3f a, Vec3f b) { return {v4f::min(a.v, b.v)}; }
-/** a < b ? b : a per lane, as the storage max. */
+/** a < b ? b : a per lane */
 inline Vec3f max(Vec3f a, Vec3f b) { return {v4f::max(a.v, b.v)}; }
-/** scalar::min per lane (f32.min). */
+/** scalar::min per lane */
 inline Vec3f fmin(Vec3f a, Vec3f b) { return {v4f::fmin(a.v, b.v)}; }
-/** scalar::max per lane (f32.max). */
+/** scalar::max per lane */
 inline Vec3f fmax(Vec3f a, Vec3f b) { return {v4f::fmax(a.v, b.v)}; }
 inline Vec3f negate(Vec3f a) { return {v4f::neg(a.v)}; }
 inline Vec3f abs(Vec3f a) { return {v4f::abs(a.v)}; }
@@ -65,7 +61,7 @@ inline Vec3f scale_and_add(Vec3f a, Vec3f b, float s) { return {v4f::mul_add(b.v
 
 inline Vec3f ceil(Vec3f a) { return {wasm_f32x4_ceil(a.v)}; }
 inline Vec3f floor(Vec3f a) { return {wasm_f32x4_floor(a.v)}; }
-/** symmetric round per component, as scalar::round. */
+/** halves away from zero */
 inline Vec3f round(Vec3f a) { return make(scalar::round(x(a)), scalar::round(y(a)), scalar::round(z(a))); }
 
 inline Vec3f inverse(Vec3f a) { return {v4f::div(v4f::splat(1.0f), a.v)}; }
@@ -84,7 +80,7 @@ inline float squared_distance(Vec3f a, Vec3f b) {
 }
 inline float distance(Vec3f a, Vec3f b) { return scalar::sqrt(squared_distance(a, b)); }
 
-/** the zero vector stays zero, as the js does. */
+/** the zero vector stays zero */
 inline Vec3f normalize(Vec3f a) {
     float len = squared_length(a);
     if (len > 0.0f) len = 1.0f / scalar::sqrt(len);
@@ -111,7 +107,7 @@ inline Vec3f perpendicular(Vec3f a) {
     return make(0.0f, az * inv_len, -ay * inv_len);
 }
 
-/** a unit vector perpendicular to a, divided by its length (jolt's GetNormalizedPerpendicular); a must not be zero. */
+/** a unit vector perpendicular to a, which must not be zero */
 inline Vec3f normalized_perpendicular(Vec3f a) {
     const float ax = x(a), ay = y(a), az = z(a);
     if (scalar::abs(ax) > scalar::abs(ay)) {
@@ -172,7 +168,7 @@ inline Vec3f bezier(Vec3f a, Vec3f b, Vec3f c, Vec3f d, float t) {
     return {r};
 }
 
-/** a as a point through m, with the perspective divide; a zero (or nan) w divides by one, as the js `w || 1`. */
+/** a as a point through m, with the perspective divide; a zero or nan w divides by one */
 inline Vec3f transform_mat4(Vec3f a, const Mat4f &m) {
     v128_t r = v4f::mul(m.c[0], v4f::splat(x(a)));
     r = v4f::mul_add(m.c[1], v4f::splat(y(a)), r);

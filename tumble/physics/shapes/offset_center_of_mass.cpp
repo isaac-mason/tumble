@@ -9,7 +9,7 @@ TUMBLE_NAMESPACE_BEGIN
 namespace offset_center_of_mass {
 
 Shape *create(const OffsetCenterOfMassShapeSettings &settings) {
-    CC_ASSERT(settings.shape != nullptr);
+    TUMBLE_ASSERT(settings.shape != nullptr);
     Shape *shape = shapes::allocate(shapes::SHAPE_OFFSET_CENTER_OF_MASS);
     if (shape == nullptr) return nullptr;
     shape->offset_center_of_mass.shape = settings.shape;

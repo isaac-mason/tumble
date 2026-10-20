@@ -27,7 +27,7 @@ static inline float closest_length_sq_of(const EpaConvexHullBuilderState &state,
 
 static void push_triangle_to_queue(EpaConvexHullBuilderState &state, int32_t tri) {
     // a triangle is queued at most once, so the queue never outgrows the pool
-    CC_ASSERT(state.queue_size < static_cast<uint32_t>(EPA_MAX_TRIANGLES));
+    TUMBLE_ASSERT(state.queue_size < static_cast<uint32_t>(EPA_MAX_TRIANGLES));
     int32_t *queue = state.queue;
     queue[state.queue_size++] = tri;
     state.triangles[tri].flags |= TRI_FLAG_IN_QUEUE;
@@ -51,16 +51,16 @@ static void push_triangle_to_queue(EpaConvexHullBuilderState &state, int32_t tri
 }
 
 void link_triangle(EpaConvexHullBuilderState &state, int32_t t1, int32_t edge1, int32_t t2, int32_t edge2) {
-    CC_ASSERT(edge1 >= 0 && edge1 < 3);
-    CC_ASSERT(edge2 >= 0 && edge2 < 3);
+    TUMBLE_ASSERT(edge1 >= 0 && edge1 < 3);
+    TUMBLE_ASSERT(edge2 >= 0 && edge2 < 3);
     Edge &e1 = state.triangles[t1].edges[edge1];
     Edge &e2 = state.triangles[t2].edges[edge2];
 
     // not connected yet, and the vertices match
-    CC_ASSERT(e1.neighbour_triangle == -1);
-    CC_ASSERT(e2.neighbour_triangle == -1);
-    CC_ASSERT(e1.start_index == state.triangles[t2].edges[(edge2 + 1) % 3].start_index);
-    CC_ASSERT(e2.start_index == state.triangles[t1].edges[(edge1 + 1) % 3].start_index);
+    TUMBLE_ASSERT(e1.neighbour_triangle == -1);
+    TUMBLE_ASSERT(e2.neighbour_triangle == -1);
+    TUMBLE_ASSERT(e1.start_index == state.triangles[t2].edges[(edge2 + 1) % 3].start_index);
+    TUMBLE_ASSERT(e2.start_index == state.triangles[t1].edges[(edge1 + 1) % 3].start_index);
 
     e1.neighbour_triangle = t2;
     e1.neighbour_edge = edge2;
@@ -199,7 +199,7 @@ void initialize(EpaConvexHullBuilderState &state, int32_t idx1, int32_t idx2, in
     // create triangles (back to back)
     const int32_t t1 = create_triangle(state, idx1, idx2, idx3);
     const int32_t t2 = create_triangle(state, idx1, idx3, idx2);
-    CC_ASSERT(t1 != -1 && t2 != -1);
+    TUMBLE_ASSERT(t1 != -1 && t2 != -1);
 
     // link triangle edges
     link_triangle(state, t1, 0, t2, 2);
@@ -301,8 +301,8 @@ int32_t find_facing_triangle(const EpaConvexHullBuilderState &state, Vec3f posit
 void free_triangle(EpaConvexHullBuilderState &state, int32_t tri) {
     Triangle &triangle = state.triangles[tri];
     // only a removed, unlinked triangle goes back
-    CC_ASSERT((triangle.flags & TRI_FLAG_REMOVED) != 0);
-    CC_ASSERT(triangle.edges[0].neighbour_triangle == -1 && triangle.edges[1].neighbour_triangle == -1 &&
+    TUMBLE_ASSERT((triangle.flags & TRI_FLAG_REMOVED) != 0);
+    TUMBLE_ASSERT(triangle.edges[0].neighbour_triangle == -1 && triangle.edges[1].neighbour_triangle == -1 &&
               triangle.edges[2].neighbour_triangle == -1);
     triangle.next_free = state.triangle_free_head;
     state.triangle_free_head = tri;
@@ -372,7 +372,7 @@ bool find_edge(EpaConvexHullBuilderState &state, int32_t facing_triangle, Vec3f 
 
                     // add element to the stack
                     cur_stack_pos++;
-                    CC_ASSERT(cur_stack_pos < EPA_MAX_EDGE_LENGTH);
+                    TUMBLE_ASSERT(cur_stack_pos < EPA_MAX_EDGE_LENGTH);
                     if (cur_stack_pos >= EPA_MAX_EDGE_LENGTH) return false;
                     stack[cur_stack_pos] = {n, n_edge, 0};
                 } else {
@@ -383,7 +383,7 @@ bool find_edge(EpaConvexHullBuilderState &state, int32_t facing_triangle, Vec3f 
                     next_expected_start_idx = state.triangles[n].edges[n_edge].start_index;
 
                     // vertex behind, keep edge
-                    CC_ASSERT(state.edges_size < static_cast<uint32_t>(EPA_MAX_EDGE_LENGTH));
+                    TUMBLE_ASSERT(state.edges_size < static_cast<uint32_t>(EPA_MAX_EDGE_LENGTH));
                     if (state.edges_size >= static_cast<uint32_t>(EPA_MAX_EDGE_LENGTH)) return false;
                     edges[state.edges_size++] = {n, n_edge, e_start_index};
                 }
@@ -401,7 +401,7 @@ bool find_edge(EpaConvexHullBuilderState &state, int32_t facing_triangle, Vec3f 
 bool add_point(EpaConvexHullBuilderState &state, int32_t facing_triangle, int32_t idx, float closest_dist_sq,
                NewTriangles &out_triangles) {
     // check if structure is intact
-    CC_ASSERT(validate_triangles(state));
+    TUMBLE_ASSERT(validate_triangles(state));
 
     // find edge of convex hull of triangles that are not facing the new vertex
     if (!find_edge(state, facing_triangle, state.positions[idx])) return false;
@@ -414,7 +414,7 @@ bool add_point(EpaConvexHullBuilderState &state, int32_t facing_triangle, int32_
         const int32_t nt = create_triangle(state, state.edges[i].start_index, state.edges[i_next].start_index, idx);
         if (nt == -1) return false;
 
-        CC_ASSERT(out_triangles.size < static_cast<uint32_t>(EPA_MAX_EDGE_LENGTH));
+        TUMBLE_ASSERT(out_triangles.size < static_cast<uint32_t>(EPA_MAX_EDGE_LENGTH));
         if (out_triangles.size >= static_cast<uint32_t>(EPA_MAX_EDGE_LENGTH)) return false;
         out_triangles.values[out_triangles.size++] = nt;
 
@@ -436,7 +436,7 @@ bool add_point(EpaConvexHullBuilderState &state, int32_t facing_triangle, int32_
     }
 
     // check if structure is intact
-    CC_ASSERT(validate_triangles(state));
+    TUMBLE_ASSERT(validate_triangles(state));
 
     return true;
 }

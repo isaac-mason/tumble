@@ -1,8 +1,5 @@
 #pragma once
 
-// the register box's functions (AABox in types.h). load and store cross to and from a record's Box3f; each
-// function gives the bits of its scalar reference (test/math/storage/box3f.h). an empty box is +inf min, -inf max.
-
 #include "tumble/math/mat4f.h"
 #include "tumble/math/simd.h"
 #include "tumble/math/types.h"
@@ -28,7 +25,6 @@ inline AABox empty() { return {vec3f::splat(INF), vec3f::splat(-INF)}; }
 /** min above max on any axis. */
 inline bool is_empty(const AABox &box) { return (v4f::bitmask(v4f::gt(box.min.v, box.max.v)) & 7u) != 0u; }
 
-/** the bounds of a triangle. */
 inline AABox from_triangle(Vec3f a, Vec3f b, Vec3f c) {
     return {{v4f::min(a.v, v4f::min(b.v, c.v))}, {v4f::max(a.v, v4f::max(b.v, c.v))}};
 }
@@ -63,7 +59,7 @@ inline AABox scale(const AABox &box, Vec3f s) {
     return {{v4f::min(lo, hi)}, {v4f::max(lo, hi)}};
 }
 
-/** the box of the transformed box: centre through the matrix, extents through its absolute upper 3x3. empty stays empty. */
+/** centre through the matrix, extents through its absolute upper 3x3; empty stays empty */
 inline AABox transform_mat4(const AABox &box, const Mat4f &mat) {
     if (is_empty(box)) return empty();
     const v128_t c = v4f::mul(v4f::add(box.min.v, box.max.v), v4f::splat(0.5f));

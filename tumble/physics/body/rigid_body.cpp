@@ -103,8 +103,8 @@ static void set_rigid_body(RigidBody *body, bodies::Bodies &bodies, const RigidB
     mp.max_angular_velocity = o.max_angular_velocity;
     mp.num_velocity_steps_override = o.num_velocity_steps_override;
     mp.num_position_steps_override = o.num_position_steps_override;
-    CC_ASSERT(mp.num_velocity_steps_override < 256);
-    CC_ASSERT(mp.num_position_steps_override < 256);
+    TUMBLE_ASSERT(mp.num_velocity_steps_override < 256);
+    TUMBLE_ASSERT(mp.num_position_steps_override < 256);
     mp.allowed_degrees_of_freedom = o.allowed_degrees_of_freedom;
     mp.allow_sleeping = o.allow_sleeping;
     mp.motion_quality = o.motion_quality;
@@ -149,7 +149,7 @@ static void set_rigid_body(RigidBody *body, bodies::Bodies &bodies, const RigidB
 }
 
 RigidBody *create(bodies::Bodies &bodies, const layers::Layers &layers, const RigidBodySettings &settings) {
-    CC_ASSERT(settings.object_layer < layers.object_layers);
+    TUMBLE_ASSERT(settings.object_layer < layers.object_layers);
     (void)layers;
 
     // claim a slot: the last freed one, or a new one at the end
@@ -326,7 +326,7 @@ void set_transform(bodies::Bodies &bodies, RigidBody *body, Vec3f position, Quat
 }
 
 void set_object_layer(const layers::Layers &layers, RigidBody *body, uint32_t object_layer) {
-    CC_ASSERT(object_layer < layers.object_layers);
+    TUMBLE_ASSERT(object_layer < layers.object_layers);
     (void)layers;
     body->object_layer = object_layer;
 }

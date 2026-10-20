@@ -1,8 +1,5 @@
 #pragma once
 
-// objects the wasm hands to js by pointer: made zeroed, so the containers in them start empty, and given back whole.
-// js holds them as typed handles, so a pointer of the wrong kind is a type error on the js side.
-
 #include <stdint.h>
 
 #include "tumble/tumble.h"
@@ -13,7 +10,7 @@ TUMBLE_NAMESPACE_BEGIN
 
 namespace util {
 
-/** a zeroed object, or null (error set) when the memory cannot grow. */
+/** zeroed, so the containers in it start empty; null (error set) when the memory cannot grow */
 template <typename T>
 inline T *create() {
     T *object = alloc<T>();

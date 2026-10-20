@@ -158,7 +158,7 @@ void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f, const Shape *s
 }
 
 int32_t get_material(const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
-    CC_ASSERT(sub_shape::is_empty(sub_shape_id));
+    TUMBLE_ASSERT(sub_shape::is_empty(sub_shape_id));
     (void)sub_shape_id;
     return shape->material_id;
 }

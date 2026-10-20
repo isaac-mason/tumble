@@ -49,8 +49,8 @@ static void reset_constraint(DistanceConstraint &constraint) {
 
 ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodies, RigidBody *body_a, RigidBody *body_b,
                     const DistanceConstraintSettings &settings) {
-    CC_ASSERT(is_body_live(bodies, body_a->index) && bodies.pool[body_a->index] == body_a);
-    CC_ASSERT(is_body_live(bodies, body_b->index) && bodies.pool[body_b->index] == body_b);
+    TUMBLE_ASSERT(is_body_live(bodies, body_a->index) && bodies.pool[body_a->index] == body_a);
+    TUMBLE_ASSERT(is_body_live(bodies, body_b->index) && bodies.pool[body_b->index] == body_b);
     constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::DISTANCE);
 
     const uint32_t index = constraints::allocate_index(pool);
@@ -281,7 +281,7 @@ void get_sort_fields(constraints::ConstraintSortFields &out, const DistanceConst
 float get_total_lambda(const DistanceConstraint &constraint) { return constraint.axis_constraint.total_lambda; }
 
 void set_distance(DistanceConstraint &constraint, float min_distance, float max_distance) {
-    CC_ASSERT(min_distance <= max_distance);
+    TUMBLE_ASSERT(min_distance <= max_distance);
     constraint.min_distance = min_distance;
     constraint.max_distance = max_distance;
 }

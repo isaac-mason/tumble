@@ -1,7 +1,5 @@
 #pragma once
 
-// the instance: init, the error word, and what js asks the wasm about itself.
-
 #include <stdint.h>
 #include "tumble/tumble.h"
 
@@ -21,7 +19,7 @@ enum WasmError : uint32_t {
 struct Instance {
     uint32_t heap_begin;
     uint32_t initialized;
-    /** set when a call could not do what it was asked; js reads and clears it. */
+    /** set when a call could not do what it was asked */
     uint32_t error;
 };
 
@@ -31,14 +29,14 @@ inline void set_error(uint32_t error) {
     if (instance().error == ERROR_NONE) instance().error = error;
 }
 
-/** starts the heap at heap_begin (js passes __heap_base); false (error set) when the memory cannot hold it. */
+/** starts the heap at heap_begin; false (error set) when the memory cannot hold it */
 bool init(uint32_t heap_begin);
 
 uint32_t abi_version();
 /** the first error since the last clear, a WasmError; 0 when none. */
 inline uint32_t error() { return instance().error; }
 inline void error_clear() { instance().error = ERROR_NONE; }
-/** proves the simd path runs on the host: dot((1,2,3), (1,2,3)) = 14. */
+/** dot((1, 2, 3), (1, 2, 3)) through the simd path: 14 when simd runs */
 float simd_check();
 
 }  // namespace util

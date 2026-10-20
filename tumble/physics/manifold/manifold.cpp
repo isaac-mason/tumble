@@ -30,12 +30,12 @@ void swap_shapes(ContactManifold &m) {
 static constexpr float MIN_DISTANCE_SQ = 1.0e-6f;
 
 void prune_contact_points(ContactManifold &m, Vec3f penetration_axis) {
-    CC_ASSERT(m.num_contact_points > MAX_CONTACT_POINTS);
+    TUMBLE_ASSERT(m.num_contact_points > MAX_CONTACT_POINTS);
 
     // early exit if already <= 4 points (safety fallback)
     if (m.num_contact_points <= MAX_CONTACT_POINTS) return;
 
-    CC_ASSERT(scalar::abs(vec3f::squared_length(penetration_axis) - 1.0f) <= 1.0e-6f);
+    TUMBLE_ASSERT(scalar::abs(vec3f::squared_length(penetration_axis) - 1.0f) <= 1.0e-6f);
 
     const uint32_t num_points = m.num_contact_points;
     Vec3f projected[MAX_CLIPPING_CONTACT_POINTS];
@@ -77,7 +77,7 @@ void prune_contact_points(ContactManifold &m, Vec3f penetration_axis) {
         }
     }
 
-    CC_ASSERT(point2 != -1);
+    TUMBLE_ASSERT(point2 != -1);
 
     // step 4: select points 3 & 4 (opposite sides of the p1-p2 edge)
     int32_t point3 = -1;
@@ -114,7 +114,7 @@ void prune_contact_points(ContactManifold &m, Vec3f penetration_axis) {
     if (point3 != -1) keep((uint32_t)point3);
     keep((uint32_t)point2);
     if (point4 != -1) {
-        CC_ASSERT(point3 != point4);
+        TUMBLE_ASSERT(point3 != point4);
         keep((uint32_t)point4);
     }
 
@@ -134,7 +134,7 @@ static void set_single_point(ContactManifold &out, Vec3f contact_point_1, Vec3f 
 void manifold_between_two_faces(ContactManifold &out, Vec3f contact_point_1, Vec3f contact_point_2, Vec3f penetration_axis,
                                 float max_contact_distance, const face::Face &shape_1_face,
                                 const face::Face &shape_2_face) {
-    CC_ASSERT(max_contact_distance > 0.0f);
+    TUMBLE_ASSERT(max_contact_distance > 0.0f);
 
     // reset output
     out.num_contact_points = 0;

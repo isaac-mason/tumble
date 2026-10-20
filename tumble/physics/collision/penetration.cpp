@@ -74,7 +74,7 @@ void penetration_depth_step_gjk(PenetrationDepth &out_penetration_depth, simplex
 /** adds a support point in the given direction; its index, or -1 when the store is full. */
 static int32_t add_epa_support_point(EpaSupportPoints &points, support::Support &support_a, support::Support &support_b, Vec3f direction) {
     // the epa loops stop at EPA_MAX_POINTS, so a full store is a broken invariant
-    CC_ASSERT(points.size < EPA_MAX_POINTS);
+    TUMBLE_ASSERT(points.size < EPA_MAX_POINTS);
     if (points.size >= EPA_MAX_POINTS) return -1;
 
     const Vec3f p = support_a.get_support(support_a, direction);

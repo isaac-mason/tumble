@@ -1,7 +1,5 @@
 #pragma once
 
-// the math package's euler.ts over Eulerf. the order is an enum where the js has a string.
-
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/types.h"

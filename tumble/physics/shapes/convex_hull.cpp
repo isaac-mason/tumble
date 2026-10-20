@@ -461,7 +461,7 @@ void release(ConvexHullData *data) { release_data(data); }
 
 Shape *create(const ConvexHullShapeSettings &settings) {
     ConvexHullData *data = settings.data;
-    CC_ASSERT(data != nullptr);
+    TUMBLE_ASSERT(data != nullptr);
     Shape *shape = shapes::allocate(shapes::SHAPE_CONVEX_HULL);
     if (shape == nullptr) return nullptr;
     shape->convex_hull.data = data;
@@ -477,7 +477,7 @@ void destroy(Shape *shape) { shapes::release(shape); }
 
 void update(Shape *shape) {
     const ConvexHullData &data = *shape->convex_hull.data;
-    CC_ASSERT(data.convex_radius >= 0.0f);
+    TUMBLE_ASSERT(data.convex_radius >= 0.0f);
 
     AABox bounds = aabox::empty();
     for (uint32_t p = 0; p < data.num_points; p++) bounds = aabox::expand_by_point(bounds, vec3f::load(data.point_positions.data, p * 3));
@@ -495,7 +495,7 @@ void compute_mass_properties(mass_properties::MassProperties &out, const Shape *
 }
 
 void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
-    CC_ASSERT(sub_shape::is_empty(sub_shape_id));
+    TUMBLE_ASSERT(sub_shape::is_empty(sub_shape_id));
     (void)sub_shape_id;
     const ConvexHullData &data = *shape->convex_hull.data;
 
@@ -647,7 +647,7 @@ void set_support(support::Support &out, const Shape *shape, support::SupportFunc
 
     // slow path: non-uniform / mirrored scale bakes per-pair vertices into scratch
     hull.output_scale = 1.0f;
-    CC_ASSERT(data.num_points <= support::MAX_HULL_POINTS);
+    TUMBLE_ASSERT(data.num_points <= support::MAX_HULL_POINTS);
 
     if (raw_vertices) {
         out.convex_radius = 0.0f;

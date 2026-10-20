@@ -10,7 +10,7 @@ TUMBLE_NAMESPACE_BEGIN
 namespace scaled {
 
 Shape *create(const ScaledShapeSettings &settings) {
-    CC_ASSERT(settings.shape != nullptr);
+    TUMBLE_ASSERT(settings.shape != nullptr);
     Shape *shape = shapes::allocate(shapes::SHAPE_SCALED);
     if (shape == nullptr) return nullptr;
     shape->scaled.shape = settings.shape;

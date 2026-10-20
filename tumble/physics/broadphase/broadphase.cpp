@@ -31,7 +31,7 @@ void add_body(Broadphase &broadphase, rigid_body::RigidBody *body, const layers:
 
     // map object layer to broadphase layer
     if (object_layer >= layers.object_layers) {
-        CC_ASSERT(false);
+        TUMBLE_ASSERT(false);
         return;
     }
     const uint32_t broadphase_layer = layers.object_layer_to_broadphase_layer[object_layer];

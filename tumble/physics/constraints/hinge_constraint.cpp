@@ -78,8 +78,8 @@ static void reset_constraint(HingeConstraint &constraint) {
 
 ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodies, RigidBody *body_a, RigidBody *body_b,
                     const HingeConstraintSettings &settings) {
-    CC_ASSERT(is_body_live(bodies, body_a->index) && bodies.pool[body_a->index] == body_a);
-    CC_ASSERT(is_body_live(bodies, body_b->index) && bodies.pool[body_b->index] == body_b);
+    TUMBLE_ASSERT(is_body_live(bodies, body_a->index) && bodies.pool[body_a->index] == body_a);
+    TUMBLE_ASSERT(is_body_live(bodies, body_b->index) && bodies.pool[body_b->index] == body_b);
     constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::HINGE);
 
     const uint32_t index = constraints::allocate_index(pool);
@@ -140,7 +140,7 @@ ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodie
     }
 
     // equal limits without a spring should be a fixed constraint
-    CC_ASSERT(settings.limits_min != settings.limits_max || settings.limits_spring_settings.frequency_or_stiffness > 0.0f);
+    TUMBLE_ASSERT(settings.limits_min != settings.limits_max || settings.limits_spring_settings.frequency_or_stiffness > 0.0f);
     set_limits(constraint, settings.limits_min, settings.limits_max);
     constraint.limits_spring_settings = settings.limits_spring_settings;
 
@@ -184,15 +184,15 @@ HingeConstraint *get(constraints::Constraints &constraints, ConstraintId id) {
 }
 
 void set_limits(HingeConstraint &constraint, float min, float max) {
-    CC_ASSERT(min <= 0.0f && min >= -scalar::PI);
-    CC_ASSERT(max >= 0.0f && max <= scalar::PI);
+    TUMBLE_ASSERT(min <= 0.0f && min >= -scalar::PI);
+    TUMBLE_ASSERT(max >= 0.0f && max <= scalar::PI);
     constraint.limits_min = min;
     constraint.limits_max = max;
     constraint.has_limits = min > -scalar::PI || max < scalar::PI;
 }
 
 void set_motor_state(HingeConstraint &constraint, MotorState state) {
-    CC_ASSERT(state == motor_settings::OFF || motor_settings::is_valid(constraint.motor_settings));
+    TUMBLE_ASSERT(state == motor_settings::OFF || motor_settings::is_valid(constraint.motor_settings));
     constraint.motor_state = state;
 }
 

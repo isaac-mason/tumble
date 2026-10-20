@@ -53,9 +53,9 @@ static void calculate_aabb(Box3f &out, float half_height, float radius) {
 void update(Shape *shape) {
     const CylinderShape &cylinder = shape->cylinder;
     // dimensions must be non-negative
-    CC_ASSERT(cylinder.half_height >= 0.0f);
-    CC_ASSERT(cylinder.radius >= 0.0f);
-    CC_ASSERT(cylinder.convex_radius >= 0.0f);
+    TUMBLE_ASSERT(cylinder.half_height >= 0.0f);
+    TUMBLE_ASSERT(cylinder.radius >= 0.0f);
+    TUMBLE_ASSERT(cylinder.convex_radius >= 0.0f);
 
     calculate_aabb(shape->aabb, cylinder.half_height, cylinder.radius);
     vec3f::store(shape->center_of_mass, vec3f::zero());

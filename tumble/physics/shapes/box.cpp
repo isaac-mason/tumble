@@ -48,8 +48,8 @@ static void compute_box_local_bounds(Box3f &out, Vec3f half_extents) {
 void update(Shape *shape) {
     const BoxShape &box = shape->box;
     // dimensions must be non-negative
-    CC_ASSERT(box.half_extents.x >= 0.0f && box.half_extents.y >= 0.0f && box.half_extents.z >= 0.0f);
-    CC_ASSERT(box.convex_radius >= 0.0f);
+    TUMBLE_ASSERT(box.half_extents.x >= 0.0f && box.half_extents.y >= 0.0f && box.half_extents.z >= 0.0f);
+    TUMBLE_ASSERT(box.convex_radius >= 0.0f);
 
     const Vec3f half_extents = vec3f::load(box.half_extents);
     compute_box_local_bounds(shape->aabb, half_extents);
@@ -62,7 +62,7 @@ void compute_mass_properties(mass_properties::MassProperties &out, const Shape *
 }
 
 void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
-    CC_ASSERT(sub_shape::is_empty(sub_shape_id));
+    TUMBLE_ASSERT(sub_shape::is_empty(sub_shape_id));
     (void)sub_shape_id;
     const Vec3f half_extents = vec3f::load(shape->box.half_extents);
 

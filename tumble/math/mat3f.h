@@ -1,8 +1,5 @@
 #pragma once
 
-// the math package's mat3.ts over Mat3f, column-major. `invert` and `normal_from_mat4` return
-// false where the js returns null (a singular matrix leaves out untouched).
-
 #include "tumble/math/scalar.h"
 #include "tumble/math/types.h"
 #include "tumble/tumble.h"
@@ -100,7 +97,6 @@ inline float determinant(const Mat3f &a) {
     return a00 * (a22 * a11 - a12 * a21) + a01 * (-a22 * a10 + a12 * a20) + a02 * (a21 * a10 - a11 * a20);
 }
 
-/** a * b. */
 inline Mat3f &multiply(Mat3f &out, const Mat3f &a, const Mat3f &b) {
     const float a00 = a.m[0], a01 = a.m[1], a02 = a.m[2];
     const float a10 = a.m[3], a11 = a.m[4], a12 = a.m[5];

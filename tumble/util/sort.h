@@ -1,9 +1,5 @@
 #pragma once
 
-// stable sorts over a range, ordered by a `before(a, b)` that is a strict weak ordering: an insertion sort for short
-// ranges (jolt's InsertionSort.h) and a bottom-up merge sort over insertion-sorted runs for long ones. both keep equal
-// elements in their order. and an lsd radix sort of 64-bit keys, for long runs of keys that carry their whole order.
-
 #include <stdint.h>
 
 #include "tumble/tumble.h"
@@ -19,7 +15,7 @@ inline void assign(T &out, const T &value) {
     out = value;
 }
 
-/** in place; `copy(out, value)` moves an element, for records that copy only their filled part */
+/** stable, in place; `before` is a strict weak ordering, `copy(out, value)` moves an element */
 template <typename T, typename Before, typename Copy>
 inline void insertion_sort(T *begin, T *end, Before before, Copy copy) {
     if (end - begin < 2) return;
@@ -44,7 +40,7 @@ inline void insertion_sort(T *begin, T *end, Before before) {
 /** runs of this many are insertion sorted before the merges start */
 constexpr uint32_t MERGE_RUN = 8;
 
-/** through `scratch`, room for the range; the sorted range is left in place */
+/** stable, bottom-up over insertion-sorted runs, through `scratch` (room for the range); the result is in place */
 template <typename T, typename Before>
 inline void merge_sort(T *begin, T *end, Before before, T *scratch) {
     const uint32_t count = (uint32_t)(end - begin);
@@ -90,10 +86,7 @@ inline bool merge_sort(T *begin, T *end, Before before) {
     return true;
 }
 
-/**
- * keys ascending, by an lsd radix sort over the bytes they don't all share, through `scratch` (count keys); returns
- * whichever of the two holds the sorted keys.
- */
+/** lsd over the bytes the keys don't all share, through `scratch`; returns whichever of the two holds the result */
 inline uint64_t *radix_sort(uint64_t *keys, uint64_t *scratch, uint32_t count) {
     if (count < 2) return keys;
     uint32_t counts[8][256];

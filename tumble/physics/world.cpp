@@ -19,7 +19,7 @@ World *create(const world_settings::WorldSettings &settings) {
     world->pairs = pairs::create();
     world->bodies = bodies::init();
     // the pool grows only as far as body_id::MAX_BODIES (bodies::add_slot refuses past it)
-    CC_ASSERT(world->bodies.pool.length <= body_id::MAX_BODIES);
+    TUMBLE_ASSERT(world->bodies.pool.length <= body_id::MAX_BODIES);
     world->contact_constraints = contact_constraints::create();
     world->constraints = constraints::create();
     world->contacts = contacts::create();

@@ -372,7 +372,7 @@ static bool compute_closest_point_to_simplex(ClosestPointToSimplexResult &result
             break;
         }
         default: {
-            CC_ASSERT(false);
+            TUMBLE_ASSERT(false);
             result.closest_point_found = false;
             return false;
         }

@@ -58,7 +58,7 @@ void release(Constraints &constraints) {
 }
 
 ConstraintPool &ensure_pool(Constraints &constraints, ConstraintType type) {
-    CC_ASSERT(type < constraint_id::CONSTRAINT_TYPE_COUNT);
+    TUMBLE_ASSERT(type < constraint_id::CONSTRAINT_TYPE_COUNT);
     ConstraintPool &pool = constraints.pools[type];
     if (pool.stride != 0) return pool;
     pool.type = type;
@@ -89,7 +89,7 @@ ConstraintPool &ensure_pool(Constraints &constraints, ConstraintType type) {
             break;
         // the core has no user constraints
         default:
-            CC_ASSERT(false);
+            TUMBLE_ASSERT(false);
             break;
     }
     return pool;
@@ -168,7 +168,7 @@ void notify_shape_changed(Constraints &constraints, const rigid_body::RigidBody 
                 six_dof_constraint::notify_shape_changed(record_at<six_dof_constraint::SixDOFConstraint>(pool, index), body.id, delta_com);
                 break;
             default:
-                CC_ASSERT(false);
+                TUMBLE_ASSERT(false);
                 break;
         }
     }
@@ -182,7 +182,7 @@ void get_constraint_iteration_overrides(ConstraintIterationOverrides &out, const
     const ConstraintPool &pool = constraints.pools[type];
     if (pool.stride == 0) return;
     const uint32_t index = constraint_id::index(id);
-    CC_ASSERT(index < pool.count);
+    TUMBLE_ASSERT(index < pool.count);
     switch (type) {
         case constraint_id::POINT:
             point_constraint::get_iteration_overrides(out, record_at<point_constraint::PointConstraint>(pool, index));
@@ -221,7 +221,7 @@ void get_constraint_sort_fields(ConstraintSortFields &out, const Constraints &co
     const ConstraintPool &pool = constraints.pools[type];
     if (pool.stride == 0) return;
     const uint32_t index = constraint_id::index(id);
-    CC_ASSERT(index < pool.count);
+    TUMBLE_ASSERT(index < pool.count);
     switch (type) {
         case constraint_id::POINT:
             point_constraint::get_sort_fields(out, record_at<point_constraint::PointConstraint>(pool, index));
@@ -333,7 +333,7 @@ void warm_start_velocity_constraints(Constraints &constraints, bodies::Bodies &b
         ConstraintPool &pool = constraints.pools[type];
         if (pool.stride == 0) continue;
         const uint32_t index = constraint_id::index(id);
-        CC_ASSERT(index < pool.count);
+        TUMBLE_ASSERT(index < pool.count);
 
         switch (type) {
             case constraint_id::POINT:
@@ -377,7 +377,7 @@ bool solve_velocity_constraints_for_island(Constraints &constraints, bodies::Bod
         ConstraintPool &pool = constraints.pools[type];
         if (pool.stride == 0) continue;
         const uint32_t index = constraint_id::index(id);
-        CC_ASSERT(index < pool.count);
+        TUMBLE_ASSERT(index < pool.count);
 
         bool applied = false;
         switch (type) {
@@ -433,7 +433,7 @@ bool solve_position_constraints_for_island(Constraints &constraints, bodies::Bod
         ConstraintPool &pool = constraints.pools[type];
         if (pool.stride == 0) continue;
         const uint32_t index = constraint_id::index(id);
-        CC_ASSERT(index < pool.count);
+        TUMBLE_ASSERT(index < pool.count);
 
         bool applied = false;
         switch (type) {

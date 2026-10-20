@@ -171,7 +171,7 @@ void *alloc_bytes(uint32_t bytes) {
 void free(void *p) {
     if (p == nullptr) return;
     BlockHeader *header = static_cast<BlockHeader *>(p) - 1;
-    CC_ASSERT(address_of(header) >= heap.range_begin);
+    TUMBLE_ASSERT(address_of(header) >= heap.range_begin);
     heap.bytes_in_use -= header->bytes;
     heap.allocations--;
     if (header->small_class != 0) {

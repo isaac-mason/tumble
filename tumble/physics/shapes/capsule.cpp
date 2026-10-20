@@ -14,8 +14,8 @@ namespace capsule {
 using shapes::CapsuleShape;
 
 Shape *create(const CapsuleShapeSettings &settings) {
-    CC_ASSERT(settings.radius > 0.0f);
-    CC_ASSERT(settings.half_height_of_cylinder > 0.0f);
+    TUMBLE_ASSERT(settings.radius > 0.0f);
+    TUMBLE_ASSERT(settings.half_height_of_cylinder > 0.0f);
 
     Shape *shape = shapes::allocate(shapes::SHAPE_CAPSULE);
     if (shape == nullptr) return nullptr;
@@ -105,7 +105,7 @@ void compute_mass_properties(mass_properties::MassProperties &out, const Shape *
 
 void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
     (void)sub_shape_id;
-    CC_ASSERT(sub_shape::is_empty(sub_shape_id));
+    TUMBLE_ASSERT(sub_shape::is_empty(sub_shape_id));
     const CapsuleShape &capsule = shape->capsule;
 
     // clamp y to the cylinder range, then the normal is from the clamped point

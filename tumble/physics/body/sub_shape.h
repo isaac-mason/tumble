@@ -53,7 +53,7 @@ inline void pop(PopResult &out, SubShapeId id, uint32_t num_bits) {
 
 /** pushes `id` as a level of `num_bits` onto `source`, into `out`. */
 inline void push(SubShapeIdBuilder &out, const SubShapeIdBuilder &source, uint32_t id, uint32_t num_bits) {
-    CC_ASSERT(source.current_bit + num_bits <= MAX_SUB_SHAPE_ID_BITS);
+    TUMBLE_ASSERT(source.current_bit + num_bits <= MAX_SUB_SHAPE_ID_BITS);
     out.value = source.value;
     out.current_bit = source.current_bit;
     if (num_bits == 0) return;

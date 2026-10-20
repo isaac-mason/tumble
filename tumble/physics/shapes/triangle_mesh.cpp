@@ -28,12 +28,12 @@ using triangle_mesh_data::TriangleMeshData;
 static constexpr int32_t STACK_SIZE = 128;
 
 static inline void push_node(int32_t *stack_nodes, int32_t &stack_size, int32_t node) {
-    CC_ASSERT(stack_size < STACK_SIZE);
+    TUMBLE_ASSERT(stack_size < STACK_SIZE);
     if (stack_size < STACK_SIZE) stack_nodes[stack_size++] = node;
 }
 
 static inline void push_node(int32_t *stack_nodes, float *stack_dist, int32_t &stack_size, int32_t node, float distance) {
-    CC_ASSERT(stack_size < STACK_SIZE);
+    TUMBLE_ASSERT(stack_size < STACK_SIZE);
     if (stack_size >= STACK_SIZE) return;
     stack_nodes[stack_size] = node;
     stack_dist[stack_size] = distance;
@@ -42,7 +42,7 @@ static inline void push_node(int32_t *stack_nodes, float *stack_dist, int32_t &s
 
 Shape *create(const TriangleMeshShapeSettings &settings) {
     TriangleMeshData *data = settings.data;
-    CC_ASSERT(data != nullptr);
+    TUMBLE_ASSERT(data != nullptr);
     Shape *shape = shapes::allocate(shapes::SHAPE_TRIANGLE_MESH);
     if (shape == nullptr) return nullptr;
     shape->triangle_mesh.data = data;
@@ -77,7 +77,7 @@ void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub
     sub_shape::pop_index(pop, sub_shape_id, data.triangle_count);
     const uint32_t triangle_index = pop.value;
 
-    CC_ASSERT(triangle_index < data.triangle_count);
+    TUMBLE_ASSERT(triangle_index < data.triangle_count);
     if (triangle_index < data.triangle_count) io.normal = triangle_mesh_data::get_triangle_normal(data, triangle_index);
 }
 
@@ -85,7 +85,7 @@ int32_t get_material(const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
     const TriangleMeshData &data = *shape->triangle_mesh.data;
     sub_shape::PopResult pop;
     sub_shape::pop_index(pop, sub_shape_id, data.triangle_count);
-    CC_ASSERT(pop.value < data.triangle_count);
+    TUMBLE_ASSERT(pop.value < data.triangle_count);
     return triangle_mesh_data::get_material_id(data, pop.value);
 }
 

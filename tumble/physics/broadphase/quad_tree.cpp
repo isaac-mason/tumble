@@ -115,7 +115,7 @@ static void get_body_location(const RigidBody &body, uint32_t &node_index, uint3
 }
 
 static void set_body_location(RigidBody &body, uint32_t node_index, uint32_t child_index) {
-    CC_ASSERT(node_index <= 0x3fffffffu && child_index < 4);
+    TUMBLE_ASSERT(node_index <= 0x3fffffffu && child_index < 4);
     body.broadphase_node = (int32_t)(node_index | (child_index << 30));
 }
 
@@ -185,7 +185,7 @@ static void widen_and_mark_node_and_parents_changed(QuadTree &tree, uint32_t nod
                 break;
             }
         }
-        CC_ASSERT(child_index != 4);
+        TUMBLE_ASSERT(child_index != 4);
 
         // the bounds only ever grow until the rebuild
         if (!encapsulate_child_bounds(parent, child_index, new_bounds)) {
@@ -330,7 +330,7 @@ static void partition(NodeId *ids, Vec3f *centers, int32_t number, int32_t &mid_
             end--;
         }
     }
-    CC_ASSERT(start == end);
+    TUMBLE_ASSERT(start == end);
 
     // a failed split halves by count
     mid_point = start > 0 && start < number ? start : number / 2;
@@ -448,7 +448,7 @@ static NodeId build_tree(QuadTree &tree, const bodies::Bodies &bodies, int32_t n
 
 /** jolt's UpdatePrepare: the new root, built from the bodies and the unchanged subtrees */
 static NodeId update_prepare(QuadTree &tree, const bodies::Bodies &bodies, bool full_rebuild) {
-    CC_ASSERT(tree.free_node_batch.length == 0);
+    TUMBLE_ASSERT(tree.free_node_batch.length == 0);
     tree.dirty = false;
 
     // collect the bodies and the unchanged subtrees, freeing the changed nodes into the batch
@@ -476,7 +476,7 @@ static NodeId update_prepare(QuadTree &tree, const bodies::Bodies &bodies, bool 
         }
     } while (stack.length > 0);
 
-    CC_ASSERT(full_rebuild ? ids.length == tree.num_bodies : ids.length <= tree.num_bodies);
+    TUMBLE_ASSERT(full_rebuild ? ids.length == tree.num_bodies : ids.length <= tree.num_bodies);
 
     if (ids.length == 0) return from_node_index(allocate_node(tree, false));
 

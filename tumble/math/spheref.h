@@ -1,7 +1,5 @@
 #pragma once
 
-// the math package's sphere.ts over Spheref.
-
 #include <stdint.h>
 
 #include "tumble/math/scalar.h"
@@ -14,7 +12,7 @@ namespace spheref {
 
 inline Spheref create() { return {{0.0f, 0.0f, 0.0f}, 1.0f}; }
 
-/** the sphere centred on the points' bounding box, just large enough to hold every one of n points (xyz triples). */
+/** centred on the bounding box of n xyz points, just large enough to hold them all */
 inline Spheref &set_from_points(Spheref &out, const float *points, uint32_t n) {
     if (n == 0) {
         out.center = {0.0f, 0.0f, 0.0f};

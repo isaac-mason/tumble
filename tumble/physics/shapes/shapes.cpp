@@ -43,7 +43,7 @@ ShapeDef define_shape(const ShapeDef &def) {
     if (out.get_inner_radius == nullptr) out.get_inner_radius = default_get_inner_radius;
     if (out.get_leaf_shape == nullptr) out.get_leaf_shape = default_get_leaf_shape;
     if (out.get_sub_shape_transformed_shape == nullptr) out.get_sub_shape_transformed_shape = default_get_sub_shape_transformed_shape;
-    CC_ASSERT(out.get_surface_normal != nullptr && out.get_supporting_face != nullptr && out.get_material != nullptr &&
+    TUMBLE_ASSERT(out.get_surface_normal != nullptr && out.get_supporting_face != nullptr && out.get_material != nullptr &&
               out.cast_ray != nullptr && out.collide_point != nullptr);
     return out;
 }

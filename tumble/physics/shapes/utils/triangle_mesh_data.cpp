@@ -124,7 +124,7 @@ Vec3f calculate_triangle_centroid(const TriangleMeshData &data, uint32_t tri_idx
 
 void swap_triangles(TriangleMeshData &data, uint32_t index_a, uint32_t index_b) {
     if (index_a == index_b) return;
-    CC_ASSERT(index_a < data.triangle_count && index_b < data.triangle_count);
+    TUMBLE_ASSERT(index_a < data.triangle_count && index_b < data.triangle_count);
 
     const Triangle tmp = data.triangles[index_a];
     data.triangles[index_a] = data.triangles[index_b];

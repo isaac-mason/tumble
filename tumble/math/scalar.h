@@ -1,8 +1,5 @@
 #pragma once
 
-// the math package's scalar.ts and angle.ts, plus the transcendentals: wasm instructions through
-// builtins, and musl's single-precision routines (src/math/musl) for the rest.
-
 #include <stdint.h>
 #include "tumble/tumble.h"
 
@@ -31,7 +28,6 @@ constexpr float DEGREES_TO_RADIANS = PI / 180.0f;
 constexpr float RADIANS_TO_DEGREES = 180.0f / PI;
 constexpr float FLOAT_MAX = __FLT_MAX__;
 constexpr float INF = __builtin_inff();
-/** the smallest positive normal float (c's and jolt's FLT_MIN) */
 constexpr float FLOAT_MIN_NORMAL = __FLT_MIN__;
 constexpr float FLOAT_EPSILON = __FLT_EPSILON__;
 
@@ -40,10 +36,9 @@ inline float abs(float x) { return __builtin_fabsf(x); }
 inline float floor(float x) { return __builtin_floorf(x); }
 inline float ceil(float x) { return __builtin_ceilf(x); }
 inline float trunc(float x) { return __builtin_truncf(x); }
-/** symmetric round: halves go away from zero, as scalar.ts's `round` does. */
+/** halves away from zero */
 inline float round(float x) { return __builtin_roundf(x); }
-// the f32.min / f32.max instructions: nan propagates and -0 orders below +0, exactly js Math.min / Math.max.
-// (c's fminf / fmaxf drop nans, so clang would call a libm that isn't there.)
+// nan propagates and -0 orders below +0; fminf / fmaxf would drop the nan
 inline float min(float a, float b) { return __builtin_wasm_min_f32(a, b); }
 inline float max(float a, float b) { return __builtin_wasm_max_f32(a, b); }
 inline float sign(float x) { return x > 0.0f ? 1.0f : (x < 0.0f ? -1.0f : 0.0f); }
@@ -60,7 +55,7 @@ inline float asin(float x) { return asinf(x); }
 inline float exp(float x) { return expf(x); }
 inline float pow(float x, float y) { return powf(x, y); }
 inline float log(float x) { return logf(x); }
-/** truncated remainder, the sign of x, as js `%`. */
+/** truncated: the result takes x's sign */
 inline float fmod(float x, float y) { return fmodf(x, y); }
 
 /** |a - b| within epsilon, absolute at or below 1 and relative above. */
@@ -68,7 +63,7 @@ inline bool equals(float a, float b, float epsilon = EPSILON) {
     return abs(a - b) <= epsilon * max(1.0f, max(abs(a), abs(b)));
 }
 
-/** ease-in-out that leaves [0, 1] outside it. */
+/** ease-in-out, unclamped */
 inline float fade(float t) { return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f); }
 
 inline float lerp(float v0, float v1, float t) { return v0 * (1.0f - t) + v1 * t; }
@@ -110,7 +105,7 @@ inline float smoothstep(float edge0, float edge1, float x) {
     return t * t * (3.0f - 2.0f * t);
 }
 
-/** perlin's smootherstep: `fade`, clamped; equal edges act as a step at edge0. */
+/** fade, clamped; equal edges act as a step at edge0 */
 inline float smootherstep(float edge0, float edge1, float x) {
     if (edge0 == edge1) return x <= edge0 ? 0.0f : 1.0f;
     return fade(clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f));
@@ -129,9 +124,7 @@ inline float delta_angle(float current, float target) {
     return delta > PI ? delta - TAU : delta;
 }
 
-// ---- f64 ----
-
-/** the f64.min / f64.max instructions: nan propagates and -0 orders below +0. */
+// nan propagates and -0 orders below +0
 inline double min64(double a, double b) { return __builtin_wasm_min_f64(a, b); }
 inline double max64(double a, double b) { return __builtin_wasm_max_f64(a, b); }
 

@@ -433,7 +433,7 @@ static Split get_optimal_split(BuildContext &ctx, uint32_t start_index, uint32_t
             }
         }
     } else {
-        CC_ASSERT(false && "invalid bvh split strategy");
+        TUMBLE_ASSERT(false && "invalid bvh split strategy");
     }
 
     return {axis, pos};

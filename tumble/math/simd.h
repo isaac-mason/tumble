@@ -1,22 +1,20 @@
 #pragma once
 
-// the thin names every kernel writes simd through. one build, always -msimd128, no scalar twin.
-// lane 3 of a three-wide value is whatever the load left there; nothing may read it as data.
-
 #include <wasm_simd128.h>
 #include "tumble/tumble.h"
 
 TUMBLE_NAMESPACE_BEGIN
 
+// lane 3 of a three-wide value is not data
 namespace v4f {
 
-/** three floats from a 12-byte struct into lanes 0..2, lane 3 zero. two loads, no overread. */
+/** lane 3 zero; never reads past the 12 bytes */
 inline v128_t load3(const float *p) {
     v128_t v = wasm_v128_load64_zero(p);
     return wasm_v128_load32_lane(p + 2, v, 2);
 }
 
-/** lanes 0..2 into a 12-byte struct. two stores, no overwrite. */
+/** never writes past the 12 bytes */
 inline void store3(float *p, v128_t v) {
     wasm_v128_store64_lane(p, v, 0);
     wasm_v128_store32_lane(p + 2, v, 2);
@@ -33,19 +31,21 @@ inline v128_t add(v128_t a, v128_t b) { return wasm_f32x4_add(a, b); }
 inline v128_t sub(v128_t a, v128_t b) { return wasm_f32x4_sub(a, b); }
 inline v128_t mul(v128_t a, v128_t b) { return wasm_f32x4_mul(a, b); }
 inline v128_t div(v128_t a, v128_t b) { return wasm_f32x4_div(a, b); }
+/** b < a ? b : a */
 inline v128_t min(v128_t a, v128_t b) { return wasm_f32x4_pmin(a, b); }
+/** a < b ? b : a */
 inline v128_t max(v128_t a, v128_t b) { return wasm_f32x4_pmax(a, b); }
-/** lane by lane as scalar::min, f32.min: nan in either lane gives nan, -0 below +0. */
+/** as scalar::min: nan propagates, -0 below +0 */
 inline v128_t fmin(v128_t a, v128_t b) { return wasm_f32x4_min(a, b); }
-/** lane by lane as scalar::max, f32.max. */
+/** as scalar::max */
 inline v128_t fmax(v128_t a, v128_t b) { return wasm_f32x4_max(a, b); }
 inline v128_t neg(v128_t a) { return wasm_f32x4_neg(a); }
 inline v128_t abs(v128_t a) { return wasm_f32x4_abs(a); }
-/** lanes 0..2 negated, lane 3 kept. */
+/** lane 3 kept */
 inline v128_t neg_xyz(v128_t a) { return wasm_v128_xor(a, wasm_f32x4_make(-0.0f, -0.0f, -0.0f, 0.0f)); }
 inline v128_t sqrt(v128_t a) { return wasm_f32x4_sqrt(a); }
 
-/** a * b + c as two instructions; wasm core simd has no fma. */
+/** not fused */
 inline v128_t mul_add(v128_t a, v128_t b, v128_t c) { return wasm_f32x4_add(wasm_f32x4_mul(a, b), c); }
 
 template <int I>
@@ -70,7 +70,7 @@ inline v128_t shuffle2(v128_t a, v128_t b) {
     return wasm_i32x4_shuffle(a, b, X, Y, Z, W);
 }
 
-/** four packed xyz points (12 floats) into one lane each of x, y and z. three loads, no overread. */
+/** four packed xyz points into x, y and z lanes; never reads past the 48 bytes */
 inline void load3x4(const float *p, v128_t &x, v128_t &y, v128_t &z) {
     const v128_t a = load4(p);      // x0 y0 z0 x1
     const v128_t b = load4(p + 4);  // y1 z1 x2 y2
@@ -80,7 +80,7 @@ inline void load3x4(const float *p, v128_t &x, v128_t &y, v128_t &z) {
     z = shuffle2<0, 1, 4, 7>(shuffle2<2, 5, 0, 0>(a, b), c);
 }
 
-/** four three-wide values (one point each) into one lane each of x, y and z. */
+/** four points into x, y and z lanes */
 inline void transpose3x4(v128_t r0, v128_t r1, v128_t r2, v128_t r3, v128_t &x, v128_t &y, v128_t &z) {
     const v128_t xy01 = shuffle2<0, 4, 1, 5>(r0, r1);  // x0 x1 y0 y1
     const v128_t xy23 = shuffle2<0, 4, 1, 5>(r2, r3);  // x2 x3 y2 y3
@@ -94,10 +94,8 @@ inline void transpose3x4(v128_t r0, v128_t r1, v128_t r2, v128_t r3, v128_t &x, 
 inline v128_t yzx(v128_t a) { return shuffle<1, 2, 0, 3>(a); }
 inline v128_t zxy(v128_t a) { return shuffle<2, 0, 1, 3>(a); }
 
-/** sum of lanes 0..2. */
 inline float hsum3(v128_t v) { return lane<0>(v) + lane<1>(v) + lane<2>(v); }
 
-/** sum of all four lanes. */
 inline float hsum4(v128_t v) {
     const v128_t s = wasm_f32x4_add(v, shuffle<2, 3, 0, 1>(v));
     return lane<0>(wasm_f32x4_add(s, shuffle<1, 0, 3, 2>(s)));
@@ -106,7 +104,6 @@ inline float hsum4(v128_t v) {
 inline float dot3(v128_t a, v128_t b) { return hsum3(wasm_f32x4_mul(a, b)); }
 inline float dot4(v128_t a, v128_t b) { return hsum4(wasm_f32x4_mul(a, b)); }
 
-/** a x b in lanes 0..2. */
 inline v128_t cross(v128_t a, v128_t b) {
     return wasm_f32x4_sub(wasm_f32x4_mul(yzx(a), zxy(b)), wasm_f32x4_mul(zxy(a), yzx(b)));
 }
@@ -117,13 +114,13 @@ inline v128_t gt(v128_t a, v128_t b) { return wasm_f32x4_gt(a, b); }
 inline v128_t ge(v128_t a, v128_t b) { return wasm_f32x4_ge(a, b); }
 inline v128_t eq(v128_t a, v128_t b) { return wasm_f32x4_eq(a, b); }
 
-/** lanes of a where mask is set, else b. */
+/** a where mask is set, else b */
 inline v128_t select(v128_t a, v128_t b, v128_t mask) { return wasm_v128_bitselect(a, b, mask); }
 
 inline bool all_true(v128_t mask) { return wasm_i32x4_all_true(mask); }
 inline bool any_true(v128_t mask) { return wasm_v128_any_true(mask); }
 
-/** the lanes of a mask as the low four bits. */
+/** a mask's lanes as the low four bits */
 inline uint32_t bitmask(v128_t mask) { return wasm_i32x4_bitmask(mask); }
 
 }  // namespace v4f

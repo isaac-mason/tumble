@@ -16,7 +16,7 @@ TUMBLE_NAMESPACE_BEGIN
 namespace compound {
 
 Shape *create(const CompoundShapeSettings &settings) {
-    CC_ASSERT(settings.num_children > 0);
+    TUMBLE_ASSERT(settings.num_children > 0);
 
     CompoundData *data = util::alloc<CompoundData>();
     if (data == nullptr) return nullptr;
@@ -53,7 +53,7 @@ void destroy(Shape *shape) {
 }
 
 const collections::Vec<CompoundShapeChild> &children_of(const Shape *shape) {
-    CC_ASSERT(shape->type == shapes::SHAPE_COMPOUND || shape->type == shapes::SHAPE_STATIC_COMPOUND);
+    TUMBLE_ASSERT(shape->type == shapes::SHAPE_COMPOUND || shape->type == shapes::SHAPE_STATIC_COMPOUND);
     return shape->type == shapes::SHAPE_COMPOUND ? shape->compound.data->children : shape->static_compound.data->children;
 }
 
@@ -122,7 +122,7 @@ static Vec3f compute_compound_center_of_mass(const collections::Vec<CompoundShap
 }
 
 static void compute_compound_child_bounds(collections::Vec<Box3f> &out, const collections::Vec<CompoundShapeChild> &children) {
-    CC_ASSERT(out.capacity >= children.length);
+    TUMBLE_ASSERT(out.capacity >= children.length);
     out.length = children.length;
     for (uint32_t child_index = 0; child_index < children.length; child_index++) {
         const CompoundShapeChild &child = children[child_index];
@@ -205,7 +205,7 @@ void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub
     sub_shape::pop_index(popped, sub_shape_id, children.length);
 
     if (popped.value >= children.length) {
-        CC_ASSERT(false);
+        TUMBLE_ASSERT(false);
         return;
     }
 
@@ -229,7 +229,7 @@ void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, cons
     sub_shape::pop_index(popped, sub_shape_id, children.length);
 
     if (popped.value >= children.length) {
-        CC_ASSERT(false);
+        TUMBLE_ASSERT(false);
         return;
     }
 
@@ -263,7 +263,7 @@ int32_t get_material(const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
     const collections::Vec<CompoundShapeChild> &children = children_of(shape);
     sub_shape::PopResult popped;
     sub_shape::pop_index(popped, sub_shape_id, children.length);
-    CC_ASSERT(popped.value < children.length);
+    TUMBLE_ASSERT(popped.value < children.length);
     return shapes::get_shape_material(children[popped.value].shape, popped.remainder);
 }
 
@@ -287,7 +287,7 @@ void get_sub_shape_transformed_shape(shapes::GetSubShapeTransformedShapeResult &
     const collections::Vec<CompoundShapeChild> &children = children_of(shape);
     sub_shape::PopResult popped;
     sub_shape::pop_index(popped, sub_shape_id, children.length);
-    CC_ASSERT(popped.value < children.length);
+    TUMBLE_ASSERT(popped.value < children.length);
     const CompoundShapeChild &child = children[popped.value];
 
     // apply the child's transform: position += rotate(rotation, scale * child position), rotation = rotation * child rotation

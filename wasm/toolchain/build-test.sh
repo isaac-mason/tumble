@@ -1,8 +1,4 @@
 #!/bin/sh
-# build and run the C++ tests: tumble/ plus tests/, the same flags plus CORE_DEBUG so asserts trap,
-# run under node. every tests/*.test.cpp is found by its `void test_<name>(TestCtx &)` functions,
-# so a new test file needs no registration. objects and the binary go in a build dir of this
-# run's own, so tests running at once never collide.
 # run: sh wasm/toolchain/build-test.sh
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -26,8 +22,8 @@ for f in $(find "$TESTS" -name '*.test.cpp' | sort); do
 done
 cmp -s "$BUILD/test_list.inc" "$LIST_DIR/test_list.inc" || mv "$BUILD/test_list.inc" "$LIST_DIR/test_list.inc"
 
-compile_tree "$SRC" "-DCORE_DEBUG"
-compile_tree "$TESTS" "-DCORE_DEBUG -I$TESTS -I$LIST_DIR -I$RUNTIME"
+compile_tree "$SRC" "-DTUMBLE_DEBUG"
+compile_tree "$TESTS" "-DTUMBLE_DEBUG -I$TESTS -I$LIST_DIR -I$RUNTIME"
 compile_c
 link_wasm "$BUILD/tumble-test.wasm" names
 node "$HERE/scripts/check-imports.mjs" "$BUILD/tumble-test.wasm"

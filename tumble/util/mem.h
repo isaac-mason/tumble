@@ -1,7 +1,5 @@
 #pragma once
 
-// byte-level helpers over the one linear memory. the builtins lower to memory.copy / memory.fill.
-
 #include <stdint.h>
 #include "tumble/tumble.h"
 

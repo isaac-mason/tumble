@@ -136,7 +136,7 @@ void cast_ray(cast_ray::CastRayCollector &collector, const cast_ray::CastRaySett
             const float left_dist = cast_utils::ray_fraction_to_box3(local_origin, inv_displacement, aabox::load(nodes[left].bounds));
             const float right_dist = cast_utils::ray_fraction_to_box3(local_origin, inv_displacement, aabox::load(nodes[right].bounds));
 
-            CC_ASSERT(stack_size + 2 <= STACK_SIZE);
+            TUMBLE_ASSERT(stack_size + 2 <= STACK_SIZE);
             const int32_t near = left_dist <= right_dist ? left : right;
             const int32_t far = left_dist <= right_dist ? right : left;
             const float near_dist = left_dist <= right_dist ? left_dist : right_dist;
@@ -202,7 +202,7 @@ void collide_point(collide_point::CollidePointCollector &collector, const collid
             }
         } else {
             // internal node: push both children
-            CC_ASSERT(stack_size + 2 <= STACK_SIZE);
+            TUMBLE_ASSERT(stack_size + 2 <= STACK_SIZE);
             stack_nodes[stack_size++] = bvh::node_left(node);
             stack_nodes[stack_size++] = bvh::node_right(nodes, node);
         }
@@ -260,7 +260,7 @@ static inline void walk_overlapping(const StaticCompoundData &data, const AABox 
                 visit(child_start + i);
             }
         } else {
-            CC_ASSERT(stack_size + 2 <= STACK_SIZE);
+            TUMBLE_ASSERT(stack_size + 2 <= STACK_SIZE);
             stack_nodes[stack_size++] = bvh::node_left(node);
             stack_nodes[stack_size++] = bvh::node_right(nodes, node);
         }
@@ -476,7 +476,7 @@ void cast_shape_vs_static_compound(cast_shape::CastShapeCollector &collector, co
             // floored at FLT_MIN so nodes the cast starts inside survive a hit at fraction 0
             const float positive_early_out = scalar::max(scalar::FLOAT_MIN_NORMAL, collector.early_out_fraction);
 
-            CC_ASSERT(stack_size + 2 <= STACK_SIZE);
+            TUMBLE_ASSERT(stack_size + 2 <= STACK_SIZE);
             const int32_t near = left_dist <= right_dist ? left : right;
             const int32_t far = left_dist <= right_dist ? right : left;
             const float near_dist = left_dist <= right_dist ? left_dist : right_dist;

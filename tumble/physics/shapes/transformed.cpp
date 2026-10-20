@@ -11,7 +11,7 @@ TUMBLE_NAMESPACE_BEGIN
 namespace transformed {
 
 Shape *create(const TransformedShapeSettings &settings) {
-    CC_ASSERT(settings.shape != nullptr);
+    TUMBLE_ASSERT(settings.shape != nullptr);
     Shape *shape = shapes::allocate(shapes::SHAPE_TRANSFORMED);
     if (shape == nullptr) return nullptr;
     shape->transformed.shape = settings.shape;

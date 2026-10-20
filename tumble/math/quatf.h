@@ -1,8 +1,5 @@
 #pragma once
 
-// the math package's quat.ts on Quatf, whole, by value. a quaternion's storage is a Float4. each function gives
-// the bits of its scalar reference (test/math/storage/quatf.h); the vec4 arithmetic is vec4f's.
-
 #include "tumble/math/mat3f.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/simd.h"
@@ -257,7 +254,7 @@ inline Quatf set_axes(Vec3f view, Vec3f right, Vec3f up) {
     return normalize(from_mat3(m));
 }
 
-/** the rotation that looks from eye at target with up, the mirror of mat4's targetTo. */
+/** the rotation that looks from eye at target with up, as mat4f::target_to */
 inline Quatf target_to(Vec3f eye, Vec3f target, Vec3f up) {
     const float ux = vec3f::x(up), uy = vec3f::y(up), uz = vec3f::z(up);
     float z0 = vec3f::x(eye) - vec3f::x(target);

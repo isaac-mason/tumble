@@ -9,7 +9,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
-#define ASSERT(x) CC_ASSERT(x)
+#define ASSERT(x) TUMBLE_ASSERT(x)
 
 namespace OffsetAllocator {
 inline uint32 lzcnt_nonzero(uint32 v) { return __builtin_clz(v); }

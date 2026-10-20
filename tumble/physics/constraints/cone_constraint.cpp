@@ -47,8 +47,8 @@ static void reset_constraint(ConeConstraint &constraint) {
 
 ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodies, RigidBody *body_a, RigidBody *body_b,
                     const ConeConstraintSettings &settings) {
-    CC_ASSERT(is_body_live(bodies, body_a->index) && bodies.pool[body_a->index] == body_a);
-    CC_ASSERT(is_body_live(bodies, body_b->index) && bodies.pool[body_b->index] == body_b);
+    TUMBLE_ASSERT(is_body_live(bodies, body_a->index) && bodies.pool[body_a->index] == body_a);
+    TUMBLE_ASSERT(is_body_live(bodies, body_b->index) && bodies.pool[body_b->index] == body_b);
     constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::CONE);
 
     const uint32_t index = constraints::allocate_index(pool);
@@ -132,7 +132,7 @@ ConeConstraint *get(constraints::Constraints &constraints, ConstraintId id) {
 }
 
 void set_half_cone_angle(ConeConstraint &constraint, float half_cone_angle) {
-    CC_ASSERT(half_cone_angle >= 0.0f && half_cone_angle <= scalar::PI);
+    TUMBLE_ASSERT(half_cone_angle >= 0.0f && half_cone_angle <= scalar::PI);
     constraint.cos_half_cone_angle = scalar::cos(half_cone_angle);
 }
 

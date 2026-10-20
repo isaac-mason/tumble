@@ -1,7 +1,5 @@
 #pragma once
 
-// the math package's vec2.ts over Vec2f. two lanes don't earn a v128, so this one is scalar.
-
 #include "tumble/math/scalar.h"
 #include "tumble/math/types.h"
 #include "tumble/tumble.h"
@@ -44,7 +42,7 @@ inline float distance(const Vec2f &a, const Vec2f &b) {
     return scalar::sqrt(x * x + y * y);
 }
 
-/** the zero vector stays zero, as the js does. */
+/** the zero vector stays zero */
 inline Vec2f &normalize(Vec2f &out, const Vec2f &a) {
     float len = squared_length(a);
     if (len > 0.0f) len = 1.0f / scalar::sqrt(len);

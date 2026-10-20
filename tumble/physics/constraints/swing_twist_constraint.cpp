@@ -72,8 +72,8 @@ static Quatf constraint_to_body(Vec3f twist_axis, Vec3f plane_axis) {
 
 ConstraintId create(constraints::Constraints &constraints, bodies::Bodies &bodies, RigidBody *body_a, RigidBody *body_b,
                     const SwingTwistConstraintSettings &settings) {
-    CC_ASSERT(is_body_live(bodies, body_a->index) && bodies.pool[body_a->index] == body_a);
-    CC_ASSERT(is_body_live(bodies, body_b->index) && bodies.pool[body_b->index] == body_b);
+    TUMBLE_ASSERT(is_body_live(bodies, body_a->index) && bodies.pool[body_a->index] == body_a);
+    TUMBLE_ASSERT(is_body_live(bodies, body_b->index) && bodies.pool[body_b->index] == body_b);
     constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::SWING_TWIST);
 
     const uint32_t index = constraints::allocate_index(pool);
@@ -191,7 +191,7 @@ void set_twist_max_angle(SwingTwistConstraint &constraint, float angle) {
 void set_max_friction_torque(SwingTwistConstraint &constraint, float torque) { constraint.max_friction_torque = torque; }
 
 void set_swing_motor_state(SwingTwistConstraint &constraint, MotorState state) {
-    CC_ASSERT(state == motor_settings::OFF || motor_settings::is_valid(constraint.swing_motor_settings));
+    TUMBLE_ASSERT(state == motor_settings::OFF || motor_settings::is_valid(constraint.swing_motor_settings));
     if (constraint.swing_motor_state != state) {
         constraint.swing_motor_state = state;
         // the motor parts are repurposed between modes: no warm start into the new one
@@ -200,7 +200,7 @@ void set_swing_motor_state(SwingTwistConstraint &constraint, MotorState state) {
 }
 
 void set_twist_motor_state(SwingTwistConstraint &constraint, MotorState state) {
-    CC_ASSERT(state == motor_settings::OFF || motor_settings::is_valid(constraint.twist_motor_settings));
+    TUMBLE_ASSERT(state == motor_settings::OFF || motor_settings::is_valid(constraint.twist_motor_settings));
     if (constraint.twist_motor_state != state) {
         constraint.twist_motor_state = state;
         angle_constraint_part::deactivate(constraint.motor_constraint_parts[0]);

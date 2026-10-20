@@ -163,7 +163,7 @@ void finalize(Islands &islands, const bodies::Bodies &bodies, const constraints:
         const uint32_t link_to = islands.body_links[i];
         if (link_to != i) {
             // links to another body: take its island (filled in already, as we loop from low to high)
-            CC_ASSERT(link_to < i);
+            TUMBLE_ASSERT(link_to < i);
             islands.body_islands[i] = islands.body_islands[link_to];
         } else {
             // links to no other body: the start of a new island
@@ -194,7 +194,7 @@ void finalize(Islands &islands, const bodies::Bodies &bodies, const constraints:
     // bodies by island, through the active list (which never holds a pooled slot)
     for (uint32_t active_index = 0; active_index < num_active_bodies; active_index++) {
         const uint32_t island_index = islands.body_islands[active_index];
-        CC_ASSERT(island_index < num_islands);
+        TUMBLE_ASSERT(island_index < num_islands);
         list[island_index].body_indices.push(active_index);
     }
 
@@ -204,7 +204,7 @@ void finalize(Islands &islands, const bodies::Bodies &bodies, const constraints:
 
         // both bodies static, or the contact never linked
         if (active_body_index == INACTIVE_BODY_INDEX) continue;
-        CC_ASSERT(active_body_index < num_active_bodies);
+        TUMBLE_ASSERT(active_body_index < num_active_bodies);
 
         list[islands.body_islands[active_body_index]].contact_indices.push(contact_index);
     }
@@ -213,7 +213,7 @@ void finalize(Islands &islands, const bodies::Bodies &bodies, const constraints:
     for (uint32_t active_constraint_index = 0; active_constraint_index < islands.constraint_ids.length; active_constraint_index++) {
         const uint32_t active_body_index = islands.constraint_links[active_constraint_index];
         if (active_body_index == INACTIVE_BODY_INDEX) continue;
-        CC_ASSERT(active_body_index < num_active_bodies);
+        TUMBLE_ASSERT(active_body_index < num_active_bodies);
 
         list[islands.body_islands[active_body_index]].constraint_ids.push(islands.constraint_ids[active_constraint_index]);
     }

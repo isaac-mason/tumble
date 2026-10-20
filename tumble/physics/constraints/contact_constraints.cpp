@@ -373,7 +373,7 @@ static void calculate_contact_constraint_properties(ContactConstraint &constrain
                                                     float delta_time, float previous_friction_lambda_1, float previous_friction_lambda_2,
                                                     float previous_angular_friction_lambda) {
     const CalculatePropertiesFn fn = CALCULATE_PROPERTIES_TABLE[body_a.motion_type][body_b.motion_type];
-    CC_ASSERT(fn != nullptr);
+    TUMBLE_ASSERT(fn != nullptr);
     fn(constraint, body_a, body_b, inertia, r_as, r_bs, penetrations, settings, world_settings, delta_time, previous_friction_lambda_1,
        previous_friction_lambda_2, previous_angular_friction_lambda);
 }
@@ -431,7 +431,7 @@ bool add_contact_constraint(ContactConstraints &contact_constraints, contacts::C
                             RigidBody &body_a_in, RigidBody &body_b_in, const manifold::ContactManifold &manifold_in,
                             const world_settings::WorldSettings &settings, events::PhysicsEvents &events, float delta_time,
                             uint32_t step_stamp) {
-    CC_ASSERT(manifold_in.num_contact_points <= manifold::MAX_CONTACT_POINTS);
+    TUMBLE_ASSERT(manifold_in.num_contact_points <= manifold::MAX_CONTACT_POINTS);
 
     // swap bodies so that body a id < body b id
     RigidBody *body_a_ptr = &body_a_in;
@@ -676,8 +676,8 @@ bool add_contact_constraint_from_cache(ContactConstraints &contact_constraints, 
 void apply_contact_override(ContactConstraints &contact_constraints, uint32_t constraint_index, contacts::Contacts &contacts,
                             bodies::Bodies &bodies, const ContactSettings &settings, const world_settings::WorldSettings &world_settings,
                             float delta_time) {
-    CC_ASSERT(constraint_index < contact_constraints.count);
-    CC_ASSERT(!settings.is_sensor);
+    TUMBLE_ASSERT(constraint_index < contact_constraints.count);
+    TUMBLE_ASSERT(!settings.is_sensor);
     ContactConstraint &constraint = contact_constraints.pool[constraint_index];
     RigidBody &body_a = *bodies.pool[constraint.body_index_a];
     RigidBody &body_b = *bodies.pool[constraint.body_index_b];

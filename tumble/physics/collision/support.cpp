@@ -223,7 +223,7 @@ void set_polygon_support(Support &out, const Vec3f *vertices, uint32_t vertex_co
     out.add_radius = 0.0f;
     out.convex_radius = convex_radius;
     // the hull evaluator scans flat xyz, so the face is copied into the scratch
-    CC_ASSERT(vertex_count <= MAX_HULL_POINTS);
+    TUMBLE_ASSERT(vertex_count <= MAX_HULL_POINTS);
     for (uint32_t i = 0; i < vertex_count; i++) vec3f::store(out.hull.scratch, vertices[i], i * 3);
     out.hull.vertices = out.hull.scratch;
     out.hull.vertex_count = vertex_count;

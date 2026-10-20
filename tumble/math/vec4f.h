@@ -1,9 +1,5 @@
 #pragma once
 
-// the math package's vec4.ts on Vec4f: the arithmetic quat.ts borrows plus what crashcat calls. each function gives
-// the bits of its scalar reference over Float4 (test/math/storage/vec4f.h); the dot is (x + z) + (y + w), as
-// v4f::dot4 sums.
-
 #include "tumble/math/scalar.h"
 #include "tumble/math/simd.h"
 #include "tumble/math/types.h"
@@ -39,6 +35,7 @@ inline Vec4f scale(Vec4f a, float b) { return {v4f::mul(a.v, v4f::splat(b))}; }
 /** a + b * s. */
 inline Vec4f scale_and_add(Vec4f a, Vec4f b, float s) { return {v4f::mul_add(b.v, v4f::splat(s), a.v)}; }
 
+/** (x + z) + (y + w) */
 inline float dot(Vec4f a, Vec4f b) { return v4f::dot4(a.v, b.v); }
 inline float squared_length(Vec4f a) { return dot(a, a); }
 inline float length(Vec4f a) { return scalar::sqrt(squared_length(a)); }
@@ -48,7 +45,7 @@ inline float squared_distance(Vec4f a, Vec4f b) {
 }
 inline float distance(Vec4f a, Vec4f b) { return scalar::sqrt(squared_distance(a, b)); }
 
-/** the zero vector stays zero, as the js does. */
+/** the zero vector stays zero */
 inline Vec4f normalize(Vec4f a) {
     float len = squared_length(a);
     if (len > 0.0f) len = 1.0f / scalar::sqrt(len);
