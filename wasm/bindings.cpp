@@ -742,7 +742,8 @@ TUMBLE_BINDINGS {
         .field(FIELD(adapters::CastShapeSettings, return_deepest_point))
         .field(FIELD(adapters::CastShapeSettings, use_shrunken_shape_and_convex_radius))
         .field(FIELD(adapters::CastShapeSettings, collide_only_with_active_edges))
-        .field(FIELD(adapters::CastShapeSettings, active_edge_movement_direction));
+        .field(FIELD(adapters::CastShapeSettings, active_edge_movement_direction))
+        .field(FIELD(adapters::CastShapeSettings, extra_convex_radius));
     VALUE_AS(adapters::CastShapeHit, "CastShapeHit")
         .field(FIELD(adapters::CastShapeHit, status))
         .field(FIELD(adapters::CastShapeHit, fraction))

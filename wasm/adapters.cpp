@@ -1500,7 +1500,8 @@ void default_cast_shape_settings(CastShapeSettings &out) {
            d.return_deepest_point,
            d.use_shrunken_shape_and_convex_radius,
            d.collide_only_with_active_edges,
-           {0.0f, 0.0f, 0.0f}};
+           {0.0f, 0.0f, 0.0f},
+           d.extra_convex_radius};
     vec3f::store(out.active_edge_movement_direction, d.active_edge_movement_direction);
 }
 
@@ -1518,6 +1519,7 @@ uint32_t cast_shape(tumble::world::World *world, uint32_t kind, float early_out_
     settings.use_shrunken_shape_and_convex_radius = s.use_shrunken_shape_and_convex_radius;
     settings.collide_only_with_active_edges = s.collide_only_with_active_edges;
     settings.active_edge_movement_direction = vec3f::load(s.active_edge_movement_direction);
+    settings.extra_convex_radius = s.extra_convex_radius;
     cast_shape_collector.kind = (collector::CollectorKind)kind;
     cast_shape::reset(cast_shape_collector);
     cast_shape_collector.early_out_fraction = early_out_fraction;

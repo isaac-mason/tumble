@@ -379,7 +379,7 @@ void cast_convex_vs_plane(cast_shape::CastShapeCollector &collector, const cast_
     const Vec3f support_point = vec3f::transform_mat4(support_point_local, a_to_b);
 
     const float signed_distance = plane3f::distance_to_point(plane, support_point);
-    const float convex_radius = support.convex_radius;
+    const float convex_radius = support.convex_radius + settings.extra_convex_radius;
     const float penetration_depth = -signed_distance + convex_radius;
     const float dot = vec3f::dot(direction_in_b, normal);
 

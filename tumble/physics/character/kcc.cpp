@@ -508,6 +508,8 @@ struct CastCollectorContext {
     Vec3f displacement;
     CharacterContact *out_contact;
     bool has_hit;
+    /** hits at fraction 0, the contacts the character already penetrates, are left to the collide collector */
+    bool ignore_initial_overlap;
 };
 
 static void character_cast_add_hit(cast_shape::CastShapeCollector &collector, const cast_shape::CastShapeHit &hit) {
@@ -518,8 +520,8 @@ static void character_cast_add_hit(cast_shape::CastShapeCollector &collector, co
     // only accept hits earlier than current best
     if (hit.fraction >= collector.early_out_fraction) return;
 
-    // ignore collisions at fraction = 0, these are already-penetrating contacts the collide collector handles
-    if (hit.fraction <= 0.0f) return;
+    // ignore collisions at fraction = 0 when asked: the already-penetrating contacts the collide collector handles
+    if (context.ignore_initial_overlap && hit.fraction <= 0.0f) return;
 
     // ignore penetrations we're moving away from
     if (vec3f::dot(hit.normal, context.displacement) >= 0.0f) return;
@@ -621,10 +623,14 @@ static bool correct_fraction_for_character_padding(support::Support &character_s
     return false;
 }
 
-/** sweep along the displacement; true with the earliest accepted contact in `out`, false if the path is clear */
-static bool get_first_contact_for_sweep(CharacterContact &out, KCC &character, World &world, Vec3f position, Vec3f displacement,
-                                        const filter::Filter &filter, const CharacterListener *listener,
-                                        const collections::Vec<IgnoredContact> *ignored_contacts) {
+/**
+ * sweep along the displacement to see how far the character can move, the shape cast without its padding and the
+ * fraction then corrected so the padding touches what it hits; initial overlaps are ignored. true with the earliest
+ * accepted contact in `out`, false if the path is clear
+ */
+static bool validate_movement(CharacterContact &out, KCC &character, World &world, Vec3f position, Vec3f displacement,
+                              const filter::Filter &filter, const CharacterListener *listener,
+                              const collections::Vec<IgnoredContact> *ignored_contacts) {
     const float displacement_len_sq = vec3f::squared_length(displacement);
     if (displacement_len_sq < 1.0e-8f) return false;
 
@@ -636,14 +642,13 @@ static bool get_first_contact_for_sweep(CharacterContact &out, KCC &character, W
     const float character_padding_fraction = character.character_padding / scalar::sqrt(displacement_len_sq);
 
     cast_shape::CastShapeSettings settings = cast_shape::default_settings();
-    settings.collision_tolerance = character.collision_tolerance;
     settings.collide_with_backfaces_triangles = character.back_face_mode == BACK_FACE_COLLIDE;
     settings.collide_with_backfaces_convex = false;
     settings.collide_only_with_active_edges = true;
     settings.use_shrunken_shape_and_convex_radius = true;
     settings.return_deepest_point = false;
 
-    CastCollectorContext context = {&world, &character, listener, ignored_contacts, displacement, &out, false};
+    CastCollectorContext context = {&world, &character, listener, ignored_contacts, displacement, &out, false, true};
     cast_shape::CastShapeCollector collector = cast_shape::create_collector(collector::COLLECT_CUSTOM);
     collector.custom_add_hit = character_cast_add_hit;
     collector.custom_should_early_out = character_cast_should_early_out;
@@ -693,6 +698,41 @@ static bool get_first_contact_for_sweep(CharacterContact &out, KCC &character, W
     out.fraction = scalar::min(out.fraction, 1.0f);
 
     return true;
+}
+
+/**
+ * the first contact along the displacement, the shape cast inflated by its padding so what it hits is what the padding
+ * touches; initial overlaps count. true with the earliest accepted contact in `out`, false if the path is clear
+ */
+static bool get_first_contact_for_sweep(CharacterContact &out, KCC &character, World &world, Vec3f position, Vec3f displacement,
+                                        const filter::Filter &filter, const CharacterListener *listener,
+                                        const collections::Vec<IgnoredContact> *ignored_contacts) {
+    reset_contact(out);
+
+    const Transformf transform = shape_transform_at(character, position);
+
+    cast_shape::CastShapeSettings settings = cast_shape::default_settings();
+    settings.extra_convex_radius = character.character_padding;
+    settings.collide_with_backfaces_triangles = character.back_face_mode == BACK_FACE_COLLIDE;
+    settings.collide_with_backfaces_convex = false;
+    settings.collide_only_with_active_edges = true;
+    settings.use_shrunken_shape_and_convex_radius = true;
+    settings.return_deepest_point = false;
+
+    CastCollectorContext context = {&world, &character, listener, ignored_contacts, displacement, &out, false, false};
+    cast_shape::CastShapeCollector collector = cast_shape::create_collector(collector::COLLECT_CUSTOM);
+    collector.custom_add_hit = character_cast_add_hit;
+    collector.custom_should_early_out = character_cast_should_early_out;
+    collector.context = &context;
+    // as jolt's 1 + FLT_MIN, which is 1 in floats: a hit must come before the end of the sweep
+    collector.early_out_fraction = 1.0f;
+
+    IgnoreSingleBodyChainedBodyFilter ignore_inner_body;
+    const filter::Filter chained_filter = chain_ignore_single_body(filter, ignore_inner_body, character.inner_rigid_body_id);
+
+    query::cast_shape(world, collector, settings, character.shape, transform, displacement, chained_filter);
+
+    return context.has_hit;
 }
 
 /**
@@ -1243,8 +1283,9 @@ Vec3f cancel_velocity_towards_steep_slopes(const KCC &character, Vec3f desired_v
 static bool has_steep_slopes_to_walk(const KCC &character, Vec3f linear_velocity) {
     if (!is_supported(character)) return false;
 
+    // enough horizontal velocity to trigger a stair walk: over 1 mm/s
     Vec3f horizontal_velocity = vec3f::scale_and_add(linear_velocity, character.up, -vec3f::dot(linear_velocity, character.up));
-    if (vec3f::squared_length(horizontal_velocity) < 1e-12f) return false;
+    if (vec3f::squared_length(horizontal_velocity) <= 1e-6f) return false;
 
     const collections::Vec<CharacterContact> &contacts = character.contacts;
     for (uint32_t i = 0; i < contacts.length; i++) {
@@ -1291,7 +1332,7 @@ static void move_shape(KCC &character, World &world, Vec3f &position, Vec3f velo
         // a sweep to test if the path is really unobstructed; a hit limits the displacement and the time, and is
         // found by the next iteration's contacts
         CharacterContact sweep_contact;
-        if (get_first_contact_for_sweep(sweep_contact, character, world, position, displacement, filter, listener, &character.ignored_contacts)) {
+        if (validate_movement(sweep_contact, character, world, position, displacement, filter, listener, &character.ignored_contacts)) {
             displacement = vec3f::scale(displacement, sweep_contact.fraction);
             time_simulated *= sweep_contact.fraction;
         }
@@ -1527,7 +1568,7 @@ bool walk_stairs(World &world, KCC &character, float delta_time, Vec3f step_up, 
                  Vec3f step_down_extra, const filter::Filter &filter, const CharacterListener *listener) {
     Vec3f up = step_up;
     CharacterContact contact;
-    if (get_first_contact_for_sweep(contact, character, world, character.position, up, filter, listener, nullptr)) {
+    if (validate_movement(contact, character, world, character.position, up, filter, listener, nullptr)) {
         if (contact.fraction < 1e-6f) return false;
         // limit up movement to first contact
         up = vec3f::scale(up, contact.fraction);
@@ -1537,8 +1578,6 @@ bool walk_stairs(World &world, KCC &character, float delta_time, Vec3f step_up, 
     // the steep slopes we're pushing against, collected before the probe changes the contacts
     Vec3f character_velocity = vec3f::scale(step_forward, 1.0f / delta_time);
 
-    Vec3f horizontal_velocity = vec3f::scale_and_add(character_velocity, character.up, -vec3f::dot(character_velocity, character.up));
-
     Vec3f steep_slope_normals[WALK_STAIRS_MAX_STEEP_SLOPE_NORMALS];
     uint32_t steep_slope_normals_count = 0;
     const collections::Vec<CharacterContact> &contacts = character.contacts;
@@ -1547,7 +1586,7 @@ bool walk_stairs(World &world, KCC &character, float delta_time, Vec3f step_up, 
         if (!c.had_collision || c.was_discarded) continue;
         if (!is_slope_too_steep(character, c.surface_normal)) continue;
 
-        Vec3f relative_velocity = vec3f::subtract(horizontal_velocity, c.linear_velocity);
+        Vec3f relative_velocity = vec3f::subtract(character_velocity, c.linear_velocity);
         if (vec3f::dot(c.surface_normal, relative_velocity) < 0.0f && steep_slope_normals_count < WALK_STAIRS_MAX_STEEP_SLOPE_NORMALS) {
             steep_slope_normals[steep_slope_normals_count++] = c.surface_normal;
         }
@@ -1565,13 +1604,22 @@ bool walk_stairs(World &world, KCC &character, float delta_time, Vec3f step_up, 
     const float horizontal_movement_sq = vec3f::squared_length(horizontal_movement);
     if (horizontal_movement_sq < 1e-8f) return false;
 
-    // we need to have moved at least 5% of the step forward against a steep slope, else we're just sliding along it
-    const float max_dot = -0.05f * vec3f::length(step_forward);
+    // progress towards a steep slope, or we just slid along it and the stair walk would move us faster than we should
+    // after the normal movement: into the slope within 45 degrees of the step forward, and at least 5% of it
+    const float step_forward_length = vec3f::length(step_forward);
+    const Vec3f step_forward_normalized = vec3f::scale(step_forward, 1.0f / step_forward_length);
     bool made_progress = false;
     for (uint32_t i = 0; i < steep_slope_normals_count; i++) {
-        if (vec3f::dot(steep_slope_normals[i], horizontal_movement) < max_dot) {
-            made_progress = true;
-            break;
+        const Vec3f normal = steep_slope_normals[i];
+        Vec3f direction = vec3f::subtract(vec3f::scale(character.up, vec3f::dot(normal, character.up)), normal);
+        const float direction_length = vec3f::length(direction);
+        if (direction_length > 1e-6f) {
+            direction = vec3f::scale(direction, 1.0f / direction_length);
+            if (vec3f::dot(direction, step_forward_normalized) > 0.707107f &&
+                vec3f::dot(direction, horizontal_movement) > 0.05f * step_forward_length) {
+                made_progress = true;
+                break;
+            }
         }
     }
     if (!made_progress) return false;
@@ -1581,9 +1629,11 @@ bool walk_stairs(World &world, KCC &character, float delta_time, Vec3f step_up, 
     down = vec3f::add(down, step_down_extra);
 
     if (!get_first_contact_for_sweep(contact, character, world, new_position, down, filter, listener, nullptr)) return false;
+    const Vec3f final_position = vec3f::scale_and_add(new_position, down, contact.fraction);
 
     // the floor must be walkable
-    if (is_slope_too_steep(character, contact.surface_normal)) {
+    Vec3f surface_normal = contact.surface_normal;
+    if (is_slope_too_steep(character, surface_normal)) {
         // too steep - try the forward test, if there is one
         if (vec3f::squared_length(step_forward_test) < 1e-12f) return false;
 
@@ -1599,11 +1649,14 @@ bool walk_stairs(World &world, KCC &character, float delta_time, Vec3f step_up, 
         CharacterContact test_contact;
         if (!get_first_contact_for_sweep(test_contact, character, world, test_position, down, filter, listener, nullptr)) return false;
 
-        if (is_slope_too_steep(character, test_contact.surface_normal)) return false;
+        surface_normal = test_contact.surface_normal;
+        if (is_slope_too_steep(character, surface_normal)) return false;
     }
 
-    new_position = vec3f::scale_and_add(new_position, down, contact.fraction);
-    move_to_contact(character, world, new_position, contact, filter, listener);
+    // no height gained over where we were, along the floor's normal: the stair walk is pointless
+    if (vec3f::dot(vec3f::subtract(final_position, character.position), surface_normal) < 1e-4f) return false;
+
+    move_to_contact(character, world, final_position, contact, filter, listener);
 
     // the contact normal may have been too steep where the forward test found a walkable floor
     character.ground.state = ON_GROUND;
@@ -1655,23 +1708,32 @@ void update(World &world, KCC &character, float delta_time, Vec3f gravity, const
 
             // we didn't move as far as we wanted and we're against a slope that's too steep
             if (achieved_horizontal_step_len + 1e-4f < desired_horizontal_step_len && has_steep_slopes_to_walk(character, desired_velocity)) {
-                // clamped to a minimum: at high frame rates the step may be too small to reach the top of the step
-                const Vec3f step_forward = vec3f::scale(step_forward_normalized, scalar::max(settings.walk_stairs_min_step_forward, desired_horizontal_step_len - achieved_horizontal_step_len));
+                // the steep contact most opposing the movement: the stair walk goes that way instead of the movement's,
+                // to step up stairs approached at a big angle. contacts at too big an angle to the movement are left out
+                Vec3f walk_stairs_direction = step_forward_normalized;
+                float max_dot = settings.walk_stairs_cos_angle_forward_contact;
+                for (uint32_t i = 0; i < character.contacts.length; i++) {
+                    const CharacterContact &c = character.contacts[i];
+                    if (!c.had_collision || c.was_discarded) continue;
+                    if (vec3f::dot(c.surface_normal, vec3f::subtract(desired_velocity, c.linear_velocity)) >= 0.0f) continue;
+                    if (!is_slope_too_steep(character, c.surface_normal)) continue;
 
-                // how far ahead to scan for a floor when the floor at step_forward is too steep: the ground normal in
-                // the horizontal plane, or the movement direction when that differs too much
-                Vec3f step_forward_test = vec3f::negate(character.ground.normal);
-                step_forward_test = vec3f::scale_and_add(step_forward_test, character.up, -vec3f::dot(step_forward_test, character.up));
-                const float step_forward_test_len_sq = vec3f::squared_length(step_forward_test);
-                if (step_forward_test_len_sq > 1e-12f) {
-                    step_forward_test = vec3f::scale(step_forward_test, 1.0f / scalar::sqrt(step_forward_test_len_sq));
-                } else {
-                    step_forward_test = step_forward_normalized;
+                    // the surface normal without its vertical part, negated to point along the movement
+                    Vec3f test = vec3f::subtract(vec3f::scale(character.up, vec3f::dot(c.surface_normal, character.up)), c.surface_normal);
+                    const float test_length = vec3f::length(test);
+                    if (test_length > 1e-6f) {
+                        test = vec3f::scale(test, 1.0f / test_length);
+                        const float dot = vec3f::dot(test, step_forward_normalized);
+                        if (dot > max_dot) {
+                            walk_stairs_direction = test;
+                            max_dot = dot;
+                        }
+                    }
                 }
-                if (vec3f::dot(step_forward_test, step_forward_normalized) < settings.walk_stairs_cos_angle_forward_contact) {
-                    step_forward_test = step_forward_normalized;
-                }
-                step_forward_test = vec3f::scale(step_forward_test, settings.walk_stairs_step_forward_test);
+
+                // clamped to a minimum: at high frame rates the step may be too small to reach the top of the step
+                const Vec3f step_forward = vec3f::scale(walk_stairs_direction, scalar::max(settings.walk_stairs_min_step_forward, desired_horizontal_step_len - achieved_horizontal_step_len));
+                const Vec3f step_forward_test = vec3f::scale(walk_stairs_direction, settings.walk_stairs_step_forward_test);
 
                 walk_stairs(world, character, delta_time, vec3f::load(settings.walk_stairs_step_up), step_forward, step_forward_test,
                             vec3f::load(settings.walk_stairs_step_down_extra), filter, listener);
@@ -1706,7 +1768,7 @@ bool cast(CharacterContact &out, World &world, KCC &character, Vec3f position, V
         const CharacterContact &contact = character.contacts[i];
         if (contact.was_discarded) ignored.push({contact.body_id, contact.sub_shape_id});
     }
-    return get_first_contact_for_sweep(out, character, world, position, displacement, filter, listener, &ignored);
+    return validate_movement(out, character, world, position, displacement, filter, listener, &ignored);
 }
 
 void update_ground(World &world, KCC &character, float delta_time, bool skip_contact_velocity_check, const CharacterListener *listener) {

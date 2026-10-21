@@ -99,9 +99,11 @@ struct CastShapeSettings {
     bool collide_only_with_active_edges;
     /** with active edges only: the movement, so an inactive edge's triangle normal is used when it impedes the movement less */
     Vec3f active_edge_movement_direction;
+    /** above 0, the cast shape is inflated by this much on every side, as an extra convex radius, meters */
+    float extra_convex_radius;
 };
 
-inline CastShapeSettings default_settings() { return {false, false, false, 1e-4f, 1e-4f, false, false, true, vec3f::zero()}; }
+inline CastShapeSettings default_settings() { return {false, false, false, 1e-4f, 1e-4f, false, false, true, vec3f::zero(), 0.0f}; }
 
 struct CastShapeCollector;
 typedef void (*CastShapeAddHit)(CastShapeCollector &collector, const CastShapeHit &hit);

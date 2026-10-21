@@ -651,6 +651,7 @@ struct CastShapeSettings {
     bool use_shrunken_shape_and_convex_radius;
     bool collide_only_with_active_edges;
     tumble::Float3 active_edge_movement_direction;
+    float extra_convex_radius;
 };
 
 /** collide_shape::CollideShapeHit as js reads it: no faces */

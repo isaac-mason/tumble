@@ -336,20 +336,20 @@ void cast_convex_vs_convex_local(cast_shape::CastShapeCollector &collector, cons
                                  const Shape *shape_a, sub_shape::SubShapeId sub_shape_id_a, const Shape *shape_b,
                                  sub_shape::SubShapeId sub_shape_id_b, const Mat4f &cast_transform, Vec3f scale_a,
                                  Vec3f displacement_in_b, Vec3f scale_b, const Mat4f &target_transform) {
-    // get support functions for both shapes WITHOUT convex radius
-    // (radius will be added in epa if needed)
+    // the actual shapes, or the shapes shrunk by their convex radius with the radius added back by the cast
+    const support::SupportFunctionMode support_mode =
+        settings.use_shrunken_shape_and_convex_radius ? support::EXCLUDE_CONVEX_RADIUS : support::DEFAULT;
     support::Support &support_a = cast_support_a;
     support::Support &support_b = cast_support_b;
-    shapes::set_shape_support(support_a, shape_a, support::EXCLUDE_CONVEX_RADIUS, scale_a);
-    shapes::set_shape_support(support_b, shape_b, support::EXCLUDE_CONVEX_RADIUS, scale_b);
+    shapes::set_shape_support(support_a, shape_a, support_mode, scale_a);
+    shapes::set_shape_support(support_b, shape_b, support_mode, scale_b);
 
     // run gjk casting with epa fallback for deep penetration in b's local space
-    const float tolerance = 1e-4f;
     gjk::GjkCastShapeResult gjk_result = gjk::create_gjk_cast_shape_result();
     gjk_result.lambda = collector.early_out_fraction;
-    penetration::cast_shape(gjk_result, cast_transform, support_a, support_b, displacement_in_b, tolerance, settings.penetration_tolerance,
-                            support_a.convex_radius, support_b.convex_radius, collector.early_out_fraction,
-                            settings.return_deepest_point);
+    penetration::cast_shape(gjk_result, cast_transform, support_a, support_b, displacement_in_b, settings.collision_tolerance,
+                            settings.penetration_tolerance, support_a.convex_radius + settings.extra_convex_radius, support_b.convex_radius,
+                            collector.early_out_fraction, settings.return_deepest_point);
 
     // check if hit found
     if (!gjk_result.hit) {

@@ -711,6 +711,32 @@ kcc::KCC *make_sphere_character(const Float3 &position, float radius, uint32_t m
 
 }  // namespace
 
+// a stair walk that gains no height is cancelled, as jolt: fast enough to clear a low thin barrier in one stair step, a
+// box landing back on the floor beyond it would only have been carried over, so it stays behind it
+void test_kcc_stair_walk_that_gains_no_height_is_cancelled(TestCtx &ctx) {
+    WorldScene scene = make_world_scene(ctx);
+    world::World &world = *scene.world;
+    add_floor(scene);
+    add_static_box(scene, {0.01f, 0.1f, 2.0f}, {1.0f, 0.1f, 0.0f});
+    step_world(world, DT);
+
+    kcc::KCCSettings character_settings;
+    character_settings.shape = box::create({.half_extents = {0.3f, 0.8f, 0.3f}});
+    character_settings.shape_offset = {0.0f, 0.8f, 0.0f};
+    kcc::KCC *character = kcc::create(character_settings, vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY));
+    filter::Filter filter = filter::create(world.settings.layers);
+    const kcc::UpdateSettings settings;
+    for (uint32_t i = 0; i < 30; i++) step_walking(world, *character, {40.0f, 0.0f, 0.0f}, settings, filter);
+
+    // its front face against the barrier's near side, one padding off
+    CHECK(ctx, vec3f::x(character->position) < 1.0f - 0.3f);
+    CHECK(ctx, character->ground.state == kcc::ON_GROUND);
+
+    kcc::destroy(character);
+    filter::release(filter);
+    release_world_scene(scene);
+}
+
 // sweep padding correction
 void test_kcc_sweep_onto_a_floor_stops_one_padding_from_its_face(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
@@ -728,10 +754,30 @@ void test_kcc_sweep_onto_a_floor_stops_one_padding_from_its_face(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// the padding correction casts at 1e-4, not the character's 1e-3 tolerance. a sphere coming down 0.3 past the floor's
-// edge settles on the edge rounded by the padding, its centre 0.6 from the edge (0.5196 above it), which the cast only
-// reaches to within its tolerance
+// the padding correction casts at 1e-4, not the character's 1e-3 tolerance. a sphere sweeping down 0.3 past the floor's
+// edge stops where the face hit, inflated by the padding, rounds the edge: its centre 0.6 from the edge (0.5196 above
+// it), which the cast only reaches to within its tolerance
 void test_kcc_padding_correction_casts_at_its_own_tolerance(TestCtx &ctx) {
+    WorldScene scene = make_world_scene(ctx);
+    world::World &world = *scene.world;
+    add_static_box(scene, {5.0f, 0.5f, 5.0f}, {0.0f, -0.5f, 0.0f});
+    step_world(world, DT);
+
+    kcc::KCC *character = make_sphere_character({5.3f, 1.0f, 0.0f}, 0.5f, 256, 0.1f);
+    filter::Filter filter = filter::create(world.settings.layers);
+    kcc::CharacterContact contact;
+    CHECK(ctx, kcc::cast(contact, world, *character, character->position, vec3f::make(0.0f, -2.0f, 0.0f), filter, nullptr));
+    // the shape sits one padding above the position
+    CHECK_NEAR(ctx, 1.0f - 2.0f * contact.fraction, scalar::sqrt(0.6f * 0.6f - 0.3f * 0.3f) - 0.1f, 1e-4f);
+
+    kcc::destroy(character);
+    filter::release(filter);
+    release_world_scene(scene);
+}
+
+// sticking to the floor sweeps the shape inflated by its padding, as jolt: down 0.3 past the floor's edge, the edge
+// rounded by the box's 0.05 convex radius, the centre stops 0.5 + 0.1 + 0.05 from that rounding's centre
+void test_kcc_stick_to_floor_sweeps_the_padded_shape(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     world::World &world = *scene.world;
     add_static_box(scene, {5.0f, 0.5f, 5.0f}, {0.0f, -0.5f, 0.0f});
@@ -741,7 +787,7 @@ void test_kcc_padding_correction_casts_at_its_own_tolerance(TestCtx &ctx) {
     filter::Filter filter = filter::create(world.settings.layers);
     CHECK(ctx, kcc::stick_to_floor(world, *character, vec3f::make(0.0f, -2.0f, 0.0f), filter, nullptr));
     // the shape sits one padding above the position
-    CHECK_NEAR(ctx, vec3f::y(character->position), scalar::sqrt(0.6f * 0.6f - 0.3f * 0.3f) - 0.1f, 1e-4f);
+    CHECK_NEAR(ctx, vec3f::y(character->position), scalar::sqrt(0.65f * 0.65f - 0.35f * 0.35f) - 0.05f - 0.1f, 1e-4f);
 
     kcc::destroy(character);
     filter::release(filter);

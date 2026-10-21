@@ -290,13 +290,24 @@ void toolkit_update(world::World &world, kcc::KCC &character, float delta_time, 
             achieved = vec3f::scale(forward, achieved_forward);
             const float achieved_length = vec3f::length(achieved);
             if (achieved_length + 1e-4f < desired_length && kcc::can_walk_stairs(character, desired_velocity)) {
-                const Vec3f step_forward = vec3f::scale(forward, scalar::max(settings.walk_stairs_min_step_forward, desired_length - achieved_length));
-                Vec3f step_forward_test = vec3f::negate(character.ground.normal);
-                step_forward_test = vec3f::scale_and_add(step_forward_test, character.up, -vec3f::dot(step_forward_test, character.up));
-                const float test_length_sq = vec3f::squared_length(step_forward_test);
-                step_forward_test = test_length_sq > 1e-12f ? vec3f::scale(step_forward_test, 1.0f / scalar::sqrt(test_length_sq)) : forward;
-                if (vec3f::dot(step_forward_test, forward) < settings.walk_stairs_cos_angle_forward_contact) step_forward_test = forward;
-                step_forward_test = vec3f::scale(step_forward_test, settings.walk_stairs_step_forward_test);
+                // towards the steep contact most opposing the movement, within the forward contact angle
+                Vec3f direction = forward;
+                float max_dot = settings.walk_stairs_cos_angle_forward_contact;
+                for (uint32_t i = 0; i < character.contacts.length; i++) {
+                    const kcc::CharacterContact &c = character.contacts[i];
+                    if (!c.had_collision || c.was_discarded || !kcc::is_slope_too_steep(character, c.surface_normal)) continue;
+                    if (vec3f::dot(c.surface_normal, vec3f::subtract(desired_velocity, c.linear_velocity)) >= 0.0f) continue;
+                    Vec3f test = vec3f::subtract(vec3f::scale(character.up, vec3f::dot(c.surface_normal, character.up)), c.surface_normal);
+                    const float test_length = vec3f::length(test);
+                    if (test_length <= 1e-6f) continue;
+                    test = vec3f::scale(test, 1.0f / test_length);
+                    if (vec3f::dot(test, forward) > max_dot) {
+                        direction = test;
+                        max_dot = vec3f::dot(test, forward);
+                    }
+                }
+                const Vec3f step_forward = vec3f::scale(direction, scalar::max(settings.walk_stairs_min_step_forward, desired_length - achieved_length));
+                const Vec3f step_forward_test = vec3f::scale(direction, settings.walk_stairs_step_forward_test);
                 kcc::walk_stairs(world, character, delta_time, vec3f::load(settings.walk_stairs_step_up), step_forward, step_forward_test,
                                  vec3f::load(settings.walk_stairs_step_down_extra), filter, listener);
             }
@@ -385,11 +396,11 @@ float z_of(const kcc::KCC &character) { return vec3f::z(character.position); }
 }  // namespace
 
 // up three steps, stopped by a fourth too tall to climb, then back down them to the floor: walk_stairs and
-// stick_to_floor
+// stick_to_floor. the fourth rises 0.6, as a rise of 0.5 is climbed: the capsule's foot steps onto its rounded edge
 void test_kcc_golden_steps_up_and_down(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     add_static_box(scene, {50.0f, 0.5f, 50.0f}, {0.0f, -0.5f, 0.0f});
-    const float heights[4] = {0.1f, 0.25f, 0.4f, 0.9f};
+    const float heights[4] = {0.1f, 0.25f, 0.4f, 1.0f};
     for (int i = 0; i < 4; i++) add_static_box(scene, {0.5f, 0.5f * heights[i], 3.0f}, {2.0f + 1.0f * (float)i, 0.5f * heights[i], 0.0f});
     step_world(*scene.world);
 
@@ -407,7 +418,7 @@ void test_kcc_golden_steps_up_and_down(TestCtx &ctx) {
         }
     }
     CHECK_NEAR(ctx, y_of(*character), 0.0f, 0.01f);
-    check_golden(ctx, "steps_up_and_down", golden.physics.value, 0x4442b504u);
+    check_golden(ctx, "steps_up_and_down", golden.physics.value, 0x4e60d085u);
     release(scene, character, filter);
 }
 
@@ -436,7 +447,7 @@ void test_kcc_golden_slopes(TestCtx &ctx) {
     // not up the steep slope, whose foot is near x -2.7
     CHECK(ctx, x_of(*character) > -3.0f);
     CHECK_NEAR(ctx, y_of(*character), 0.0f, 0.01f);
-    check_golden(ctx, "slopes", golden.physics.value, 0xc3c5013cu);
+    check_golden(ctx, "slopes", golden.physics.value, 0xc84f9cefu);
     release(scene, character, filter);
 }
 
@@ -498,7 +509,7 @@ void test_kcc_golden_platforms(TestCtx &ctx) {
     // standing still, carried round by the turning platform
     CHECK(ctx, character->ground.body_id == turner->id);
     CHECK(ctx, z_of(*character) < turning_from - 1.0f);
-    check_golden(ctx, "platforms", golden.physics.value, 0xf307ee2bu);
+    check_golden(ctx, "platforms", golden.physics.value, 0xe0813654u);
     release(scene, character, filter);
 }
 
@@ -526,7 +537,7 @@ void test_kcc_golden_pushing_and_standing_on_dynamics(TestCtx &ctx) {
     CHECK(ctx, small_crate->position.x > 5.5f);
     CHECK(ctx, character->ground.body_id == slab->id);
     CHECK_NEAR(ctx, y_of(*character), 0.3f, 0.01f);
-    check_golden(ctx, "pushing_and_standing_on_dynamics", golden.physics.value, 0x93f0c1feu);
+    check_golden(ctx, "pushing_and_standing_on_dynamics", golden.physics.value, 0x971acf3bu);
     release(scene, character, filter);
 }
 
@@ -590,7 +601,7 @@ void test_kcc_golden_mesh_terrain(TestCtx &ctx) {
     }
     CHECK(ctx, at_the_hit_limit);
     CHECK(ctx, x_of(*ball) < -1.0f);
-    check_golden(ctx, "mesh_terrain", golden.physics.value, 0x5d69378cu);
+    check_golden(ctx, "mesh_terrain", golden.physics.value, 0xa2ea5476u);
 
     release(scene, ball, filter);
     triangle_mesh_data::destroy(data);
@@ -674,8 +685,8 @@ void test_kcc_golden_conveyor(TestCtx &ctx) {
         // two seconds standing still, carried at the belt's 2 m/s
         if (i == 149) CHECK_NEAR(ctx, x_of(*character) - boarded, 4.0f, 0.05f);
     }
-    check_golden(ctx, "conveyor", golden.physics.value, 0x2ab1e17cu);
-    check_golden(ctx, "conveyor log", golden.log.value, 0xf97c6c7fu);
+    check_golden(ctx, "conveyor", golden.physics.value, 0xa25e9579u);
+    check_golden(ctx, "conveyor log", golden.log.value, 0xc499a247u);
     release(scene, character, filter);
 }
 
@@ -702,8 +713,8 @@ void test_kcc_golden_unpushable_crate(TestCtx &ctx) {
     }
     CHECK_NEAR(ctx, unpushable->position.x, 1.5f, 1e-3f);
     CHECK(ctx, pushable->position.x > 3.5f);
-    check_golden(ctx, "unpushable_crate", golden.physics.value, 0xdec1a1ecu);
-    check_golden(ctx, "unpushable_crate log", golden.log.value, 0x203281ebu);
+    check_golden(ctx, "unpushable_crate", golden.physics.value, 0x38806201u);
+    check_golden(ctx, "unpushable_crate log", golden.log.value, 0x5da92f11u);
     release(scene, character, filter);
 }
 

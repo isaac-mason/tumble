@@ -76,8 +76,9 @@ static void visit_cast_shape(body_visitor::BodyVisitor *visitor, RigidBody *body
 
 void cast_shape(world::World &world, cast_shape::CastShapeCollector &collector, const cast_shape::CastShapeSettings &settings,
                 const shapes::Shape *shape, const Transformf &transform, Vec3f displacement, const filter::Filter &filter) {
+    // the shape's bounds grown by the extra convex radius it is cast with
     Box3f bounds;
-    aabox::store(bounds, shape_world_bounds(shape, transform));
+    aabox::store(bounds, aabox::expand_by_margin(shape_world_bounds(shape, transform), settings.extra_convex_radius));
 
     CastShapeVisit visit = {&collector, &settings, shape, transform, displacement};
     body_visitor::BodyVisitor visitor = body_visitor::create(visit_cast_shape, &visit);

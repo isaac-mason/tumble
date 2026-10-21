@@ -7,7 +7,7 @@
 import type { Instance } from '../module.js';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0xba204eaa;
+export const SCHEMA_HASH = 0x74d130b9;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 368;
 
@@ -4069,9 +4069,10 @@ export type CastShapeSettings = {
     useShrunkenShapeAndConvexRadius: boolean;
     collideOnlyWithActiveEdges: boolean;
     activeEdgeMovementDirection: Vec3;
+    extraConvexRadius: number;
 };
 export const CastShapeSettings = {
-    size: 28,
+    size: 32,
     create(): CastShapeSettings {
         return {
             collideWithBackfacesTriangles: false,
@@ -4082,6 +4083,7 @@ export const CastShapeSettings = {
             useShrunkenShapeAndConvexRadius: false,
             collideOnlyWithActiveEdges: false,
             activeEdgeMovementDirection: Vec3.create(),
+            extraConvexRadius: 0,
         };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
@@ -4097,6 +4099,7 @@ export const CastShapeSettings = {
         out.activeEdgeMovementDirection[0] = mem.f32[(address + 16) >> 2]!;
         out.activeEdgeMovementDirection[1] = mem.f32[(address + 20) >> 2]!;
         out.activeEdgeMovementDirection[2] = mem.f32[(address + 24) >> 2]!;
+        out.extraConvexRadius = mem.f32[(address + 28) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -4112,6 +4115,7 @@ export const CastShapeSettings = {
         mem.f32[(address + 16) >> 2] = value.activeEdgeMovementDirection[0];
         mem.f32[(address + 20) >> 2] = value.activeEdgeMovementDirection[1];
         mem.f32[(address + 24) >> 2] = value.activeEdgeMovementDirection[2];
+        mem.f32[(address + 28) >> 2] = value.extraConvexRadius;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: CastShapeSettings): void {
@@ -4125,6 +4129,7 @@ export const CastShapeSettings = {
         view.setFloat32(offset + 16, value.activeEdgeMovementDirection[0], true);
         view.setFloat32(offset + 20, value.activeEdgeMovementDirection[1], true);
         view.setFloat32(offset + 24, value.activeEdgeMovementDirection[2], true);
+        view.setFloat32(offset + 28, value.extraConvexRadius, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: CastShapeSettings, view: DataView, offset: number): CastShapeSettings {
@@ -4138,6 +4143,7 @@ export const CastShapeSettings = {
         out.activeEdgeMovementDirection[0] = view.getFloat32(offset + 16, true);
         out.activeEdgeMovementDirection[1] = view.getFloat32(offset + 20, true);
         out.activeEdgeMovementDirection[2] = view.getFloat32(offset + 24, true);
+        out.extraConvexRadius = view.getFloat32(offset + 28, true);
         return out;
     },
 };

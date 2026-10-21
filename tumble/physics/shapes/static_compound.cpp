@@ -422,8 +422,9 @@ void cast_shape_vs_static_compound(cast_shape::CastShapeCollector &collector, co
     const float inv_ray_length = ray.length > 1e-10f ? 1.0f / ray.length : 0.0f;
     ray.direction = vec3f::scale(displacement_in_b, inv_ray_length);
 
-    // half extents of the base aabb, which every bound the ray is tested against grows by
-    const Vec3f half_extents = aabox::extents(swept_aabb);
+    // half extents of the base aabb and the extra convex radius, which every bound the ray is tested against grows by
+    const Vec3f half_extents =
+        vec3f::add(aabox::extents(swept_aabb), vec3f::divide(vec3f::splat(settings.extra_convex_radius), vec3f::abs(vec3f::load(transform_b.scale))));
 
     int32_t stack_nodes[STACK_SIZE];
     float stack_dist[STACK_SIZE];

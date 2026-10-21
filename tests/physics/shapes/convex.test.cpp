@@ -362,9 +362,18 @@ void test_convex_cast_perpendicular_normal(TestCtx &ctx) {
     shapes::Shape *b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.05f});
     cast_shape::CastShapeCollector collector = cast_shape::create_collector(collector::COLLECT_ALL);
 
-    // sliding along a face it overlaps: the normal is perpendicular to the motion, which is not a back face, so it hits
-    // at the start
+    // sliding along a face it overlaps hits at the start. the full shapes overlap, so without the deepest point the
+    // normal is only the search direction gjk ended on, as jolt's
     cast(collector, cast_shape::default_settings(), b, pose({0, 0.99f, 0}), {2, 0, 0}, b, pose({0, 0, 0}));
+    CHECK(ctx, collector.hits.length == 1);
+    CHECK(ctx, collector.hits[0].fraction == 0.0f);
+
+    // shrunk by their convex radius they are apart, so the normal is the face's: perpendicular to the motion, which is
+    // not a back face
+    cast_shape::reset(collector);
+    cast_shape::CastShapeSettings shrunk = cast_shape::default_settings();
+    shrunk.use_shrunken_shape_and_convex_radius = true;
+    cast(collector, shrunk, b, pose({0, 0.99f, 0}), {2, 0, 0}, b, pose({0, 0, 0}));
     CHECK(ctx, collector.hits.length == 1);
     CHECK(ctx, collector.hits[0].fraction == 0.0f);
     CHECK(ctx, vec3f::x(collector.hits[0].normal) == 0.0f);

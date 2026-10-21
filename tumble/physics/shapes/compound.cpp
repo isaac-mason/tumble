@@ -462,7 +462,8 @@ void cast_shape_vs_compound(cast_shape::CastShapeCollector &collector, const cas
     // culled by sweeping the centre of those bounds against child bounds grown by their extent
     const AABox query_bounds = bounds_in_compound_space(shape_a, transform_a, transform_b, 0.0f);
     const Vec3f center = aabox::center(query_bounds);
-    const Vec3f extent = aabox::extents(query_bounds);
+    const Vec3f extent =
+        vec3f::add(aabox::extents(query_bounds), vec3f::divide(vec3f::splat(settings.extra_convex_radius), vec3f::abs(vec3f::load(transform_b.scale))));
     const Quatf inv_quat = quatf::conjugate(quatf::load(transform_b.quaternion));
     const Vec3f local_displacement = vec3f::divide(vec3f::transform_quat(displacement_a, inv_quat), vec3f::load(transform_b.scale));
     const Vec3f inv_displacement = vec3f::make(cast_utils::safe_reciprocal(vec3f::x(local_displacement)), cast_utils::safe_reciprocal(vec3f::y(local_displacement)),

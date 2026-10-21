@@ -382,7 +382,7 @@ void cast_convex_vs_triangle_mesh(cast_shape::CastShapeCollector &collector, con
     walk_ray.direction = vec3f::scale(walk_displacement, inv_ray_length);
 
     // half-extents of the base aabb
-    const Vec3f half_extents = aabox::extents(swept_aabb);
+    const Vec3f half_extents = vec3f::add(aabox::extents(swept_aabb), vec3f::divide(vec3f::splat(settings.extra_convex_radius), vec3f::abs(scale_b)));
 
     // the active edge movement hint in the mesh's local space
     Vec3f active_edge_movement_direction = mat4f::multiply3x3_transposed_vec(target_transform, settings.active_edge_movement_direction);
@@ -443,7 +443,8 @@ void cast_convex_vs_triangle_mesh(cast_shape::CastShapeCollector &collector, con
                 // gjk shapecast with epa fallback for deep penetration, a folded into b's space by cast_transform
                 gjk::GjkCastShapeResult gjk_result = gjk::create_gjk_cast_shape_result();
                 penetration::cast_shape(gjk_result, cast_transform, support_a, cast_triangle_support, displacement_in_b,
-                                        settings.collision_tolerance, settings.penetration_tolerance, support_a.convex_radius,
+                                        settings.collision_tolerance, settings.penetration_tolerance,
+                                        support_a.convex_radius + settings.extra_convex_radius,
                                         0.0f,  // triangle has no convex radius
                                         collector.early_out_fraction, settings.return_deepest_point);
 
@@ -1014,7 +1015,7 @@ void cast_sphere_vs_triangle_mesh(cast_shape::CastShapeCollector &collector, con
     if (data.node_count == 0) return;
 
     // scaled sphere radius (assuming uniform scale)
-    const float sphere_radius = scalar::abs(transform_a.scale.x) * shape_a->sphere.radius;
+    const float sphere_radius = scalar::abs(transform_a.scale.x) * shape_a->sphere.radius + settings.extra_convex_radius;
 
     const Vec3f scale_b = vec3f::load(transform_b.scale);
 
