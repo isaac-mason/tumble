@@ -143,4 +143,5 @@ static void ui(App &app) {
 
 static void shutdown(App &) { state.spawned.release(); }
 
-const Example EXAMPLE_SHAPES = {"shapes", init, step, nullptr, ui, shutdown};
+static const Example EXAMPLE_SHAPES = {"Shapes", init, step, nullptr, ui, shutdown};
+static const examples::Registration REGISTERED(EXAMPLE_SHAPES);

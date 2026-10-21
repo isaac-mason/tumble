@@ -120,7 +120,7 @@ static void destroy_shape(shapes::Shape *shape) {
 
 /** the example's world, then its shapes, then what they were built from */
 static void end_example() {
-    if (current_example >= 0 && EXAMPLES[current_example]->shutdown) EXAMPLES[current_example]->shutdown(state);
+    if (current_example >= 0 && examples::at(current_example).shutdown) examples::at(current_example).shutdown(state);
     if (state.world != nullptr) world::destroy(state.world);
     state.world = nullptr;
     for (uint32_t i = 0; i < state.shapes.length; i++) destroy_shape(state.shapes[i]);
@@ -142,7 +142,7 @@ static void select_example(int index) {
     state.click = {};
     state.body_colors.length = 0;
     state.camera = camera::create();
-    EXAMPLES[current_example]->init(state);
+    examples::at(current_example).init(state);
 }
 
 static void init() {
@@ -271,8 +271,8 @@ static void ui(const Example &example) {
     ImGui::SetNextWindowSize(ImVec2(340, 0), ImGuiCond_FirstUseEver);
     ImGui::Begin("tumble");
     if (ImGui::BeginCombo("example", example.name)) {
-        for (int i = 0; i < EXAMPLE_COUNT; i++) {
-            if (ImGui::Selectable(EXAMPLES[i]->name, i == current_example)) select_example(i);
+        for (int i = 0; i < examples::count(); i++) {
+            if (ImGui::Selectable(examples::at(i).name, i == current_example)) select_example(i);
         }
         ImGui::EndCombo();
     }
@@ -325,14 +325,14 @@ static void frame() {
     state.pointer.ray = camera::screen_ray(state.camera, state.pointer.x, state.pointer.y);
     renderer::clear(state.renderer);
 
-    const Example &example = *EXAMPLES[current_example];
+    const Example &example = examples::at(current_example);
     // screenshots step a fixed time a frame, the same picture on every machine
     step_world(example, screenshot_path != nullptr ? 1.0f / state.step_rate : delta_time);
     if (example.update) example.update(state, delta_time);
     state.click = {};
     if (state.world != nullptr) draw_world(*state.world);
 
-    ui(*EXAMPLES[current_example]);
+    ui(examples::at(current_example));
 
     sg_pass pass = {};
     pass.action.colors[0].load_action = SG_LOADACTION_CLEAR;
@@ -420,8 +420,8 @@ sapp_desc sokol_main(int argc, char **argv) {
             screenshot_frame = atoi(argv[++arg]);
             continue;
         }
-        for (int i = 0; i < EXAMPLE_COUNT; i++) {
-            if (strcmp(EXAMPLES[i]->name, argv[arg]) == 0) initial_example = i;
+        for (int i = 0; i < examples::count(); i++) {
+            if (strcmp(examples::at(i).name, argv[arg]) == 0) initial_example = i;
         }
     }
 

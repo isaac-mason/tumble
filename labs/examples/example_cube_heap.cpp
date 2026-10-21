@@ -67,4 +67,5 @@ static void ui(App &app) {
 
 static void shutdown(App &) { state.cubes.release(); }
 
-const Example EXAMPLE_CUBE_HEAP = {"cube heap", init, step, nullptr, ui, shutdown};
+static const Example EXAMPLE_CUBE_HEAP = {"Cube Heap", init, step, nullptr, ui, shutdown};
+static const examples::Registration REGISTERED(EXAMPLE_CUBE_HEAP);
