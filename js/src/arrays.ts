@@ -1,4 +1,4 @@
-import * as Low from './generated/tumble';
+import * as Low from './generated/tumble.js';
 
 /** copies arrays into blocks of the wasm's memory, each freed when the withCopies that made it returns */
 export type Copier = {

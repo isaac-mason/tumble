@@ -3,8 +3,8 @@
 // comes out through the views. the memory starts small and the wasm grows it as it allocates, which replaces the buffer
 // under every view; `grew()` re-derives them, and the plumbing calls it after any call that can allocate.
 
-import { SCHEMA_HASH, SCRATCH_BYTES, setWasm, WasmError, type WasmExports } from './generated/tumble';
-import { createWasmMemory, refreshViews, type WasmMemory } from './memory';
+import { SCHEMA_HASH, SCRATCH_BYTES, setWasm, WasmError, type WasmExports } from './generated/tumble.js';
+import { createWasmMemory, refreshViews, type WasmMemory } from './memory.js';
 
 export type Instance = {
     module: WebAssembly.Module;

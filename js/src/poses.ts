@@ -1,6 +1,6 @@
-import * as Low from './generated/tumble';
-import type { BodyId } from './rigid-body';
-import type { World } from './world';
+import * as Low from './generated/tumble.js';
+import type { BodyId } from './rigid-body.js';
+import type { World } from './world.js';
 
 /**
  * what read hands back: views straight onto the wasm's memory, valid until the next call into tumble, so take them from

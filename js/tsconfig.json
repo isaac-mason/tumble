@@ -9,7 +9,8 @@
         "noUncheckedIndexedAccess": true,
         "isolatedModules": true,
         "verbatimModuleSyntax": true,
-        "skipLibCheck": true
+        "skipLibCheck": true,
+        "paths": { "tumble": ["./src/index.ts"] }
     },
-    "include": ["src", "test"]
+    "include": ["src", "test", "docs", "vitest.config.ts"]
 }

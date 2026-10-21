@@ -1,7 +1,7 @@
-import * as Low from './generated/tumble';
-import { type Box3, copied, type Quat, type Vec3 } from './math';
-import type { MassProperties, Shape } from './shapes';
-import type { World } from './world';
+import * as Low from './generated/tumble.js';
+import { type Box3, copied, type Quat, type Vec3 } from './math.js';
+import type { MassProperties, Shape } from './shapes.js';
+import type { World } from './world.js';
 
 /** a body in a world: an index and a sequence in one number, so the id of a removed body names nothing */
 export type BodyId = number;

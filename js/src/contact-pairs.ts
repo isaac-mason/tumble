@@ -1,8 +1,8 @@
-import * as Low from './generated/tumble';
-import type { KCC } from './kcc';
-import type { Vec3 } from './math';
-import type { BodyId } from './rigid-body';
-import type { World } from './world';
+import * as Low from './generated/tumble.js';
+import type { KCC } from './kcc.js';
+import type { Vec3 } from './math.js';
+import type { BodyId } from './rigid-body.js';
+import type { World } from './world.js';
 
 /** a pair of body sub shapes in contact, one side a body observing contacts; its fields are its last record's */
 export type ContactPair = {

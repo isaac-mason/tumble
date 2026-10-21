@@ -1,8 +1,8 @@
-import * as Low from './generated/tumble';
-import type { Quat, Vec3 } from './math';
-import type { BodyId } from './rigid-body';
-import type { Shape } from './shapes';
-import type { World } from './world';
+import * as Low from './generated/tumble.js';
+import type { Quat, Vec3 } from './math.js';
+import type { BodyId } from './rigid-body.js';
+import type { Shape } from './shapes.js';
+import type { World } from './world.js';
 
 export const CastRayStatus = Low.CastRayStatus;
 export type CastRayStatus = Low.CastRayStatus;

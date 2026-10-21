@@ -1,7 +1,7 @@
-import { withCopies } from './arrays';
-import * as Low from './generated/tumble';
-import type { Box3, Quat, Vec3 } from './math';
-import { defaultsOf, over } from './settings';
+import { withCopies } from './arrays.js';
+import * as Low from './generated/tumble.js';
+import type { Box3, Quat, Vec3 } from './math.js';
+import { defaultsOf, over } from './settings.js';
 
 /** a shape, yours to free with its type's destroy once no body or other shape uses it */
 export type Shape = Low.Shape;

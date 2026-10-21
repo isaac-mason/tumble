@@ -1,8 +1,8 @@
-import * as Low from './generated/tumble';
-import { copied, type Quat, type Vec2, type Vec3 } from './math';
-import type { BodyId } from './rigid-body';
-import { defaultsOf, type Given, over } from './settings';
-import type { World } from './world';
+import * as Low from './generated/tumble.js';
+import { copied, type Quat, type Vec2, type Vec3 } from './math.js';
+import type { BodyId } from './rigid-body.js';
+import { defaultsOf, type Given, over } from './settings.js';
+import type { World } from './world.js';
 
 /** a constraint in a world: its index, type and sequence in one number, so the id of a removed constraint names nothing */
 export type ConstraintId = number;

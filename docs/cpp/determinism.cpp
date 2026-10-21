@@ -9,6 +9,9 @@
 
 using namespace tumble;
 
+/** the pile's hash, the same natively, in the wasm, and through the js package */
+static constexpr uint32_t PILE_HASH = 0x2a2c339cu;
+
 static world::World *make_pile(shapes::Shape *ground_shape, shapes::Shape *ball_shape) {
     world_settings::WorldSettings settings = world_settings::create();
     const uint32_t moving = world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
@@ -20,8 +23,9 @@ static world::World *make_pile(shapes::Shape *ground_shape, shapes::Shape *ball_
     rigid_body::create(*world, {.shape = ground_shape, .object_layer = not_moving, .motion_type = motion_type::MOTION_STATIC,
                                 .position = {0.0f, -0.5f, 0.0f}});
     for (int i = 0; i < 20; i++) {
+        // offsets exact in every float type, so js builds the same pile
         rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving, .motion_type = motion_type::MOTION_DYNAMIC,
-                                    .position = {0.05f * (float)(i % 3), 0.6f + 1.1f * (float)i, 0.03f * (float)(i % 4)}});
+                                    .position = {0.0625f * (float)(i % 3), 0.625f + 1.125f * (float)i, 0.03125f * (float)(i % 4)}});
     }
     return world;
 }
@@ -50,6 +54,26 @@ int main() {
     /* SNIPPET_END: replay */
     /* HIDE_START */
     if (!same) return 1;
+    // the pile's poses, hashed as js/docs/determinism.ts hashes them: the js package must give the same bits
+    uint32_t hash = 2166136261u;
+    const auto word = [&hash](uint32_t w) {
+        for (int k = 0; k < 4; k++) {
+            hash ^= (w >> (k * 8)) & 0xffu;
+            hash *= 16777619u;
+        }
+    };
+    for (uint32_t i = 0; i < first->bodies.pool.length; i++) {
+        const rigid_body::RigidBody &body = *first->bodies.pool[i];
+        const float values[7] = {body.position.x,   body.position.y,   body.position.z,  body.quaternion.x,
+                                 body.quaternion.y, body.quaternion.z, body.quaternion.w};
+        for (float value : values) {
+            uint32_t bits;
+            memcpy(&bits, &value, sizeof bits);
+            word(bits);
+        }
+    }
+    printf("pile 0x%08x\n", hash);
+    if (hash != PILE_HASH) return 1;
     /* HIDE_END */
 
     world::destroy(first);

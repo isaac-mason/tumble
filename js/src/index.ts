@@ -27,8 +27,8 @@ export {
     SwingTwistConstraint,
     type SwingTwistConstraintSettings,
     SwingType,
-} from './constraints';
-export { type ContactPair, ContactPairs } from './contact-pairs';
+} from './constraints.js';
+export { type ContactPair, ContactPairs } from './contact-pairs.js';
 export {
     type BodiesOptions,
     BodyColorMode,
@@ -39,9 +39,9 @@ export {
     type DebugViews,
     type JointsOptions,
     type ShapeOptions,
-} from './debug';
-export type { ContactEvent, ContactRemovedEvent, ContactSettings, Listener } from './events';
-export { type InitOptions, init } from './init';
+} from './debug.js';
+export type { ContactEvent, ContactRemovedEvent, ContactSettings, Listener } from './events.js';
+export { type InitOptions, init } from './init.js';
 export {
     BackFaceMode,
     createDefaultUpdateSettings,
@@ -60,9 +60,9 @@ export {
     type KCCSweepContact,
     type KCCTuning,
     type KCCUpdateSettings,
-} from './kcc';
-export type { Box3, Mat4, Quat, Vec2, Vec3 } from './math';
-export { Poses, type PoseViews } from './poses';
+} from './kcc.js';
+export type { Box3, Mat4, Quat, Vec2, Vec3 } from './math.js';
+export { Poses, type PoseViews } from './poses.js';
 export {
     AllCastRayCollector,
     AllCastShapeCollector,
@@ -110,7 +110,7 @@ export {
     createDefaultCollidePointSettings,
     createDefaultCollideShapeSettings,
     Filter,
-} from './queries';
+} from './queries.js';
 export {
     type BodyId,
     Dof,
@@ -120,7 +120,7 @@ export {
     MotionType,
     RigidBody,
     type RigidBodySettings,
-} from './rigid-body';
+} from './rigid-body.js';
 export {
     BakeSupportAdjacency,
     Box,
@@ -159,7 +159,7 @@ export {
     type TriangleMeshBuildSettings,
     TriangleMeshData,
     type TriangleMeshSettings,
-} from './shapes';
+} from './shapes.js';
 export {
     type CcdSettings,
     type ContactsSettings,
@@ -169,4 +169,4 @@ export {
     type SolverSettings,
     World,
     WorldSettings,
-} from './world';
+} from './world.js';

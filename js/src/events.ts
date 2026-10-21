@@ -1,7 +1,7 @@
-import * as Low from './generated/tumble';
-import type { Vec3 } from './math';
-import type { BodyId } from './rigid-body';
-import type { World } from './world';
+import * as Low from './generated/tumble.js';
+import type { Vec3 } from './math.js';
+import type { BodyId } from './rigid-body.js';
+import type { World } from './world.js';
 
 /** how a contact is solved: its combined material, and the scales and surface velocities a hook may change */
 export type ContactSettings = Low.ContactSettings;

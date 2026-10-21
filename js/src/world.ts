@@ -1,7 +1,7 @@
-import { withCopies } from './arrays';
-import { type Listener, stepWith } from './events';
-import * as Low from './generated/tumble';
-import type { Vec3 } from './math';
+import { withCopies } from './arrays.js';
+import { type Listener, stepWith } from './events.js';
+import * as Low from './generated/tumble.js';
+import type { Vec3 } from './math.js';
 
 export type World = Low.World;
 

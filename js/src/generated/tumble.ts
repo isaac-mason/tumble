@@ -4,7 +4,7 @@
 // the wasm. a value type is a plain object or tuple with a reader and writer over memory; a call passes one
 // through the wasm's scratch region. the realm has one wasm, bound here by init.
 
-import type { Instance } from '../module';
+import type { Instance } from '../module.js';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
 export const SCHEMA_HASH = 0x843dff72;

@@ -1,10 +1,10 @@
-import * as Low from './generated/tumble';
-import type { KCC } from './kcc';
-import type { Quat, Vec3 } from './math';
-import type { BodyId } from './rigid-body';
-import { defaultsOf, over } from './settings';
-import type { Shape } from './shapes';
-import type { World } from './world';
+import * as Low from './generated/tumble.js';
+import type { KCC } from './kcc.js';
+import type { Quat, Vec3 } from './math.js';
+import type { BodyId } from './rigid-body.js';
+import { defaultsOf, over } from './settings.js';
+import type { Shape } from './shapes.js';
+import type { World } from './world.js';
 
 export const BodyColorMode = Low.BodyColorMode;
 export type BodyColorMode = Low.BodyColorMode;

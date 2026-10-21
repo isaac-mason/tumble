@@ -1,0 +1,149 @@
+import {
+    Box,
+    CastRayStatus,
+    CastShapeStatus,
+    castRay,
+    castShape,
+    collidePoint,
+    collideShape,
+    createAllCastRayCollector,
+    createAllCollidePointCollector,
+    createAnyCastRayCollector,
+    createClosestCastRayCollector,
+    createClosestCastShapeCollector,
+    createClosestCollideShapeCollector,
+    createDefaultCastRaySettings,
+    createDefaultCastShapeSettings,
+    createDefaultCollidePointSettings,
+    createDefaultCollideShapeSettings,
+    Filter,
+    init,
+    MotionType,
+    RigidBody,
+    Sphere,
+    type Vec3,
+    World,
+    WorldSettings,
+} from 'tumble';
+
+await init();
+const settings = WorldSettings.create();
+const moving = WorldSettings.addObjectLayer(settings, WorldSettings.addBroadphaseLayer(settings));
+const notMoving = WorldSettings.addObjectLayer(settings, WorldSettings.addBroadphaseLayer(settings));
+WorldSettings.enableCollision(settings, moving, moving);
+WorldSettings.enableCollision(settings, moving, notMoving);
+settings.gravity = [0, 0, 0];
+const world = World.create(settings);
+const crateShape = Box.create({ halfExtents: [0.5, 0.5, 0.5] });
+const floorShape = Box.create({ halfExtents: [20, 0.5, 20] });
+const floor = RigidBody.create(world, {
+    shape: floorShape,
+    objectLayer: notMoving,
+    motionType: MotionType.STATIC,
+    position: [0, -0.5, 0],
+});
+// two crates stacked over the floor: y 0.5 to 1.5, and 2.5 to 3.5
+const lower = RigidBody.create(world, {
+    shape: crateShape,
+    objectLayer: moving,
+    motionType: MotionType.DYNAMIC,
+    position: [0, 1, 0],
+});
+const upper = RigidBody.create(world, {
+    shape: crateShape,
+    objectLayer: moving,
+    motionType: MotionType.DYNAMIC,
+    position: [0, 3, 0],
+    userData: 9,
+});
+World.step(world, undefined, 1 / 60);
+const check = (ok: boolean, what: string): void => {
+    if (!ok) throw new Error(what);
+};
+
+/* SNIPPET_START: cast-ray */
+// what a query may hit: every layer of the world's, until told otherwise. free it when done
+const filter = Filter.create(world);
+const raySettings = createDefaultCastRaySettings();
+const origin: Vec3 = [0, 10, 0];
+const down: Vec3 = [0, -1, 0];
+
+// the nearest hit, its fraction along the ray's 20 m
+const closest = createClosestCastRayCollector();
+castRay(world, closest, raySettings, origin, down, 20, filter);
+if (closest.hit.status === CastRayStatus.COLLIDING) {
+    const distance = closest.hit.fraction * 20;
+    const point: Vec3 = [origin[0], origin[1] - distance, origin[2]];
+    console.log(`body ${closest.hit.bodyIdB} hit at ${point}`); // the upper crate, its top at y 3.5
+}
+
+// the first hit found, for line of sight; every hit, nearest first after sort
+const any = createAnyCastRayCollector();
+castRay(world, any, raySettings, origin, down, 20, filter);
+const all = createAllCastRayCollector();
+castRay(world, all, raySettings, origin, down, 20, filter);
+all.sort();
+all.hits.length; // 3: the crates and the floor
+
+// a collector keeps what it had, across queries, until reset
+closest.reset();
+/* SNIPPET_END: cast-ray */
+check(any.hit.status === CastRayStatus.COLLIDING, 'any');
+check(all.hits.length === 3 && all.hits[0]!.bodyIdB === upper && all.hits[2]!.bodyIdB === floor, 'all, nearest first');
+
+/* SNIPPET_START: collide-point */
+// the bodies whose shapes hold a point
+const inside = createAllCollidePointCollector();
+collidePoint(world, inside, createDefaultCollidePointSettings(), [0, 1, 0], filter);
+inside.hits[0]?.bodyIdB; // the lower crate
+/* SNIPPET_END: collide-point */
+check(inside.hits.length === 1 && inside.hits[0]!.bodyIdB === lower, 'the point in the lower crate');
+
+/* SNIPPET_START: collide-shape */
+// what a shape overlaps, posed and scaled: placing something, or a blast's reach. the closest is the deepest
+const probe = Sphere.create({ radius: 0.8 });
+const deepest = createClosestCollideShapeCollector();
+collideShape(world, deepest, createDefaultCollideShapeSettings(), probe, [0, 2, 0], [0, 0, 0, 1], [1, 1, 1], filter);
+deepest.hit?.penetration; // into a crate by 0.3
+/* SNIPPET_END: collide-shape */
+check(deepest.hit !== null && Math.abs(deepest.hit.penetration - 0.3) < 0.01, 'overlapping a crate by 0.3');
+
+/* SNIPPET_START: cast-shape */
+// a shape swept: where a falling ball first meets something, for placing it or for a projectile's path
+const sweep = createClosestCastShapeCollector();
+const ball = Sphere.create({ radius: 0.5 });
+castShape(world, sweep, createDefaultCastShapeSettings(), ball, [0, 10, 0], [0, 0, 0, 1], [1, 1, 1], [0, -20, 0], filter);
+if (sweep.hit.status === CastShapeStatus.COLLIDING) {
+    sweep.hit.fraction; // 0.3: its centre half a metre over the upper crate's top
+    sweep.hit.normal; // up, from the crate towards the ball
+}
+/* SNIPPET_END: cast-shape */
+check(Math.abs(sweep.hit.fraction - 0.3) < 0.01 && sweep.hit.normal[1] > 0.99, 'swept onto the upper crate');
+
+/* SNIPPET_START: filters */
+// layers first, then groups and masks, then a body filter: all must pass
+Filter.disableObjectLayer(filter, world, notMoving); // the floor's layer: crates only
+filter.collisionMask = ~2 >>> 0; // no body in group 2
+Filter.setAllEnabled(filter, world); // back to everything
+// what a body collides with: its layer's layers, and its groups and mask
+Filter.setFromBody(filter, world, upper);
+/* SNIPPET_END: filters */
+Filter.setAllEnabled(filter, world);
+
+/* SNIPPET_START: body-filter */
+// your own test, for each body a query reaches: the closest it passes, not the closest there is. such a query collects
+// every hit first, losing its early out, so prefer layers and masks where they do
+filter.bodyFilter = (body) => RigidBody.getUserData(world, body) !== 9;
+closest.reset();
+castRay(world, closest, raySettings, origin, down, 20, filter);
+closest.hit.bodyIdB; // the lower crate: the upper is filtered out
+filter.bodyFilter = null;
+/* SNIPPET_END: body-filter */
+check(closest.hit.bodyIdB === lower, 'past the filtered crate');
+
+Filter.destroy(filter);
+World.destroy(world);
+Box.destroy(crateShape);
+Box.destroy(floorShape);
+Sphere.destroy(probe);
+Sphere.destroy(ball);

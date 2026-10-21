@@ -1,5 +1,5 @@
-import { hasWasm } from './generated/tumble';
-import { instantiate } from './module';
+import { hasWasm } from './generated/tumble.js';
+import { instantiate } from './module.js';
 
 export type InitOptions = {
     /** the wasm itself, its bytes or compiled module, or where to fetch it from; by default the package's dist/tumble.wasm */

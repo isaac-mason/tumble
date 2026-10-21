@@ -1,10 +1,10 @@
-import * as Low from './generated/tumble';
-import { copied, type Quat, type Vec3 } from './math';
-import type { Filter } from './queries';
-import { type BodyId, INVALID_BODY_ID, type MotionType } from './rigid-body';
-import { defaultsOf, type Given, over } from './settings';
-import type { Shape } from './shapes';
-import type { World } from './world';
+import * as Low from './generated/tumble.js';
+import { copied, type Quat, type Vec3 } from './math.js';
+import type { Filter } from './queries.js';
+import { type BodyId, INVALID_BODY_ID, type MotionType } from './rigid-body.js';
+import { defaultsOf, type Given, over } from './settings.js';
+import type { Shape } from './shapes.js';
+import type { World } from './world.js';
 
 export const GroundState = Low.GroundState;
 export type GroundState = Low.GroundState;
