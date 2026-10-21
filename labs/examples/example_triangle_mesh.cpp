@@ -46,13 +46,13 @@ static void make_jungle(App &app) {
 
 /** a sphere or a box, dropped somewhere over the middle at any angle */
 static rigid_body::RigidBody *spawn(App &app) {
-    const Float3 axis = {random::next(state.random) - 0.5f, random::next(state.random) - 0.5f, random::next(state.random) - 0.5f};
+    const Float3 axis = {seeded::next(state.random) - 0.5f, seeded::next(state.random) - 0.5f, seeded::next(state.random) - 0.5f};
     rigid_body::RigidBodySettings settings;
-    settings.shape = state.kinds[(uint32_t)(random::next(state.random) * KIND_COUNT) % KIND_COUNT];
+    settings.shape = state.kinds[(uint32_t)(seeded::next(state.random) * KIND_COUNT) % KIND_COUNT];
     settings.object_layer = state.layers.moving;
     settings.motion_type = motion_type::MOTION_DYNAMIC;
-    settings.position = {random::range(state.random, -SPAWN_AREA, SPAWN_AREA), SPAWN_HEIGHT, random::range(state.random, -SPAWN_AREA, SPAWN_AREA)};
-    settings.quaternion = vec::quat_axis_angle(axis, random::next(state.random) * 2.0f * scalar::PI);
+    settings.position = {seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA), SPAWN_HEIGHT, seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA)};
+    settings.quaternion = vec::quat_axis_angle(axis, seeded::next(state.random) * 2.0f * scalar::PI);
     settings.restitution = 0.4f;
     settings.friction = 0.6f;
     return rigid_body::create(*app.world, settings);

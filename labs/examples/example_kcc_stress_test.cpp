@@ -98,7 +98,7 @@ static Agent make_agent(App &app, float x, float z) {
     kcc::KCC *character = kcc::create(settings, vec3f::load(position), quatf::identity());
     kcc::add(*app.world, *character);
     app::set_color(app, rigid_body::get(*app.world, character->inner_rigid_body_id), {0.95f, 0.75f, 0.3f, 1.0f});
-    return {character, random::next(state.random) * 2 * PI, 1 + random::next(state.random) * 2, position};
+    return {character, seeded::next(state.random) * 2 * PI, 1 + seeded::next(state.random) * 2, position};
 }
 
 static void release_agents(App &app) {
@@ -155,8 +155,8 @@ static void steer(App &app, Agent &agent, float delta_time) {
     agent.turn_timer -= delta_time;
     if (agent.turn_timer <= 0) {
         // a new heading, up to 90 degrees either way
-        agent.target_angle += (random::next(state.random) - 0.5f) * PI;
-        agent.turn_timer = 1 + random::next(state.random) * 2;
+        agent.target_angle += (seeded::next(state.random) - 0.5f) * PI;
+        agent.turn_timer = 1 + seeded::next(state.random) * 2;
     }
     kcc::update_ground_velocity(*app.world, character, nullptr);
     const Vec3f up = character.up;

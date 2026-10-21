@@ -48,7 +48,7 @@ static Color hsl(float hue, float saturation, float lightness) {
 
 /** somewhere over the cat's path, high up, at rest */
 static void reset_ball(App &app, rigid_body::RigidBody *ball) {
-    const float x = (random::next(state.random) - 0.5f) * MOVEMENT_RANGE * 2.0f;
+    const float x = (seeded::next(state.random) - 0.5f) * MOVEMENT_RANGE * 2.0f;
     rigid_body::set_position(*app.world, ball, vec3f::make(x, SPAWN_HEIGHT, 0.0f), true);
     rigid_body::set_linear_velocity(*app.world, ball, vec3f::zero());
     rigid_body::set_angular_velocity(*app.world, ball, vec3f::zero());
@@ -69,9 +69,9 @@ static void spawn_ball(App &app) {
     settings.friction = 0.4f;
     rigid_body::RigidBody *ball = rigid_body::create(*app.world, settings);
     reset_ball(app, ball);
-    const float hue = random::next(state.random);
-    const float saturation = 0.65f + random::next(state.random) * 0.25f;
-    const float lightness = 0.55f + random::next(state.random) * 0.15f;
+    const float hue = seeded::next(state.random);
+    const float saturation = 0.65f + seeded::next(state.random) * 0.25f;
+    const float lightness = 0.55f + seeded::next(state.random) * 0.15f;
     app::set_color(app, ball, hsl(hue, saturation, lightness));
     state.balls.push(ball);
 }

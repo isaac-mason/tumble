@@ -7,7 +7,7 @@ struct Random {
     uint32_t state;
 };
 
-namespace random {
+namespace seeded {
 
 inline float next(Random &random) {
     random.state = random.state * 1664525u + 1013904223u;

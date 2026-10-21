@@ -120,8 +120,8 @@ static rigid_body::RigidBody *spawn_box(App &app) {
     settings.shape = state.sphere_box;
     settings.object_layer = state.layers.moving;
     settings.motion_type = motion_type::MOTION_DYNAMIC;
-    settings.position = {(random::next(state.random) - 0.5f) * (BRIDGE_LENGTH - 4.0f), BRIDGE_HEIGHT + 5.0f + random::next(state.random) * 3.0f,
-                         (random::next(state.random) - 0.5f) * (BRIDGE_WIDTH - 0.5f)};
+    settings.position = {(seeded::next(state.random) - 0.5f) * (BRIDGE_LENGTH - 4.0f), BRIDGE_HEIGHT + 5.0f + seeded::next(state.random) * 3.0f,
+                         (seeded::next(state.random) - 0.5f) * (BRIDGE_WIDTH - 0.5f)};
     settings.restitution = 0.3f;
     settings.friction = 0.5f;
     return rigid_body::create(*app.world, settings);

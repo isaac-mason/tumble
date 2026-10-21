@@ -78,8 +78,8 @@ static void step(App &app, float) {
     if (++state.spawn_steps >= SPAWN_STEPS) {
         state.spawn_steps = 0;
         // anywhere in a circle over the character
-        const float angle = random::next(state.random) * 2.0f * 3.14159265f;
-        const float radius = random::next(state.random) * SPAWN_RADIUS;
+        const float angle = seeded::next(state.random) * 2.0f * 3.14159265f;
+        const float radius = seeded::next(state.random) * SPAWN_RADIUS;
         rigid_body::RigidBodySettings settings;
         settings.shape = state.debris_shape;
         settings.object_layer = state.debris_layer;

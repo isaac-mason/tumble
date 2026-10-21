@@ -23,8 +23,8 @@ static void spawn(App &app) {
     settings.shape = state.cube;
     settings.object_layer = state.layers.moving;
     settings.motion_type = motion_type::MOTION_DYNAMIC;
-    settings.position = {random::range(state.random, -SPAWN_AREA, SPAWN_AREA), random::range(state.random, 0.0f, SPAWN_HEIGHT),
-                         random::range(state.random, -SPAWN_AREA, SPAWN_AREA)};
+    settings.position = {seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA), seeded::range(state.random, 0.0f, SPAWN_HEIGHT),
+                         seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA)};
     settings.friction = 0.5f;
     settings.mass = 1.0f;
     state.cubes.push(rigid_body::create(*app.world, settings));
@@ -55,8 +55,8 @@ static void init(App &app) {
 static void step(App &app, float) {
     // one cube a step dropped back in over the middle, keeping the heap moving
     if (state.cubes.length == 0) return;
-    rigid_body::RigidBody *cube = state.cubes[(uint32_t)(random::next(state.random) * (float)state.cubes.length) % state.cubes.length];
-    rigid_body::set_position(*app.world, cube, vec3f::make(0.0f, random::range(state.random, 0.0f, SPAWN_HEIGHT), 0.0f), true);
+    rigid_body::RigidBody *cube = state.cubes[(uint32_t)(seeded::next(state.random) * (float)state.cubes.length) % state.cubes.length];
+    rigid_body::set_position(*app.world, cube, vec3f::make(0.0f, seeded::range(state.random, 0.0f, SPAWN_HEIGHT), 0.0f), true);
     rigid_body::set_linear_velocity(*app.world, cube, vec3f::zero());
     rigid_body::set_angular_velocity(*app.world, cube, vec3f::zero());
 }

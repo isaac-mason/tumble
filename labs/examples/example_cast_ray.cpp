@@ -69,9 +69,9 @@ static Float4 euler_xyz(float x, float y, float z) {
 
 static Spinner random_spinner(float z_range) {
     Spinner spin;
-    spin.rotation_speed = {(random::next(state.random) - 0.5f) * 0.0001f, (random::next(state.random) - 0.5f) * 0.0001f,
-                           (random::next(state.random) - 0.5f) * 0.0001f};
-    spin.quaternion = euler_xyz(random::next(state.random) * 10.0f, random::next(state.random) * 10.0f, random::next(state.random) * z_range);
+    spin.rotation_speed = {(seeded::next(state.random) - 0.5f) * 0.0001f, (seeded::next(state.random) - 0.5f) * 0.0001f,
+                           (seeded::next(state.random) - 0.5f) * 0.0001f};
+    spin.quaternion = euler_xyz(seeded::next(state.random) * 10.0f, seeded::next(state.random) * 10.0f, seeded::next(state.random) * z_range);
     return spin;
 }
 
@@ -145,8 +145,8 @@ static void update_from_options(App &app) {
         MeshObject mesh;
         mesh.spin = random_spinner(0.0f);
         const Float3 up = {0.0f, 1.0f, 0.0f};
-        const Float3 tilted = vec::rotate(vec::quat_axis_angle({1.0f, 0.0f, 0.0f}, PI * random::next(state.random)), up);
-        mesh.position = vec::scale(vec::rotate(vec::quat_axis_angle({0.0f, 1.0f, 0.0f}, 2.0f * PI * random::next(state.random)), tilted), distance);
+        const Float3 tilted = vec::rotate(vec::quat_axis_angle({1.0f, 0.0f, 0.0f}, PI * seeded::next(state.random)), up);
+        mesh.position = vec::scale(vec::rotate(vec::quat_axis_angle({0.0f, 1.0f, 0.0f}, 2.0f * PI * seeded::next(state.random)), tilted), distance);
         rigid_body::RigidBodySettings settings;
         settings.shape = shape;
         settings.object_layer = state.layers.moving;

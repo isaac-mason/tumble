@@ -35,13 +35,13 @@ static void init(App &app) {
     const Color colors[] = {hex(0xffa500), hex(0xff69b4), hex(0xffffff)};
     shapes::Shape *ball = app::keep(app, sphere::create({.radius = SPHERE_RADIUS}));
     for (int i = 0; i < COUNT; i++) {
-        const float side = random::next(state.random) > 0.5f ? 1.0f : -1.0f;
+        const float side = seeded::next(state.random) > 0.5f ? 1.0f : -1.0f;
         rigid_body::RigidBodySettings settings;
         settings.shape = ball;
         settings.object_layer = state.layers.moving;
         settings.motion_type = motion_type::MOTION_DYNAMIC;
-        settings.position = {side * random::range(state.random, 50.0f, 100.0f), random::range(state.random, -50.0f, 50.0f),
-                             random::range(state.random, -10.0f, 10.0f)};
+        settings.position = {side * seeded::range(state.random, 50.0f, 100.0f), seeded::range(state.random, -50.0f, 50.0f),
+                             seeded::range(state.random, -10.0f, 10.0f)};
         settings.linear_damping = LINEAR_DAMPING;
         settings.angular_damping = ANGULAR_DAMPING;
         settings.friction = 0.1f;

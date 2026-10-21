@@ -81,6 +81,12 @@ struct Layers {
 };
 tumble::world::World *create_world(Layers &out, tumble::Float3 gravity = {0.0f, -9.81f, 0.0f});
 
+/**
+ * frees the world and everything kept, for an example that swaps its world for another (a menu of scenes). from init,
+ * step or update: by ui, the frame's meshes are queued
+ */
+void clear_world(App &app);
+
 /** the shape, freed with the example's world: a shape and the shapes it wraps are kept separately */
 tumble::shapes::Shape *keep(App &app, tumble::shapes::Shape *shape);
 tumble::convex_hull::ConvexHullData *keep(App &app, tumble::convex_hull::ConvexHullData *hull);

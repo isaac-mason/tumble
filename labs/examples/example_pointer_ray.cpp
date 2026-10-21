@@ -66,11 +66,11 @@ static void init(App &app) {
         const float radius = 10.0f + (float)(i % 5) * 5.0f;
         const Float3 position = {radius * sinf(phi) * cosf(theta), radius * sinf(phi) * sinf(theta), radius * cosf(phi)};
 
-        const Eulerf euler = {random::next(state.random) * 2.0f * PI, random::next(state.random) * 2.0f * PI,
-                              random::next(state.random) * 2.0f * PI, EULER_XYZ};
+        const Eulerf euler = {seeded::next(state.random) * 2.0f * PI, seeded::next(state.random) * 2.0f * PI,
+                              seeded::next(state.random) * 2.0f * PI, EULER_XYZ};
         Orbiter &orbiter = state.orbiters[i];
-        orbiter.angular_velocity = {(random::next(state.random) - 0.5f) * 0.5f, (random::next(state.random) - 0.5f) * 0.5f,
-                                    (random::next(state.random) - 0.5f) * 0.5f};
+        orbiter.angular_velocity = {(seeded::next(state.random) - 0.5f) * 0.5f, (seeded::next(state.random) - 0.5f) * 0.5f,
+                                    (seeded::next(state.random) - 0.5f) * 0.5f};
 
         rigid_body::RigidBodySettings settings;
         settings.shape = kinds[i % 3];
@@ -86,8 +86,8 @@ static void init(App &app) {
         orbiter.radial_direction = vec::normalize(position);
         orbiter.min_radius = vec::length(position) - 3.0f;
         orbiter.max_radius = vec::length(position) + 3.0f;
-        orbiter.radial_speed = 0.2f + random::next(state.random) * 0.3f;
-        orbiter.radial_phase = random::next(state.random) * 2.0f * PI;
+        orbiter.radial_speed = 0.2f + seeded::next(state.random) * 0.3f;
+        orbiter.radial_phase = seeded::next(state.random) * 2.0f * PI;
     }
 
     camera::look_at(app.camera, {0.0f, 5.0f, 40.0f}, {0.0f, 0.0f, 0.0f});

@@ -63,6 +63,25 @@ static int frame_count = 0;
 /** at most this many steps a frame, so a slow step cannot snowball */
 static constexpr int MAX_STEPS_PER_FRAME = 4;
 
+static void destroy_shape(shapes::Shape *shape) {
+    switch (shape->type) {
+        case shapes::SHAPE_SPHERE: sphere::destroy(shape); break;
+        case shapes::SHAPE_BOX: box::destroy(shape); break;
+        case shapes::SHAPE_CAPSULE: capsule::destroy(shape); break;
+        case shapes::SHAPE_CYLINDER: cylinder::destroy(shape); break;
+        case shapes::SHAPE_CONVEX_HULL: convex_hull::destroy(shape); break;
+        case shapes::SHAPE_TRIANGLE_MESH: triangle_mesh::destroy(shape); break;
+        case shapes::SHAPE_COMPOUND: compound::destroy(shape); break;
+        case shapes::SHAPE_STATIC_COMPOUND: static_compound::destroy(shape); break;
+        case shapes::SHAPE_TRANSFORMED: transformed::destroy(shape); break;
+        case shapes::SHAPE_SCALED: scaled::destroy(shape); break;
+        case shapes::SHAPE_OFFSET_CENTER_OF_MASS: offset_center_of_mass::destroy(shape); break;
+        case shapes::SHAPE_PLANE: plane::destroy(shape); break;
+        case shapes::SHAPE_EMPTY: empty::destroy(shape); break;
+        default: shapes::release(shape); break;
+    }
+}
+
 namespace app {
 
 world::World *create_world(Layers &out, Float3 gravity) {
@@ -75,6 +94,21 @@ world::World *create_world(Layers &out, Float3 gravity) {
     world::World *world = world::create(settings);
     world_settings::release(settings);
     return world;
+}
+
+void clear_world(App &app) {
+    if (app.world != nullptr) world::destroy(app.world);
+    app.world = nullptr;
+    // the world, then its shapes (wrappers before what they wrap), then what they were built from
+    for (uint32_t i = app.shapes.length; i-- > 0;) destroy_shape(app.shapes[i]);
+    for (uint32_t i = 0; i < app.hulls.length; i++) convex_hull::release(app.hulls[i]);
+    for (uint32_t i = 0; i < app.mesh_data.length; i++) triangle_mesh_data::destroy(app.mesh_data[i]);
+    app.shapes.length = 0;
+    app.hulls.length = 0;
+    app.mesh_data.length = 0;
+    app.body_colors.length = 0;
+    // a freed shape's memory may be reused by the next world's
+    renderer::forget_shapes(app.renderer);
 }
 
 shapes::Shape *keep(App &app, shapes::Shape *shape) {
@@ -145,38 +179,10 @@ double now_milliseconds() { return stm_ms(stm_now()); }
 
 }
 
-static void destroy_shape(shapes::Shape *shape) {
-    switch (shape->type) {
-        case shapes::SHAPE_SPHERE: sphere::destroy(shape); break;
-        case shapes::SHAPE_BOX: box::destroy(shape); break;
-        case shapes::SHAPE_CAPSULE: capsule::destroy(shape); break;
-        case shapes::SHAPE_CYLINDER: cylinder::destroy(shape); break;
-        case shapes::SHAPE_CONVEX_HULL: convex_hull::destroy(shape); break;
-        case shapes::SHAPE_TRIANGLE_MESH: triangle_mesh::destroy(shape); break;
-        case shapes::SHAPE_COMPOUND: compound::destroy(shape); break;
-        case shapes::SHAPE_STATIC_COMPOUND: static_compound::destroy(shape); break;
-        case shapes::SHAPE_TRANSFORMED: transformed::destroy(shape); break;
-        case shapes::SHAPE_SCALED: scaled::destroy(shape); break;
-        case shapes::SHAPE_OFFSET_CENTER_OF_MASS: offset_center_of_mass::destroy(shape); break;
-        case shapes::SHAPE_PLANE: plane::destroy(shape); break;
-        case shapes::SHAPE_EMPTY: empty::destroy(shape); break;
-        default: shapes::release(shape); break;
-    }
-}
 
-/** the example's world, then its shapes, then what they were built from */
 static void end_example() {
     if (current_example >= 0 && examples::at(current_example).shutdown) examples::at(current_example).shutdown(state);
-    if (state.world != nullptr) world::destroy(state.world);
-    state.world = nullptr;
-    for (uint32_t i = 0; i < state.shapes.length; i++) destroy_shape(state.shapes[i]);
-    for (uint32_t i = 0; i < state.hulls.length; i++) convex_hull::release(state.hulls[i]);
-    for (uint32_t i = 0; i < state.mesh_data.length; i++) triangle_mesh_data::destroy(state.mesh_data[i]);
-    state.shapes.length = 0;
-    state.hulls.length = 0;
-    state.mesh_data.length = 0;
-    // a freed shape's memory may be reused by the next example's
-    renderer::forget_shapes(state.renderer);
+    app::clear_world(state);
 }
 
 static void select_example(int index) {

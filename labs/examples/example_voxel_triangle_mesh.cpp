@@ -248,14 +248,14 @@ static void make_kinds(App &app) {
 }
 
 static rigid_body::RigidBody *spawn(App &app, float restitution) {
-    const Kind &kind = state.kinds[(uint32_t)(random::next(state.random) * KIND_COUNT) % KIND_COUNT];
+    const Kind &kind = state.kinds[(uint32_t)(seeded::next(state.random) * KIND_COUNT) % KIND_COUNT];
     rigid_body::RigidBodySettings settings;
     settings.shape = kind.shape;
     settings.object_layer = state.layers.moving;
     settings.motion_type = motion_type::MOTION_DYNAMIC;
-    settings.position = {random::range(state.random, -SPAWN_AREA, SPAWN_AREA), SPAWN_HEIGHT, random::range(state.random, -SPAWN_AREA, SPAWN_AREA)};
-    const Float3 axis = {random::next(state.random) - 0.5f, random::next(state.random) - 0.5f, random::next(state.random) - 0.5f};
-    settings.quaternion = vec::quat_axis_angle(axis, random::next(state.random) * 2.0f * 3.14159265f);
+    settings.position = {seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA), SPAWN_HEIGHT, seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA)};
+    const Float3 axis = {seeded::next(state.random) - 0.5f, seeded::next(state.random) - 0.5f, seeded::next(state.random) - 0.5f};
+    settings.quaternion = vec::quat_axis_angle(axis, seeded::next(state.random) * 2.0f * 3.14159265f);
     settings.restitution = restitution;
     settings.friction = 0.5f;
     rigid_body::RigidBody *body = rigid_body::create(*app.world, settings);
@@ -281,7 +281,8 @@ static void init(App &app) {
     make_kinds(app);
     match_count(app);
     app.drawing.grid = false;
-    camera::look_at(app.camera, {0.0f, 10.0f, 30.0f}, {0.0f, 5.0f, 0.0f});
+    // above the terrain: crashcat's eye, (0, 10, 30), is inside a column 10 high
+    camera::look_at(app.camera, {0.0f, 40.0f, 60.0f}, {0.0f, 5.0f, 0.0f});
 }
 
 static void step(App &app, float) {

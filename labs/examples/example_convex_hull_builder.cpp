@@ -102,9 +102,9 @@ static void generate_random_in_sphere(int count, float radius) {
     for (int i = 0; i < count; i++) {
         float x, y, z;
         do {
-            x = (random::next(state.random) - 0.5f) * 2.0f * radius;
-            y = (random::next(state.random) - 0.5f) * 2.0f * radius;
-            z = (random::next(state.random) - 0.5f) * 2.0f * radius;
+            x = (seeded::next(state.random) - 0.5f) * 2.0f * radius;
+            y = (seeded::next(state.random) - 0.5f) * 2.0f * radius;
+            z = (seeded::next(state.random) - 0.5f) * 2.0f * radius;
         } while (x * x + y * y + z * z > radius * radius);
         state.points.push(vec3f::make(x, y, z));
     }
@@ -112,9 +112,9 @@ static void generate_random_in_sphere(int count, float radius) {
 
 static void generate_random_in_cube(int count, float size) {
     for (int i = 0; i < count; i++) {
-        const float x = (random::next(state.random) - 0.5f) * 2.0f * size;
-        const float y = (random::next(state.random) - 0.5f) * 2.0f * size;
-        const float z = (random::next(state.random) - 0.5f) * 2.0f * size;
+        const float x = (seeded::next(state.random) - 0.5f) * 2.0f * size;
+        const float y = (seeded::next(state.random) - 0.5f) * 2.0f * size;
+        const float z = (seeded::next(state.random) - 0.5f) * 2.0f * size;
         state.points.push(vec3f::make(x, y, z));
     }
 }
