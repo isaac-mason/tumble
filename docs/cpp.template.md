@@ -283,6 +283,15 @@ Each query walks the broadphase under a filter and runs against every body it re
 
 <Snippet source="./cpp/queries.cpp" select="cast-shape" />
 
+### Bounds only
+
+`broadphase_query` finds bodies by their bounds alone, without testing their shapes, as Jolt's `BroadPhaseQuery`: a
+box, a sphere, a point or an oriented box for the bodies it overlaps, and a ray or a moving box for the bodies it enters
+and where. They take the same filter. The overlaps' collector takes `COLLECT_ALL`, `COLLECT_ANY` or `COLLECT_CUSTOM`, as
+an overlap has no nearest; the casts' takes `COLLECT_CLOSEST` too.
+
+<Snippet source="./cpp/queries.cpp" select="broadphase" />
+
 ### Filters
 
 <Snippet source="./cpp/queries.cpp" select="filters" />

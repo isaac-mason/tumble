@@ -27,12 +27,14 @@ struct BodyVisitor {
      * pruning off.
      */
     float early_out_fraction;
+    /** a cast's entry fraction into the visited body's box, in [0, 1]; 0 for visitors that don't cast */
+    float fraction;
     Visit visit;
     void *context;
 };
 
 /** a visitor that doesn't cast: no early exit, no distance pruning. */
-inline BodyVisitor create(Visit visit, void *context) { return {false, scalar::INF, visit, context}; }
+inline BodyVisitor create(Visit visit, void *context) { return {false, scalar::INF, 0.0f, visit, context}; }
 
 }  // namespace body_visitor
 

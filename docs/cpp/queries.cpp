@@ -1,8 +1,11 @@
 #include <stdio.h>
 
+#include "tumble/math/aabox.h"
+#include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/body/rigid_body.h"
+#include "tumble/physics/broadphase_query.h"
 #include "tumble/physics/query.h"
 #include "tumble/physics/shapes/box.h"
 #include "tumble/physics/shapes/dispatch.h"
@@ -119,6 +122,38 @@ int main() {
         cast_shape::release(sweep);
         filter::release(only_moving);
         sphere::destroy(blast);
+        /* HIDE_END */
+    }
+
+    {
+        /* SNIPPET_START: broadphase */
+        // the bodies whose bounds a 1 m box around the origin overlaps, their shapes not tested
+        filter::Filter filter = filter::create(world->settings.layers);
+        broadphase_query::BodyCollector near_origin = broadphase_query::create_body_collector(collector::COLLECT_ALL);
+        broadphase_query::collide_aabb(*world, near_origin, aabox::make(vec3f::splat(-0.5f), vec3f::splat(0.5f)), filter);
+
+        // a sphere and a turned box, likewise
+        broadphase_query::reset(near_origin);
+        broadphase_query::collide_sphere(*world, near_origin, vec3f::make(0.0f, 3.0f, 0.0f), 2.1f, filter);
+        const Quatf turn = quatf::set_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.7f);
+        const OrientedBox turned = {mat4f::from_rotation_translation(turn, vec3f::make(0.0f, 0.5f, 0.0f)), vec3f::make(0.2f, 0.2f, 0.2f)};
+        broadphase_query::BodyCollector in_turned = broadphase_query::create_body_collector(collector::COLLECT_ALL);
+        broadphase_query::collide_oriented_box(*world, in_turned, turned, filter);
+
+        // a box swept down from above: the first body whose bounds it enters, and where
+        broadphase_query::BodyCastCollector first = broadphase_query::create_body_cast_collector(collector::COLLECT_CLOSEST);
+        const AABox falling = aabox::make(vec3f::make(-0.1f, 4.9f, -0.1f), vec3f::make(0.1f, 5.1f, 0.1f));
+        broadphase_query::cast_aabb(*world, first, falling, vec3f::make(0.0f, -10.0f, 0.0f), filter);
+        if (const broadphase_query::BodyCastHit *hit = broadphase_query::hit(first)) printf("bounds entered at %.2f\n", hit->fraction);
+        /* SNIPPET_END: broadphase */
+        /* HIDE_START */
+        if (near_origin.hits.length != 1 || near_origin.hits[0] != crate->id) return 1;
+        if (in_turned.hits.length != 1 || in_turned.hits[0] != crate->id) return 1;
+        if (!first.has_hit || first.hits[0].body_id != crate->id || !near(first.hits[0].fraction, 0.39f, 1e-4f)) return 1;
+        broadphase_query::release(near_origin);
+        broadphase_query::release(in_turned);
+        broadphase_query::release(first);
+        filter::release(filter);
         /* HIDE_END */
     }
 

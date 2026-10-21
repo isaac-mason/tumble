@@ -531,6 +531,105 @@ static inline uint32_t contains4(const Node &node, V128 px, V128 py, V128 pz) {
     return v4f::bitmask(v4f::bit_and(v4f::bit_and(x, y), z));
 }
 
+/** within radius_sq of the centre, for four boxes given as six lanes of bounds: jolt's AABox4VsSphere */
+static inline uint32_t sphere4(V128 min_x, V128 min_y, V128 min_z, V128 max_x, V128 max_y, V128 max_z, V128 cx, V128 cy, V128 cz,
+                               V128 radius_sq) {
+    const V128 dx = v4f::sub(v4f::min(v4f::max(cx, min_x), max_x), cx);
+    const V128 dy = v4f::sub(v4f::min(v4f::max(cy, min_y), max_y), cy);
+    const V128 dz = v4f::sub(v4f::min(v4f::max(cz, min_z), max_z), cz);
+    const V128 distance_sq = v4f::add(v4f::add(v4f::mul(dx, dx), v4f::mul(dy, dy)), v4f::mul(dz, dz));
+    return v4f::bitmask(v4f::le(distance_sq, radius_sq));
+}
+
+/** an oriented box's terms for the separating axis test, worked out once a query */
+struct BoxAxes {
+    /** orientation(row, column): the rotation's rows of each column */
+    float rotation[3][3];
+    /** |rotation(i, k)| + epsilon at [k][i], so parallel edges' near null cross products don't separate */
+    float abs_rotation[3][3];
+    V128 translation[3];
+    float half_extents[3];
+};
+
+static BoxAxes box_axes(const OrientedBox &box) {
+    // jolt's epsilon for AABox4VsBox
+    constexpr float EPSILON = 1.0e-6f;
+    BoxAxes axes;
+    for (int k = 0; k < 3; k++) {
+        float column[4];
+        v4f::store4(column, box.orientation.c[k]);
+        for (int i = 0; i < 3; i++) {
+            axes.rotation[i][k] = column[i];
+            axes.abs_rotation[k][i] = scalar::abs(column[i]) + EPSILON;
+        }
+    }
+    float translation[4];
+    v4f::store4(translation, box.orientation.c[3]);
+    float half_extents[4];
+    v4f::store4(half_extents, box.half_extents.v);
+    for (int i = 0; i < 3; i++) {
+        axes.translation[i] = v4f::splat(translation[i]);
+        axes.half_extents[i] = half_extents[i];
+    }
+    return axes;
+}
+
+/**
+ * the oriented box overlaps each of four boxes given as six lanes of bounds: jolt's AABox4VsBox, from real time collision
+ * detection 4.4.1, with a the aligned boxes and b the oriented one so its orientation needs no inverse
+ */
+static inline uint32_t oriented_box4(const BoxAxes &b, V128 min_x, V128 min_y, V128 min_z, V128 max_x, V128 max_y, V128 max_z) {
+    const V128 half = v4f::splat(0.5f);
+    // b's centre in the space of each a
+    const V128 t[3] = {v4f::sub(b.translation[0], v4f::mul(half, v4f::add(min_x, max_x))),
+                       v4f::sub(b.translation[1], v4f::mul(half, v4f::add(min_y, max_y))),
+                       v4f::sub(b.translation[2], v4f::mul(half, v4f::add(min_z, max_z)))};
+    const V128 a[3] = {v4f::mul(half, v4f::sub(max_x, min_x)), v4f::mul(half, v4f::sub(max_y, min_y)), v4f::mul(half, v4f::sub(max_z, min_z))};
+    const float(&r)[3][3] = b.rotation;
+    const float(&abs_r)[3][3] = b.abs_rotation;
+    const float(&e)[3] = b.half_extents;
+    const auto s = [](float value) { return v4f::splat(value); };
+
+    V128 overlaps = v4f::eq(v4f::zero(), v4f::zero());
+    const auto test = [&](V128 distance, V128 ra, V128 rb) { overlaps = v4f::bit_and(overlaps, v4f::le(v4f::abs(distance), v4f::add(ra, rb))); };
+
+    // axes a0, a1, a2
+    for (int i = 0; i < 3; i++) test(t[i], a[i], s(e[0] * abs_r[0][i] + e[1] * abs_r[1][i] + e[2] * abs_r[2][i]));
+
+    // axes b0, b1, b2
+    for (int i = 0; i < 3; i++) {
+        const V128 ra = v4f::add(v4f::add(v4f::mul(a[0], s(abs_r[i][0])), v4f::mul(a[1], s(abs_r[i][1]))), v4f::mul(a[2], s(abs_r[i][2])));
+        const V128 distance = v4f::add(v4f::add(v4f::mul(t[0], s(r[0][i])), v4f::mul(t[1], s(r[1][i]))), v4f::mul(t[2], s(r[2][i])));
+        test(distance, ra, s(e[i]));
+    }
+
+    // a0 x b0, a0 x b1, a0 x b2
+    test(v4f::sub(v4f::mul(t[2], s(r[1][0])), v4f::mul(t[1], s(r[2][0]))), v4f::add(v4f::mul(a[1], s(abs_r[0][2])), v4f::mul(a[2], s(abs_r[0][1]))),
+         s(e[1] * abs_r[2][0] + e[2] * abs_r[1][0]));
+    test(v4f::sub(v4f::mul(t[2], s(r[1][1])), v4f::mul(t[1], s(r[2][1]))), v4f::add(v4f::mul(a[1], s(abs_r[1][2])), v4f::mul(a[2], s(abs_r[1][1]))),
+         s(e[0] * abs_r[2][0] + e[2] * abs_r[0][0]));
+    test(v4f::sub(v4f::mul(t[2], s(r[1][2])), v4f::mul(t[1], s(r[2][2]))), v4f::add(v4f::mul(a[1], s(abs_r[2][2])), v4f::mul(a[2], s(abs_r[2][1]))),
+         s(e[0] * abs_r[1][0] + e[1] * abs_r[0][0]));
+
+    // a1 x b0, a1 x b1, a1 x b2
+    test(v4f::sub(v4f::mul(t[0], s(r[2][0])), v4f::mul(t[2], s(r[0][0]))), v4f::add(v4f::mul(a[0], s(abs_r[0][2])), v4f::mul(a[2], s(abs_r[0][0]))),
+         s(e[1] * abs_r[2][1] + e[2] * abs_r[1][1]));
+    test(v4f::sub(v4f::mul(t[0], s(r[2][1])), v4f::mul(t[2], s(r[0][1]))), v4f::add(v4f::mul(a[0], s(abs_r[1][2])), v4f::mul(a[2], s(abs_r[1][0]))),
+         s(e[0] * abs_r[2][1] + e[2] * abs_r[0][1]));
+    test(v4f::sub(v4f::mul(t[0], s(r[2][2])), v4f::mul(t[2], s(r[0][2]))), v4f::add(v4f::mul(a[0], s(abs_r[2][2])), v4f::mul(a[2], s(abs_r[2][0]))),
+         s(e[0] * abs_r[1][1] + e[1] * abs_r[0][1]));
+
+    // a2 x b0, a2 x b1, a2 x b2
+    test(v4f::sub(v4f::mul(t[1], s(r[0][0])), v4f::mul(t[0], s(r[1][0]))), v4f::add(v4f::mul(a[0], s(abs_r[0][1])), v4f::mul(a[1], s(abs_r[0][0]))),
+         s(e[1] * abs_r[2][2] + e[2] * abs_r[1][2]));
+    test(v4f::sub(v4f::mul(t[1], s(r[0][1])), v4f::mul(t[0], s(r[1][1]))), v4f::add(v4f::mul(a[0], s(abs_r[1][1])), v4f::mul(a[1], s(abs_r[1][0]))),
+         s(e[0] * abs_r[2][2] + e[2] * abs_r[0][2]));
+    test(v4f::sub(v4f::mul(t[1], s(r[0][2])), v4f::mul(t[0], s(r[1][2]))), v4f::add(v4f::mul(a[0], s(abs_r[2][1])), v4f::mul(a[1], s(abs_r[2][0]))),
+         s(e[0] * abs_r[1][2] + e[1] * abs_r[0][2]));
+
+    return v4f::bitmask(overlaps);
+}
+
 /**
  * the overlap walks: from the root, a node's children whose lanes the test sets are pushed in lane order, and the walk
  * pops from the top. leaf(body) returns false to stop the walk.
@@ -645,6 +744,54 @@ void intersect_point(const bodies::Bodies &bodies, QuadTree &tree, Vec3f point, 
         });
 }
 
+void intersect_sphere(const bodies::Bodies &bodies, QuadTree &tree, Vec3f center, float radius, const filter::Filter &query_filter,
+                      BodyVisitor &visitor) {
+    if (tree.num_bodies == 0) return;
+    const V128 cx = v4f::splat(vec3f::x(center)), cy = v4f::splat(vec3f::y(center)), cz = v4f::splat(vec3f::z(center));
+    const V128 radius_sq = v4f::splat(radius * radius);
+    walk_tree(
+        tree, bodies,
+        [&](const Node &node) {
+            return sphere4(v4f::load4(node.bounds_min_x), v4f::load4(node.bounds_min_y), v4f::load4(node.bounds_min_z), v4f::load4(node.bounds_max_x),
+                           v4f::load4(node.bounds_max_y), v4f::load4(node.bounds_max_z), cx, cy, cz, radius_sq);
+        },
+        [&](RigidBody *body) {
+            if (!filter_body(query_filter, body)) return true;
+            // the fat box was near enough: the body's own box must be too
+            const Box3f &box = body->aabb;
+            if ((sphere4(v4f::splat(box.min.x), v4f::splat(box.min.y), v4f::splat(box.min.z), v4f::splat(box.max.x), v4f::splat(box.max.y),
+                         v4f::splat(box.max.z), cx, cy, cz, radius_sq) &
+                 1u) == 0u) {
+                return true;
+            }
+            visitor.visit(&visitor, body);
+            return !visitor.should_exit;
+        });
+}
+
+void intersect_oriented_box(const bodies::Bodies &bodies, QuadTree &tree, const OrientedBox &box, const filter::Filter &query_filter,
+                            BodyVisitor &visitor) {
+    if (tree.num_bodies == 0) return;
+    const BoxAxes axes = box_axes(box);
+    walk_tree(
+        tree, bodies,
+        [&](const Node &node) {
+            return oriented_box4(axes, v4f::load4(node.bounds_min_x), v4f::load4(node.bounds_min_y), v4f::load4(node.bounds_min_z),
+                                 v4f::load4(node.bounds_max_x), v4f::load4(node.bounds_max_y), v4f::load4(node.bounds_max_z));
+        },
+        [&](RigidBody *body) {
+            if (!filter_body(query_filter, body)) return true;
+            const Box3f &own = body->aabb;
+            if ((oriented_box4(axes, v4f::splat(own.min.x), v4f::splat(own.min.y), v4f::splat(own.min.z), v4f::splat(own.max.x),
+                               v4f::splat(own.max.y), v4f::splat(own.max.z)) &
+                 1u) == 0u) {
+                return true;
+            }
+            visitor.visit(&visitor, body);
+            return !visitor.should_exit;
+        });
+}
+
 void walk(const bodies::Bodies &bodies, QuadTree &tree, BodyVisitor &visitor) {
     if (tree.num_bodies == 0) return;
     walk_tree(
@@ -710,8 +857,11 @@ static void cast_walk(const bodies::Bodies &bodies, QuadTree &tree, const SlabRa
         const NodeId id = stack[top];
         if (is_body(id)) {
             RigidBody *body = bodies.pool[id];
-            if (filter_body(query_filter, body) &&
-                slab_entry(ray, v4f::sub(v4f::load3(&body->aabb.min.x), expand), v4f::add(v4f::load3(&body->aabb.max.x), expand)) != scalar::INF) {
+            const float entry = filter_body(query_filter, body)
+                                    ? slab_entry(ray, v4f::sub(v4f::load3(&body->aabb.min.x), expand), v4f::add(v4f::load3(&body->aabb.max.x), expand))
+                                    : scalar::INF;
+            if (entry != scalar::INF) {
+                visitor.fraction = entry;
                 visitor.visit(&visitor, body);
                 if (visitor.should_exit) return;
                 // a hit may have shrunk the collector's early-out fraction

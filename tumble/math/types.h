@@ -49,6 +49,12 @@ struct AABox {
     Vec3f min, max;
 };
 
+/** a box turned and moved by `orientation` (rotation and translation, no scale), `half_extents` along its own axes */
+struct OrientedBox {
+    Mat4f orientation;
+    Vec3f half_extents;
+};
+
 /** normal . x + constant = 0 */
 struct Plane {
     Vec3f normal;

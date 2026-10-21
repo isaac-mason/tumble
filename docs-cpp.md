@@ -52,6 +52,7 @@ it shows.
   - [Points](#points)
   - [Overlaps](#overlaps)
   - [Sweeps](#sweeps)
+  - [Bounds only](#bounds-only)
   - [Filters](#filters)
 - [Constraints](#constraints)
   - [Hinge](#hinge)
@@ -807,6 +808,34 @@ const shapes::Shape *small_ball = blast;
 const Transformf start = {{-10.0f, 0.5f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, {0.25f, 0.25f, 0.25f}};
 query::cast_shape(*world, sweep, cast_shape::default_settings(), small_ball, start, vec3f::make(20.0f, 0.0f, 0.0f), only_moving);
 if (const cast_shape::CastShapeHit *hit = cast_shape::hit(sweep)) printf("stops after %.2f m\n", 20.0f * hit->fraction);
+```
+
+### Bounds only
+
+`broadphase_query` finds bodies by their bounds alone, without testing their shapes, as Jolt's `BroadPhaseQuery`: a
+box, a sphere, a point or an oriented box for the bodies it overlaps, and a ray or a moving box for the bodies it enters
+and where. They take the same filter. The overlaps' collector takes `COLLECT_ALL`, `COLLECT_ANY` or `COLLECT_CUSTOM`, as
+an overlap has no nearest; the casts' takes `COLLECT_CLOSEST` too.
+
+```cpp
+// the bodies whose bounds a 1 m box around the origin overlaps, their shapes not tested
+filter::Filter filter = filter::create(world->settings.layers);
+broadphase_query::BodyCollector near_origin = broadphase_query::create_body_collector(collector::COLLECT_ALL);
+broadphase_query::collide_aabb(*world, near_origin, aabox::make(vec3f::splat(-0.5f), vec3f::splat(0.5f)), filter);
+
+// a sphere and a turned box, likewise
+broadphase_query::reset(near_origin);
+broadphase_query::collide_sphere(*world, near_origin, vec3f::make(0.0f, 3.0f, 0.0f), 2.1f, filter);
+const Quatf turn = quatf::set_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.7f);
+const OrientedBox turned = {mat4f::from_rotation_translation(turn, vec3f::make(0.0f, 0.5f, 0.0f)), vec3f::make(0.2f, 0.2f, 0.2f)};
+broadphase_query::BodyCollector in_turned = broadphase_query::create_body_collector(collector::COLLECT_ALL);
+broadphase_query::collide_oriented_box(*world, in_turned, turned, filter);
+
+// a box swept down from above: the first body whose bounds it enters, and where
+broadphase_query::BodyCastCollector first = broadphase_query::create_body_cast_collector(collector::COLLECT_CLOSEST);
+const AABox falling = aabox::make(vec3f::make(-0.1f, 4.9f, -0.1f), vec3f::make(0.1f, 5.1f, 0.1f));
+broadphase_query::cast_aabb(*world, first, falling, vec3f::make(0.0f, -10.0f, 0.0f), filter);
+if (const broadphase_query::BodyCastHit *hit = broadphase_query::hit(first)) printf("bounds entered at %.2f\n", hit->fraction);
 ```
 
 ### Filters

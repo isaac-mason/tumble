@@ -63,6 +63,14 @@ void intersect_aabb(Broadphase &broadphase, const bodies::Bodies &bodies, const 
 void intersect_point(Broadphase &broadphase, const bodies::Bodies &bodies, Vec3f point, const filter::Filter &query_filter,
                      BodyVisitor &visitor);
 
+/** finds bodies with aabbs within radius of the centre */
+void intersect_sphere(Broadphase &broadphase, const bodies::Bodies &bodies, Vec3f center, float radius, const filter::Filter &query_filter,
+                      BodyVisitor &visitor);
+
+/** finds bodies with aabbs that overlap the oriented box */
+void intersect_oriented_box(Broadphase &broadphase, const bodies::Bodies &bodies, const OrientedBox &box, const filter::Filter &query_filter,
+                            BodyVisitor &visitor);
+
 /** finds bodies with aabbs that intersect the given swept aabb */
 void cast_aabb(Broadphase &broadphase, const bodies::Bodies &bodies, const Box3f &bounds, Vec3f displacement,
                const filter::Filter &query_filter, BodyVisitor &visitor);

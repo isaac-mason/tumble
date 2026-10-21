@@ -123,6 +123,14 @@ void intersect_aabb(const bodies::Bodies &bodies, QuadTree &tree, const Box3f &a
 
 void intersect_point(const bodies::Bodies &bodies, QuadTree &tree, Vec3f point, const filter::Filter &query_filter, BodyVisitor &visitor);
 
+/** the bodies whose box is within radius of the centre, faces included */
+void intersect_sphere(const bodies::Bodies &bodies, QuadTree &tree, Vec3f center, float radius, const filter::Filter &query_filter,
+                      BodyVisitor &visitor);
+
+/** the bodies whose box overlaps the oriented box */
+void intersect_oriented_box(const bodies::Bodies &bodies, QuadTree &tree, const OrientedBox &box, const filter::Filter &query_filter,
+                            BodyVisitor &visitor);
+
 /** visit every body in the tree: no filtering, no aabb tests */
 void walk(const bodies::Bodies &bodies, QuadTree &tree, BodyVisitor &visitor);
 

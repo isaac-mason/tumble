@@ -107,6 +107,28 @@ void intersect_aabb(Broadphase &broadphase, const bodies::Bodies &bodies, const 
     }
 }
 
+void intersect_sphere(Broadphase &broadphase, const bodies::Bodies &bodies, Vec3f center, float radius, const filter::Filter &query_filter,
+                      BodyVisitor &visitor) {
+    for (uint32_t broadphase_layer = 0; broadphase_layer < broadphase.trees.length; broadphase_layer++) {
+        if (!filter::filter_broadphase_layer(query_filter, broadphase_layer)) continue;
+
+        quad_tree::intersect_sphere(bodies, broadphase.trees[broadphase_layer], center, radius, query_filter, visitor);
+
+        if (visitor.should_exit) break;
+    }
+}
+
+void intersect_oriented_box(Broadphase &broadphase, const bodies::Bodies &bodies, const OrientedBox &box, const filter::Filter &query_filter,
+                            BodyVisitor &visitor) {
+    for (uint32_t broadphase_layer = 0; broadphase_layer < broadphase.trees.length; broadphase_layer++) {
+        if (!filter::filter_broadphase_layer(query_filter, broadphase_layer)) continue;
+
+        quad_tree::intersect_oriented_box(bodies, broadphase.trees[broadphase_layer], box, query_filter, visitor);
+
+        if (visitor.should_exit) break;
+    }
+}
+
 void intersect_point(Broadphase &broadphase, const bodies::Bodies &bodies, Vec3f point, const filter::Filter &query_filter,
                      BodyVisitor &visitor) {
     for (uint32_t broadphase_layer = 0; broadphase_layer < broadphase.trees.length; broadphase_layer++) {
