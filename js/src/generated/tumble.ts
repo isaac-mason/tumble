@@ -7,7 +7,7 @@
 import type { Instance } from '../module';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x7d24402a;
+export const SCHEMA_HASH = 0x189605fa;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 368;
 
@@ -66,6 +66,9 @@ export const KCC_CONTACT_WAS_DISCARDED = 90;
 export const KCC_CONTACT_CAN_PUSH_CHARACTER = 91;
 
 export const KCC_CONTACT_CAN_RECEIVE_IMPULSES = 92;
+
+/** floats per vertex: x, y, z, r, g, b. */
+export const DEBUG_VERTEX_STRIDE = 6;
 
 /** what error() reports: the first failure since the last clear. */
 export const WasmError = {
@@ -286,6 +289,15 @@ export const KCCContactEventKind = {
     REMOVED: 2,
 } as const;
 export type KCCContactEventKind = (typeof KCCContactEventKind)[keyof typeof KCCContactEventKind];
+
+export const BodyColorMode = {
+    MOTION_TYPE: 0,
+    /** a colour of its own per body. */
+    INSTANCE: 1,
+    SLEEPING: 2,
+    ISLAND: 3,
+} as const;
+export type BodyColorMode = (typeof BodyColorMode)[keyof typeof BodyColorMode];
 
 export type Vec3 = [x: number, y: number, z: number];
 export const Vec3 = {
@@ -5251,6 +5263,177 @@ export const KCCSolve = {
     },
 };
 
+export type DebugBodiesOptions = {
+    colorMode: number;
+    showLinearVelocity: boolean;
+    showAngularVelocity: boolean;
+    excludedObjectLayers: number;
+};
+export const DebugBodiesOptions = {
+    size: 12,
+    create(): DebugBodiesOptions {
+        return { colorMode: 0, showLinearVelocity: false, showAngularVelocity: false, excludedObjectLayers: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: DebugBodiesOptions, address: number): DebugBodiesOptions {
+        const mem = wasm.mem;
+        out.colorMode = mem.u32[(address + 0) >> 2]!;
+        out.showLinearVelocity = mem.u8[address + 4]! !== 0;
+        out.showAngularVelocity = mem.u8[address + 5]! !== 0;
+        out.excludedObjectLayers = mem.u32[(address + 8) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: DebugBodiesOptions): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.colorMode;
+        mem.u8[address + 4] = value.showLinearVelocity ? 1 : 0;
+        mem.u8[address + 5] = value.showAngularVelocity ? 1 : 0;
+        mem.u32[(address + 8) >> 2] = value.excludedObjectLayers;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: DebugBodiesOptions): void {
+        view.setUint32(offset + 0, value.colorMode, true);
+        view.setUint8(offset + 4, value.showLinearVelocity ? 1 : 0);
+        view.setUint8(offset + 5, value.showAngularVelocity ? 1 : 0);
+        view.setUint32(offset + 8, value.excludedObjectLayers, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: DebugBodiesOptions, view: DataView, offset: number): DebugBodiesOptions {
+        out.colorMode = view.getUint32(offset + 0, true);
+        out.showLinearVelocity = view.getUint8(offset + 4) !== 0;
+        out.showAngularVelocity = view.getUint8(offset + 5) !== 0;
+        out.excludedObjectLayers = view.getUint32(offset + 8, true);
+        return out;
+    },
+};
+
+export type DebugBodyOptions = {
+    hasColor: boolean;
+    color: Vec3;
+    colorMode: number;
+    showLinearVelocity: boolean;
+    showAngularVelocity: boolean;
+};
+export const DebugBodyOptions = {
+    size: 24,
+    create(): DebugBodyOptions {
+        return { hasColor: false, color: Vec3.create(), colorMode: 0, showLinearVelocity: false, showAngularVelocity: false };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: DebugBodyOptions, address: number): DebugBodyOptions {
+        const mem = wasm.mem;
+        out.hasColor = mem.u8[address + 0]! !== 0;
+        out.color[0] = mem.f32[(address + 4) >> 2]!;
+        out.color[1] = mem.f32[(address + 8) >> 2]!;
+        out.color[2] = mem.f32[(address + 12) >> 2]!;
+        out.colorMode = mem.u32[(address + 16) >> 2]!;
+        out.showLinearVelocity = mem.u8[address + 20]! !== 0;
+        out.showAngularVelocity = mem.u8[address + 21]! !== 0;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: DebugBodyOptions): void {
+        const mem = wasm.mem;
+        mem.u8[address + 0] = value.hasColor ? 1 : 0;
+        mem.f32[(address + 4) >> 2] = value.color[0];
+        mem.f32[(address + 8) >> 2] = value.color[1];
+        mem.f32[(address + 12) >> 2] = value.color[2];
+        mem.u32[(address + 16) >> 2] = value.colorMode;
+        mem.u8[address + 20] = value.showLinearVelocity ? 1 : 0;
+        mem.u8[address + 21] = value.showAngularVelocity ? 1 : 0;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: DebugBodyOptions): void {
+        view.setUint8(offset + 0, value.hasColor ? 1 : 0);
+        view.setFloat32(offset + 4, value.color[0], true);
+        view.setFloat32(offset + 8, value.color[1], true);
+        view.setFloat32(offset + 12, value.color[2], true);
+        view.setUint32(offset + 16, value.colorMode, true);
+        view.setUint8(offset + 20, value.showLinearVelocity ? 1 : 0);
+        view.setUint8(offset + 21, value.showAngularVelocity ? 1 : 0);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: DebugBodyOptions, view: DataView, offset: number): DebugBodyOptions {
+        out.hasColor = view.getUint8(offset + 0) !== 0;
+        out.color[0] = view.getFloat32(offset + 4, true);
+        out.color[1] = view.getFloat32(offset + 8, true);
+        out.color[2] = view.getFloat32(offset + 12, true);
+        out.colorMode = view.getUint32(offset + 16, true);
+        out.showLinearVelocity = view.getUint8(offset + 20) !== 0;
+        out.showAngularVelocity = view.getUint8(offset + 21) !== 0;
+        return out;
+    },
+};
+
+export type DebugShapeOptions = { color: Vec3 };
+export const DebugShapeOptions = {
+    size: 12,
+    create(): DebugShapeOptions {
+        return { color: Vec3.create() };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: DebugShapeOptions, address: number): DebugShapeOptions {
+        const mem = wasm.mem;
+        out.color[0] = mem.f32[(address + 0) >> 2]!;
+        out.color[1] = mem.f32[(address + 4) >> 2]!;
+        out.color[2] = mem.f32[(address + 8) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: DebugShapeOptions): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.color[0];
+        mem.f32[(address + 4) >> 2] = value.color[1];
+        mem.f32[(address + 8) >> 2] = value.color[2];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: DebugShapeOptions): void {
+        view.setFloat32(offset + 0, value.color[0], true);
+        view.setFloat32(offset + 4, value.color[1], true);
+        view.setFloat32(offset + 8, value.color[2], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: DebugShapeOptions, view: DataView, offset: number): DebugShapeOptions {
+        out.color[0] = view.getFloat32(offset + 0, true);
+        out.color[1] = view.getFloat32(offset + 4, true);
+        out.color[2] = view.getFloat32(offset + 8, true);
+        return out;
+    },
+};
+
+export type DebugJointsOptions = { size: number; drawLimits: boolean };
+export const DebugJointsOptions = {
+    size: 8,
+    create(): DebugJointsOptions {
+        return { size: 0, drawLimits: false };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: DebugJointsOptions, address: number): DebugJointsOptions {
+        const mem = wasm.mem;
+        out.size = mem.f32[(address + 0) >> 2]!;
+        out.drawLimits = mem.u8[address + 4]! !== 0;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: DebugJointsOptions): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.size;
+        mem.u8[address + 4] = value.drawLimits ? 1 : 0;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: DebugJointsOptions): void {
+        view.setFloat32(offset + 0, value.size, true);
+        view.setUint8(offset + 4, value.drawLimits ? 1 : 0);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: DebugJointsOptions, view: DataView, offset: number): DebugJointsOptions {
+        out.size = view.getFloat32(offset + 0, true);
+        out.drawLimits = view.getUint8(offset + 4) !== 0;
+        return out;
+    },
+};
+
 export type WorldSettings = Handle<'WorldSettings'>;
 /** WorldSettings's fields as a plain object, for WorldSettings.writeTo / readFrom over another realm's buffer. */
 export type WorldSettingsValue = {
@@ -5707,6 +5890,10 @@ export const Policy = {
 
 export type KCC = Handle<'KCC'>;
 export const KCC = {
+};
+
+export type DebugBuffers = Handle<'DebugBuffers'>;
+export const DebugBuffers = {
 };
 
 export function init(heapBegin: number): boolean {
@@ -7550,6 +7737,126 @@ export const Kcc = {
     },
 };
 
+export const Debug = {
+    create(): DebugBuffers {
+        const r = wasm.exports.tumble_debug_create();
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as DebugBuffers;
+    },
+
+    destroy(buffers: DebugBuffers): void {
+        wasm.exports.tumble_debug_destroy(buffers);
+    },
+
+    clear(buffers: DebugBuffers): void {
+        wasm.exports.tumble_debug_clear(buffers);
+    },
+
+    lines(buffers: DebugBuffers): Pointer<'f32'> {
+        const r = wasm.exports.tumble_debug_lines(buffers);
+        return r as Pointer<'f32'>;
+    },
+
+    lineCount(buffers: DebugBuffers): number {
+        const r = wasm.exports.tumble_debug_line_count(buffers);
+        return r >>> 0;
+    },
+
+    triangles(buffers: DebugBuffers): Pointer<'f32'> {
+        const r = wasm.exports.tumble_debug_triangles(buffers);
+        return r as Pointer<'f32'>;
+    },
+
+    triangleCount(buffers: DebugBuffers): number {
+        const r = wasm.exports.tumble_debug_triangle_count(buffers);
+        return r >>> 0;
+    },
+
+    defaultBodiesOptions(out: DebugBodiesOptions): DebugBodiesOptions {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_debug_default_bodies_options(scratch + 0);
+        DebugBodiesOptions.read(out, scratch + 0);
+        return out;
+    },
+
+    defaultBodyOptions(out: DebugBodyOptions): DebugBodyOptions {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_debug_default_body_options(scratch + 0);
+        DebugBodyOptions.read(out, scratch + 0);
+        return out;
+    },
+
+    defaultShapeOptions(out: DebugShapeOptions): DebugShapeOptions {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_debug_default_shape_options(scratch + 0);
+        DebugShapeOptions.read(out, scratch + 0);
+        return out;
+    },
+
+    defaultJointsOptions(out: DebugJointsOptions): DebugJointsOptions {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_debug_default_joints_options(scratch + 0);
+        DebugJointsOptions.read(out, scratch + 0);
+        return out;
+    },
+
+    bodies(out: DebugBuffers, world: World, options: DebugBodiesOptions): void {
+        const scratch = wasm.scratch;
+        DebugBodiesOptions.write(scratch + 0, options);
+        wasm.exports.tumble_debug_bodies(out, world, scratch + 0);
+        wasm.grew();
+    },
+
+    body(out: DebugBuffers, world: World, body: number, options: DebugBodyOptions): boolean {
+        const scratch = wasm.scratch;
+        DebugBodyOptions.write(scratch + 0, options);
+        const r = wasm.exports.tumble_debug_body(out, world, body, scratch + 0);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    line(out: DebugBuffers, a: Vec3, b: Vec3, color: Vec3): void {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, a);
+        Vec3.write(scratch + 16, b);
+        Vec3.write(scratch + 32, color);
+        wasm.exports.tumble_debug_line(out, scratch + 0, scratch + 16, scratch + 32);
+        wasm.grew();
+    },
+
+    shape(out: DebugBuffers, shape: Shape, position: Vec3, quaternion: Quat, options: DebugShapeOptions): void {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, position);
+        Quat.write(scratch + 16, quaternion);
+        DebugShapeOptions.write(scratch + 32, options);
+        wasm.exports.tumble_debug_shape(out, shape, scratch + 0, scratch + 16, scratch + 32);
+        wasm.grew();
+    },
+
+    contacts(out: DebugBuffers, world: World): void {
+        wasm.exports.tumble_debug_contacts(out, world);
+        wasm.grew();
+    },
+
+    characterContacts(out: DebugBuffers, character: KCC): void {
+        wasm.exports.tumble_debug_character_contacts(out, character);
+        wasm.grew();
+    },
+
+    contactConstraints(out: DebugBuffers, world: World): void {
+        wasm.exports.tumble_debug_contact_constraints(out, world);
+        wasm.grew();
+    },
+
+    joints(out: DebugBuffers, world: World, options: DebugJointsOptions): void {
+        const scratch = wasm.scratch;
+        DebugJointsOptions.write(scratch + 0, options);
+        wasm.exports.tumble_debug_joints(out, world, scratch + 0);
+        wasm.grew();
+    },
+};
+
 /** the extern "C" surface, every function taking and returning numbers; the namespaces above call these. */
 export type WasmExports = {
     __heap_base: WebAssembly.Global;
@@ -7997,4 +8304,23 @@ export type WasmExports = {
     tumble_kcc_apply_weight(world: number, character: number, gravity: number, deltaTime: number): void;
     tumble_kcc_begin_contact_tracking(character: number): void;
     tumble_kcc_end_contact_tracking(character: number): void;
+    tumble_debug_create(): number;
+    tumble_debug_destroy(buffers: number): void;
+    tumble_debug_clear(buffers: number): void;
+    tumble_debug_lines(buffers: number): number;
+    tumble_debug_line_count(buffers: number): number;
+    tumble_debug_triangles(buffers: number): number;
+    tumble_debug_triangle_count(buffers: number): number;
+    tumble_debug_default_bodies_options(out: number): void;
+    tumble_debug_default_body_options(out: number): void;
+    tumble_debug_default_shape_options(out: number): void;
+    tumble_debug_default_joints_options(out: number): void;
+    tumble_debug_bodies(out: number, world: number, options: number): void;
+    tumble_debug_body(out: number, world: number, body: number, options: number): number;
+    tumble_debug_line(out: number, a: number, b: number, color: number): void;
+    tumble_debug_shape(out: number, shape: number, position: number, quaternion: number, options: number): void;
+    tumble_debug_contacts(out: number, world: number): void;
+    tumble_debug_character_contacts(out: number, character: number): void;
+    tumble_debug_contact_constraints(out: number, world: number): void;
+    tumble_debug_joints(out: number, world: number, options: number): void;
 };

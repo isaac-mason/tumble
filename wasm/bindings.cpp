@@ -947,4 +947,46 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::kcc::apply_weight), names("world", "character", "gravity", "deltaTime"), GROWS);
     bind::fn(b, BIND(adapters::kcc::begin_contact_tracking), names("character"), GROWS);
     bind::fn(b, BIND(adapters::kcc::end_contact_tracking), names("character"), GROWS);
+
+    RECORD(debug::DebugBuffers);
+    bind::enumeration<uint32_t>(b, "BodyColorMode")
+        .value("MOTION_TYPE", debug::COLOR_MOTION_TYPE)
+        .value("INSTANCE", debug::COLOR_INSTANCE, "a colour of its own per body.")
+        .value("SLEEPING", debug::COLOR_SLEEPING)
+        .value("ISLAND", debug::COLOR_ISLAND);
+    VALUE_AS(debug::BodiesOptions, "DebugBodiesOptions")
+        .field(FIELD(debug::BodiesOptions, color_mode))
+        .field(FIELD(debug::BodiesOptions, show_linear_velocity))
+        .field(FIELD(debug::BodiesOptions, show_angular_velocity))
+        .field(FIELD(debug::BodiesOptions, excluded_object_layers));
+    VALUE_AS(debug::BodyOptions, "DebugBodyOptions")
+        .field(FIELD(debug::BodyOptions, has_color))
+        .field(FIELD(debug::BodyOptions, color))
+        .field(FIELD(debug::BodyOptions, color_mode))
+        .field(FIELD(debug::BodyOptions, show_linear_velocity))
+        .field(FIELD(debug::BodyOptions, show_angular_velocity));
+    VALUE_AS(debug::ShapeOptions, "DebugShapeOptions").field(FIELD(debug::ShapeOptions, color));
+    VALUE_AS(debug::JointsOptions, "DebugJointsOptions")
+        .field(FIELD(debug::JointsOptions, size))
+        .field(FIELD(debug::JointsOptions, draw_limits));
+    bind::constant(b, "DEBUG_VERTEX_STRIDE", debug::VERTEX_STRIDE, "floats per vertex: x, y, z, r, g, b.");
+    bind::fn(b, BIND(adapters::debug::create), names(), GROWS);
+    bind::fn(b, BIND(adapters::debug::destroy), names("buffers"));
+    bind::fn(b, BIND(adapters::debug::clear), names("buffers"));
+    bind::fn(b, BIND(adapters::debug::lines), names("buffers"));
+    bind::fn(b, BIND(adapters::debug::line_count), names("buffers"));
+    bind::fn(b, BIND(adapters::debug::triangles), names("buffers"));
+    bind::fn(b, BIND(adapters::debug::triangle_count), names("buffers"));
+    bind::fn(b, BIND(adapters::debug::default_bodies_options), names("out"));
+    bind::fn(b, BIND(adapters::debug::default_body_options), names("out"));
+    bind::fn(b, BIND(adapters::debug::default_shape_options), names("out"));
+    bind::fn(b, BIND(adapters::debug::default_joints_options), names("out"));
+    bind::fn(b, BIND(adapters::debug::bodies), names("out", "world", "options"), GROWS);
+    bind::fn(b, BIND(adapters::debug::body), names("out", "world", "body", "options"), GROWS);
+    bind::fn(b, BIND(adapters::debug::line), names("out", "a", "b", "color"), GROWS);
+    bind::fn(b, BIND(adapters::debug::shape), names("out", "shape", "position", "quaternion", "options"), GROWS);
+    bind::fn(b, BIND(adapters::debug::contacts), names("out", "world"), GROWS);
+    bind::fn(b, BIND(adapters::debug::character_contacts), names("out", "character"), GROWS);
+    bind::fn(b, BIND(adapters::debug::contact_constraints), names("out", "world"), GROWS);
+    bind::fn(b, BIND(adapters::debug::joints), names("out", "world", "options"), GROWS);
 }

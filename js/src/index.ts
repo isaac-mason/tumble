@@ -28,6 +28,17 @@ export {
     type SwingTwistConstraintSettings,
     SwingType,
 } from './constraints';
+export {
+    type BodiesOptions,
+    BodyColorMode,
+    type BodyOptions,
+    DEBUG_VERTEX_STRIDE,
+    Debug,
+    DebugBuffers,
+    type DebugViews,
+    type JointsOptions,
+    type ShapeOptions,
+} from './debug';
 export type { ContactEvent, ContactRemovedEvent, ContactSettings, Listener } from './events';
 export { type InitOptions, init } from './init';
 export {

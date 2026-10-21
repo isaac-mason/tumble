@@ -1787,4 +1787,49 @@ void end_contact_tracking(KCC *character) { tumble::kcc::end_contact_tracking(*c
 
 }  // namespace kcc
 
+namespace debug {
+
+tumble::debug::DebugBuffers *create() { return tumble::debug::create(); }
+void destroy(tumble::debug::DebugBuffers *buffers) { tumble::debug::release(buffers); }
+void clear(tumble::debug::DebugBuffers *buffers) { tumble::debug::clear(*buffers); }
+const float *lines(const tumble::debug::DebugBuffers *buffers) { return buffers->lines.data; }
+uint32_t line_count(const tumble::debug::DebugBuffers *buffers) { return buffers->line_count; }
+const float *triangles(const tumble::debug::DebugBuffers *buffers) { return buffers->triangles.data; }
+uint32_t triangle_count(const tumble::debug::DebugBuffers *buffers) { return buffers->triangle_count; }
+
+void default_bodies_options(tumble::debug::BodiesOptions &out) { out = {}; }
+void default_body_options(tumble::debug::BodyOptions &out) { out = {}; }
+void default_shape_options(tumble::debug::ShapeOptions &out) { out = {}; }
+void default_joints_options(tumble::debug::JointsOptions &out) { out = {}; }
+
+void bodies(tumble::debug::DebugBuffers *out, const tumble::world::World *world, const tumble::debug::BodiesOptions &options) {
+    tumble::debug::bodies(*out, *world, options);
+}
+
+bool body(tumble::debug::DebugBuffers *out, tumble::world::World *world, body_id::BodyId body, const tumble::debug::BodyOptions &options) {
+    const tumble::rigid_body::RigidBody *found = rigid_body::resolve(world, body);
+    if (found == nullptr) return false;
+    tumble::debug::body(*out, *found, options);
+    return true;
+}
+
+void line(tumble::debug::DebugBuffers *out, const Float3 &a, const Float3 &b, const Float3 &color) {
+    tumble::debug::line(*out, vec3f::load(a), vec3f::load(b), vec3f::load(color));
+}
+
+void shape(tumble::debug::DebugBuffers *out, const shapes::Shape *shape, const Float3 &position, const Float4 &quaternion,
+           const tumble::debug::ShapeOptions &options) {
+    tumble::debug::shape(*out, shape, vec3f::load(position), quatf::load(quaternion), options);
+}
+
+void contacts(tumble::debug::DebugBuffers *out, const tumble::world::World *world) { tumble::debug::contacts(*out, *world); }
+void character_contacts(tumble::debug::DebugBuffers *out, const tumble::kcc::KCC *character) { tumble::debug::character_contacts(*out, *character); }
+void contact_constraints(tumble::debug::DebugBuffers *out, const tumble::world::World *world) { tumble::debug::contact_constraints(*out, *world); }
+
+void joints(tumble::debug::DebugBuffers *out, const tumble::world::World *world, const tumble::debug::JointsOptions &options) {
+    tumble::debug::joints(*out, *world, options);
+}
+
+}  // namespace debug
+
 }  // namespace adapters

@@ -17,6 +17,7 @@
 #include "tumble/physics/constraints/six_dof_constraint.h"
 #include "tumble/physics/constraints/slider_constraint.h"
 #include "tumble/physics/constraints/swing_twist_constraint.h"
+#include "tumble/physics/debug.h"
 #include "tumble/physics/filter.h"
 #include "tumble/physics/manifold/manifold.h"
 #include "tumble/physics/query.h"
@@ -854,5 +855,37 @@ void begin_contact_tracking(tumble::kcc::KCC *character);
 void end_contact_tracking(tumble::kcc::KCC *character);
 
 }  // namespace kcc
+
+// wireframes into buffers js views in place: lines and triangles as x y z r g b per vertex, valid until the next draw
+// or clear, a draw moving them when it grows them
+namespace debug {
+
+/** null when the allocator fails */
+tumble::debug::DebugBuffers *create();
+void destroy(tumble::debug::DebugBuffers *buffers);
+void clear(tumble::debug::DebugBuffers *buffers);
+const float *lines(const tumble::debug::DebugBuffers *buffers);
+uint32_t line_count(const tumble::debug::DebugBuffers *buffers);
+const float *triangles(const tumble::debug::DebugBuffers *buffers);
+uint32_t triangle_count(const tumble::debug::DebugBuffers *buffers);
+
+void default_bodies_options(tumble::debug::BodiesOptions &out);
+void default_body_options(tumble::debug::BodyOptions &out);
+void default_shape_options(tumble::debug::ShapeOptions &out);
+void default_joints_options(tumble::debug::JointsOptions &out);
+
+// each draw appends; false (error set) for a body id naming no body
+void bodies(tumble::debug::DebugBuffers *out, const tumble::world::World *world, const tumble::debug::BodiesOptions &options);
+bool body(tumble::debug::DebugBuffers *out, tumble::world::World *world, tumble::body_id::BodyId body,
+          const tumble::debug::BodyOptions &options);
+void line(tumble::debug::DebugBuffers *out, const tumble::Float3 &a, const tumble::Float3 &b, const tumble::Float3 &color);
+void shape(tumble::debug::DebugBuffers *out, const tumble::shapes::Shape *shape, const tumble::Float3 &position, const tumble::Float4 &quaternion,
+           const tumble::debug::ShapeOptions &options);
+void contacts(tumble::debug::DebugBuffers *out, const tumble::world::World *world);
+void character_contacts(tumble::debug::DebugBuffers *out, const tumble::kcc::KCC *character);
+void contact_constraints(tumble::debug::DebugBuffers *out, const tumble::world::World *world);
+void joints(tumble::debug::DebugBuffers *out, const tumble::world::World *world, const tumble::debug::JointsOptions &options);
+
+}  // namespace debug
 
 }  // namespace adapters
