@@ -1,0 +1,5 @@
+add_executable(hello_world hello_world.cpp)
+target_link_libraries(hello_world PRIVATE tumble::tumble)
+if(TUMBLE_BUILD_TESTS)
+    add_test(NAME example_hello_world COMMAND hello_world)
+endif()

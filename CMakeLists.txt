@@ -9,6 +9,7 @@ else()
 endif()
 
 option(TUMBLE_BUILD_TESTS "Build the tests and register them with ctest" ${TUMBLE_IS_TOP_LEVEL})
+option(TUMBLE_BUILD_EXAMPLES "Build the examples" ${TUMBLE_IS_TOP_LEVEL})
 option(TUMBLE_DEBUG "Check the library's asserts" OFF)
 option(TUMBLE_NO_SIMD "Use the scalar backend even where simd is available" OFF)
 
@@ -37,4 +38,8 @@ if(TUMBLE_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
     add_subdirectory(docs)
+endif()
+
+if(TUMBLE_BUILD_EXAMPLES)
+    add_subdirectory(examples)
 endif()
