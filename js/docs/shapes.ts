@@ -49,10 +49,13 @@ Shape.getVolume(ball); // 4/3 pi r^3
 check(near(Shape.getVolume(ball), (4 / 3) * Math.PI * 0.125), 'volume');
 
 /* SNIPPET_START: convex-hull */
-// a hull is built once, as data, and shared by any number of shapes; points inside it are dropped
+// the hull around the points, built for this shape alone and freed with it; points inside it are dropped
 const points = [-1, -1, -1, 1, -1, -1, -1, 1, -1, 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, 1, 1, 1, 1, 1, 0, 0, 0];
+const rock = ConvexHull.create({ positions: points, density: 2500 });
+// or built once, as data, and shared by any number of shapes
 const cubeData = ConvexHullData.build({ positions: points });
-const rock = ConvexHull.create({ data: cubeData, density: 2500 });
+const pebble = ConvexHull.create({ data: cubeData, density: 2500 });
+const boulder = ConvexHull.create({ data: cubeData, density: 3000 });
 // points that make no hull throw, saying why
 try {
     ConvexHullData.build({ positions: [0, 0, 0, 1, 0, 0] });
@@ -60,7 +63,7 @@ try {
     if (error instanceof ConvexHullBuildError) error.result; // ConvexHullBuildResult.TOO_FEW_POINTS
 }
 /* SNIPPET_END: convex-hull */
-check(near(Shape.getVolume(rock), 8), 'a cube hull');
+check(near(Shape.getVolume(rock), 8) && near(Shape.getVolume(pebble), 8), 'a cube hull');
 try {
     ConvexHullData.build({ positions: [0, 0, 0, 1, 0, 0] });
     check(false, 'too few points');
@@ -75,15 +78,17 @@ RigidBody.create(world, { shape: ground, objectLayer: notMoving, motionType: Mot
 /* SNIPPET_END: plane */
 
 /* SNIPPET_START: triangle-mesh */
-// a mesh is built once, as data: welded, its bvh made and its edges marked so things slide over the joins. a material
-// per triangle, picking a surface from World.setMaterials
-const terrainData = TriangleMeshData.build({
+// welded, its bvh made and its edges marked so things slide over the joins. a material per triangle, picking a surface
+// from World.setMaterials
+const terrain = TriangleMesh.create({
     positions: [-10, 0, -10, 10, 0, -10, 10, 0, 10, -10, 0, 10],
     indices: [0, 2, 1, 0, 3, 2],
     materialIds: [0, 1],
 });
-const terrain = TriangleMesh.create({ data: terrainData });
 RigidBody.create(world, { shape: terrain, objectLayer: notMoving, motionType: MotionType.STATIC, position: [0, 5, 0] });
+// as with hulls, mesh data built once is shared by the shapes over it
+const tileData = TriangleMeshData.build({ positions: [0, 0, 0, 1, 0, 0, 0, 0, 1], indices: [0, 2, 1] });
+const tile = TriangleMesh.create({ data: tileData });
 /* SNIPPET_END: triangle-mesh */
 const bounds: Box3 = { min: [0, 0, 0], max: [0, 0, 0] };
 Shape.getLocalBounds(bounds, terrain);
@@ -133,22 +138,13 @@ const nothing = Empty.create();
 /* SNIPPET_END: empty */
 
 /* SNIPPET_START: freeing */
-// bodies borrow their shapes, and shapes their data: free the world (or the bodies) first, then the shapes over
-// other shapes, then theirs, then the data
+// bodies borrow their shapes, and shapes over other shapes borrow those: free the world (or the bodies) first, then
+// the shapes over other shapes, then theirs. a hull or mesh made from points frees its data; shared data goes last
 World.destroy(world);
-Transformed.destroy(raised);
-Scaled.destroy(stretched);
-OffsetCenterOfMass.destroy(weighted);
-Compound.destroy(table);
-StaticCompound.destroy(fence);
-for (const box of [crate, leg, top]) Box.destroy(box);
-Sphere.destroy(ball);
-Capsule.destroy(pill);
-Cylinder.destroy(barrel);
-ConvexHull.destroy(rock);
+for (const shape of [raised, stretched, weighted, table, fence]) Shape.destroy(shape);
+for (const shape of [crate, leg, top, ball, pill, barrel, rock, terrain, ground, nothing]) Shape.destroy(shape);
+for (const shape of [pebble, boulder]) Shape.destroy(shape);
 ConvexHullData.release(cubeData);
-TriangleMesh.destroy(terrain);
-TriangleMeshData.release(terrainData);
-Plane.destroy(ground);
-Empty.destroy(nothing);
+Shape.destroy(tile);
+TriangleMeshData.release(tileData);
 /* SNIPPET_END: freeing */

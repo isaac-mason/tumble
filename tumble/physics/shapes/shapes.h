@@ -112,13 +112,18 @@ struct PlaneShape {
 };
 
 struct ConvexHullShape {
-    /** the caller's, shared by any number of shapes; the shape never frees it */
+    /** the caller's, shared by any number of shapes, unless owns_data */
     convex_hull::ConvexHullData *data;
     float density;
+    /** destroy releases the data */
+    bool owns_data;
 };
 
 struct TriangleMeshShape {
+    /** the caller's, shared by any number of shapes, unless owns_data */
     triangle_mesh_data::TriangleMeshData *data;
+    /** destroy releases the data */
+    bool owns_data;
 };
 
 struct CompoundShape {

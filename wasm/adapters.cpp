@@ -1454,17 +1454,22 @@ static collide_point::CollidePointCollector collide_point_collector = {};
 /** ALL, ANY or CLOSEST: a CUSTOM collector's function pointers are not js's to give */
 static bool built_in(uint32_t kind) { return kind <= collector::COLLECT_CLOSEST; }
 
-/** the filter with the query's group and mask */
-static const tumble::filter::Filter &with_groups(tumble::filter::Filter *filter, uint32_t collision_groups, uint32_t collision_mask) {
+// what a query without a filter of its own hits: refilled for the world each time
+static tumble::filter::Filter every_layer = {};
+
+/** the filter with the query's group and mask; a null filter enables every layer of the world */
+static const tumble::filter::Filter &with_groups(const tumble::world::World &world, tumble::filter::Filter *filter, uint32_t collision_groups,
+                                                 uint32_t collision_mask) {
+    if (filter == nullptr) {
+        tumble::filter::set_all_enabled(every_layer, world.settings.layers);
+        filter = &every_layer;
+    }
     filter->collision_groups = collision_groups;
     filter->collision_mask = collision_mask;
     return *filter;
 }
 
 static Transformf transform_of(const Float3 &position, const Float4 &quaternion, const Float3 &scale) { return {position, quaternion, scale}; }
-
-float initial_early_out_fraction() { return collector::INITIAL_EARLY_OUT_FRACTION; }
-float unbounded_early_out() { return collector::UNBOUNDED; }
 
 void default_cast_ray_settings(cast_ray::CastRaySettings &out) { out = cast_ray::default_settings(); }
 
@@ -1476,7 +1481,7 @@ uint32_t cast_ray(tumble::world::World *world, uint32_t kind, float early_out_fr
     cast_ray::reset(ray_collector);
     ray_collector.early_out_fraction = early_out_fraction;
     const cast_ray::Rayf ray = {vec3f::load(origin), vec3f::load(direction), length};
-    tumble::query::cast_ray(*world, ray_collector, settings, ray, with_groups(filter, collision_groups, collision_mask));
+    tumble::query::cast_ray(*world, ray_collector, settings, ray, with_groups(*world, filter, collision_groups, collision_mask));
     return ray_collector.hits.length;
 }
 
@@ -1517,7 +1522,7 @@ uint32_t cast_shape(tumble::world::World *world, uint32_t kind, float early_out_
     cast_shape::reset(cast_shape_collector);
     cast_shape_collector.early_out_fraction = early_out_fraction;
     tumble::query::cast_shape(*world, cast_shape_collector, settings, shape, transform_of(position, quaternion, scale), vec3f::load(displacement),
-                              with_groups(filter, collision_groups, collision_mask));
+                              with_groups(*world, filter, collision_groups, collision_mask));
     return cast_shape_collector.hits.length;
 }
 
@@ -1568,7 +1573,7 @@ uint32_t collide_shape(tumble::world::World *world, uint32_t kind, float early_o
     collide_shape::reset(collide_shape_collector);
     collide_shape_collector.early_out_fraction = early_out_fraction;
     const Transformf transform = transform_of(position, quaternion, scale);
-    const tumble::filter::Filter &query_filter = with_groups(filter, collision_groups, collision_mask);
+    const tumble::filter::Filter &query_filter = with_groups(*world, filter, collision_groups, collision_mask);
     if (internal_edge_removal) {
         tumble::query::collide_shape_with_internal_edge_removal(*world, collide_shape_collector, settings, shape, transform, query_filter);
     } else {
@@ -1599,7 +1604,7 @@ uint32_t collide_point(tumble::world::World *world, uint32_t kind, const collide
     if (!built_in(kind)) return 0;
     collide_point_collector.kind = (collector::CollectorKind)kind;
     collide_point::reset(collide_point_collector);
-    tumble::query::collide_point(*world, collide_point_collector, settings, vec3f::load(point), with_groups(filter, collision_groups, collision_mask));
+    tumble::query::collide_point(*world, collide_point_collector, settings, vec3f::load(point), with_groups(*world, filter, collision_groups, collision_mask));
     return collide_point_collector.hits.length;
 }
 
@@ -1796,23 +1801,23 @@ void update_ground_velocity(tumble::world::World *world, KCC *character, const t
 
 void refresh_contacts(tumble::world::World *world, KCC *character, tumble::filter::Filter *filter, uint32_t collision_groups,
                       uint32_t collision_mask, const tumble::kcc_policy::Policy *policy) {
-    tumble::kcc::refresh_contacts(*world, *character, query::with_groups(filter, collision_groups, collision_mask), PolicyListener(policy).pointer);
+    tumble::kcc::refresh_contacts(*world, *character, query::with_groups(*world, filter, collision_groups, collision_mask), PolicyListener(policy).pointer);
 }
 
 bool set_shape(tumble::world::World *world, KCC *character, shapes::Shape *shape, tumble::filter::Filter *filter, uint32_t collision_groups,
                uint32_t collision_mask, const tumble::kcc_policy::Policy *policy, float max_penetration_depth) {
-    return tumble::kcc::set_shape(*world, *character, shape, query::with_groups(filter, collision_groups, collision_mask), PolicyListener(policy).pointer,
+    return tumble::kcc::set_shape(*world, *character, shape, query::with_groups(*world, filter, collision_groups, collision_mask), PolicyListener(policy).pointer,
                                   max_penetration_depth);
 }
 
 void move(tumble::world::World *world, KCC *character, float delta_time, const Float3 &gravity, const tumble::kcc_policy::Policy *policy,
           tumble::filter::Filter *filter, uint32_t collision_groups, uint32_t collision_mask) {
-    tumble::kcc::move(*world, *character, delta_time, vec3f::load(gravity), PolicyListener(policy).pointer, query::with_groups(filter, collision_groups, collision_mask));
+    tumble::kcc::move(*world, *character, delta_time, vec3f::load(gravity), PolicyListener(policy).pointer, query::with_groups(*world, filter, collision_groups, collision_mask));
 }
 
 bool stick_to_floor(tumble::world::World *world, KCC *character, const Float3 &step_down, tumble::filter::Filter *filter,
                     uint32_t collision_groups, uint32_t collision_mask, const tumble::kcc_policy::Policy *policy) {
-    return tumble::kcc::stick_to_floor(*world, *character, vec3f::load(step_down), query::with_groups(filter, collision_groups, collision_mask),
+    return tumble::kcc::stick_to_floor(*world, *character, vec3f::load(step_down), query::with_groups(*world, filter, collision_groups, collision_mask),
                                        PolicyListener(policy).pointer);
 }
 
@@ -1820,19 +1825,19 @@ bool walk_stairs(tumble::world::World *world, KCC *character, float delta_time, 
                  const Float3 &step_forward_test, const Float3 &step_down_extra, tumble::filter::Filter *filter, uint32_t collision_groups,
                  uint32_t collision_mask, const tumble::kcc_policy::Policy *policy) {
     return tumble::kcc::walk_stairs(*world, *character, delta_time, vec3f::load(step_up), vec3f::load(step_forward), vec3f::load(step_forward_test),
-                                    vec3f::load(step_down_extra), query::with_groups(filter, collision_groups, collision_mask), PolicyListener(policy).pointer);
+                                    vec3f::load(step_down_extra), query::with_groups(*world, filter, collision_groups, collision_mask), PolicyListener(policy).pointer);
 }
 
 void update(tumble::world::World *world, KCC *character, float delta_time, const Float3 &gravity, const tumble::kcc::UpdateSettings &settings,
             const tumble::kcc_policy::Policy *policy, tumble::filter::Filter *filter, uint32_t collision_groups, uint32_t collision_mask) {
     tumble::kcc::update(*world, *character, delta_time, vec3f::load(gravity), settings, PolicyListener(policy).pointer,
-                        query::with_groups(filter, collision_groups, collision_mask));
+                        query::with_groups(*world, filter, collision_groups, collision_mask));
 }
 
 void collide(tumble::world::World *world, KCC *character, const Float3 &position, const Float3 &movement_direction, tumble::filter::Filter *filter,
              uint32_t collision_groups, uint32_t collision_mask, const tumble::kcc_policy::Policy *policy) {
     tumble::kcc::collide(*world, *character, vec3f::load(position), vec3f::load(movement_direction),
-                         query::with_groups(filter, collision_groups, collision_mask), PolicyListener(policy).pointer);
+                         query::with_groups(*world, filter, collision_groups, collision_mask), PolicyListener(policy).pointer);
 }
 
 void solve(KCCSolve &out, tumble::world::World *world, KCC *character, const Float3 &velocity, float delta_time, float time_remaining,
@@ -1848,7 +1853,7 @@ bool cast(KCCContact &out, tumble::world::World *world, KCC *character, const Fl
           tumble::filter::Filter *filter, uint32_t collision_groups, uint32_t collision_mask, const tumble::kcc_policy::Policy *policy) {
     tumble::kcc::CharacterContact hit;
     if (!tumble::kcc::cast(hit, *world, *character, vec3f::load(position), vec3f::load(displacement),
-                           query::with_groups(filter, collision_groups, collision_mask), PolicyListener(policy).pointer)) {
+                           query::with_groups(*world, filter, collision_groups, collision_mask), PolicyListener(policy).pointer)) {
         return false;
     }
     out = {float3_of(hit.position), float3_of(hit.linear_velocity), float3_of(hit.contact_normal), float3_of(hit.surface_normal), hit.distance,

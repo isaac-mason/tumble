@@ -1292,6 +1292,24 @@ void test_convex_hull_shared_data(TestCtx &ctx) {
     CHECK(ctx, util::allocated_bytes() == bytes && util::allocated_blocks() == blocks);
 }
 
+void test_convex_hull_owned_data(TestCtx &ctx) {
+    dispatch::init();
+
+    // a shape that owns its hull frees it with itself
+    const size_t bytes = util::allocated_bytes();
+    const size_t blocks = util::allocated_blocks();
+    convex_hull::ConvexHullData *data = convex_hull::build({.positions = CUBE_POINTS, .num_positions = 8});
+    Shape *shape = convex_hull::create({.data = data, .owns_data = true});
+    CHECK(ctx, shape->convex_hull.owns_data);
+    convex_hull::destroy(shape);
+    CHECK(ctx, util::allocated_bytes() == bytes && util::allocated_blocks() == blocks);
+
+    // and a borrowing one does not
+    Shape *borrowing = make({.positions = CUBE_POINTS, .num_positions = 8});
+    CHECK(ctx, !borrowing->convex_hull.owns_data);
+    drop(borrowing);
+}
+
 /* material by sub shape id */
 
 void test_convex_hull_material(TestCtx &ctx) {

@@ -7,7 +7,7 @@
 import type { Instance } from '../module.js';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0xe7b83d4f;
+export const SCHEMA_HASH = 0xba204eaa;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 368;
 
@@ -41,6 +41,12 @@ export function getWasm(): Instance {
 export function hasWasm(): boolean {
     return wasm !== UNBOOTED;
 }
+
+/** a cast collector's early out fraction before any hit */
+export const INITIAL_EARLY_OUT_FRACTION = 1.0000001192092896;
+
+/** a collide collector's before any hit: no bound on the penetration */
+export const UNBOUNDED_EARLY_OUT = 3.4028234663852886e+38;
 
 export const KCC_CONTACT_STRIDE = 96;
 
@@ -2008,11 +2014,11 @@ export const ConvexHullBuild = {
     },
 };
 
-export type ConvexHullSettings = { data: ConvexHullData | null; density: number; materialId: number };
+export type ConvexHullSettings = { data: ConvexHullData | null; density: number; materialId: number; ownsData: boolean };
 export const ConvexHullSettings = {
-    size: 12,
+    size: 16,
     create(): ConvexHullSettings {
-        return { data: null, density: 0, materialId: 0 };
+        return { data: null, density: 0, materialId: 0, ownsData: false };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: ConvexHullSettings, address: number): ConvexHullSettings {
@@ -2020,6 +2026,7 @@ export const ConvexHullSettings = {
         out.data = (mem.u32[(address + 0) >> 2]! || null) as ConvexHullData | null;
         out.density = mem.f32[(address + 4) >> 2]!;
         out.materialId = mem.i32[(address + 8) >> 2]!;
+        out.ownsData = mem.u8[address + 12]! !== 0;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -2028,18 +2035,21 @@ export const ConvexHullSettings = {
         mem.u32[(address + 0) >> 2] = value.data ?? 0;
         mem.f32[(address + 4) >> 2] = value.density;
         mem.i32[(address + 8) >> 2] = value.materialId;
+        mem.u8[address + 12] = value.ownsData ? 1 : 0;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: ConvexHullSettings): void {
         view.setUint32(offset + 0, value.data ?? 0, true);
         view.setFloat32(offset + 4, value.density, true);
         view.setInt32(offset + 8, value.materialId, true);
+        view.setUint8(offset + 12, value.ownsData ? 1 : 0);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: ConvexHullSettings, view: DataView, offset: number): ConvexHullSettings {
         out.data = (view.getUint32(offset + 0, true) || null) as ConvexHullData | null;
         out.density = view.getFloat32(offset + 4, true);
         out.materialId = view.getInt32(offset + 8, true);
+        out.ownsData = view.getUint8(offset + 12) !== 0;
         return out;
     },
 };
@@ -2124,17 +2134,18 @@ export const TriangleMeshBuildSettings = {
     },
 };
 
-export type TriangleMeshSettings = { data: TriangleMeshData | null; materialId: number };
+export type TriangleMeshSettings = { data: TriangleMeshData | null; materialId: number; ownsData: boolean };
 export const TriangleMeshSettings = {
-    size: 8,
+    size: 12,
     create(): TriangleMeshSettings {
-        return { data: null, materialId: 0 };
+        return { data: null, materialId: 0, ownsData: false };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: TriangleMeshSettings, address: number): TriangleMeshSettings {
         const mem = wasm.mem;
         out.data = (mem.u32[(address + 0) >> 2]! || null) as TriangleMeshData | null;
         out.materialId = mem.i32[(address + 4) >> 2]!;
+        out.ownsData = mem.u8[address + 8]! !== 0;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -2142,16 +2153,19 @@ export const TriangleMeshSettings = {
         const mem = wasm.mem;
         mem.u32[(address + 0) >> 2] = value.data ?? 0;
         mem.i32[(address + 4) >> 2] = value.materialId;
+        mem.u8[address + 8] = value.ownsData ? 1 : 0;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: TriangleMeshSettings): void {
         view.setUint32(offset + 0, value.data ?? 0, true);
         view.setInt32(offset + 4, value.materialId, true);
+        view.setUint8(offset + 8, value.ownsData ? 1 : 0);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: TriangleMeshSettings, view: DataView, offset: number): TriangleMeshSettings {
         out.data = (view.getUint32(offset + 0, true) || null) as TriangleMeshData | null;
         out.materialId = view.getInt32(offset + 4, true);
+        out.ownsData = view.getUint8(offset + 8) !== 0;
         return out;
     },
 };
@@ -7491,16 +7505,6 @@ export const SixDofConstraint = {
 };
 
 export const Query = {
-    initialEarlyOutFraction(): number {
-        const r = wasm.exports.tumble_query_initial_early_out_fraction();
-        return r;
-    },
-
-    unboundedEarlyOut(): number {
-        const r = wasm.exports.tumble_query_unbounded_early_out();
-        return r;
-    },
-
     defaultCastRaySettings(out: CastRaySettings): CastRaySettings {
         const scratch = wasm.scratch;
         wasm.exports.tumble_query_default_cast_ray_settings(scratch + 0);
@@ -8541,8 +8545,6 @@ export type WasmExports = {
     tumble_filter_get_collision_groups(filter: number): number;
     tumble_filter_get_collision_mask(filter: number): number;
     tumble_filter_copy(out: number, source: number): number;
-    tumble_query_initial_early_out_fraction(): number;
-    tumble_query_unbounded_early_out(): number;
     tumble_query_default_cast_ray_settings(out: number): void;
     tumble_query_cast_ray(
         world: number,

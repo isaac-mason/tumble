@@ -365,7 +365,8 @@ TUMBLE_BINDINGS {
     VALUE_AS(convex_hull::ConvexHullShapeSettings, "ConvexHullSettings")
         .field(FIELD(convex_hull::ConvexHullShapeSettings, data))
         .field(FIELD(convex_hull::ConvexHullShapeSettings, density))
-        .field(FIELD(convex_hull::ConvexHullShapeSettings, material_id));
+        .field(FIELD(convex_hull::ConvexHullShapeSettings, material_id))
+        .field(FIELD(convex_hull::ConvexHullShapeSettings, owns_data));
     bind::fn(b, BIND(adapters::convex_hull::default_settings), names("out"));
     bind::fn(b, BIND(adapters::convex_hull::create), names("settings"), GROWS);
     bind::fn(b, BIND(adapters::convex_hull::destroy), names("shape"));
@@ -391,7 +392,8 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::triangle_mesh_data::release), names("data"));
     VALUE_AS(triangle_mesh::TriangleMeshShapeSettings, "TriangleMeshSettings")
         .field(FIELD(triangle_mesh::TriangleMeshShapeSettings, data))
-        .field(FIELD(triangle_mesh::TriangleMeshShapeSettings, material_id));
+        .field(FIELD(triangle_mesh::TriangleMeshShapeSettings, material_id))
+        .field(FIELD(triangle_mesh::TriangleMeshShapeSettings, owns_data));
     bind::fn(b, BIND(adapters::triangle_mesh::default_settings), names("out"));
     bind::fn(b, BIND(adapters::triangle_mesh::create), names("settings"), GROWS);
     bind::fn(b, BIND(adapters::triangle_mesh::destroy), names("shape"));
@@ -723,8 +725,9 @@ TUMBLE_BINDINGS {
         .field(FIELD(cast_ray::CastRayHit, sub_shape_id))
         .field(FIELD(cast_ray::CastRayHit, body_id_b))
         .field(FIELD(cast_ray::CastRayHit, material_id));
-    bind::fn(b, BIND(adapters::query::initial_early_out_fraction), names());
-    bind::fn(b, BIND(adapters::query::unbounded_early_out), names());
+    bind::float_constant(b, "INITIAL_EARLY_OUT_FRACTION", collector::INITIAL_EARLY_OUT_FRACTION,
+                   "a cast collector's early out fraction before any hit");
+    bind::float_constant(b, "UNBOUNDED_EARLY_OUT", collector::UNBOUNDED, "a collide collector's before any hit: no bound on the penetration");
     bind::fn(b, BIND(adapters::query::default_cast_ray_settings), names("out"));
     bind::fn(b, BIND(adapters::query::cast_ray),
              names("world", "kind", "earlyOutFraction", "settings", "origin", "direction", "length", "filter", "collisionGroups", "collisionMask"),

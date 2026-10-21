@@ -54,7 +54,7 @@ struct ConvexHullFace {
 /**
  * the built hull: the heavy part of a hull shape, the caller's and borrowed by any number of shapes (a shape is copied,
  * its data is not). built by convex_hull::build, freed by convex_hull::release after every
- * shape over it is destroyed.
+ * shape over it is destroyed, or by the destroy of the one shape that owns it.
  */
 struct ConvexHullData {
     /** flat xyz, 3 per hull vertex, in the input's space (not relative to the centre of mass) */
@@ -103,10 +103,12 @@ struct ConvexHullBuildSettings {
 };
 
 struct ConvexHullShapeSettings {
-    /** a built hull the shape borrows; outlives the shape */
+    /** a built hull the shape borrows, outliving the shape */
     ConvexHullData *data = nullptr;
     float density = shapes::DEFAULT_SHAPE_DENSITY;
     int32_t material_id = -1;
+    /** the shape takes the hull instead, and its destroy releases it; for a hull no other shape uses */
+    bool owns_data = false;
 };
 
 /**
@@ -118,7 +120,7 @@ ConvexHullData *build(const ConvexHullBuildSettings &settings, BuildResult *out_
 void release(ConvexHullData *data);
 /** a shape over a built hull; null when the allocator fails */
 Shape *create(const ConvexHullShapeSettings &settings);
-/** frees the shape, not the hull it borrows */
+/** frees the shape, and the hull when it owns it */
 void destroy(Shape *shape);
 /** recomputes the bounds from the hull's points */
 void update(Shape *shape);

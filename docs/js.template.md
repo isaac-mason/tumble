@@ -147,8 +147,8 @@ A triangle mesh has no volume to take a mass from: a dynamic body with one needs
 
 ## Shapes
 
-Shapes are created by each type's `create`, shared by any number of bodies, and freed by its `destroy` once nothing uses
-them. A body's pose places its shape: a shape's own geometry is centred on its origin.
+Shapes are created by each type's `create`, shared by any number of bodies, and freed by `Shape.destroy` once nothing
+uses them. A body's pose places its shape: a shape's own geometry is centred on its origin.
 
 ### Convex shapes
 
@@ -207,8 +207,8 @@ span several world steps and the characters' updates between them.
 
 ## Queries
 
-Each query walks the world under a filter and reports to a collector: the closest hit, any hit (stopping at the first),
-or every hit.
+Each query walks the world, under a filter when given one, and reports to a collector: the closest hit, any hit
+(stopping at the first), or every hit.
 
 ### Rays
 

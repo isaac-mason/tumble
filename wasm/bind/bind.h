@@ -254,7 +254,9 @@ struct EnumDesc {
 /** a C++ constant js reads as a module-level const of the same value. */
 struct ConstantDesc {
     const char *name;
+    /** a float's bits when is_float */
     uint32_t value;
+    bool is_float;
     const char *doc;
 };
 
@@ -275,7 +277,11 @@ struct Binder {
 inline void include(Binder &b, const char *header) { b.includes[take_slot(b.include_count, MAX_INCLUDES)] = header; }
 
 inline void constant(Binder &b, const char *name, uint32_t value, const char *doc = nullptr) {
-    b.constants[take_slot(b.constant_count, MAX_CONSTANTS)] = {name, value, doc};
+    b.constants[take_slot(b.constant_count, MAX_CONSTANTS)] = {name, value, false, doc};
+}
+
+inline void float_constant(Binder &b, const char *name, float value, const char *doc = nullptr) {
+    b.constants[take_slot(b.constant_count, MAX_CONSTANTS)] = {name, __builtin_bit_cast(uint32_t, value), true, doc};
 }
 
 template <typename... A>

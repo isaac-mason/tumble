@@ -131,6 +131,20 @@ describe('convex hulls', () => {
         expect(() => ConvexHullData.build({ positions: [0, 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0] })).toThrow(ConvexHullBuildError);
         expect(() => ConvexHullData.build({ positions: [0, 0] })).toThrow('xyz');
     });
+
+    test('a hull made from points owns its data and frees it with itself', async () => {
+        await init();
+        const before = Low.allocatedBytes();
+        const hull = ConvexHull.create({ positions: CUBE, convexRadius: 0.1, density: 2 });
+        expect(Shape.getVolume(hull)).toBeCloseTo(8, 3);
+        const mass = Low.MassProperties.create();
+        Shape.getMassProperties(mass, hull);
+        expect(mass.mass).toBeCloseTo(16, 3);
+        Shape.destroy(hull);
+        expect(Low.allocatedBytes()).toBe(before);
+        expect(() => ConvexHull.create({ positions: [0, 0, 0, 1, 0, 0] })).toThrow(ConvexHullBuildError);
+        expect(Low.allocatedBytes()).toBe(before);
+    });
 });
 
 describe('triangle meshes', () => {
@@ -253,5 +267,29 @@ test('every shape and its data, made and freed, leaves the heap as it was', asyn
     ConvexHullData.release(hull);
     TriangleMeshData.release(mesh);
     Box.destroy(cube);
+    expect(Low.allocatedBytes()).toBe(before);
+});
+
+test('Shape.destroy frees any shape, and the data of those that own it', async () => {
+    await init();
+    const before = Low.allocatedBytes();
+    const cube = Box.create({ halfExtents: [1, 1, 1] });
+    const shapes = [
+        Sphere.create({ radius: 1 }),
+        Capsule.create({ halfHeightOfCylinder: 1, radius: 0.5 }),
+        Cylinder.create({ halfHeight: 1, radius: 0.5 }),
+        Plane.create(),
+        Empty.create(),
+        ConvexHull.create({ positions: CUBE }),
+        TriangleMesh.create({ positions: [0, 0, 0, 1, 0, 0, 0, 0, 1], indices: [0, 2, 1], materialId: 3 }),
+        Compound.create({ children: [{ shape: cube }] }),
+        StaticCompound.create({ children: [{ shape: cube }, { shape: cube, position: [3, 0, 0] }] }),
+        Transformed.create({ shape: cube }),
+        Scaled.create({ shape: cube, scale: [2, 2, 2] }),
+        OffsetCenterOfMass.create({ shape: cube, offset: [0, -1, 0] }),
+    ];
+    expect(new Set(shapes.map((shape) => Shape.getType(shape))).size).toBe(shapes.length);
+    for (const shape of shapes) Shape.destroy(shape);
+    Shape.destroy(cube);
     expect(Low.allocatedBytes()).toBe(before);
 });

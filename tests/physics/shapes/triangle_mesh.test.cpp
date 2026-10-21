@@ -199,6 +199,18 @@ void test_triangle_mesh_shared_data(TestCtx &ctx) {
     triangle_mesh_data::destroy(data);
 }
 
+void test_triangle_mesh_owned_data(TestCtx &ctx) {
+    dispatch::init();
+    // a shape that owns its mesh frees it with itself
+    const size_t bytes = util::allocated_bytes();
+    const size_t blocks = util::allocated_blocks();
+    TriangleMeshData *data = triangle_mesh_builder::build({.positions = QUAD_POSITIONS, .num_positions = 4, .indices = QUAD_INDICES, .num_indices = 6});
+    Shape *shape = triangle_mesh::create({.data = data, .owns_data = true});
+    CHECK(ctx, shape->triangle_mesh.owns_data);
+    triangle_mesh::destroy(shape);
+    CHECK(ctx, util::allocated_bytes() == bytes && util::allocated_blocks() == blocks);
+}
+
 void test_triangle_mesh_surface_normal(TestCtx &ctx) {
     dispatch::init();
 

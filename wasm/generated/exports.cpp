@@ -258,8 +258,6 @@ WASM_EXPORT bool tumble_filter_set_from_body(filter::Filter * filter, world::Wor
 WASM_EXPORT uint32_t tumble_filter_get_collision_groups(const filter::Filter * filter) { return adapters::filter::get_collision_groups(filter); }
 WASM_EXPORT uint32_t tumble_filter_get_collision_mask(const filter::Filter * filter) { return adapters::filter::get_collision_mask(filter); }
 WASM_EXPORT bool tumble_filter_copy(filter::Filter * out, const filter::Filter * source) { return adapters::filter::copy(out, source); }
-WASM_EXPORT float tumble_query_initial_early_out_fraction() { return adapters::query::initial_early_out_fraction(); }
-WASM_EXPORT float tumble_query_unbounded_early_out() { return adapters::query::unbounded_early_out(); }
 WASM_EXPORT void tumble_query_default_cast_ray_settings(cast_ray::CastRaySettings * out) { adapters::query::default_cast_ray_settings(*out); }
 WASM_EXPORT uint32_t tumble_query_cast_ray(world::World * world, uint32_t kind, float earlyOutFraction, const cast_ray::CastRaySettings * settings, const Float3 * origin, const Float3 * direction, float length, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { return adapters::query::cast_ray(world, kind, earlyOutFraction, *settings, *origin, *direction, length, filter, collisionGroups, collisionMask); }
 WASM_EXPORT bool tumble_query_read_cast_ray_hit(cast_ray::CastRayHit * out, uint32_t index) { return adapters::query::read_cast_ray_hit(*out, index); }

@@ -219,6 +219,8 @@ void describe(Out &out, const Counts &from, const Counts &to) {
         put_str(out, c.name);
         put(out, ",\"value\":");
         put_u32(out, c.value);
+        put(out, ",\"float\":");
+        put_bool(out, c.is_float);
         put(out, ",\"doc\":");
         put_opt_str(out, c.doc);
         put(out, "}");

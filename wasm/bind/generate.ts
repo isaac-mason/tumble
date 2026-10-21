@@ -38,7 +38,8 @@ type StructDesc = {
     fields: FieldDesc[];
 };
 type EnumDesc = { name: string; doc: string | null; values: Array<{ name: string; value: number; doc: string | null }> };
-type ConstantDesc = { name: string; value: number; doc: string | null };
+/** a float constant's value is its bits */
+type ConstantDesc = { name: string; value: number; float: boolean; doc: string | null };
 type Schema = {
     includes: string[];
     structs: StructDesc[];
@@ -841,7 +842,11 @@ function emitEnum(e: EnumDesc): string[] {
 
 /** a bound C++ constant as a module-level const; masks and sentinels past 16 bits in hex, as the C++ writes them. */
 function emitConstant(c: ConstantDesc): string[] {
-    const value = c.value > 0xffff ? `0x${c.value.toString(16)}` : String(c.value);
+    const value = c.float
+        ? String(new Float32Array(new Uint32Array([c.value]).buffer)[0])
+        : c.value > 0xffff
+          ? `0x${c.value.toString(16)}`
+          : String(c.value);
     return [...docLines(c.doc, ''), `export const ${c.name} = ${value};`];
 }
 

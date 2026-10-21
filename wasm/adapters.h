@@ -682,11 +682,6 @@ struct CollideShapeSettings {
 // holds, read by index (false past the count) until the next query of the type; 0 for a CUSTOM kind
 namespace query {
 
-/** a cast collector's early-out fraction before any hit */
-float initial_early_out_fraction();
-/** a collide collector's before any hit: no bound on the penetration */
-float unbounded_early_out();
-
 void default_cast_ray_settings(tumble::cast_ray::CastRaySettings &out);
 uint32_t cast_ray(tumble::world::World *world, uint32_t kind, float early_out_fraction, const tumble::cast_ray::CastRaySettings &settings,
                   const tumble::Float3 &origin, const tumble::Float3 &direction, float length, tumble::filter::Filter *filter,

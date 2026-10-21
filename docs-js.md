@@ -455,8 +455,8 @@ RigidBody.setObjectLayer(world, crate, notMoving);
 
 ## Shapes
 
-Shapes are created by each type's `create`, shared by any number of bodies, and freed by its `destroy` once nothing uses
-them. A body's pose places its shape: a shape's own geometry is centred on its origin.
+Shapes are created by each type's `create`, shared by any number of bodies, and freed by `Shape.destroy` once nothing
+uses them. A body's pose places its shape: a shape's own geometry is centred on its origin.
 
 ### Convex shapes
 
@@ -473,10 +473,13 @@ Shape.getVolume(ball); // 4/3 pi r^3
 ### Convex hulls
 
 ```ts
-// a hull is built once, as data, and shared by any number of shapes; points inside it are dropped
+// the hull around the points, built for this shape alone and freed with it; points inside it are dropped
 const points = [-1, -1, -1, 1, -1, -1, -1, 1, -1, 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, 1, 1, 1, 1, 1, 0, 0, 0];
+const rock = ConvexHull.create({ positions: points, density: 2500 });
+// or built once, as data, and shared by any number of shapes
 const cubeData = ConvexHullData.build({ positions: points });
-const rock = ConvexHull.create({ data: cubeData, density: 2500 });
+const pebble = ConvexHull.create({ data: cubeData, density: 2500 });
+const boulder = ConvexHull.create({ data: cubeData, density: 3000 });
 // points that make no hull throw, saying why
 try {
     ConvexHullData.build({ positions: [0, 0, 0, 1, 0, 0] });
@@ -496,15 +499,17 @@ RigidBody.create(world, { shape: ground, objectLayer: notMoving, motionType: Mot
 ### Triangle meshes
 
 ```ts
-// a mesh is built once, as data: welded, its bvh made and its edges marked so things slide over the joins. a material
-// per triangle, picking a surface from World.setMaterials
-const terrainData = TriangleMeshData.build({
+// welded, its bvh made and its edges marked so things slide over the joins. a material per triangle, picking a surface
+// from World.setMaterials
+const terrain = TriangleMesh.create({
     positions: [-10, 0, -10, 10, 0, -10, 10, 0, 10, -10, 0, 10],
     indices: [0, 2, 1, 0, 3, 2],
     materialIds: [0, 1],
 });
-const terrain = TriangleMesh.create({ data: terrainData });
 RigidBody.create(world, { shape: terrain, objectLayer: notMoving, motionType: MotionType.STATIC, position: [0, 5, 0] });
+// as with hulls, mesh data built once is shared by the shapes over it
+const tileData = TriangleMeshData.build({ positions: [0, 0, 0, 1, 0, 0, 0, 0, 1], indices: [0, 2, 1] });
+const tile = TriangleMesh.create({ data: tileData });
 ```
 
 Meshes are for static bodies: they are hollow, with no volume, no inside and no mass.
@@ -549,24 +554,15 @@ const nothing = Empty.create();
 ### Freeing shapes
 
 ```ts
-// bodies borrow their shapes, and shapes their data: free the world (or the bodies) first, then the shapes over
-// other shapes, then theirs, then the data
+// bodies borrow their shapes, and shapes over other shapes borrow those: free the world (or the bodies) first, then
+// the shapes over other shapes, then theirs. a hull or mesh made from points frees its data; shared data goes last
 World.destroy(world);
-Transformed.destroy(raised);
-Scaled.destroy(stretched);
-OffsetCenterOfMass.destroy(weighted);
-Compound.destroy(table);
-StaticCompound.destroy(fence);
-for (const box of [crate, leg, top]) Box.destroy(box);
-Sphere.destroy(ball);
-Capsule.destroy(pill);
-Cylinder.destroy(barrel);
-ConvexHull.destroy(rock);
+for (const shape of [raised, stretched, weighted, table, fence]) Shape.destroy(shape);
+for (const shape of [crate, leg, top, ball, pill, barrel, rock, terrain, ground, nothing]) Shape.destroy(shape);
+for (const shape of [pebble, boulder]) Shape.destroy(shape);
 ConvexHullData.release(cubeData);
-TriangleMesh.destroy(terrain);
-TriangleMeshData.release(terrainData);
-Plane.destroy(ground);
-Empty.destroy(nothing);
+Shape.destroy(tile);
+TriangleMeshData.release(tileData);
 ```
 
 ## Events
@@ -672,21 +668,19 @@ function read(): void {
 
 ## Queries
 
-Each query walks the world under a filter and reports to a collector: the closest hit, any hit (stopping at the first),
-or every hit.
+Each query walks the world, under a filter when given one, and reports to a collector: the closest hit, any hit
+(stopping at the first), or every hit.
 
 ### Rays
 
 ```ts
-// what a query may hit: every layer of the world's, until told otherwise. free it when done
-const filter = Filter.create(world);
 const raySettings = createDefaultCastRaySettings();
 const origin: Vec3 = [0, 10, 0];
 const down: Vec3 = [0, -1, 0];
 
 // the nearest hit, its fraction along the ray's 20 m
 const closest = createClosestCastRayCollector();
-castRay(world, closest, raySettings, origin, down, 20, filter);
+castRay(world, closest, raySettings, origin, down, 20);
 if (closest.hit.status === CastRayStatus.COLLIDING) {
     const distance = closest.hit.fraction * 20;
     const point: Vec3 = [origin[0], origin[1] - distance, origin[2]];
@@ -695,9 +689,9 @@ if (closest.hit.status === CastRayStatus.COLLIDING) {
 
 // the first hit found, for line of sight; every hit, nearest first after sort
 const any = createAnyCastRayCollector();
-castRay(world, any, raySettings, origin, down, 20, filter);
+castRay(world, any, raySettings, origin, down, 20);
 const all = createAllCastRayCollector();
-castRay(world, all, raySettings, origin, down, 20, filter);
+castRay(world, all, raySettings, origin, down, 20);
 all.sort();
 all.hits.length; // 3: the crates and the floor
 
@@ -710,7 +704,7 @@ closest.reset();
 ```ts
 // the bodies whose shapes hold a point
 const inside = createAllCollidePointCollector();
-collidePoint(world, inside, createDefaultCollidePointSettings(), [0, 1, 0], filter);
+collidePoint(world, inside, createDefaultCollidePointSettings(), [0, 1, 0]);
 inside.hits[0]?.bodyIdB; // the lower crate
 ```
 
@@ -720,7 +714,7 @@ inside.hits[0]?.bodyIdB; // the lower crate
 // what a shape overlaps, posed and scaled: placing something, or a blast's reach. the closest is the deepest
 const probe = Sphere.create({ radius: 0.8 });
 const deepest = createClosestCollideShapeCollector();
-collideShape(world, deepest, createDefaultCollideShapeSettings(), probe, [0, 2, 0], [0, 0, 0, 1], [1, 1, 1], filter);
+collideShape(world, deepest, createDefaultCollideShapeSettings(), probe, [0, 2, 0], [0, 0, 0, 1], [1, 1, 1]);
 deepest.hit?.penetration; // into a crate by 0.3
 ```
 
@@ -730,7 +724,7 @@ deepest.hit?.penetration; // into a crate by 0.3
 // a shape swept: where a falling ball first meets something, for placing it or for a projectile's path
 const sweep = createClosestCastShapeCollector();
 const ball = Sphere.create({ radius: 0.5 });
-castShape(world, sweep, createDefaultCastShapeSettings(), ball, [0, 10, 0], [0, 0, 0, 1], [1, 1, 1], [0, -20, 0], filter);
+castShape(world, sweep, createDefaultCastShapeSettings(), ball, [0, 10, 0], [0, 0, 0, 1], [1, 1, 1], [0, -20, 0]);
 if (sweep.hit.status === CastShapeStatus.COLLIDING) {
     sweep.hit.fraction; // 0.3: its centre half a metre over the upper crate's top
     sweep.hit.normal; // up, from the crate towards the ball
@@ -740,7 +734,9 @@ if (sweep.hit.status === CastShapeStatus.COLLIDING) {
 ### Filters
 
 ```ts
-// layers first, then groups and masks, then a body filter: all must pass
+// a query without a filter hits everything. a filter, held in the wasm and freed when done, starts with every layer
+// of the world's enabled; then layers, groups and masks, and a body filter must all pass
+const filter = Filter.create(world);
 Filter.disableObjectLayer(filter, world, notMoving); // the floor's layer: crates only
 filter.collisionMask = ~2 >>> 0; // no body in group 2
 Filter.setAllEnabled(filter, world); // back to everything

@@ -3,7 +3,7 @@ import * as Low from './generated/tumble.js';
 import type { Box3, Quat, Vec3 } from './math.js';
 import { defaultsOf, over } from './settings.js';
 
-/** a shape, yours to free with its type's destroy once no body or other shape uses it */
+/** a shape, yours to free with Shape.destroy once no body or other shape uses it */
 export type Shape = Low.Shape;
 
 export const ShapeType = Low.ShapeType;
@@ -32,6 +32,53 @@ export const Shape = {
     /** at the shape's density, about its centre of mass */
     getMassProperties(out: MassProperties, shape: Shape): MassProperties {
         return Low.Shape.getMassProperties(out, shape);
+    },
+    /** frees the shape, whatever its type, and the hull or mesh data it owns; a wrapper's shape is freed on its own */
+    destroy(shape: Shape): void {
+        const type = Shape.getType(shape);
+        switch (type) {
+            case ShapeType.SPHERE:
+                Low.Sphere.destroy(shape);
+                return;
+            case ShapeType.BOX:
+                Low.Box.destroy(shape);
+                return;
+            case ShapeType.CAPSULE:
+                Low.Capsule.destroy(shape);
+                return;
+            case ShapeType.CONVEX_HULL:
+                Low.ConvexHull.destroy(shape);
+                return;
+            case ShapeType.TRIANGLE_MESH:
+                Low.TriangleMesh.destroy(shape);
+                return;
+            case ShapeType.COMPOUND:
+                Low.Compound.destroy(shape);
+                return;
+            case ShapeType.TRANSFORMED:
+                Low.Transformed.destroy(shape);
+                return;
+            case ShapeType.SCALED:
+                Low.Scaled.destroy(shape);
+                return;
+            case ShapeType.EMPTY:
+                Low.Empty.destroy(shape);
+                return;
+            case ShapeType.CYLINDER:
+                Low.Cylinder.destroy(shape);
+                return;
+            case ShapeType.OFFSET_CENTER_OF_MASS:
+                Low.OffsetCenterOfMass.destroy(shape);
+                return;
+            case ShapeType.PLANE:
+                Low.Plane.destroy(shape);
+                return;
+            case ShapeType.STATIC_COMPOUND:
+                Low.StaticCompound.destroy(shape);
+                return;
+            default:
+                throw new Error(`tumble: no destroy for shape type ${type}`);
+        }
     },
 };
 
@@ -208,15 +255,27 @@ export const ConvexHullData = {
     },
 };
 
-export type ConvexHullSettings = { data: ConvexHullData } & Density & Material;
+/** built hull data the shape borrows, or the points to build a hull the shape owns */
+export type ConvexHullSettings = ({ data: ConvexHullData } | ConvexHullBuildSettings) & Density & Material;
 
 const hullDefaults = defaultsOf(Low.ConvexHull.defaultSettings, Low.ConvexHullSettings.create);
 
 export const ConvexHull = {
-    /** a shape over built hull data, which it borrows */
+    /** a shape over built hull data, which it borrows; or over a hull it builds from points, which it frees with itself */
     create(settings: ConvexHullSettings): Shape {
-        Low.errorClear();
-        return Low.ConvexHull.create(over(hullDefaults(), settings));
+        if ('data' in settings) {
+            Low.errorClear();
+            return Low.ConvexHull.create(over(hullDefaults(), settings));
+        }
+        const data = ConvexHullData.build(settings);
+        try {
+            Low.errorClear();
+            const { density, materialId } = settings;
+            return Low.ConvexHull.create(over(hullDefaults(), { data, density, materialId, ownsData: true }));
+        } catch (error) {
+            Low.ConvexHullData.release(data);
+            throw error;
+        }
     },
     destroy(shape: Shape): void {
         Low.ConvexHull.destroy(shape);
@@ -275,9 +334,11 @@ export const TriangleMeshData = {
     },
 };
 
-/** for static bodies, or kinematic ones: a mesh has no volume, so a dynamic body over one needs massPropertiesOverride */
-export type TriangleMeshSettings = {
-    data: TriangleMeshData;
+/**
+ * built mesh data the shape borrows, or the triangles to build a mesh the shape owns. for static bodies, or kinematic
+ * ones: a mesh has no volume, so a dynamic body over one needs massPropertiesOverride
+ */
+export type TriangleMeshSettings = ({ data: TriangleMeshData } | TriangleMeshBuildSettings) & {
     /** the shape's own material, for queries that report it; hits report the hit triangle's */
     materialId?: number;
 };
@@ -285,10 +346,20 @@ export type TriangleMeshSettings = {
 const meshDefaults = defaultsOf(Low.TriangleMesh.defaultSettings, Low.TriangleMeshSettings.create);
 
 export const TriangleMesh = {
-    /** a shape over built mesh data, which it borrows */
+    /** a shape over built mesh data, which it borrows; or over a mesh it builds from triangles, which it frees with itself */
     create(settings: TriangleMeshSettings): Shape {
-        Low.errorClear();
-        return Low.TriangleMesh.create(over(meshDefaults(), settings));
+        if ('data' in settings) {
+            Low.errorClear();
+            return Low.TriangleMesh.create(over(meshDefaults(), settings));
+        }
+        const data = TriangleMeshData.build(settings);
+        try {
+            Low.errorClear();
+            return Low.TriangleMesh.create(over(meshDefaults(), { data, materialId: settings.materialId, ownsData: true }));
+        } catch (error) {
+            Low.TriangleMeshData.release(data);
+            throw error;
+        }
     },
     destroy(shape: Shape): void {
         Low.TriangleMesh.destroy(shape);

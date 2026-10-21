@@ -468,6 +468,7 @@ Shape *create(const ConvexHullShapeSettings &settings) {
     if (shape == nullptr) return nullptr;
     shape->convex_hull.data = data;
     shape->convex_hull.density = settings.density;
+    shape->convex_hull.owns_data = settings.owns_data;
     shape->material_id = settings.material_id;
     shape->aabb = data->aabb;
     shape->center_of_mass = data->center_of_mass;
@@ -475,7 +476,10 @@ Shape *create(const ConvexHullShapeSettings &settings) {
     return shape;
 }
 
-void destroy(Shape *shape) { shapes::release(shape); }
+void destroy(Shape *shape) {
+    if (shape->convex_hull.owns_data) release(shape->convex_hull.data);
+    shapes::release(shape);
+}
 
 void update(Shape *shape) {
     const ConvexHullData &data = *shape->convex_hull.data;

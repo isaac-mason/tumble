@@ -46,12 +46,16 @@ Shape *create(const TriangleMeshShapeSettings &settings) {
     Shape *shape = shapes::allocate(shapes::SHAPE_TRIANGLE_MESH);
     if (shape == nullptr) return nullptr;
     shape->triangle_mesh.data = data;
+    shape->triangle_mesh.owns_data = settings.owns_data;
     shape->material_id = settings.material_id;
     update(shape);
     return shape;
 }
 
-void destroy(Shape *shape) { shapes::release(shape); }
+void destroy(Shape *shape) {
+    if (shape->triangle_mesh.owns_data) triangle_mesh_data::destroy(shape->triangle_mesh.data);
+    shapes::release(shape);
+}
 
 void update(Shape *shape) {
     const TriangleMeshData &data = *shape->triangle_mesh.data;

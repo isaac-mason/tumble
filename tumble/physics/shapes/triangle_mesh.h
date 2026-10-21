@@ -15,15 +15,17 @@ namespace triangle_mesh {
 using shapes::Shape;
 
 struct TriangleMeshShapeSettings {
-    /** a built mesh (triangle_mesh_builder::build) the shape borrows; outlives the shape */
+    /** a built mesh (triangle_mesh_builder::build) the shape borrows, outliving the shape */
     triangle_mesh_data::TriangleMeshData *data = nullptr;
     /** the shape's material; hits report the hit triangle's own */
     int32_t material_id = -1;
+    /** the shape takes the mesh instead, and its destroy frees it; for a mesh no other shape uses */
+    bool owns_data = false;
 };
 
 /** a shape over a built mesh; null when the allocator fails */
 Shape *create(const TriangleMeshShapeSettings &settings);
-/** frees the shape, not the mesh it borrows */
+/** frees the shape, and the mesh when it owns it */
 void destroy(Shape *shape);
 /** the bounds from the bvh root */
 void update(Shape *shape);

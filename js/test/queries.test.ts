@@ -215,6 +215,26 @@ describe('queries', () => {
         releaseStack(stack);
     });
 
+    test('a query without a filter hits every layer and group', async () => {
+        const stack = await makeStack();
+        const { world } = stack;
+        const all = createAllCastRayCollector();
+        castRay(world, all, createDefaultCastRaySettings(), [0, 10, 0], DOWN, 20);
+        expect(all.hits.length).toBe(3);
+        const swept = createClosestCastShapeCollector();
+        const ball = Sphere.create({ radius: 0.5 });
+        castShape(world, swept, createDefaultCastShapeSettings(), ball, [0, 10, 0], IDENTITY, ONE, [0, -20, 0]);
+        expect(swept.hit.bodyIdB).toBe(stack.upper);
+        const overlap = createAllCollideShapeCollector();
+        collideShape(world, overlap, createDefaultCollideShapeSettings(), ball, [0, 2, 0], IDENTITY, ONE);
+        expect(overlap.hits.map((hit) => hit.bodyIdB).sort()).toEqual([stack.lower, stack.upper].sort());
+        const point = createAnyCollidePointCollector();
+        collidePoint(world, point, createDefaultCollidePointSettings(), [0, 1, 0]);
+        expect(point.hit?.bodyIdB).toBe(stack.lower);
+        Sphere.destroy(ball);
+        releaseStack(stack);
+    });
+
     test('filters, made and freed, leave the heap as it was', async () => {
         const stack = await makeStack();
         const before = Low.allocatedBytes();
