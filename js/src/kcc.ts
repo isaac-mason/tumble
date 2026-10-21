@@ -182,13 +182,14 @@ export type KCCContactEvent = {
     normal: Vec3;
 };
 
-/** a contact a sweep found (cast) */
-export type KCCSweepContact = {
+/** a contact of the character's: its last call's, in character.contacts, or a sweep's (cast) */
+export type KCCContact = {
     position: Vec3;
-    /** the body's velocity at the point */
+    /** the body's velocity at the point, the policy's surface velocity included; between collide and solve, yours to set */
     linearVelocity: Vec3;
     /** toward the character */
     contactNormal: Vec3;
+    /** may differ from the contact normal at edges */
     surfaceNormal: Vec3;
     /** negative is penetration */
     distance: number;
@@ -199,9 +200,15 @@ export type KCCSweepContact = {
     materialId: number;
     motionType: MotionType;
     isSensor: boolean;
+    /** a real collision, not only a predictive contact */
+    hadCollision: boolean;
+    /** passed over by the solve, the sweep and the ground; between collide and solve, yours to set */
+    wasDiscarded: boolean;
+    canPushCharacter: boolean;
+    canReceiveImpulses: boolean;
 };
 
-export function createSweepContact(): KCCSweepContact {
+export function createContact(): KCCContact {
     return {
         position: [0, 0, 0],
         linearVelocity: [0, 0, 0],
@@ -214,6 +221,10 @@ export function createSweepContact(): KCCSweepContact {
         materialId: -1,
         motionType: 0 as MotionType,
         isSensor: false,
+        hadCollision: false,
+        wasDiscarded: false,
+        canPushCharacter: true,
+        canReceiveImpulses: true,
     };
 }
 
@@ -227,184 +238,130 @@ export function createSolveResult(): KCCSolveResult {
 const STRIDE = Low.KCC_CONTACT_STRIDE;
 
 /**
- * a character's contacts, rows read and written in the wasm's memory in place, valid until the character next moves.
- * between collide and solve, a row's discarded and linear velocity are yours to change
+ * a character: a shape slid through the world by sweeps. its fields are the wasm's state as its last call left it,
+ * copied out after each call; linearVelocity is yours to set before a move, and between collide and solve so are its
+ * contacts' wasDiscarded and linearVelocity
  */
-export class KCCContacts {
-    count = 0;
-    #base = 0;
-    #character: Low.KCC;
+export type KCC = {
+    /** the character in the wasm */
+    handle: Low.KCC;
+    position: Vec3;
+    quaternion: Quat;
+    linearVelocity: Vec3;
+    up: Vec3;
+    ground: GroundInfo;
+    /** INVALID_BODY_ID without one, or before it is added */
+    innerRigidBodyId: BodyId;
+    shape: Shape;
+    contacts: KCCContact[];
+    /** since the frame began: update, refreshContacts and setShape begin one, and a move adds to it */
+    contactEvents: KCCContactEvent[];
+    /** the contacts and events made so far, reused from call to call */
+    contactPool: KCCContact[];
+    eventPool: KCCContactEvent[];
+};
 
-    constructor(character: Low.KCC) {
-        this.#character = character;
+function readVec3(out: Vec3, f32: Float32Array, at: number): void {
+    out[0] = f32[at]!;
+    out[1] = f32[at + 1]!;
+    out[2] = f32[at + 2]!;
+}
+
+/** a row of the wasm's contacts into a plain contact */
+function readContact(out: KCCContact, row: number): void {
+    const { f32, u32, i32, u8 } = Low.getWasm().mem;
+    readVec3(out.position, f32, (row + Low.KCC_CONTACT_POSITION) >> 2);
+    readVec3(out.linearVelocity, f32, (row + Low.KCC_CONTACT_LINEAR_VELOCITY) >> 2);
+    readVec3(out.contactNormal, f32, (row + Low.KCC_CONTACT_CONTACT_NORMAL) >> 2);
+    readVec3(out.surfaceNormal, f32, (row + Low.KCC_CONTACT_SURFACE_NORMAL) >> 2);
+    out.distance = f32[(row + Low.KCC_CONTACT_DISTANCE) >> 2]!;
+    out.fraction = f32[(row + Low.KCC_CONTACT_FRACTION) >> 2]!;
+    out.bodyId = u32[(row + Low.KCC_CONTACT_BODY_ID) >> 2]!;
+    out.subShapeId = u32[(row + Low.KCC_CONTACT_SUB_SHAPE_ID) >> 2]!;
+    out.materialId = i32[(row + Low.KCC_CONTACT_MATERIAL_ID) >> 2]!;
+    out.motionType = u32[(row + Low.KCC_CONTACT_MOTION_TYPE) >> 2]! as MotionType;
+    out.isSensor = u8[row + Low.KCC_CONTACT_IS_SENSOR] !== 0;
+    out.hadCollision = u8[row + Low.KCC_CONTACT_HAD_COLLISION] !== 0;
+    out.wasDiscarded = u8[row + Low.KCC_CONTACT_WAS_DISCARDED] !== 0;
+    out.canPushCharacter = u8[row + Low.KCC_CONTACT_CAN_PUSH_CHARACTER] !== 0;
+    out.canReceiveImpulses = u8[row + Low.KCC_CONTACT_CAN_RECEIVE_IMPULSES] !== 0;
+}
+
+/** the state as the character's last call left it */
+function pull(character: KCC): void {
+    Low.Kcc.readState(state, character.handle);
+    copyVec3(character.position, state.position);
+    for (let i = 0; i < 4; i++) character.quaternion[i] = state.quaternion[i]!;
+    copyVec3(character.linearVelocity, state.linearVelocity);
+    copyVec3(character.up, state.up);
+    const ground = character.ground;
+    ground.state = state.groundState as GroundState;
+    copyVec3(ground.normal, state.groundNormal);
+    copyVec3(ground.velocity, state.groundVelocity);
+    ground.bodyId = state.groundBodyId;
+    ground.subShapeId = state.groundSubShapeId;
+    copyVec3(ground.position, state.groundPosition);
+    if (state.shape !== null) character.shape = state.shape;
+    character.innerRigidBodyId = state.innerRigidBodyId;
+
+    const contacts = character.contacts;
+    contacts.length = 0;
+    const base = state.contactCount > 0 ? Low.Kcc.contacts(character.handle) : 0;
+    for (let i = 0; i < state.contactCount; i++) {
+        let contact = character.contactPool[i];
+        if (contact === undefined) {
+            contact = createContact();
+            character.contactPool.push(contact);
+        }
+        readContact(contact, base + i * STRIDE);
+        contacts.push(contact);
     }
 
-    /** the rows as the character's last call left them */
-    sync(count: number): void {
-        this.count = count;
-        this.#base = count > 0 ? Low.Kcc.contacts(this.#character) : 0;
-    }
-
-    #at(index: number, offset: number): number {
-        if (!(index >= 0 && index < this.count)) throw new RangeError(`tumble: contact ${index} of ${this.count}`);
-        return this.#base + index * STRIDE + offset;
-    }
-    #vec3(out: Vec3, index: number, offset: number): Vec3 {
-        const f32 = Low.getWasm().mem.f32;
-        const at = this.#at(index, offset) >> 2;
-        out[0] = f32[at]!;
-        out[1] = f32[at + 1]!;
-        out[2] = f32[at + 2]!;
-        return out;
-    }
-    #u8(index: number, offset: number): boolean {
-        return Low.getWasm().mem.u8[this.#at(index, offset)] !== 0;
-    }
-
-    position(out: Vec3, index: number): Vec3 {
-        return this.#vec3(out, index, Low.KCC_CONTACT_POSITION);
-    }
-    /** the body's velocity at the point, the policy's surface velocity included */
-    linearVelocity(out: Vec3, index: number): Vec3 {
-        return this.#vec3(out, index, Low.KCC_CONTACT_LINEAR_VELOCITY);
-    }
-    /** toward the character */
-    contactNormal(out: Vec3, index: number): Vec3 {
-        return this.#vec3(out, index, Low.KCC_CONTACT_CONTACT_NORMAL);
-    }
-    /** may differ from the contact normal at edges */
-    surfaceNormal(out: Vec3, index: number): Vec3 {
-        return this.#vec3(out, index, Low.KCC_CONTACT_SURFACE_NORMAL);
-    }
-    /** negative is penetration */
-    distance(index: number): number {
-        return Low.getWasm().mem.f32[this.#at(index, Low.KCC_CONTACT_DISTANCE) >> 2]!;
-    }
-    fraction(index: number): number {
-        return Low.getWasm().mem.f32[this.#at(index, Low.KCC_CONTACT_FRACTION) >> 2]!;
-    }
-    bodyId(index: number): BodyId {
-        return Low.getWasm().mem.u32[this.#at(index, Low.KCC_CONTACT_BODY_ID) >> 2]!;
-    }
-    subShapeId(index: number): number {
-        return Low.getWasm().mem.u32[this.#at(index, Low.KCC_CONTACT_SUB_SHAPE_ID) >> 2]!;
-    }
-    materialId(index: number): number {
-        return Low.getWasm().mem.i32[this.#at(index, Low.KCC_CONTACT_MATERIAL_ID) >> 2]!;
-    }
-    motionType(index: number): MotionType {
-        return Low.getWasm().mem.u32[this.#at(index, Low.KCC_CONTACT_MOTION_TYPE) >> 2]! as MotionType;
-    }
-    isSensor(index: number): boolean {
-        return this.#u8(index, Low.KCC_CONTACT_IS_SENSOR);
-    }
-    /** a real collision, not only a predictive contact */
-    hadCollision(index: number): boolean {
-        return this.#u8(index, Low.KCC_CONTACT_HAD_COLLISION);
-    }
-    /** passed over: by you, the policy, a sensor once met, or the shallower of two opposing contacts on one body */
-    discarded(index: number): boolean {
-        return this.#u8(index, Low.KCC_CONTACT_WAS_DISCARDED);
-    }
-    canPushCharacter(index: number): boolean {
-        return this.#u8(index, Low.KCC_CONTACT_CAN_PUSH_CHARACTER);
-    }
-    canReceiveImpulses(index: number): boolean {
-        return this.#u8(index, Low.KCC_CONTACT_CAN_RECEIVE_IMPULSES);
-    }
-    /** passed over by the solve, the sweep and the ground, or no longer */
-    setDiscarded(index: number, discarded: boolean): void {
-        Low.getWasm().mem.u8[this.#at(index, Low.KCC_CONTACT_WAS_DISCARDED)] = discarded ? 1 : 0;
-    }
-    /** the velocity the solve takes the contact to move at */
-    setLinearVelocity(index: number, velocity: Vec3): void {
-        const f32 = Low.getWasm().mem.f32;
-        const at = this.#at(index, Low.KCC_CONTACT_LINEAR_VELOCITY) >> 2;
-        f32[at] = velocity[0];
-        f32[at + 1] = velocity[1];
-        f32[at + 2] = velocity[2];
-        // the fourth lane as a load of the three leaves it
-        f32[at + 3] = velocity[2];
+    const events = character.contactEvents;
+    events.length = 0;
+    for (let i = 0; i < state.contactEventCount; i++) {
+        Low.Kcc.readContactEvent(event, character.handle, i);
+        let out = character.eventPool[i];
+        if (out === undefined) {
+            out = {
+                kind: KCCContactEventKind.ADDED,
+                bodyId: INVALID_BODY_ID,
+                subShapeId: 0,
+                position: [0, 0, 0],
+                normal: [0, 0, 0],
+            };
+            character.eventPool.push(out);
+        }
+        out.kind = event.kind as KCCContactEventKind;
+        out.bodyId = event.bodyId;
+        out.subShapeId = event.subShapeId;
+        copyVec3(out.position, event.position);
+        copyVec3(out.normal, event.normal);
+        events.push(out);
     }
 }
 
-/** a character: a shape slid through the world by sweeps, with its state mirrored here after each call that moves it */
-class Character {
-    readonly handle: Low.KCC;
-    readonly position: Vec3 = [0, 0, 0];
-    readonly quaternion: Quat = [0, 0, 0, 1];
-    /** yours to set before a move or update */
-    linearVelocity: Vec3 = [0, 0, 0];
-    readonly up: Vec3 = [0, 1, 0];
-    readonly ground: GroundInfo = {
-        state: GroundState.IN_AIR,
-        normal: [0, 1, 0],
-        velocity: [0, 0, 0],
-        bodyId: INVALID_BODY_ID,
-        subShapeId: 0,
-        position: [0, 0, 0],
-    };
-    /** INVALID_BODY_ID without one, or before it is added */
-    innerRigidBodyId: BodyId = INVALID_BODY_ID;
-    shape: Shape;
-    readonly contacts: KCCContacts;
-    /** since the frame began: update, refreshContacts and setShape begin one, and a move adds to it */
-    readonly contactEvents: KCCContactEvent[] = [];
-    readonly #spareEvents: KCCContactEvent[] = [];
+/** the velocity into the character, for a call that reads it */
+function push(character: KCC): void {
+    Low.Kcc.setLinearVelocity(character.handle, character.linearVelocity);
+}
 
-    constructor(handle: Low.KCC, shape: Shape) {
-        this.handle = handle;
-        this.shape = shape;
-        this.contacts = new KCCContacts(handle);
-    }
-
-    /** the state as the character's last call left it */
-    pull(): void {
-        Low.Kcc.readState(state, this.handle);
-        copyVec3(this.position, state.position);
-        this.quaternion[0] = state.quaternion[0];
-        this.quaternion[1] = state.quaternion[1];
-        this.quaternion[2] = state.quaternion[2];
-        this.quaternion[3] = state.quaternion[3];
-        copyVec3(this.linearVelocity, state.linearVelocity);
-        copyVec3(this.up, state.up);
-        const ground = this.ground;
-        ground.state = state.groundState as GroundState;
-        copyVec3(ground.normal, state.groundNormal);
-        copyVec3(ground.velocity, state.groundVelocity);
-        ground.bodyId = state.groundBodyId;
-        ground.subShapeId = state.groundSubShapeId;
-        copyVec3(ground.position, state.groundPosition);
-        if (state.shape !== null) this.shape = state.shape;
-        this.innerRigidBodyId = state.innerRigidBodyId;
-        this.contacts.sync(state.contactCount);
-        const events = this.contactEvents;
-        events.length = 0;
-        for (let i = 0; i < state.contactEventCount; i++) {
-            Low.Kcc.readContactEvent(event, this.handle, i);
-            let out = this.#spareEvents[i];
-            if (out === undefined) {
-                out = {
-                    kind: KCCContactEventKind.ADDED,
-                    bodyId: INVALID_BODY_ID,
-                    subShapeId: 0,
-                    position: [0, 0, 0],
-                    normal: [0, 0, 0],
-                };
-                this.#spareEvents.push(out);
-            }
-            out.kind = event.kind as KCCContactEventKind;
-            out.bodyId = event.bodyId;
-            out.subShapeId = event.subShapeId;
-            copyVec3(out.position, event.position);
-            copyVec3(out.normal, event.normal);
-            events.push(out);
-        }
-    }
-
-    /** the velocity into the character, for a call that reads it */
-    push(): void {
-        Low.Kcc.setLinearVelocity(this.handle, this.linearVelocity);
+/** the contacts' wasDiscarded and linearVelocity back into the wasm's rows, for the phases that read them */
+function pushContacts(character: KCC): void {
+    const contacts = character.contacts;
+    if (contacts.length === 0) return;
+    const { f32, u8 } = Low.getWasm().mem;
+    const base = Low.Kcc.contacts(character.handle);
+    for (let i = 0; i < contacts.length; i++) {
+        const contact = contacts[i]!;
+        const row = base + i * STRIDE;
+        u8[row + Low.KCC_CONTACT_WAS_DISCARDED] = contact.wasDiscarded ? 1 : 0;
+        const at = (row + Low.KCC_CONTACT_LINEAR_VELOCITY) >> 2;
+        f32[at] = contact.linearVelocity[0];
+        f32[at + 1] = contact.linearVelocity[1];
+        f32[at + 2] = contact.linearVelocity[2];
+        // the fourth lane as a load of the three leaves it
+        f32[at + 3] = contact.linearVelocity[2];
     }
 }
 
@@ -425,15 +382,13 @@ function layersOf(filter: Filter): Low.Filter {
     return filter.layers;
 }
 
-export type KCC = Character;
-
 /** a call that moves the character: the velocity in, the call, the state out, any error thrown */
 function moving<T>(character: KCC, call: () => T): T {
-    character.push();
+    push(character);
     Low.errorClear();
     const result = call();
     Low.getWasm().check();
-    character.pull();
+    pull(character);
     return result;
 }
 
@@ -470,8 +425,28 @@ export const KCC = {
         native.innerRigidBodyObjectLayer = settings.innerRigidBody?.objectLayer ?? 0;
         Low.errorClear();
         const handle = Low.Kcc.create(native, position, quaternion);
-        const character = new Character(handle, settings.shape);
-        character.pull();
+        const character: KCC = {
+            handle,
+            position: [0, 0, 0],
+            quaternion: [0, 0, 0, 1],
+            linearVelocity: [0, 0, 0],
+            up: [0, 1, 0],
+            ground: {
+                state: GroundState.IN_AIR,
+                normal: [0, 1, 0],
+                velocity: [0, 0, 0],
+                bodyId: INVALID_BODY_ID,
+                subShapeId: 0,
+                position: [0, 0, 0],
+            },
+            innerRigidBodyId: INVALID_BODY_ID,
+            shape: settings.shape,
+            contacts: [],
+            contactEvents: [],
+            contactPool: [],
+            eventPool: [],
+        };
+        pull(character);
         return character;
     },
     /** remove it from the world first if it was added */
@@ -645,7 +620,7 @@ export const KCC = {
     setTuning(character: KCC, given: Given<KCCTuning>): void {
         Low.Kcc.getTuning(tuning, character.handle);
         Low.Kcc.setTuning(character.handle, over(tuning, given));
-        character.pull();
+        pull(character);
     },
 
     /** on ground or on steep ground */
@@ -670,7 +645,7 @@ export const KCC = {
         copied(outQuaternion, quat, true);
     },
 
-    // the toolkit: a move's phases, for a loop of your own. each collision iteration collide, edit the rows, solve,
+    // the toolkit: a move's phases, for a loop of your own. each collision iteration collide, edit the contacts, solve,
     // cast, then advance the position by the cast's share of the displacement; after the iterations setPosition,
     // updateGround and applyWeight. update adds beginContactTracking and cancelVelocityTowardsSteepSlopes before, and
     // stickToFloor, walkStairs and endContactTracking after
@@ -708,6 +683,7 @@ export const KCC = {
         timeRemaining: number,
         policy: KCCPolicy | undefined,
     ): KCCSolveResult {
+        pushContacts(character);
         moving(character, () =>
             Low.Kcc.solve(solved, world, character.handle, velocity, deltaTime, timeRemaining, policyOf(policy)),
         );
@@ -718,7 +694,7 @@ export const KCC = {
     },
     /** the first contact sweeping by the displacement from a position, past the discarded rows: whether there is one */
     cast(
-        out: KCCSweepContact,
+        out: KCCContact,
         world: World,
         character: KCC,
         position: Vec3,
@@ -727,6 +703,7 @@ export const KCC = {
         policy: KCCPolicy | undefined,
     ): boolean {
         const layers = layersOf(filter);
+        pushContacts(character);
         Low.errorClear();
         const hit = Low.Kcc.cast(
             sweep,
@@ -752,6 +729,10 @@ export const KCC = {
         out.materialId = sweep.materialId;
         out.motionType = sweep.motionType as MotionType;
         out.isSensor = sweep.isSensor;
+        out.hadCollision = false;
+        out.wasDiscarded = false;
+        out.canPushCharacter = true;
+        out.canReceiveImpulses = true;
         return true;
     },
     /** the ground from the contacts, those near enough flagged touching unless moving away (with the velocity check) */
@@ -762,6 +743,7 @@ export const KCC = {
         skipContactVelocityCheck: boolean,
         policy: KCCPolicy | undefined,
     ): void {
+        pushContacts(character);
         moving(character, () =>
             Low.Kcc.updateGround(world, character.handle, deltaTime, skipContactVelocityCheck, policyOf(policy)),
         );

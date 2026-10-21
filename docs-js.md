@@ -929,7 +929,7 @@ for (let i = 0; i < 120; i++) {
 
 `KCC` moves a character through the world by sweeps: it walks up slopes and stairs, slides along walls, sticks to the
 floor going down, and stands on moving bodies. It is not a rigid body. Its optional inner body, a kinematic body that
-follows it, is its presence in the world for bodies, queries and contact pairs. The character is an object: its
+follows it, is its presence in the world for bodies, queries and contact pairs. The character is a plain object: its
 `position`, `quaternion`, `ground` and `contacts` are as its last call left them, and `linearVelocity` is yours to set.
 
 ```ts
@@ -1024,8 +1024,7 @@ const platform = RigidBody.create(world, {
 });
 const fromBelow = (bodyId: number, normal: Vec3): boolean => bodyId === platform && normal[1] < 0.5;
 const solved = createSolveResult();
-const hit: KCCSweepContact = createSweepContact();
-const normal: Vec3 = [0, 0, 0];
+const hit: KCCContact = createContact();
 character.linearVelocity = [0, 7, 0];
 for (let i = 0; i < 90; i++) {
     const deltaTime = 1 / 60;
@@ -1038,9 +1037,8 @@ for (let i = 0; i < 90; i++) {
         const speed = Math.hypot(...velocity);
         const direction: Vec3 = speed > 0 ? [velocity[0] / speed, velocity[1] / speed, velocity[2] / speed] : [0, 0, 0];
         KCC.collide(world, character, position, direction, filter, policy);
-        const rows = character.contacts;
-        for (let row = 0; row < rows.count; row++) {
-            if (fromBelow(rows.bodyId(row), rows.contactNormal(normal, row))) rows.setDiscarded(row, true);
+        for (const contact of character.contacts) {
+            if (fromBelow(contact.bodyId, contact.contactNormal)) contact.wasDiscarded = true;
         }
         KCC.solve(solved, world, character, velocity, deltaTime, timeRemaining, policy);
         velocity.splice(0, 3, ...solved.velocity);
@@ -1064,8 +1062,8 @@ for (let i = 0; i < 90; i++) {
 ```
 
 `collide`, `solve` and `cast` are a move's phases, as `move` runs them each collision iteration. Between `collide` and
-`solve`, a row of `character.contacts` is yours to discard (`setDiscarded`) or give another velocity
-(`setLinearVelocity`): the solve, the sweep and the ground pass over a discarded one. `update` is the same phases with
+`solve`, each of `character.contacts` is a plain object yours to edit: set its `wasDiscarded`, or give it another
+`linearVelocity`. The solve, the sweep and the ground pass over a discarded one. `update` is the same phases with
 contact tracking (`beginContactTracking`, `endContactTracking`), `cancelVelocityTowardsSteepSlopes` before, and
 `stickToFloor` and `walkStairs` after. A character's queries run in the wasm, so a filter's `bodyFilter` cannot reach
 them: set `ignore` in its policy instead.

@@ -3,14 +3,15 @@ import {
     BackFaceMode,
     Box,
     Capsule,
+    createContact,
     createDefaultUpdateSettings,
     createSolveResult,
-    createSweepContact,
     Filter,
     GroundState,
     INVALID_BODY_ID,
     init,
     KCC,
+    type KCCContact,
     KCCContactEventKind,
     KCCPolicy,
     MotionType,
@@ -91,12 +92,12 @@ function dot32(a: Vec3, b: Vec3): number {
     return f(f(f(a[0] * b[0]) + f(a[1] * b[1])) + f(a[2] * b[2]));
 }
 
-/** move from the toolkit, its own float32 arithmetic as the C++ does it, the rows open to edit between collide and solve */
+/** move from the toolkit, its own float32 arithmetic as the C++ does it, the contacts open to edit between collide and solve */
 function toolkitMove(
     scene: Scene,
     character: KCC,
     edit?: (character: KCC) => void,
-    skipHit?: (hit: ReturnType<typeof createSweepContact>) => boolean,
+    skipHit?: (hit: KCCContact) => boolean,
 ): void {
     const position: Vec3 = [...character.position];
     const velocity: Vec3 = [...character.linearVelocity];
@@ -107,7 +108,7 @@ function toolkitMove(
         direction = [f(velocity[0] * inverse), f(velocity[1] * inverse), f(velocity[2] * inverse)];
     }
     const result = createSolveResult();
-    const hit = createSweepContact();
+    const hit = createContact();
     let timeRemaining = f(DT);
     for (let iteration = 0; iteration < 5; iteration++) {
         if (timeRemaining < f(1e-4)) break;
@@ -268,15 +269,13 @@ describe('character controller', () => {
         release(scene, [character]);
     });
 
-    test('a one-way platform from your own loop: discarded rows and a skipped hit, jumped up through', async () => {
+    test('a one-way platform from your own loop: discarded contacts and a skipped hit, jumped up through', async () => {
         const scene = await makeScene();
         const platform = addBox(scene, [2, 0.1, 2], [0, 2, 0]);
         const character = KCC.create({ shape: standingShape(scene) }, [0, 0, 0], [0, 0, 0, 1]);
-        const normal: Vec3 = [0, 0, 0];
         const fromBelow = (character: KCC): void => {
-            const rows = character.contacts;
-            for (let i = 0; i < rows.count; i++) {
-                if (rows.bodyId(i) === platform && rows.contactNormal(normal, i)[1] < 0.5) rows.setDiscarded(i, true);
+            for (const contact of character.contacts) {
+                if (contact.bodyId === platform && contact.contactNormal[1] < 0.5) contact.wasDiscarded = true;
             }
         };
         character.linearVelocity = [0, 9, 0];

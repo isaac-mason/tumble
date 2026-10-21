@@ -287,7 +287,7 @@ limits outside [-pi, pi], throw a `RangeError`.
 
 `KCC` moves a character through the world by sweeps: it walks up slopes and stairs, slides along walls, sticks to the
 floor going down, and stands on moving bodies. It is not a rigid body. Its optional inner body, a kinematic body that
-follows it, is its presence in the world for bodies, queries and contact pairs. The character is an object: its
+follows it, is its presence in the world for bodies, queries and contact pairs. The character is a plain object: its
 `position`, `quaternion`, `ground` and `contacts` are as its last call left them, and `linearVelocity` is yours to set.
 
 <Snippet source="../js/docs/character.ts" select="create" />
@@ -319,8 +319,8 @@ Give every shape the character's feet as its origin, and swap them freely.
 <Snippet source="../js/docs/character.ts" select="toolkit" />
 
 `collide`, `solve` and `cast` are a move's phases, as `move` runs them each collision iteration. Between `collide` and
-`solve`, a row of `character.contacts` is yours to discard (`setDiscarded`) or give another velocity
-(`setLinearVelocity`): the solve, the sweep and the ground pass over a discarded one. `update` is the same phases with
+`solve`, each of `character.contacts` is a plain object yours to edit: set its `wasDiscarded`, or give it another
+`linearVelocity`. The solve, the sweep and the ground pass over a discarded one. `update` is the same phases with
 contact tracking (`beginContactTracking`, `endContactTracking`), `cancelVelocityTowardsSteepSlopes` before, and
 `stickToFloor` and `walkStairs` after. A character's queries run in the wasm, so a filter's `bodyFilter` cannot reach
 them: set `ignore` in its policy instead.

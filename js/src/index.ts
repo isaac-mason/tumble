@@ -44,20 +44,19 @@ export type { ContactEvent, ContactRemovedEvent, ContactSettings, Listener } fro
 export { type InitOptions, init } from './init.js';
 export {
     BackFaceMode,
+    createContact,
     createDefaultUpdateSettings,
     createSolveResult,
-    createSweepContact,
     type GroundInfo,
     GroundState,
     KCC,
     type KCCBodyPolicy,
+    type KCCContact,
     type KCCContactEvent,
     KCCContactEventKind,
-    KCCContacts,
     KCCPolicy,
     type KCCSettings,
     type KCCSolveResult,
-    type KCCSweepContact,
     type KCCTuning,
     type KCCUpdateSettings,
 } from './kcc.js';
