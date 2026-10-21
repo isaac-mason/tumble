@@ -357,14 +357,25 @@ follows it, is its presence in the world for bodies, queries and contact pairs.
 
 Give every shape the character's feet as its origin, and swap them freely.
 
-### Policy
+### Listeners and policies
+
+How the character treats the bodies it meets is a `CharacterListener`'s: crashcat's and Jolt's callbacks, each
+optional. `on_adjust_body_velocity` changes a body's velocity as the character sees it (a conveyor's belt),
+`on_contact_validate` lets the character pass through a contact, `on_contact_added` and `on_contact_persisted` set a
+contact's push settings, `on_contact_solve` changes the character's velocity against a contact, and
+`on_contact_removed` reports a contact gone. Pass the listener to each call, or null for none.
+
+<Snippet source="./cpp/character.cpp" select="listener" />
+
+A policy is per body data that `kcc_policy::listener` makes into a listener:
 
 <Snippet source="./cpp/character.cpp" select="policy" />
 
 A body's policy: `ignore` passes through it, `can_push_character` false blocks without moving the character,
 `can_receive_impulses` false keeps the character from pushing it, `slide_on_walkable` false stops the character on a
 still, walkable surface of it, and `surface_linear_velocity` and `surface_angular_velocity` move the character as a
-conveyor's belt would.
+conveyor's belt would. The JS package's characters take policies: a listener's callbacks would have to call from the
+wasm into JS.
 
 ### Your own loop
 

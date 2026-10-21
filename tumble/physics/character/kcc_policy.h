@@ -4,6 +4,7 @@
 
 #include "tumble/math/types.h"
 #include "tumble/physics/body/body_id.h"
+#include "tumble/physics/character/kcc.h"
 #include "tumble/tumble.h"
 #include "tumble/util/collections.h"
 
@@ -55,6 +56,12 @@ bool set(Policy &policy, body_id::BodyId body_id, const BodyPolicy &body_policy)
 bool remove(Policy &policy, body_id::BodyId body_id);
 /** the body's policy, or the defaults; a null policy is the BodyPolicy defaults for every body */
 const BodyPolicy &get(const Policy *policy, body_id::BodyId body_id);
+
+/**
+ * a listener that treats each body as the policy says, reading it at each callback, so changes to it apply at once.
+ * it borrows the policy, which outlives it
+ */
+kcc::CharacterListener listener(const Policy &policy);
 
 }  // namespace kcc_policy
 

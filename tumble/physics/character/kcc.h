@@ -8,7 +8,6 @@
 #include "tumble/physics/body/body_id.h"
 #include "tumble/physics/body/motion_type.h"
 #include "tumble/physics/body/sub_shape.h"
-#include "tumble/physics/character/kcc_policy.h"
 #include "tumble/physics/filter.h"
 #include "tumble/physics/shapes/shapes.h"
 #include "tumble/physics/world.h"
@@ -61,7 +60,7 @@ struct CharacterContact {
     bool is_sensor;
     /** a real collision, not only a predictive contact */
     bool had_collision;
-    /** passed over: its body ignored by the policy, a sensor once met, or the shallower of two opposing contacts on one body */
+    /** passed over: rejected by the listener, a sensor once met, or the shallower of two opposing contacts on one body */
     bool was_discarded;
     bool can_push_character;
     /** the character may apply impulses to the body */
@@ -99,7 +98,7 @@ struct GroundInfo {
     Vec3f position;
 };
 
-/** a contact's push settings, from the policy for its body */
+/** a contact's push settings, as the listener leaves them */
 struct CharacterContactSettings {
     bool can_push_character;
     /** the character may apply impulses to the body */
@@ -112,7 +111,7 @@ struct TrackedContact {
     sub_shape::SubShapeId sub_shape_id;
     /** 0 when not seen this frame */
     uint32_t count;
-    /** as the policy gave them when the contact was first met this frame */
+    /** as the listener left them when the contact was first met this frame */
     CharacterContactSettings settings;
 };
 
@@ -134,6 +133,36 @@ struct ContactEvent {
     Vec3f position;
     /** away from the character, into the body; zero for a removal */
     Vec3f normal;
+};
+
+struct KCC;
+
+/**
+ * the character's callbacks, each optional, as Jolt's CharacterContactListener: how it treats the bodies it meets.
+ * kcc_policy::listener makes one from per body data. a body given to a callback is live; normals point away from the
+ * character, into the body
+ */
+struct CharacterListener {
+    /** the body's velocities as the character sees them, before collision detection: a conveyor belt's surface */
+    void (*on_adjust_body_velocity)(const KCC &character, const rigid_body::RigidBody &body, Vec3f &io_linear_velocity,
+                                    Vec3f &io_angular_velocity, void *context);
+    /** false: the character passes through the contact */
+    bool (*on_contact_validate)(const KCC &character, const rigid_body::RigidBody &body, sub_shape::SubShapeId sub_shape_id,
+                                Vec3f contact_position, Vec3f contact_normal, void *context);
+    /** first met this frame and not touching last frame; the settings start true and are the callback's to change */
+    void (*on_contact_added)(const KCC &character, const rigid_body::RigidBody &body, sub_shape::SubShapeId sub_shape_id,
+                             Vec3f contact_position, Vec3f contact_normal, CharacterContactSettings &io_settings, void *context);
+    /** first met this frame and touching last frame too */
+    void (*on_contact_persisted)(const KCC &character, const rigid_body::RigidBody &body, sub_shape::SubShapeId sub_shape_id,
+                                 Vec3f contact_position, Vec3f contact_normal, CharacterContactSettings &io_settings,
+                                 void *context);
+    /** the character's velocity as the solve leaves it against the contact, the callback's to change */
+    void (*on_contact_solve)(const KCC &character, const rigid_body::RigidBody &body, sub_shape::SubShapeId sub_shape_id,
+                             Vec3f contact_position, Vec3f contact_normal, Vec3f contact_velocity, Vec3f character_velocity,
+                             Vec3f &io_new_character_velocity, void *context);
+    /** touching last frame, not at the end of this one; by id, as the body may have been removed */
+    void (*on_contact_removed)(const KCC &character, body_id::BodyId body_id, sub_shape::SubShapeId sub_shape_id, void *context);
+    void *context;
 };
 
 struct KCCSettings {
@@ -287,11 +316,11 @@ void set_position(world::World &world, KCC &character, Vec3f position);
 /** the inner body follows */
 void set_quaternion(world::World &world, KCC &character, Quatf quaternion);
 
-/** from the ground body, its rotation and the policy's surface velocity included */
-void update_ground_velocity(world::World &world, KCC &character, const kcc_policy::Policy *policy);
+/** from the ground body, its rotation and the listener's adjustment included */
+void update_ground_velocity(world::World &world, KCC &character, const CharacterListener *listener);
 
 /** the contacts and the ground state where the character is now; for after a teleport */
-void refresh_contacts(world::World &world, KCC &character, const filter::Filter &filter, const kcc_policy::Policy *policy);
+void refresh_contacts(world::World &world, KCC &character, const filter::Filter &filter, const CharacterListener *listener);
 
 /** this frame */
 bool has_collided_with(const KCC &character, body_id::BodyId body_id);
@@ -300,28 +329,28 @@ bool has_collided_with(const KCC &character, body_id::BodyId body_id);
 bool can_walk_stairs(const KCC &character, Vec3f linear_velocity);
 
 /** refused, false, when the new shape would penetrate deeper than max_penetration_depth; FLT_MAX skips the test */
-bool set_shape(world::World &world, KCC &character, shapes::Shape *new_shape, const filter::Filter &filter, const kcc_policy::Policy *policy,
+bool set_shape(world::World &world, KCC &character, shapes::Shape *new_shape, const filter::Filter &filter, const CharacterListener *listener,
                float max_penetration_depth);
 
 /**
  * by the velocity, with collision resolution; the ground state and the inner body follow, and a dynamic ground body is
  * pushed by the character's weight. without update's contact tracking, stairs and floor sticking
  */
-void move(world::World &world, KCC &character, float delta_time, Vec3f gravity, const kcc_policy::Policy *policy,
+void move(world::World &world, KCC &character, float delta_time, Vec3f gravity, const CharacterListener *listener,
           const filter::Filter &filter);
 
 /** sweeps down by step_down onto a floor; true if one was found */
 bool stick_to_floor(world::World &world, KCC &character, Vec3f step_down, const filter::Filter &filter,
-                    const kcc_policy::Policy *policy);
+                    const CharacterListener *listener);
 
 /** up, forward and down onto a walkable floor; true if the step succeeded */
 bool walk_stairs(world::World &world, KCC &character, float delta_time, Vec3f step_up, Vec3f step_forward,
                  Vec3f step_forward_test, Vec3f step_down_extra, const filter::Filter &filter,
-                 const kcc_policy::Policy *policy);
+                 const CharacterListener *listener);
 
 /** move with contact tracking, velocity cancelled toward steep slopes, floor sticking and stair walking */
 void update(world::World &world, KCC &character, float delta_time, Vec3f gravity, const UpdateSettings &settings,
-            const kcc_policy::Policy *policy, const filter::Filter &filter);
+            const CharacterListener *listener, const filter::Filter &filter);
 
 // a move's phases, as move runs them each collision iteration: collide, solve, cast, then the position advanced by
 // the cast's share of the displacement; after the iterations the position committed (set_position), the ground
@@ -335,22 +364,22 @@ void update(world::World &world, KCC &character, float delta_time, Vec3f gravity
  * contacts on one body the shallower discarded
  */
 void collide(world::World &world, KCC &character, Vec3f position, Vec3f movement_direction, const filter::Filter &filter,
-             const kcc_policy::Policy *policy);
+             const CharacterListener *listener);
 
 /**
  * the slide over the contacts for up to time_remaining: each contact the character moves into validated, met and
- * pushed by the policy for its body, and slid along (or two at once). velocity in and out; the displacement into
+ * pushed as the listener's settings allow, and slid along (or two at once). velocity in and out; the displacement into
  * out_displacement, and the time simulated returned
  */
-float solve(world::World &world, KCC &character, Vec3f &io_velocity, float delta_time, float time_remaining, const kcc_policy::Policy *policy,
+float solve(world::World &world, KCC &character, Vec3f &io_velocity, float delta_time, float time_remaining, const CharacterListener *listener,
             Vec3f &out_displacement);
 
 /** the first contact sweeping by the displacement from a position, past the discarded contacts: true, with it in out */
 bool cast(CharacterContact &out, world::World &world, KCC &character, Vec3f position, Vec3f displacement, const filter::Filter &filter,
-          const kcc_policy::Policy *policy);
+          const CharacterListener *listener);
 
 /** the ground from the contacts, flagging those near enough as touching unless moving away (with the velocity check) */
-void update_ground(world::World &world, KCC &character, float delta_time, bool skip_contact_velocity_check, const kcc_policy::Policy *policy);
+void update_ground(world::World &world, KCC &character, float delta_time, bool skip_contact_velocity_check, const CharacterListener *listener);
 
 /** the character's weight on a dynamic ground body, along the ground normal, over delta_time */
 void apply_weight(world::World &world, KCC &character, Vec3f gravity, float delta_time);
@@ -358,7 +387,7 @@ void apply_weight(world::World &world, KCC &character, Vec3f gravity, float delt
 /** the frame of contact tracking begun: contact_events cleared, the contacts touching now remembered */
 void begin_contact_tracking(KCC &character);
 /** the frame ended: the remembered contacts not touching now reported removed */
-void end_contact_tracking(KCC &character);
+void end_contact_tracking(KCC &character, const CharacterListener *listener);
 
 /** the velocity without its horizontal part into steep slopes the character touches, unless on ground or in the air */
 Vec3f cancel_velocity_towards_steep_slopes(const KCC &character, Vec3f velocity);

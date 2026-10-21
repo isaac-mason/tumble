@@ -1,6 +1,8 @@
+#include <float.h>
 #include <stdio.h>
 
 #include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/body/rigid_body.h"
 #include "tumble/physics/character/kcc.h"
@@ -61,6 +63,8 @@ int main() {
     // number of characters. here the crate may be pushed (until the character crouches, below)
     kcc_policy::Policy policy = kcc_policy::create();
     kcc_policy::set(policy, crate->id, {.can_receive_impulses = true});
+    // the character asks a listener: this one reads the policy, changes to it taking effect at once
+    const kcc::CharacterListener listener = kcc_policy::listener(policy);
     /* SNIPPET_END: policy */
 
     const float delta_time = 1.0f / 60.0f;
@@ -76,7 +80,7 @@ int main() {
                              : vec3f::scale(character->up, vec3f::dot(character->linear_velocity, character->up));
         velocity = vec3f::scale_and_add(velocity, gravity, delta_time);
         character->linear_velocity = vec3f::add(velocity, input);
-        kcc::update(*world, *character, delta_time, gravity, update_settings, &policy, filter);
+        kcc::update(*world, *character, delta_time, gravity, update_settings, &listener, filter);
         world::step(*world, delta_time);
     }
     printf("at x %.2f y %.2f, %s\n", vec3f::x(character->position), vec3f::y(character->position),
@@ -91,7 +95,7 @@ int main() {
     // a shorter shape, on the same feet, where it fits: refused, false, if it would sink deeper than the given depth
     shapes::Shape *crouching_capsule = capsule::create({.half_height_of_cylinder = 0.2f, .radius = 0.3f});
     shapes::Shape *crouching = transformed::create({.shape = crouching_capsule, .position = {0.0f, 0.5f, 0.0f}});
-    const bool crouched = kcc::set_shape(*world, *character, crouching, filter, &policy, 0.01f);
+    const bool crouched = kcc::set_shape(*world, *character, crouching, filter, &listener, 0.01f);
     if (crouched) kcc_policy::set(policy, crate->id, {.can_receive_impulses = false});
     /* SNIPPET_END: crouch */
     /* HIDE_START */
@@ -115,7 +119,7 @@ int main() {
     /* SNIPPET_START: contacts */
     // its contacts as data, through its inner body, in a contact pairs frame
     contact_pairs::begin(*world);
-    kcc::refresh_contacts(*world, *character, filter, &policy);
+    kcc::refresh_contacts(*world, *character, filter, &listener);
     contact_pairs::record_character_contacts(*world, *character);
     contact_pairs::end(*world);
     /* SNIPPET_END: contacts */
@@ -146,14 +150,14 @@ int main() {
         Vec3f velocity = character->linear_velocity;
         float time_remaining = delta_time;
         for (uint32_t iteration = 0; iteration < character->max_collision_iterations && time_remaining >= character->min_time_remaining; iteration++) {
-            kcc::collide(*world, *character, position, vec3f::normalize(velocity), filter, &policy);
+            kcc::collide(*world, *character, position, vec3f::normalize(velocity), filter, &listener);
             for (uint32_t i = 0; i < character->contacts.length; i++) {
                 if (from_below(character->contacts[i])) character->contacts[i].was_discarded = true;
             }
             Vec3f displacement;
-            float time_simulated = kcc::solve(*world, *character, velocity, delta_time, time_remaining, &policy, displacement);
+            float time_simulated = kcc::solve(*world, *character, velocity, delta_time, time_remaining, &listener, displacement);
             kcc::CharacterContact hit;
-            if (kcc::cast(hit, *world, *character, position, displacement, filter, &policy) && !from_below(hit)) {
+            if (kcc::cast(hit, *world, *character, position, displacement, filter, &listener) && !from_below(hit)) {
                 displacement = vec3f::scale(displacement, hit.fraction);
                 time_simulated *= hit.fraction;
             }
@@ -161,7 +165,7 @@ int main() {
             time_remaining -= time_simulated;
         }
         kcc::set_position(*world, *character, position);
-        kcc::update_ground(*world, *character, delta_time, false, &policy);
+        kcc::update_ground(*world, *character, delta_time, false, &listener);
         // landed, coming down
         if (character->ground.state == kcc::ON_GROUND && vec3f::y(character->linear_velocity) <= 0.0f) {
             character->linear_velocity = vec3f::make(0.0f, 0.0f, 0.0f);
@@ -173,6 +177,47 @@ int main() {
     // up through the platform and stood on its top at 1.9, where it jumped
     if (character->ground.body_id != platform->id || vec3f::y(character->position) < 1.89f || vec3f::y(character->position) > 1.91f) return 1;
     if (vec3f::x(character->position) != under_x) return 1;
+    /* HIDE_END */
+
+    /* HIDE_START */
+    // a slope of 20 degrees, well away from the rest
+    shapes::Shape *slope_shape = box::create({.half_extents = {4.0f, 0.2f, 4.0f}});
+    const float tilt = 0.5f * 20.0f * scalar::DEGREES_TO_RADIANS;
+    rigid_body::create(*world, {.shape = slope_shape, .object_layer = not_moving, .motion_type = motion_type::MOTION_STATIC,
+                                .position = {-20.0f, 0.0f, 0.0f}, .quaternion = {0.0f, 0.0f, scalar::sin(tilt), scalar::cos(tilt)}});
+    kcc::set_shape(*world, *character, standing, filter, nullptr, FLT_MAX);
+    /* HIDE_END */
+    /* SNIPPET_START: listener */
+    // the hooks themselves, as crashcat's and Jolt's: a listener's callbacks, each optional, called as the character meets
+    // bodies. here Jolt's sample's rule for standing still: on a still, walkable surface, the character does not slide
+    kcc::CharacterListener standing_still = {};
+    standing_still.on_contact_solve = [](const kcc::KCC &self, const rigid_body::RigidBody &, sub_shape::SubShapeId, Vec3f, Vec3f contact_normal,
+                                         Vec3f contact_velocity, Vec3f, Vec3f &io_new_character_velocity, void *) {
+        if (vec3f::squared_length(contact_velocity) <= 1e-12f && !kcc::is_slope_too_steep(self, contact_normal)) {
+            io_new_character_velocity = vec3f::zero();
+        }
+    };
+    /* SNIPPET_END: listener */
+    /* HIDE_START */
+    // stood on the slope with no input: without the listener it slides down, with it it stays
+    for (int with_listener = 0; with_listener < 2; with_listener++) {
+        kcc::set_position(*world, *character, vec3f::make(-20.0f, 1.0f, 0.0f));
+        character->linear_velocity = vec3f::zero();
+        const kcc::CharacterListener *hooks = with_listener == 1 ? &standing_still : nullptr;
+        float settled_x = 0.0f;
+        for (int i = 0; i < 120; i++) {
+            kcc::update_ground_velocity(*world, *character, hooks);
+            Vec3f velocity = character->ground.state == kcc::ON_GROUND
+                                 ? character->ground.velocity
+                                 : vec3f::scale(character->up, vec3f::dot(character->linear_velocity, character->up));
+            character->linear_velocity = vec3f::scale_and_add(velocity, gravity, delta_time);
+            kcc::update(*world, *character, delta_time, gravity, update_settings, hooks, filter);
+            world::step(*world, delta_time);
+            if (i == 59) settled_x = vec3f::x(character->position);
+        }
+        const float drift = scalar::abs(vec3f::x(character->position) - settled_x);
+        if (with_listener == 1 ? drift > 1e-4f : drift < 0.05f) return 1;
+    }
     /* HIDE_END */
 
     /* SNIPPET_START: remove */
@@ -191,5 +236,6 @@ int main() {
     box::destroy(platform_shape);
     box::destroy(step_shape);
     box::destroy(ground_shape);
+    box::destroy(slope_shape);
     return 0;
 }

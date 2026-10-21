@@ -6,7 +6,6 @@
 #include "imgui.h"
 #include "sokol_app.h"
 #include "tumble/physics/character/kcc.h"
-#include "tumble/physics/character/kcc_policy.h"
 #include "tumble/physics/constraints/distance_constraint.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/vec4f.h"
@@ -38,7 +37,7 @@ enum ShapeType { SHAPE_CAPSULE = 0, SHAPE_BOX = 1 };
 static struct {
     app::Layers layers;
     filter::Filter filter;
-    kcc_policy::Policy policy;
+    kcc::CharacterListener listener;
     kcc::UpdateSettings update_settings;
     kcc::KCC *character;
     shapes::Shape *standing[2];
@@ -47,6 +46,10 @@ static struct {
     bool crouched;
     Float3 desired_velocity;
     rigid_body::RigidBody *lava;
+    rigid_body::RigidBody *conveyor;
+    /** the input asks to move: the character may slide on walkable slopes */
+    bool allow_sliding;
+    bool in_lava;
     rigid_body::RigidBody *spinning;
     rigid_body::RigidBody *sliding;
     rigid_body::RigidBody *diagonal;
@@ -165,11 +168,8 @@ static void make_level(App &app) {
     // lava far below: falling in sends the character back to the start
     state.lava = add_static(app, box_of(app, {1000, 2, 1000}), {0, -50, 0});
     app::set_color(app, state.lava, {0.9f, 0.3f, 0.1f, 1.0f});
-    rigid_body::RigidBody *conveyor = add_static(app, box_of(app, {10, 0.25f, 2}), {0, 0, -10});
-    app::set_color(app, conveyor, {0.3f, 0.3f, 0.75f, 1.0f});
-    kcc_policy::BodyPolicy belt;
-    belt.surface_linear_velocity = {5.0f, 0.0f, 0.0f};
-    kcc_policy::set(state.policy, conveyor->id, belt);
+    state.conveyor = add_static(app, box_of(app, {10, 0.25f, 2}), {0, 0, -10});
+    app::set_color(app, state.conveyor, {0.3f, 0.3f, 0.75f, 1.0f});
 
     add_static(app, box_of(app, {50, 0.5f, 50}), {0, -0.5f, 0});
     shapes::Shape *wall = box_of(app, {0.5f, 2, 45});
@@ -251,6 +251,25 @@ static void make_level(App &app) {
     }
 }
 
+// crashcat's listener: the conveyor's surface, the lava, and no sliding while standing still
+
+static void on_adjust_body_velocity(const kcc::KCC &, const rigid_body::RigidBody &body, Vec3f &io_linear_velocity, Vec3f &, void *) {
+    // the belt seems to move: 5 m/s along x
+    if (body.id == state.conveyor->id) io_linear_velocity = vec3f::add(io_linear_velocity, vec3f::make(5.0f, 0.0f, 0.0f));
+}
+
+static bool on_contact_validate(const kcc::KCC &, const rigid_body::RigidBody &body, sub_shape::SubShapeId, Vec3f, Vec3f, void *) {
+    if (body.id == state.lava->id) state.in_lava = true;
+    return true;
+}
+
+static void on_contact_solve(const kcc::KCC &character, const rigid_body::RigidBody &, sub_shape::SubShapeId, Vec3f, Vec3f contact_normal,
+                             Vec3f contact_velocity, Vec3f, Vec3f &io_new_character_velocity, void *) {
+    if (!state.allow_sliding && vec3f::squared_length(contact_velocity) < 1e-6f && !kcc::is_slope_too_steep(character, contact_normal)) {
+        io_new_character_velocity = vec3f::zero();
+    }
+}
+
 static void init(App &app) {
     state = {};
     state.walk_stairs = true;
@@ -258,7 +277,10 @@ static void init(App &app) {
     app.world = app::create_world(state.layers, GRAVITY);
     state.filter = filter::create(app.world->settings.layers);
     filter::set_from_layer(state.filter, app.world->settings.layers, state.layers.moving, 0xffffffffu, 0xffffffffu);
-    state.policy = kcc_policy::create();
+    state.listener = {};
+    state.listener.on_adjust_body_velocity = on_adjust_body_velocity;
+    state.listener.on_contact_validate = on_contact_validate;
+    state.listener.on_contact_solve = on_contact_solve;
     make_level(app);
     make_character_shapes(app);
     make_character(app);
@@ -269,7 +291,7 @@ static void set_crouched(App &app, bool crouched) {
     if (crouched == state.crouched) return;
     shapes::Shape *shape = crouched ? state.crouching[state.shape_type] : state.standing[state.shape_type];
     // only where it fits
-    if (!kcc::set_shape(*app.world, *state.character, shape, state.filter, &state.policy, 0.1f)) return;
+    if (!kcc::set_shape(*app.world, *state.character, shape, state.filter, &state.listener, 0.1f)) return;
     state.crouched = crouched;
     state.character->supporting_volume_plane = vec4f::make(0.0f, 1.0f, 0.0f, -(crouched ? RADIUS_CROUCHING : RADIUS_STANDING));
 }
@@ -299,18 +321,17 @@ static void steer(App &app, float delta_time) {
 
     const bool controls_horizontal = CONTROL_MOVEMENT_DURING_JUMP || kcc::is_supported(character);
     // no sliding down walkable slopes while standing still; in the air, slide
-    bool allow_sliding = true;
+    state.allow_sliding = true;
     if (controls_horizontal) {
-        allow_sliding = length > 1e-6f;
+        state.allow_sliding = length > 1e-6f;
         if (ENABLE_INERTIA) {
             state.desired_velocity = vec::add(vec::scale(state.desired_velocity, 0.75f), vec::scale(direction, 0.25f * SPEED));
         } else {
             state.desired_velocity = vec::scale(direction, SPEED);
         }
     }
-    state.policy.defaults.slide_on_walkable = allow_sliding;
 
-    kcc::update_ground_velocity(*app.world, character, &state.policy);
+    kcc::update_ground_velocity(*app.world, character, &state.listener);
     const Float3 up = f3(character.up);
     const Float3 velocity = f3(character.linear_velocity);
     const Float3 vertical = vec::scale(up, vec::dot(velocity, up));
@@ -332,6 +353,12 @@ static void steer(App &app, float delta_time) {
 
 static void step(App &app, float delta_time) {
     kcc::KCC &character = *state.character;
+    if (state.in_lava) {
+        kcc::set_position(*app.world, character, v3(SPAWN));
+        character.linear_velocity = vec3f::zero();
+        app.camera.target = SPAWN;
+        state.in_lava = false;
+    }
     const Float3 up = f3(character.up);
     state.update_settings.stick_to_floor_step_down = state.stick_to_floor ? vec::scale(up, -0.5f) : Float3{0, 0, 0};
     state.update_settings.walk_stairs_step_up = state.walk_stairs ? vec::scale(up, 0.4f) : Float3{0, 0, 0};
@@ -341,20 +368,11 @@ static void step(App &app, float delta_time) {
     move_platforms(app, delta_time);
 
     const Float3 before = f3(character.position);
-    kcc::update(*app.world, character, delta_time, v3(GRAVITY), state.update_settings, &state.policy, state.filter);
+    kcc::update(*app.world, character, delta_time, v3(GRAVITY), state.update_settings, &state.listener, state.filter);
     // the camera follows
     const Float3 moved = vec::subtract(f3(character.position), before);
     app.camera.target = vec::add(app.camera.target, moved);
 
-    for (uint32_t i = 0; i < character.contact_events.length; i++) {
-        const kcc::ContactEvent &event = character.contact_events[i];
-        if (event.kind == kcc::CONTACT_ADDED && event.body_id == state.lava->id) {
-            kcc::set_position(*app.world, character, v3(SPAWN));
-            character.linear_velocity = vec3f::zero();
-            app.camera.target = SPAWN;
-            break;
-        }
-    }
     state.steps++;
 }
 
@@ -419,7 +437,6 @@ static void ui(App &app) {
 
 static void shutdown(App &app) {
     release_character(app);
-    kcc_policy::release(state.policy);
     filter::release(state.filter);
 }
 

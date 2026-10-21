@@ -64,7 +64,7 @@ it shows.
   - [Motors and springs](#motors-and-springs)
 - [Character controller](#character-controller)
   - [Changing shape](#changing-shape)
-  - [Policy](#policy)
+  - [Listeners and policies](#listeners-and-policies)
   - [Your own loop](#your-own-loop)
   - [Contacts](#contacts)
 - [Custom shapes](#custom-shapes)
@@ -1023,7 +1023,7 @@ for (int frame = 0; frame < 180; frame++) {
                          : vec3f::scale(character->up, vec3f::dot(character->linear_velocity, character->up));
     velocity = vec3f::scale_and_add(velocity, gravity, delta_time);
     character->linear_velocity = vec3f::add(velocity, input);
-    kcc::update(*world, *character, delta_time, gravity, update_settings, &policy, filter);
+    kcc::update(*world, *character, delta_time, gravity, update_settings, &listener, filter);
     world::step(*world, delta_time);
 }
 printf("at x %.2f y %.2f, %s\n", vec3f::x(character->position), vec3f::y(character->position),
@@ -1039,25 +1039,48 @@ printf("at x %.2f y %.2f, %s\n", vec3f::x(character->position), vec3f::y(charact
 // a shorter shape, on the same feet, where it fits: refused, false, if it would sink deeper than the given depth
 shapes::Shape *crouching_capsule = capsule::create({.half_height_of_cylinder = 0.2f, .radius = 0.3f});
 shapes::Shape *crouching = transformed::create({.shape = crouching_capsule, .position = {0.0f, 0.5f, 0.0f}});
-const bool crouched = kcc::set_shape(*world, *character, crouching, filter, &policy, 0.01f);
+const bool crouched = kcc::set_shape(*world, *character, crouching, filter, &listener, 0.01f);
 if (crouched) kcc_policy::set(policy, crate->id, {.can_receive_impulses = false});
 ```
 
 Give every shape the character's feet as its origin, and swap them freely.
 
-### Policy
+### Listeners and policies
+
+How the character treats the bodies it meets is a `CharacterListener`'s: crashcat's and Jolt's callbacks, each
+optional. `on_adjust_body_velocity` changes a body's velocity as the character sees it (a conveyor's belt),
+`on_contact_validate` lets the character pass through a contact, `on_contact_added` and `on_contact_persisted` set a
+contact's push settings, `on_contact_solve` changes the character's velocity against a contact, and
+`on_contact_removed` reports a contact gone. Pass the listener to each call, or null for none.
+
+```cpp
+// the hooks themselves, as crashcat's and Jolt's: a listener's callbacks, each optional, called as the character meets
+// bodies. here Jolt's sample's rule for standing still: on a still, walkable surface, the character does not slide
+kcc::CharacterListener standing_still = {};
+standing_still.on_contact_solve = [](const kcc::KCC &self, const rigid_body::RigidBody &, sub_shape::SubShapeId, Vec3f, Vec3f contact_normal,
+                                     Vec3f contact_velocity, Vec3f, Vec3f &io_new_character_velocity, void *) {
+    if (vec3f::squared_length(contact_velocity) <= 1e-12f && !kcc::is_slope_too_steep(self, contact_normal)) {
+        io_new_character_velocity = vec3f::zero();
+    }
+};
+```
+
+A policy is per body data that `kcc_policy::listener` makes into a listener:
 
 ```cpp
 // how characters treat the bodies they meet, by body, the rest taking the policy's defaults; one policy serves any
 // number of characters. here the crate may be pushed (until the character crouches, below)
 kcc_policy::Policy policy = kcc_policy::create();
 kcc_policy::set(policy, crate->id, {.can_receive_impulses = true});
+// the character asks a listener: this one reads the policy, changes to it taking effect at once
+const kcc::CharacterListener listener = kcc_policy::listener(policy);
 ```
 
 A body's policy: `ignore` passes through it, `can_push_character` false blocks without moving the character,
 `can_receive_impulses` false keeps the character from pushing it, `slide_on_walkable` false stops the character on a
 still, walkable surface of it, and `surface_linear_velocity` and `surface_angular_velocity` move the character as a
-conveyor's belt would.
+conveyor's belt would. The JS package's characters take policies: a listener's callbacks would have to call from the
+wasm into JS.
 
 ### Your own loop
 
@@ -1079,14 +1102,14 @@ for (int frame = 0; frame < 90; frame++) {
     Vec3f velocity = character->linear_velocity;
     float time_remaining = delta_time;
     for (uint32_t iteration = 0; iteration < character->max_collision_iterations && time_remaining >= character->min_time_remaining; iteration++) {
-        kcc::collide(*world, *character, position, vec3f::normalize(velocity), filter, &policy);
+        kcc::collide(*world, *character, position, vec3f::normalize(velocity), filter, &listener);
         for (uint32_t i = 0; i < character->contacts.length; i++) {
             if (from_below(character->contacts[i])) character->contacts[i].was_discarded = true;
         }
         Vec3f displacement;
-        float time_simulated = kcc::solve(*world, *character, velocity, delta_time, time_remaining, &policy, displacement);
+        float time_simulated = kcc::solve(*world, *character, velocity, delta_time, time_remaining, &listener, displacement);
         kcc::CharacterContact hit;
-        if (kcc::cast(hit, *world, *character, position, displacement, filter, &policy) && !from_below(hit)) {
+        if (kcc::cast(hit, *world, *character, position, displacement, filter, &listener) && !from_below(hit)) {
             displacement = vec3f::scale(displacement, hit.fraction);
             time_simulated *= hit.fraction;
         }
@@ -1094,7 +1117,7 @@ for (int frame = 0; frame < 90; frame++) {
         time_remaining -= time_simulated;
     }
     kcc::set_position(*world, *character, position);
-    kcc::update_ground(*world, *character, delta_time, false, &policy);
+    kcc::update_ground(*world, *character, delta_time, false, &listener);
     // landed, coming down
     if (character->ground.state == kcc::ON_GROUND && vec3f::y(character->linear_velocity) <= 0.0f) {
         character->linear_velocity = vec3f::make(0.0f, 0.0f, 0.0f);
@@ -1124,7 +1147,7 @@ printf("touching %u bodies\n", touching);
 ```cpp
 // its contacts as data, through its inner body, in a contact pairs frame
 contact_pairs::begin(*world);
-kcc::refresh_contacts(*world, *character, filter, &policy);
+kcc::refresh_contacts(*world, *character, filter, &listener);
 contact_pairs::record_character_contacts(*world, *character);
 contact_pairs::end(*world);
 ```

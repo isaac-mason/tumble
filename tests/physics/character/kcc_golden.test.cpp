@@ -5,6 +5,7 @@
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/character/kcc.h"
+#include "tumble/physics/character/kcc_policy.h"
 #include "tumble/physics/shapes/transformed.h"
 #include "tumble/physics/shapes/triangle_mesh.h"
 #include "tumble/physics/shapes/utils/triangle_mesh_builder.h"
@@ -70,6 +71,7 @@ struct Rules {
     LogEntry log[MAX_LOG];
     uint32_t log_count = 0;
     kcc_policy::Policy policy = kcc_policy::create();
+    kcc::CharacterListener listener;
 
     Rules() = default;
     Rules(const Rules &) = delete;
@@ -82,8 +84,12 @@ void log_entry(Rules &rules, uint32_t kind, body_id::BodyId id, sub_shape::SubSh
     if (id == rules.watched && kind == kcc::CONTACT_REMOVED) rules.watched_removed = true;
 }
 
-/** the events of the character's last tracked call (update, refresh_contacts, set_shape) into the log */
+/** the frames run with the hand-written listener below in place of the policy's, for test_kcc_golden_hand_written_listener */
+bool use_hand_written = false;
+
+/** the events of the character's last tracked call (update, refresh_contacts, set_shape) into the log; the hand-written listener logs its own */
 void log_events(Rules &rules, const kcc::KCC &character) {
+    if (use_hand_written) return;
     for (uint32_t i = 0; i < character.contact_events.length; i++) {
         const kcc::ContactEvent &event = character.contact_events[i];
         log_entry(rules, event.kind, event.body_id, event.sub_shape_id);
@@ -94,15 +100,63 @@ void set_body(kcc_policy::Policy &policy, body_id::BodyId body_id, const kcc_pol
     if (body_id != body_id::INVALID_BODY_ID) kcc_policy::set(policy, body_id, body_policy);
 }
 
-/** the policy the rules make, as of this frame */
-const kcc_policy::Policy *policy_of(Rules &rules) {
+void settings_for(const Rules &rules, const RigidBody &body, kcc::CharacterContactSettings &io_settings) {
+    if (body.id == rules.unpushable) io_settings.can_receive_impulses = false;
+    if (body.id == rules.cannot_push_character) io_settings.can_push_character = false;
+}
+
+// the rules as a listener's callbacks, written as crashcat's and Jolt's samples write them, logging what they are told
+
+void on_adjust(const kcc::KCC &, const RigidBody &body, Vec3f &io_linear_velocity, Vec3f &, void *context) {
+    const Rules &rules = *static_cast<const Rules *>(context);
+    if (body.id == rules.conveyor) io_linear_velocity = vec3f::add(io_linear_velocity, vec3f::make(2.0f, 0.0f, 0.0f));
+}
+
+bool on_validate(const kcc::KCC &, const RigidBody &body, sub_shape::SubShapeId, Vec3f, Vec3f, void *context) {
+    return body.id != static_cast<const Rules *>(context)->ignored;
+}
+
+void on_added(const kcc::KCC &, const RigidBody &body, sub_shape::SubShapeId sub_shape_id, Vec3f, Vec3f,
+              kcc::CharacterContactSettings &io_settings, void *context) {
+    Rules &rules = *static_cast<Rules *>(context);
+    settings_for(rules, body, io_settings);
+    log_entry(rules, kcc::CONTACT_ADDED, body.id, sub_shape_id);
+}
+
+void on_persisted(const kcc::KCC &, const RigidBody &body, sub_shape::SubShapeId sub_shape_id, Vec3f, Vec3f,
+                  kcc::CharacterContactSettings &io_settings, void *context) {
+    Rules &rules = *static_cast<Rules *>(context);
+    settings_for(rules, body, io_settings);
+    log_entry(rules, kcc::CONTACT_PERSISTED, body.id, sub_shape_id);
+}
+
+/** jolt's sample: no sliding down a still, walkable surface */
+void on_solve(const kcc::KCC &character, const RigidBody &, sub_shape::SubShapeId, Vec3f, Vec3f contact_normal, Vec3f contact_velocity,
+              Vec3f, Vec3f &io_new_character_velocity, void *context) {
+    const Rules &rules = *static_cast<const Rules *>(context);
+    if (rules.slide_prevention && vec3f::squared_length(contact_velocity) <= 1e-12f && !kcc::is_slope_too_steep(character, contact_normal)) {
+        io_new_character_velocity = vec3f::make(0.0f, 0.0f, 0.0f);
+    }
+}
+
+void on_removed(const kcc::KCC &, body_id::BodyId id, sub_shape::SubShapeId sub_shape_id, void *context) {
+    log_entry(*static_cast<Rules *>(context), kcc::CONTACT_REMOVED, id, sub_shape_id);
+}
+
+/** the listener the rules make, as of this frame: the policy's, or the hand-written one */
+const kcc::CharacterListener *listener_of(Rules &rules) {
+    if (use_hand_written) {
+        rules.listener = {on_adjust, on_validate, on_added, on_persisted, on_solve, on_removed, &rules};
+        return &rules.listener;
+    }
     kcc_policy::Policy &policy = rules.policy;
     policy.defaults.slide_on_walkable = !rules.slide_prevention;
     set_body(policy, rules.conveyor, {.surface_linear_velocity = {2.0f, 0.0f, 0.0f}});
     set_body(policy, rules.unpushable, {.can_receive_impulses = false});
     set_body(policy, rules.ignored, {.ignore = true});
     set_body(policy, rules.cannot_push_character, {.can_push_character = false});
-    return &policy;
+    rules.listener = kcc_policy::listener(policy);
+    return &rules.listener;
 }
 
 /** a frame's log in one order, whichever order it was reported in */
@@ -178,7 +232,7 @@ struct Golden {
 bool use_toolkit = false;
 
 /** move, from the toolkit's phases alone, as a caller's own loop would run them */
-void toolkit_move(world::World &world, kcc::KCC &character, float delta_time, Vec3f gravity, const kcc_policy::Policy *policy,
+void toolkit_move(world::World &world, kcc::KCC &character, float delta_time, Vec3f gravity, const kcc::CharacterListener *listener,
                   const filter::Filter &filter) {
     if (delta_time <= 0.0f) return;
     Vec3f position = character.position;
@@ -189,11 +243,11 @@ void toolkit_move(world::World &world, kcc::KCC &character, float delta_time, Ve
     float time_remaining = delta_time;
     for (uint32_t iteration = 0; iteration < character.max_collision_iterations; iteration++) {
         if (time_remaining < character.min_time_remaining) break;
-        kcc::collide(world, character, position, direction, filter, policy);
+        kcc::collide(world, character, position, direction, filter, listener);
         Vec3f displacement;
-        float time_simulated = kcc::solve(world, character, velocity, delta_time, time_remaining, policy, displacement);
+        float time_simulated = kcc::solve(world, character, velocity, delta_time, time_remaining, listener, displacement);
         kcc::CharacterContact hit;
-        if (kcc::cast(hit, world, character, position, displacement, filter, policy)) {
+        if (kcc::cast(hit, world, character, position, displacement, filter, listener)) {
             displacement = vec3f::scale(displacement, hit.fraction);
             time_simulated *= hit.fraction;
         }
@@ -202,26 +256,26 @@ void toolkit_move(world::World &world, kcc::KCC &character, float delta_time, Ve
         if (vec3f::squared_length(displacement) < 1e-8f) break;
     }
     kcc::set_position(world, character, position);
-    kcc::update_ground(world, character, delta_time, false, policy);
+    kcc::update_ground(world, character, delta_time, false, listener);
     kcc::apply_weight(world, character, gravity, delta_time);
 }
 
 /** update, from the toolkit's phases and the public calls alone: proof a caller's loop can do all update does */
 void toolkit_update(world::World &world, kcc::KCC &character, float delta_time, Vec3f gravity, const kcc::UpdateSettings &settings,
-                    const kcc_policy::Policy *policy, const filter::Filter &filter) {
+                    const kcc::CharacterListener *listener, const filter::Filter &filter) {
     kcc::begin_contact_tracking(character);
     const Vec3f desired_velocity = character.linear_velocity;
     character.linear_velocity = kcc::cancel_velocity_towards_steep_slopes(character, desired_velocity);
     const Vec3f old_position = character.position;
     bool ground_to_air = kcc::is_supported(character);
 
-    toolkit_move(world, character, delta_time, gravity, policy, filter);
+    toolkit_move(world, character, delta_time, gravity, listener, filter);
 
     if (kcc::is_supported(character)) ground_to_air = false;
     if (ground_to_air && vec3f::squared_length(vec3f::load(settings.stick_to_floor_step_down)) > 1e-12f) {
         const Vec3f step = vec3f::subtract(character.position, old_position);
         if (vec3f::dot(step, character.up) / delta_time <= 1e-6f) {
-            kcc::stick_to_floor(world, character, vec3f::load(settings.stick_to_floor_step_down), filter, policy);
+            kcc::stick_to_floor(world, character, vec3f::load(settings.stick_to_floor_step_down), filter, listener);
         }
     }
     if (vec3f::squared_length(vec3f::load(settings.walk_stairs_step_up)) > 1e-12f) {
@@ -244,11 +298,11 @@ void toolkit_update(world::World &world, kcc::KCC &character, float delta_time, 
                 if (vec3f::dot(step_forward_test, forward) < settings.walk_stairs_cos_angle_forward_contact) step_forward_test = forward;
                 step_forward_test = vec3f::scale(step_forward_test, settings.walk_stairs_step_forward_test);
                 kcc::walk_stairs(world, character, delta_time, vec3f::load(settings.walk_stairs_step_up), step_forward, step_forward_test,
-                                 vec3f::load(settings.walk_stairs_step_down_extra), filter, policy);
+                                 vec3f::load(settings.walk_stairs_step_down_extra), filter, listener);
             }
         }
     }
-    kcc::end_contact_tracking(character);
+    kcc::end_contact_tracking(character, listener);
 }
 
 /**
@@ -257,14 +311,14 @@ void toolkit_update(world::World &world, kcc::KCC &character, float delta_time, 
  */
 void frame(Golden &golden, world::World &world, kcc::KCC &character, Vec3f input, const kcc::UpdateSettings &settings,
            const filter::Filter &filter, Rules *rules) {
-    const kcc_policy::Policy *policy = rules != nullptr ? policy_of(*rules) : nullptr;
-    kcc::update_ground_velocity(world, character, policy);
+    const kcc::CharacterListener *listener = rules != nullptr ? listener_of(*rules) : nullptr;
+    kcc::update_ground_velocity(world, character, listener);
     Vec3f velocity = character.ground.state == kcc::ON_GROUND ? character.ground.velocity
                                                               : vec3f::scale(character.up, vec3f::dot(character.linear_velocity, character.up));
     velocity = vec3f::scale_and_add(velocity, vec3f::load(GRAVITY), DT);
     character.linear_velocity = vec3f::add(velocity, input);
-    if (use_toolkit) toolkit_update(world, character, DT, vec3f::load(GRAVITY), settings, policy, filter);
-    else kcc::update(world, character, DT, vec3f::load(GRAVITY), settings, policy, filter);
+    if (use_toolkit) toolkit_update(world, character, DT, vec3f::load(GRAVITY), settings, listener, filter);
+    else kcc::update(world, character, DT, vec3f::load(GRAVITY), settings, listener, filter);
     if (rules != nullptr) log_events(*rules, character);
     step_world(world, DT);
     hash_frame(golden.physics, world, character);
@@ -571,12 +625,12 @@ void test_kcc_golden_crouch_teleport_and_a_sensor(TestCtx &ctx) {
     Golden golden;
     for (int i = 0; i < 360; i++) {
         if (i == 40) {
-            CHECK(ctx, kcc::set_shape(world, *character, crouching, filter, policy_of(rules), 0.01f));
+            CHECK(ctx, kcc::set_shape(world, *character, crouching, filter, listener_of(rules), 0.01f));
             log_events(rules, *character);
         }
         if (i == 120 || i == 200) {
             // refused, it begins no frame: the events are still the last update's, already logged
-            const bool stood = kcc::set_shape(world, *character, standing, filter, policy_of(rules), 0.01f);
+            const bool stood = kcc::set_shape(world, *character, standing, filter, listener_of(rules), 0.01f);
             if (stood) log_events(rules, *character);
             // under the ceiling at x 4, then past it at x 6.7
             CHECK(ctx, stood == (i == 200));
@@ -584,7 +638,7 @@ void test_kcc_golden_crouch_teleport_and_a_sensor(TestCtx &ctx) {
         }
         if (i == 240) {
             kcc::set_position(world, *character, vec3f::make(-1.0f, 0.0f, 0.0f));
-            kcc::refresh_contacts(world, *character, filter, policy_of(rules));
+            kcc::refresh_contacts(world, *character, filter, listener_of(rules));
             log_events(rules, *character);
         }
         const Vec3f input = i < 220 ? vec3f::make(2.0f, 0.0f, 0.0f) : vec3f::make(-2.5f, 0.0f, 0.0f);
@@ -749,4 +803,22 @@ void test_kcc_golden_toolkit_composes_update(TestCtx &ctx) {
     test_kcc_golden_pusher_that_cannot_push(ctx);
     test_kcc_golden_slide_prevention(ctx);
     use_toolkit = false;
+}
+
+// every scene again, its rules as a hand-written listener in place of the policy's: the same, bit for bit, events and all
+void test_kcc_golden_hand_written_listener(TestCtx &ctx) {
+    use_hand_written = true;
+    test_kcc_golden_steps_up_and_down(ctx);
+    test_kcc_golden_slopes(ctx);
+    test_kcc_golden_walls_and_a_wedge(ctx);
+    test_kcc_golden_platforms(ctx);
+    test_kcc_golden_pushing_and_standing_on_dynamics(ctx);
+    test_kcc_golden_mesh_terrain(ctx);
+    test_kcc_golden_crouch_teleport_and_a_sensor(ctx);
+    test_kcc_golden_conveyor(ctx);
+    test_kcc_golden_unpushable_crate(ctx);
+    test_kcc_golden_ignored_wall(ctx);
+    test_kcc_golden_pusher_that_cannot_push(ctx);
+    test_kcc_golden_slide_prevention(ctx);
+    use_hand_written = false;
 }

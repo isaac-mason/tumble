@@ -272,13 +272,8 @@ static Vec3f calculate_character_ground_velocity(const KCC &character, Vec3f bod
     return linear_velocity;
 }
 
-static bool is_zero(const Float3 &v) { return v.x == 0.0f && v.y == 0.0f && v.z == 0.0f; }
-
-/**
- * the body's velocities (zero for static) with the policy's surface velocity for it added (a conveyor belt on a static
- * body); a zero surface velocity adds nothing, so a body's -0 stays -0
- */
-static void get_adjusted_body_velocity(const RigidBody &body, const kcc_policy::Policy *policy, Vec3f &out_linear_velocity,
+/** the body's velocities (zero for static), as the listener adjusts them (a conveyor belt on a static body) */
+static void get_adjusted_body_velocity(const KCC &character, const RigidBody &body, const CharacterListener *listener, Vec3f &out_linear_velocity,
                                        Vec3f &out_angular_velocity) {
     if (body.motion_type == motion_type::MOTION_DYNAMIC || body.motion_type == motion_type::MOTION_KINEMATIC) {
         out_linear_velocity = vec3f::load(body.motion_properties.linear_velocity);
@@ -288,13 +283,13 @@ static void get_adjusted_body_velocity(const RigidBody &body, const kcc_policy::
         out_angular_velocity = vec3f::make(0.0f, 0.0f, 0.0f);
     }
 
-    const kcc_policy::BodyPolicy &own = kcc_policy::get(policy, body.id);
-    if (!is_zero(own.surface_linear_velocity)) out_linear_velocity = vec3f::add(out_linear_velocity, vec3f::load(own.surface_linear_velocity));
-    if (!is_zero(own.surface_angular_velocity)) out_angular_velocity = vec3f::add(out_angular_velocity, vec3f::load(own.surface_angular_velocity));
+    if (listener != nullptr && listener->on_adjust_body_velocity != nullptr) {
+        listener->on_adjust_body_velocity(character, body, out_linear_velocity, out_angular_velocity, listener->context);
+    }
 }
 
 /** a contact's properties from a hit on `body`: position on the body, normals, distance, ids, motion type and point velocity */
-static void fill_contact_properties(CharacterContact &contact, const KCC &character, const RigidBody &body, const kcc_policy::Policy *policy,
+static void fill_contact_properties(CharacterContact &contact, const KCC &character, const RigidBody &body, const CharacterListener *listener,
                                     Vec3f point_b, Vec3f contact_normal, float distance, sub_shape::SubShapeId sub_shape_id,
                                     int32_t material_id) {
     // position is the contact point on shape b (the world body)
@@ -323,17 +318,21 @@ static void fill_contact_properties(CharacterContact &contact, const KCC &charac
 
     // point velocity: v_point = v_linear + w x (position - centre of mass)
     Vec3f linear_velocity, angular_velocity;
-    get_adjusted_body_velocity(body, policy, linear_velocity, angular_velocity);
+    get_adjusted_body_velocity(character, body, listener, linear_velocity, angular_velocity);
     Vec3f r = vec3f::subtract(contact.position, vec3f::load(body.center_of_mass_position));
     const Vec3f angular_component = vec3f::cross(angular_velocity, r);
     contact.linear_velocity = vec3f::add(linear_velocity, angular_component);
 }
 
 
-/** false when the policy ignores the contact's body; a removed body's contact is kept */
-static bool validate_contact(World &world, const CharacterContact &contact, const kcc_policy::Policy *policy) {
-    if (rigid_body::get(world, contact.body_id) == nullptr) return true;
-    return !kcc_policy::get(policy, contact.body_id).ignore;
+/** false when the listener rejects the contact; a removed body's contact is kept */
+static bool validate_contact(World &world, const KCC &character, const CharacterContact &contact, const CharacterListener *listener) {
+    if (listener == nullptr || listener->on_contact_validate == nullptr) return true;
+    const RigidBody *body = rigid_body::get(world, contact.body_id);
+    if (body == nullptr) return true;
+    // the contact normal points toward the character, the callback's into the body
+    return listener->on_contact_validate(character, *body, contact.sub_shape_id, contact.position, vec3f::negate(contact.contact_normal),
+                                         listener->context);
 }
 
 static void push_event(KCC &character, ContactEventKind kind, const CharacterContact &contact) {
@@ -341,20 +340,21 @@ static void push_event(KCC &character, ContactEventKind kind, const CharacterCon
 }
 
 /**
- * the contact met: added, or persisted the first time this frame, with its settings from the policy for its body; met
- * again this frame, the settings it was first given
+ * the contact met: added, or persisted the first time this frame, its settings the listener's to change; met again this
+ * frame, the settings it was first given
  */
-static void contact_added(World &world, KCC &character, const CharacterContact &contact, const kcc_policy::Policy *policy,
+static void contact_added(World &world, KCC &character, const CharacterContact &contact, const CharacterListener *listener,
                           CharacterContactSettings &io_settings) {
     const RigidBody *body = rigid_body::get(world, contact.body_id);
+    const Vec3f normal = vec3f::negate(contact.contact_normal);
 
     TrackedContact *tracked = find_tracked_contact(character, contact.body_id, contact.sub_shape_id);
     if (tracked != nullptr) {
         if (++tracked->count == 1) {
             if (body != nullptr) {
-                const kcc_policy::BodyPolicy &own = kcc_policy::get(policy, contact.body_id);
-                io_settings.can_push_character = own.can_push_character;
-                io_settings.can_receive_impulses = own.can_receive_impulses;
+                if (listener != nullptr && listener->on_contact_persisted != nullptr) {
+                    listener->on_contact_persisted(character, *body, contact.sub_shape_id, contact.position, normal, io_settings, listener->context);
+                }
                 push_event(character, CONTACT_PERSISTED, contact);
             }
             tracked->settings = io_settings;
@@ -363,9 +363,9 @@ static void contact_added(World &world, KCC &character, const CharacterContact &
         }
     } else {
         if (body != nullptr) {
-            const kcc_policy::BodyPolicy &own = kcc_policy::get(policy, contact.body_id);
-            io_settings.can_push_character = own.can_push_character;
-            io_settings.can_receive_impulses = own.can_receive_impulses;
+            if (listener != nullptr && listener->on_contact_added != nullptr) {
+                listener->on_contact_added(character, *body, contact.sub_shape_id, contact.position, normal, io_settings, listener->context);
+            }
             push_event(character, CONTACT_ADDED, contact);
         }
         TrackedContact *value = acquire_tracked_contact(character, contact.body_id, contact.sub_shape_id);
@@ -381,7 +381,7 @@ static void contact_added(World &world, KCC &character, const CharacterContact &
 struct CollideCollectorContext {
     World *world;
     const KCC *character;
-    const kcc_policy::Policy *policy;
+    const CharacterListener *listener;
     collections::Vec<CharacterContact> *contacts;
     uint32_t max_hits;
     bool max_hits_exceeded;
@@ -440,7 +440,7 @@ static void character_collide_add_hit(collide_shape::CollideShapeCollector &coll
     }
 
     // distance is negative penetration (negative = penetrating); a static collision has no sweep fraction
-    fill_contact_properties(*contact, *context.character, *body, context.policy, hit.point_b, contact_normal, -hit.penetration,
+    fill_contact_properties(*contact, *context.character, *body, context.listener, hit.point_b, contact_normal, -hit.penetration,
                             hit.sub_shape_id_b, hit.material_id_b);
     contact->fraction = 0.0f;
     contact->had_collision = false;
@@ -464,7 +464,7 @@ static void sort_contacts(collections::Vec<CharacterContact> &contacts) {
  * off their distances. `contacts` is cleared first
  */
 static void get_contacts_at_position(KCC &character, World &world, Vec3f position, Vec3f movement_direction,
-                                     const filter::Filter &filter, const kcc_policy::Policy *policy, collections::Vec<CharacterContact> &contacts) {
+                                     const filter::Filter &filter, const CharacterListener *listener, collections::Vec<CharacterContact> &contacts) {
     contacts.length = 0;
 
     const Transformf transform = shape_transform_at(character, position);
@@ -477,7 +477,7 @@ static void get_contacts_at_position(KCC &character, World &world, Vec3f positio
     settings.active_edge_movement_direction = movement_direction;
     settings.collide_only_with_active_edges = true;
 
-    CollideCollectorContext context = {&world, &character, policy, &contacts, character.max_num_hits, false, character.hit_reduction_cos_max_angle};
+    CollideCollectorContext context = {&world, &character, listener, &contacts, character.max_num_hits, false, character.hit_reduction_cos_max_angle};
     collide_shape::CollideShapeCollector collector = collide_shape::create_collector(collector::COLLECT_CUSTOM);
     collector.custom_add_hit = character_collide_add_hit;
     collector.custom_should_early_out = character_collide_should_early_out;
@@ -503,7 +503,7 @@ static void get_contacts_at_position(KCC &character, World &world, Vec3f positio
 struct CastCollectorContext {
     World *world;
     const KCC *character;
-    const kcc_policy::Policy *policy;
+    const CharacterListener *listener;
     const collections::Vec<IgnoredContact> *ignored_contacts;
     Vec3f displacement;
     CharacterContact *out_contact;
@@ -540,18 +540,18 @@ static void character_cast_add_hit(cast_shape::CastShapeCollector &collector, co
 
     CharacterContact contact;
     reset_contact(contact);
-    fill_contact_properties(contact, *context.character, *body, context.policy, hit.point_b, hit.normal, -hit.penetration_depth,
+    fill_contact_properties(contact, *context.character, *body, context.listener, hit.point_b, hit.normal, -hit.penetration_depth,
                             hit.sub_shape_id_b, hit.material_id_b);
     contact.fraction = hit.fraction;
     contact.had_collision = true;
     contact.was_discarded = false;
     contact.can_push_character = true;
 
-    // only accept contacts that will cause significant penetration and that the policy validates: current distance
+    // only accept contacts that will cause significant penetration and that the listener validates: current distance
     // plus how far we move into the surface; a grazing contact is ignored
     const float predicted_penetration = contact.distance + vec3f::dot(contact.contact_normal, context.displacement);
     if (predicted_penetration < -context.character->collision_tolerance &&
-        validate_contact(*context.world, contact, context.policy)) {
+        validate_contact(*context.world, *context.character, contact, context.listener)) {
         *context.out_contact = contact;
         context.has_hit = true;
         collector.early_out_fraction = hit.fraction;
@@ -623,7 +623,7 @@ static bool correct_fraction_for_character_padding(support::Support &character_s
 
 /** sweep along the displacement; true with the earliest accepted contact in `out`, false if the path is clear */
 static bool get_first_contact_for_sweep(CharacterContact &out, KCC &character, World &world, Vec3f position, Vec3f displacement,
-                                        const filter::Filter &filter, const kcc_policy::Policy *policy,
+                                        const filter::Filter &filter, const CharacterListener *listener,
                                         const collections::Vec<IgnoredContact> *ignored_contacts) {
     const float displacement_len_sq = vec3f::squared_length(displacement);
     if (displacement_len_sq < 1.0e-8f) return false;
@@ -643,7 +643,7 @@ static bool get_first_contact_for_sweep(CharacterContact &out, KCC &character, W
     settings.use_shrunken_shape_and_convex_radius = true;
     settings.return_deepest_point = false;
 
-    CastCollectorContext context = {&world, &character, policy, ignored_contacts, displacement, &out, false};
+    CastCollectorContext context = {&world, &character, listener, ignored_contacts, displacement, &out, false};
     cast_shape::CastShapeCollector collector = cast_shape::create_collector(collector::COLLECT_CUSTOM);
     collector.custom_add_hit = character_cast_add_hit;
     collector.custom_should_early_out = character_cast_should_early_out;
@@ -853,14 +853,14 @@ static void apply_impulse_to_body(World &world, const KCC &character, const Char
  * a contact the solver reached: validated, flagged as colliding, reported added or persisted with its settings taken,
  * and a dynamic body pushed by the character's input velocity. false to discard it (rejected, or a sensor)
  */
-static bool handle_contact(World &world, KCC &character, CharacterContact &contact, const kcc_policy::Policy *policy, bool track,
+static bool handle_contact(World &world, KCC &character, CharacterContact &contact, const CharacterListener *listener, bool track,
                            Vec3f character_velocity, float delta_time) {
-    if (!validate_contact(world, contact, policy)) return false;
+    if (!validate_contact(world, character, contact, listener)) return false;
 
     contact.had_collision = true;
 
     CharacterContactSettings settings = {true, true};
-    if (track) contact_added(world, character, contact, policy, settings);
+    if (track) contact_added(world, character, contact, listener, settings);
 
     contact.can_push_character = settings.can_push_character;
 
@@ -888,7 +888,7 @@ static void sort_constraints(collections::Vec<CharacterConstraint *> &constraint
  * until the time is used. velocity is in/out; returns the time simulated
  */
 static float solve_constraints(KCC &character, World &world, Vec3f &velocity, float delta_time, float time_remaining,
-                               const kcc_policy::Policy *policy, bool track, Vec3f &out_displacement, collections::Vec<IgnoredContact> &io_ignored_contacts,
+                               const CharacterListener *listener, bool track, Vec3f &out_displacement, collections::Vec<IgnoredContact> &io_ignored_contacts,
                                collections::Vec<CharacterConstraint> &constraints) {
     out_displacement = vec3f::make(0.0f, 0.0f, 0.0f);
 
@@ -938,8 +938,8 @@ static float solve_constraints(KCC &character, World &world, Vec3f &velocity, fl
             // skip if we're not moving toward this constraint
             if (constraint.projected_velocity <= 1e-10f) continue;
 
-            // the policy's validation, had_collision, the added / persisted tracking and settings, impulses
-            if (!constraint.contact->had_collision && !handle_contact(world, character, *constraint.contact, policy, track, velocity, delta_time)) {
+            // the listener's validation, had_collision, the added / persisted tracking and settings, impulses
+            if (!constraint.contact->had_collision && !handle_contact(world, character, *constraint.contact, listener, track, velocity, delta_time)) {
                 constraint.contact->was_discarded = true;
                 io_ignored_contacts.push({constraint.contact->body_id, constraint.contact->sub_shape_id});
                 continue;
@@ -1020,11 +1020,14 @@ static float solve_constraints(KCC &character, World &world, Vec3f &velocity, fl
         // with a 2nd constraint, slide along the intersection of both planes
         if (other_constraint != nullptr) new_velocity = character_constraints::slide_along_edge(velocity, *active_constraint, *other_constraint);
 
-        // a body the policy keeps from sliding: on a still, walkable surface of it the character stops
-        const CharacterContact &active_contact = *active_constraint->contact;
-        if (rigid_body::get(world, active_contact.body_id) != nullptr && !kcc_policy::get(policy, active_contact.body_id).slide_on_walkable &&
-            vec3f::squared_length(active_contact.linear_velocity) <= 1e-12f && !is_slope_too_steep(character, active_contact.contact_normal)) {
-            new_velocity = vec3f::make(0.0f, 0.0f, 0.0f);
+        // the listener may change the new velocity
+        if (listener != nullptr && listener->on_contact_solve != nullptr) {
+            const CharacterContact &contact = *active_constraint->contact;
+            const RigidBody *body = rigid_body::get(world, contact.body_id);
+            if (body != nullptr) {
+                listener->on_contact_solve(character, *body, contact.sub_shape_id, contact.position, contact.contact_normal, contact.linear_velocity,
+                                           velocity, new_velocity, listener->context);
+            }
         }
 
         velocity = new_velocity;
@@ -1054,7 +1057,7 @@ static float supporting_volume_signed_distance(Vec3f point, Vec4f plane) {
  * and the slope, the averaged ground normal and velocity, and for steep slopes only whether they hold the character
  */
 static void update_supporting_contact(KCC &character, World &world, bool skip_contact_velocity_check, float last_delta_time,
-                                      const kcc_policy::Policy *policy) {
+                                      const CharacterListener *listener) {
     collections::Vec<CharacterContact> &contacts = character.contacts;
 
     // flag contacts as colliding if close enough, unless we move away from them (contacts move_shape marked stay)
@@ -1070,9 +1073,9 @@ static void update_supporting_contact(KCC &character, World &world, bool skip_co
         }
 
         // the settings are discarded, can_push_character keeps its value
-        if (validate_contact(world, contact, policy)) {
+        if (validate_contact(world, character, contact, listener)) {
             CharacterContactSettings dummy_settings = {true, true};
-            contact_added(world, character, contact, policy, dummy_settings);
+            contact_added(world, character, contact, listener, dummy_settings);
             contact.had_collision = true;
         } else {
             contact.was_discarded = true;
@@ -1132,7 +1135,7 @@ static void update_supporting_contact(KCC &character, World &world, bool skip_co
                 const RigidBody *body = rigid_body::get(world, contact.body_id);
                 if (body != nullptr) {
                     Vec3f linear_velocity, angular_velocity;
-                    get_adjusted_body_velocity(*body, policy, linear_velocity, angular_velocity);
+                    get_adjusted_body_velocity(character, *body, listener, linear_velocity, angular_velocity);
                     avg_velocity = vec3f::add(avg_velocity, calculate_character_ground_velocity(character, vec3f::load(body->center_of_mass_position),
                                                                                                 linear_velocity, angular_velocity, last_delta_time));
                 } else {
@@ -1189,7 +1192,7 @@ static void update_supporting_contact(KCC &character, World &world, bool skip_co
             Vec3f down_velocity = vec3f::negate(character.up);
             Vec3f displacement;
             character.supporting_ignored_contacts.length = 0;
-            // a probe: no policy and no tracking, so nothing it meets is reported
+            // a probe: no listener and no tracking, so nothing it meets is reported
             const float time_simulated = solve_constraints(character, world, down_velocity, 1.0f, 1.0f, nullptr, false, displacement,
                                                            character.supporting_ignored_contacts, character.constraints);
 
@@ -1261,7 +1264,7 @@ static bool has_steep_slopes_to_walk(const KCC &character, Vec3f linear_velocity
  * character's contacts for real movement, scratch for probes
  */
 static void move_shape(KCC &character, World &world, Vec3f &position, Vec3f velocity, float delta_time, const filter::Filter &filter,
-                       const kcc_policy::Policy *policy, collections::Vec<CharacterContact> &out_contacts) {
+                       const CharacterListener *listener, collections::Vec<CharacterContact> &out_contacts) {
     // movement direction for active edge handling
     Vec3f movement_direction = vec3f::make(0.0f, 0.0f, 0.0f);
     const float velocity_len_sq = vec3f::squared_length(velocity);
@@ -1275,20 +1278,20 @@ static void move_shape(KCC &character, World &world, Vec3f &position, Vec3f velo
     for (uint32_t iteration = 0; iteration < character.max_collision_iterations; iteration++) {
         if (time_remaining < character.min_time_remaining) break;
 
-        get_contacts_at_position(character, world, position, movement_direction, filter, policy, out_contacts);
+        get_contacts_at_position(character, world, position, movement_direction, filter, listener, out_contacts);
 
         remove_conflicting_contacts(out_contacts, character.character_padding, character.ignored_contacts);
 
         determine_constraints(character, out_contacts, delta_time, character.constraints);
 
         Vec3f displacement;
-        float time_simulated = solve_constraints(character, world, solve_velocity, delta_time, time_remaining, policy, true, displacement,
+        float time_simulated = solve_constraints(character, world, solve_velocity, delta_time, time_remaining, listener, true, displacement,
                                                  character.ignored_contacts, character.constraints);
 
         // a sweep to test if the path is really unobstructed; a hit limits the displacement and the time, and is
         // found by the next iteration's contacts
         CharacterContact sweep_contact;
-        if (get_first_contact_for_sweep(sweep_contact, character, world, position, displacement, filter, policy, &character.ignored_contacts)) {
+        if (get_first_contact_for_sweep(sweep_contact, character, world, position, displacement, filter, listener, &character.ignored_contacts)) {
             displacement = vec3f::scale(displacement, sweep_contact.fraction);
             time_simulated *= sweep_contact.fraction;
         }
@@ -1313,7 +1316,7 @@ void begin_contact_tracking(KCC &character) {
 }
 
 /** ends a frame's contact tracking: entries not seen this frame are reported removed, with the body id */
-void end_contact_tracking(KCC &character) {
+void end_contact_tracking(KCC &character, const CharacterListener *listener) {
     // re-mark all contacts - reset all counts to 0, then mark active ones as 1
     collections::Vec<TrackedContact> &live = character.tracked_contacts;
     for (uint32_t i = 0; i < live.length; i++) live[i].count = 0;
@@ -1330,6 +1333,9 @@ void end_contact_tracking(KCC &character) {
         if (live[i].count == 0) {
             character.contact_events.push({CONTACT_REMOVED, live[i].body_id, live[i].sub_shape_id, vec3f::make(0.0f, 0.0f, 0.0f),
                                            vec3f::make(0.0f, 0.0f, 0.0f)});
+            if (listener != nullptr && listener->on_contact_removed != nullptr) {
+                listener->on_contact_removed(character, live[i].body_id, live[i].sub_shape_id, listener->context);
+            }
         }
     }
 
@@ -1356,7 +1362,7 @@ void set_quaternion(World &world, KCC &character, Quatf quaternion) {
     update_inner_body_transform(character, world);
 }
 
-void update_ground_velocity(World &world, KCC &character, const kcc_policy::Policy *policy) {
+void update_ground_velocity(World &world, KCC &character, const CharacterListener *listener) {
     if (character.ground.body_id == body_id::INVALID_BODY_ID) return;
 
     const RigidBody *ground_body = rigid_body::get(world, character.ground.body_id);
@@ -1368,7 +1374,7 @@ void update_ground_velocity(World &world, KCC &character, const kcc_policy::Poli
     }
 
     Vec3f linear_velocity, angular_velocity;
-    get_adjusted_body_velocity(*ground_body, policy, linear_velocity, angular_velocity);
+    get_adjusted_body_velocity(character, *ground_body, listener, linear_velocity, angular_velocity);
     character.ground.velocity = calculate_character_ground_velocity(character, vec3f::load(ground_body->center_of_mass_position), linear_velocity,
                                                                     angular_velocity, character.last_delta_time);
 }
@@ -1381,15 +1387,15 @@ static Vec3f movement_direction_of(Vec3f velocity) {
     return direction;
 }
 
-void refresh_contacts(World &world, KCC &character, const filter::Filter &filter, const kcc_policy::Policy *policy) {
+void refresh_contacts(World &world, KCC &character, const filter::Filter &filter, const CharacterListener *listener) {
     begin_contact_tracking(character);
 
-    get_contacts_at_position(character, world, character.position, movement_direction_of(character.linear_velocity), filter, policy,
+    get_contacts_at_position(character, world, character.position, movement_direction_of(character.linear_velocity), filter, listener,
                              character.contacts);
 
-    update_supporting_contact(character, world, true, character.last_delta_time, policy);
+    update_supporting_contact(character, world, true, character.last_delta_time, listener);
 
-    end_contact_tracking(character);
+    end_contact_tracking(character, listener);
 }
 
 bool has_collided_with(const KCC &character, body_id::BodyId id) {
@@ -1402,7 +1408,7 @@ bool has_collided_with(const KCC &character, body_id::BodyId id) {
 
 bool can_walk_stairs(const KCC &character, Vec3f linear_velocity) { return has_steep_slopes_to_walk(character, linear_velocity); }
 
-bool set_shape(World &world, KCC &character, shapes::Shape *new_shape, const filter::Filter &filter, const kcc_policy::Policy *policy,
+bool set_shape(World &world, KCC &character, shapes::Shape *new_shape, const filter::Filter &filter, const CharacterListener *listener,
                float max_penetration_depth) {
     if (character.shape == new_shape) return true;
 
@@ -1411,7 +1417,7 @@ bool set_shape(World &world, KCC &character, shapes::Shape *new_shape, const fil
         collections::Vec<CharacterContact> &new_contacts = character.set_shape_contacts;
         shapes::Shape *old_shape = character.shape;
         character.shape = new_shape;
-        get_contacts_at_position(character, world, character.position, movement_direction_of(character.linear_velocity), filter, policy,
+        get_contacts_at_position(character, world, character.position, movement_direction_of(character.linear_velocity), filter, listener,
                                  new_contacts);
         character.shape = old_shape;
 
@@ -1430,8 +1436,8 @@ bool set_shape(World &world, KCC &character, shapes::Shape *new_shape, const fil
         character.contacts = new_contacts;
         character.set_shape_contacts = old_contacts;
         character.set_shape_contacts.length = 0;
-        update_supporting_contact(character, world, true, character.last_delta_time, policy);
-        end_contact_tracking(character);
+        update_supporting_contact(character, world, true, character.last_delta_time, listener);
+        end_contact_tracking(character, listener);
     } else {
         character.shape = new_shape;
     }
@@ -1458,15 +1464,15 @@ void apply_weight(World &world, KCC &character, Vec3f gravity, float delta_time)
     }
 }
 
-void move(World &world, KCC &character, float delta_time, Vec3f gravity, const kcc_policy::Policy *policy, const filter::Filter &filter) {
+void move(World &world, KCC &character, float delta_time, Vec3f gravity, const CharacterListener *listener, const filter::Filter &filter) {
     if (delta_time <= 0.0f) return;
 
     // for the supporting contact velocity check
     character.last_delta_time = delta_time;
 
-    move_shape(character, world, character.position, character.linear_velocity, delta_time, filter, policy, character.contacts);
+    move_shape(character, world, character.position, character.linear_velocity, delta_time, filter, listener, character.contacts);
 
-    update_supporting_contact(character, world, false, delta_time, policy);
+    update_supporting_contact(character, world, false, delta_time, listener);
 
     update_inner_body_transform(character, world);
 
@@ -1475,13 +1481,13 @@ void move(World &world, KCC &character, float delta_time, Vec3f gravity, const k
 
 /** moves to the position of a sweep contact: the contact reported, the contacts there with it marked colliding, the ground state */
 static void move_to_contact(KCC &character, World &world, Vec3f position, const CharacterContact &contact, const filter::Filter &filter,
-                            const kcc_policy::Policy *policy) {
+                            const CharacterListener *listener) {
     set_position(world, character, position);
 
     CharacterContactSettings settings = {true, true};
-    contact_added(world, character, contact, policy, settings);
+    contact_added(world, character, contact, listener, settings);
 
-    get_contacts_at_position(character, world, character.position, movement_direction_of(character.linear_velocity), filter, policy,
+    get_contacts_at_position(character, world, character.position, movement_direction_of(character.linear_velocity), filter, listener,
                              character.contacts);
 
     // ensure the contact we moved to is marked as colliding
@@ -1501,27 +1507,27 @@ static void move_to_contact(KCC &character, World &world, Vec3f position, const 
         added.was_discarded = false;
     }
 
-    update_supporting_contact(character, world, true, character.last_delta_time, policy);
+    update_supporting_contact(character, world, true, character.last_delta_time, listener);
 
     // ensure that the rigid body ends up at the new position
     update_inner_body_transform(character, world);
 }
 
-bool stick_to_floor(World &world, KCC &character, Vec3f step_down, const filter::Filter &filter, const kcc_policy::Policy *policy) {
+bool stick_to_floor(World &world, KCC &character, Vec3f step_down, const filter::Filter &filter, const CharacterListener *listener) {
     CharacterContact contact;
-    if (!get_first_contact_for_sweep(contact, character, world, character.position, step_down, filter, policy, nullptr)) return false;
+    if (!get_first_contact_for_sweep(contact, character, world, character.position, step_down, filter, listener, nullptr)) return false;
 
     Vec3f new_position = vec3f::scale_and_add(character.position, step_down, contact.fraction);
 
-    move_to_contact(character, world, new_position, contact, filter, policy);
+    move_to_contact(character, world, new_position, contact, filter, listener);
     return true;
 }
 
 bool walk_stairs(World &world, KCC &character, float delta_time, Vec3f step_up, Vec3f step_forward, Vec3f step_forward_test,
-                 Vec3f step_down_extra, const filter::Filter &filter, const kcc_policy::Policy *policy) {
+                 Vec3f step_down_extra, const filter::Filter &filter, const CharacterListener *listener) {
     Vec3f up = step_up;
     CharacterContact contact;
-    if (get_first_contact_for_sweep(contact, character, world, character.position, up, filter, policy, nullptr)) {
+    if (get_first_contact_for_sweep(contact, character, world, character.position, up, filter, listener, nullptr)) {
         if (contact.fraction < 1e-6f) return false;
         // limit up movement to first contact
         up = vec3f::scale(up, contact.fraction);
@@ -1552,7 +1558,7 @@ bool walk_stairs(World &world, KCC &character, float delta_time, Vec3f step_up, 
     // horizontal movement at the elevated position. a probe: its contacts go to scratch, so on any early return the
     // character's contacts remain the real post-update set
     Vec3f new_position = up_position;
-    move_shape(character, world, new_position, character_velocity, delta_time, filter, policy, character.walk_stairs_probe_contacts);
+    move_shape(character, world, new_position, character_velocity, delta_time, filter, listener, character.walk_stairs_probe_contacts);
     character.walk_stairs_probe_contacts.length = 0;
 
     Vec3f horizontal_movement = vec3f::subtract(new_position, up_position);
@@ -1574,7 +1580,7 @@ bool walk_stairs(World &world, KCC &character, float delta_time, Vec3f step_up, 
     Vec3f down = vec3f::negate(up);
     down = vec3f::add(down, step_down_extra);
 
-    if (!get_first_contact_for_sweep(contact, character, world, new_position, down, filter, policy, nullptr)) return false;
+    if (!get_first_contact_for_sweep(contact, character, world, new_position, down, filter, listener, nullptr)) return false;
 
     // the floor must be walkable
     if (is_slope_too_steep(character, contact.surface_normal)) {
@@ -1584,20 +1590,20 @@ bool walk_stairs(World &world, KCC &character, float delta_time, Vec3f step_up, 
         // move further forward to test the floor, a probe as above
         Vec3f test_position = up_position;
         character_velocity = vec3f::scale(step_forward_test, 1.0f / delta_time);
-        move_shape(character, world, test_position, character_velocity, delta_time, filter, policy, character.walk_stairs_probe_contacts);
+        move_shape(character, world, test_position, character_velocity, delta_time, filter, listener, character.walk_stairs_probe_contacts);
         character.walk_stairs_probe_contacts.length = 0;
 
         horizontal_movement = vec3f::subtract(test_position, up_position);
         if (vec3f::squared_length(horizontal_movement) <= horizontal_movement_sq + 1e-8f) return false;
 
         CharacterContact test_contact;
-        if (!get_first_contact_for_sweep(test_contact, character, world, test_position, down, filter, policy, nullptr)) return false;
+        if (!get_first_contact_for_sweep(test_contact, character, world, test_position, down, filter, listener, nullptr)) return false;
 
         if (is_slope_too_steep(character, test_contact.surface_normal)) return false;
     }
 
     new_position = vec3f::scale_and_add(new_position, down, contact.fraction);
-    move_to_contact(character, world, new_position, contact, filter, policy);
+    move_to_contact(character, world, new_position, contact, filter, listener);
 
     // the contact normal may have been too steep where the forward test found a walkable floor
     character.ground.state = ON_GROUND;
@@ -1605,7 +1611,7 @@ bool walk_stairs(World &world, KCC &character, float delta_time, Vec3f step_up, 
     return true;
 }
 
-void update(World &world, KCC &character, float delta_time, Vec3f gravity, const UpdateSettings &settings, const kcc_policy::Policy *policy,
+void update(World &world, KCC &character, float delta_time, Vec3f gravity, const UpdateSettings &settings, const CharacterListener *listener,
             const filter::Filter &filter) {
     begin_contact_tracking(character);
 
@@ -1618,7 +1624,7 @@ void update(World &world, KCC &character, float delta_time, Vec3f gravity, const
     // on ground before the update
     bool ground_to_air = is_supported(character);
 
-    move(world, character, delta_time, gravity, policy, filter);
+    move(world, character, delta_time, gravity, listener, filter);
 
     // ... and in the air after
     if (is_supported(character)) ground_to_air = false;
@@ -1627,7 +1633,7 @@ void update(World &world, KCC &character, float delta_time, Vec3f gravity, const
     if (ground_to_air && vec3f::squared_length(vec3f::load(settings.stick_to_floor_step_down)) > 1e-12f) {
         const Vec3f step = vec3f::subtract(character.position, old_position);
         const float velocity_up = vec3f::dot(step, character.up) / delta_time;
-        if (velocity_up <= 1e-6f) stick_to_floor(world, character, vec3f::load(settings.stick_to_floor_step_down), filter, policy);
+        if (velocity_up <= 1e-6f) stick_to_floor(world, character, vec3f::load(settings.stick_to_floor_step_down), filter, listener);
     }
 
     if (vec3f::squared_length(vec3f::load(settings.walk_stairs_step_up)) > 1e-12f) {
@@ -1668,31 +1674,31 @@ void update(World &world, KCC &character, float delta_time, Vec3f gravity, const
                 step_forward_test = vec3f::scale(step_forward_test, settings.walk_stairs_step_forward_test);
 
                 walk_stairs(world, character, delta_time, vec3f::load(settings.walk_stairs_step_up), step_forward, step_forward_test,
-                            vec3f::load(settings.walk_stairs_step_down_extra), filter, policy);
+                            vec3f::load(settings.walk_stairs_step_down_extra), filter, listener);
             }
         }
     }
 
-    end_contact_tracking(character);
+    end_contact_tracking(character, listener);
 }
 
 void collide(World &world, KCC &character, Vec3f position, Vec3f movement_direction, const filter::Filter &filter,
-             const kcc_policy::Policy *policy) {
-    get_contacts_at_position(character, world, position, movement_direction, filter, policy, character.contacts);
+             const CharacterListener *listener) {
+    get_contacts_at_position(character, world, position, movement_direction, filter, listener, character.contacts);
     remove_conflicting_contacts(character.contacts, character.character_padding, character.ignored_contacts);
 }
 
-float solve(World &world, KCC &character, Vec3f &io_velocity, float delta_time, float time_remaining, const kcc_policy::Policy *policy,
+float solve(World &world, KCC &character, Vec3f &io_velocity, float delta_time, float time_remaining, const CharacterListener *listener,
             Vec3f &out_displacement) {
     determine_constraints(character, character.contacts, delta_time, character.constraints);
-    const float time_simulated = solve_constraints(character, world, io_velocity, delta_time, time_remaining, policy, true, out_displacement,
+    const float time_simulated = solve_constraints(character, world, io_velocity, delta_time, time_remaining, listener, true, out_displacement,
                                                    character.ignored_contacts, character.constraints);
     character.constraints.length = 0;
     return time_simulated;
 }
 
 bool cast(CharacterContact &out, World &world, KCC &character, Vec3f position, Vec3f displacement, const filter::Filter &filter,
-          const kcc_policy::Policy *policy) {
+          const CharacterListener *listener) {
     // the discarded contacts, the caller's as well as the conflicts and the solve's: the same set move's own loop keeps
     collections::Vec<IgnoredContact> &ignored = character.ignored_contacts;
     ignored.length = 0;
@@ -1700,12 +1706,12 @@ bool cast(CharacterContact &out, World &world, KCC &character, Vec3f position, V
         const CharacterContact &contact = character.contacts[i];
         if (contact.was_discarded) ignored.push({contact.body_id, contact.sub_shape_id});
     }
-    return get_first_contact_for_sweep(out, character, world, position, displacement, filter, policy, &ignored);
+    return get_first_contact_for_sweep(out, character, world, position, displacement, filter, listener, &ignored);
 }
 
-void update_ground(World &world, KCC &character, float delta_time, bool skip_contact_velocity_check, const kcc_policy::Policy *policy) {
+void update_ground(World &world, KCC &character, float delta_time, bool skip_contact_velocity_check, const CharacterListener *listener) {
     character.last_delta_time = delta_time;
-    update_supporting_contact(character, world, skip_contact_velocity_check, delta_time, policy);
+    update_supporting_contact(character, world, skip_contact_velocity_check, delta_time, listener);
 }
 
 }  // namespace kcc
