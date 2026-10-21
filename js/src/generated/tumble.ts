@@ -7,7 +7,7 @@
 import type { Instance } from '../module.js';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x73aac211;
+export const SCHEMA_HASH = 0x22157f39;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 368;
 
@@ -2518,7 +2518,7 @@ export const PointConstraintSettings = {
         out.pointB[1] = mem.f32[(address + 16) >> 2]!;
         out.pointB[2] = mem.f32[(address + 20) >> 2]!;
         out.space = mem.u32[(address + 24) >> 2]!;
-        out.constraintPriority = mem.i32[(address + 28) >> 2]!;
+        out.constraintPriority = mem.u32[(address + 28) >> 2]!;
         out.numVelocityStepsOverride = mem.u32[(address + 32) >> 2]!;
         out.numPositionStepsOverride = mem.u32[(address + 36) >> 2]!;
         return out;
@@ -2533,7 +2533,7 @@ export const PointConstraintSettings = {
         mem.f32[(address + 16) >> 2] = value.pointB[1];
         mem.f32[(address + 20) >> 2] = value.pointB[2];
         mem.u32[(address + 24) >> 2] = value.space;
-        mem.i32[(address + 28) >> 2] = value.constraintPriority;
+        mem.u32[(address + 28) >> 2] = value.constraintPriority;
         mem.u32[(address + 32) >> 2] = value.numVelocityStepsOverride;
         mem.u32[(address + 36) >> 2] = value.numPositionStepsOverride;
     },
@@ -2546,7 +2546,7 @@ export const PointConstraintSettings = {
         view.setFloat32(offset + 16, value.pointB[1], true);
         view.setFloat32(offset + 20, value.pointB[2], true);
         view.setUint32(offset + 24, value.space, true);
-        view.setInt32(offset + 28, value.constraintPriority, true);
+        view.setUint32(offset + 28, value.constraintPriority, true);
         view.setUint32(offset + 32, value.numVelocityStepsOverride, true);
         view.setUint32(offset + 36, value.numPositionStepsOverride, true);
     },
@@ -2559,7 +2559,7 @@ export const PointConstraintSettings = {
         out.pointB[1] = view.getFloat32(offset + 16, true);
         out.pointB[2] = view.getFloat32(offset + 20, true);
         out.space = view.getUint32(offset + 24, true);
-        out.constraintPriority = view.getInt32(offset + 28, true);
+        out.constraintPriority = view.getUint32(offset + 28, true);
         out.numVelocityStepsOverride = view.getUint32(offset + 32, true);
         out.numPositionStepsOverride = view.getUint32(offset + 36, true);
         return out;
@@ -2607,7 +2607,7 @@ export const DistanceConstraintSettings = {
         out.springSettings.frequencyOrStiffness = mem.f32[(address + 36) >> 2]!;
         out.springSettings.damping = mem.f32[(address + 40) >> 2]!;
         out.space = mem.u32[(address + 44) >> 2]!;
-        out.constraintPriority = mem.i32[(address + 48) >> 2]!;
+        out.constraintPriority = mem.u32[(address + 48) >> 2]!;
         out.numVelocityStepsOverride = mem.u32[(address + 52) >> 2]!;
         out.numPositionStepsOverride = mem.u32[(address + 56) >> 2]!;
         return out;
@@ -2627,7 +2627,7 @@ export const DistanceConstraintSettings = {
         mem.f32[(address + 36) >> 2] = value.springSettings.frequencyOrStiffness;
         mem.f32[(address + 40) >> 2] = value.springSettings.damping;
         mem.u32[(address + 44) >> 2] = value.space;
-        mem.i32[(address + 48) >> 2] = value.constraintPriority;
+        mem.u32[(address + 48) >> 2] = value.constraintPriority;
         mem.u32[(address + 52) >> 2] = value.numVelocityStepsOverride;
         mem.u32[(address + 56) >> 2] = value.numPositionStepsOverride;
     },
@@ -2645,7 +2645,7 @@ export const DistanceConstraintSettings = {
         view.setFloat32(offset + 36, value.springSettings.frequencyOrStiffness, true);
         view.setFloat32(offset + 40, value.springSettings.damping, true);
         view.setUint32(offset + 44, value.space, true);
-        view.setInt32(offset + 48, value.constraintPriority, true);
+        view.setUint32(offset + 48, value.constraintPriority, true);
         view.setUint32(offset + 52, value.numVelocityStepsOverride, true);
         view.setUint32(offset + 56, value.numPositionStepsOverride, true);
     },
@@ -2663,7 +2663,7 @@ export const DistanceConstraintSettings = {
         out.springSettings.frequencyOrStiffness = view.getFloat32(offset + 36, true);
         out.springSettings.damping = view.getFloat32(offset + 40, true);
         out.space = view.getUint32(offset + 44, true);
-        out.constraintPriority = view.getInt32(offset + 48, true);
+        out.constraintPriority = view.getUint32(offset + 48, true);
         out.numVelocityStepsOverride = view.getUint32(offset + 52, true);
         out.numPositionStepsOverride = view.getUint32(offset + 56, true);
         return out;
@@ -2743,7 +2743,7 @@ export const HingeConstraintSettings = {
         out.motorSettings.maxForceLimit = mem.f32[(address + 116) >> 2]!;
         out.motorSettings.minTorqueLimit = mem.f32[(address + 120) >> 2]!;
         out.motorSettings.maxTorqueLimit = mem.f32[(address + 124) >> 2]!;
-        out.constraintPriority = mem.i32[(address + 128) >> 2]!;
+        out.constraintPriority = mem.u32[(address + 128) >> 2]!;
         out.numVelocityStepsOverride = mem.u32[(address + 132) >> 2]!;
         out.numPositionStepsOverride = mem.u32[(address + 136) >> 2]!;
         return out;
@@ -2783,7 +2783,7 @@ export const HingeConstraintSettings = {
         mem.f32[(address + 116) >> 2] = value.motorSettings.maxForceLimit;
         mem.f32[(address + 120) >> 2] = value.motorSettings.minTorqueLimit;
         mem.f32[(address + 124) >> 2] = value.motorSettings.maxTorqueLimit;
-        mem.i32[(address + 128) >> 2] = value.constraintPriority;
+        mem.u32[(address + 128) >> 2] = value.constraintPriority;
         mem.u32[(address + 132) >> 2] = value.numVelocityStepsOverride;
         mem.u32[(address + 136) >> 2] = value.numPositionStepsOverride;
     },
@@ -2821,7 +2821,7 @@ export const HingeConstraintSettings = {
         view.setFloat32(offset + 116, value.motorSettings.maxForceLimit, true);
         view.setFloat32(offset + 120, value.motorSettings.minTorqueLimit, true);
         view.setFloat32(offset + 124, value.motorSettings.maxTorqueLimit, true);
-        view.setInt32(offset + 128, value.constraintPriority, true);
+        view.setUint32(offset + 128, value.constraintPriority, true);
         view.setUint32(offset + 132, value.numVelocityStepsOverride, true);
         view.setUint32(offset + 136, value.numPositionStepsOverride, true);
     },
@@ -2859,7 +2859,7 @@ export const HingeConstraintSettings = {
         out.motorSettings.maxForceLimit = view.getFloat32(offset + 116, true);
         out.motorSettings.minTorqueLimit = view.getFloat32(offset + 120, true);
         out.motorSettings.maxTorqueLimit = view.getFloat32(offset + 124, true);
-        out.constraintPriority = view.getInt32(offset + 128, true);
+        out.constraintPriority = view.getUint32(offset + 128, true);
         out.numVelocityStepsOverride = view.getUint32(offset + 132, true);
         out.numPositionStepsOverride = view.getUint32(offset + 136, true);
         return out;
@@ -2942,7 +2942,7 @@ export const SliderConstraintSettings = {
         out.motorSettings.maxForceLimit = mem.f32[(address + 120) >> 2]!;
         out.motorSettings.minTorqueLimit = mem.f32[(address + 124) >> 2]!;
         out.motorSettings.maxTorqueLimit = mem.f32[(address + 128) >> 2]!;
-        out.constraintPriority = mem.i32[(address + 132) >> 2]!;
+        out.constraintPriority = mem.u32[(address + 132) >> 2]!;
         out.numVelocityStepsOverride = mem.u32[(address + 136) >> 2]!;
         out.numPositionStepsOverride = mem.u32[(address + 140) >> 2]!;
         return out;
@@ -2983,7 +2983,7 @@ export const SliderConstraintSettings = {
         mem.f32[(address + 120) >> 2] = value.motorSettings.maxForceLimit;
         mem.f32[(address + 124) >> 2] = value.motorSettings.minTorqueLimit;
         mem.f32[(address + 128) >> 2] = value.motorSettings.maxTorqueLimit;
-        mem.i32[(address + 132) >> 2] = value.constraintPriority;
+        mem.u32[(address + 132) >> 2] = value.constraintPriority;
         mem.u32[(address + 136) >> 2] = value.numVelocityStepsOverride;
         mem.u32[(address + 140) >> 2] = value.numPositionStepsOverride;
     },
@@ -3022,7 +3022,7 @@ export const SliderConstraintSettings = {
         view.setFloat32(offset + 120, value.motorSettings.maxForceLimit, true);
         view.setFloat32(offset + 124, value.motorSettings.minTorqueLimit, true);
         view.setFloat32(offset + 128, value.motorSettings.maxTorqueLimit, true);
-        view.setInt32(offset + 132, value.constraintPriority, true);
+        view.setUint32(offset + 132, value.constraintPriority, true);
         view.setUint32(offset + 136, value.numVelocityStepsOverride, true);
         view.setUint32(offset + 140, value.numPositionStepsOverride, true);
     },
@@ -3061,7 +3061,7 @@ export const SliderConstraintSettings = {
         out.motorSettings.maxForceLimit = view.getFloat32(offset + 120, true);
         out.motorSettings.minTorqueLimit = view.getFloat32(offset + 124, true);
         out.motorSettings.maxTorqueLimit = view.getFloat32(offset + 128, true);
-        out.constraintPriority = view.getInt32(offset + 132, true);
+        out.constraintPriority = view.getUint32(offset + 132, true);
         out.numVelocityStepsOverride = view.getUint32(offset + 136, true);
         out.numPositionStepsOverride = view.getUint32(offset + 140, true);
         return out;
@@ -3121,7 +3121,7 @@ export const FixedConstraintSettings = {
         out.axisYB[2] = mem.f32[(address + 68) >> 2]!;
         out.space = mem.u32[(address + 72) >> 2]!;
         out.autoDetectPoint = mem.u8[address + 76]! !== 0;
-        out.constraintPriority = mem.i32[(address + 80) >> 2]!;
+        out.constraintPriority = mem.u32[(address + 80) >> 2]!;
         out.numVelocityStepsOverride = mem.u32[(address + 84) >> 2]!;
         out.numPositionStepsOverride = mem.u32[(address + 88) >> 2]!;
         return out;
@@ -3149,7 +3149,7 @@ export const FixedConstraintSettings = {
         mem.f32[(address + 68) >> 2] = value.axisYB[2];
         mem.u32[(address + 72) >> 2] = value.space;
         mem.u8[address + 76] = value.autoDetectPoint ? 1 : 0;
-        mem.i32[(address + 80) >> 2] = value.constraintPriority;
+        mem.u32[(address + 80) >> 2] = value.constraintPriority;
         mem.u32[(address + 84) >> 2] = value.numVelocityStepsOverride;
         mem.u32[(address + 88) >> 2] = value.numPositionStepsOverride;
     },
@@ -3175,7 +3175,7 @@ export const FixedConstraintSettings = {
         view.setFloat32(offset + 68, value.axisYB[2], true);
         view.setUint32(offset + 72, value.space, true);
         view.setUint8(offset + 76, value.autoDetectPoint ? 1 : 0);
-        view.setInt32(offset + 80, value.constraintPriority, true);
+        view.setUint32(offset + 80, value.constraintPriority, true);
         view.setUint32(offset + 84, value.numVelocityStepsOverride, true);
         view.setUint32(offset + 88, value.numPositionStepsOverride, true);
     },
@@ -3201,7 +3201,7 @@ export const FixedConstraintSettings = {
         out.axisYB[2] = view.getFloat32(offset + 68, true);
         out.space = view.getUint32(offset + 72, true);
         out.autoDetectPoint = view.getUint8(offset + 76) !== 0;
-        out.constraintPriority = view.getInt32(offset + 80, true);
+        out.constraintPriority = view.getUint32(offset + 80, true);
         out.numVelocityStepsOverride = view.getUint32(offset + 84, true);
         out.numPositionStepsOverride = view.getUint32(offset + 88, true);
         return out;
@@ -3251,7 +3251,7 @@ export const ConeConstraintSettings = {
         out.twistAxisB[2] = mem.f32[(address + 44) >> 2]!;
         out.halfConeAngle = mem.f32[(address + 48) >> 2]!;
         out.space = mem.u32[(address + 52) >> 2]!;
-        out.constraintPriority = mem.i32[(address + 56) >> 2]!;
+        out.constraintPriority = mem.u32[(address + 56) >> 2]!;
         out.numVelocityStepsOverride = mem.u32[(address + 60) >> 2]!;
         out.numPositionStepsOverride = mem.u32[(address + 64) >> 2]!;
         return out;
@@ -3273,7 +3273,7 @@ export const ConeConstraintSettings = {
         mem.f32[(address + 44) >> 2] = value.twistAxisB[2];
         mem.f32[(address + 48) >> 2] = value.halfConeAngle;
         mem.u32[(address + 52) >> 2] = value.space;
-        mem.i32[(address + 56) >> 2] = value.constraintPriority;
+        mem.u32[(address + 56) >> 2] = value.constraintPriority;
         mem.u32[(address + 60) >> 2] = value.numVelocityStepsOverride;
         mem.u32[(address + 64) >> 2] = value.numPositionStepsOverride;
     },
@@ -3293,7 +3293,7 @@ export const ConeConstraintSettings = {
         view.setFloat32(offset + 44, value.twistAxisB[2], true);
         view.setFloat32(offset + 48, value.halfConeAngle, true);
         view.setUint32(offset + 52, value.space, true);
-        view.setInt32(offset + 56, value.constraintPriority, true);
+        view.setUint32(offset + 56, value.constraintPriority, true);
         view.setUint32(offset + 60, value.numVelocityStepsOverride, true);
         view.setUint32(offset + 64, value.numPositionStepsOverride, true);
     },
@@ -3313,7 +3313,7 @@ export const ConeConstraintSettings = {
         out.twistAxisB[2] = view.getFloat32(offset + 44, true);
         out.halfConeAngle = view.getFloat32(offset + 48, true);
         out.space = view.getUint32(offset + 52, true);
-        out.constraintPriority = view.getInt32(offset + 56, true);
+        out.constraintPriority = view.getUint32(offset + 56, true);
         out.numVelocityStepsOverride = view.getUint32(offset + 60, true);
         out.numPositionStepsOverride = view.getUint32(offset + 64, true);
         return out;
@@ -3406,7 +3406,7 @@ export const SwingTwistConstraintSettings = {
         out.twistMotorSettings.maxForceLimit = mem.f32[(address + 144) >> 2]!;
         out.twistMotorSettings.minTorqueLimit = mem.f32[(address + 148) >> 2]!;
         out.twistMotorSettings.maxTorqueLimit = mem.f32[(address + 152) >> 2]!;
-        out.constraintPriority = mem.i32[(address + 156) >> 2]!;
+        out.constraintPriority = mem.u32[(address + 156) >> 2]!;
         out.numVelocityStepsOverride = mem.u32[(address + 160) >> 2]!;
         out.numPositionStepsOverride = mem.u32[(address + 164) >> 2]!;
         return out;
@@ -3453,7 +3453,7 @@ export const SwingTwistConstraintSettings = {
         mem.f32[(address + 144) >> 2] = value.twistMotorSettings.maxForceLimit;
         mem.f32[(address + 148) >> 2] = value.twistMotorSettings.minTorqueLimit;
         mem.f32[(address + 152) >> 2] = value.twistMotorSettings.maxTorqueLimit;
-        mem.i32[(address + 156) >> 2] = value.constraintPriority;
+        mem.u32[(address + 156) >> 2] = value.constraintPriority;
         mem.u32[(address + 160) >> 2] = value.numVelocityStepsOverride;
         mem.u32[(address + 164) >> 2] = value.numPositionStepsOverride;
     },
@@ -3498,7 +3498,7 @@ export const SwingTwistConstraintSettings = {
         view.setFloat32(offset + 144, value.twistMotorSettings.maxForceLimit, true);
         view.setFloat32(offset + 148, value.twistMotorSettings.minTorqueLimit, true);
         view.setFloat32(offset + 152, value.twistMotorSettings.maxTorqueLimit, true);
-        view.setInt32(offset + 156, value.constraintPriority, true);
+        view.setUint32(offset + 156, value.constraintPriority, true);
         view.setUint32(offset + 160, value.numVelocityStepsOverride, true);
         view.setUint32(offset + 164, value.numPositionStepsOverride, true);
     },
@@ -3543,7 +3543,7 @@ export const SwingTwistConstraintSettings = {
         out.twistMotorSettings.maxForceLimit = view.getFloat32(offset + 144, true);
         out.twistMotorSettings.minTorqueLimit = view.getFloat32(offset + 148, true);
         out.twistMotorSettings.maxTorqueLimit = view.getFloat32(offset + 152, true);
-        out.constraintPriority = view.getInt32(offset + 156, true);
+        out.constraintPriority = view.getUint32(offset + 156, true);
         out.numVelocityStepsOverride = view.getUint32(offset + 160, true);
         out.numPositionStepsOverride = view.getUint32(offset + 164, true);
         return out;
@@ -3682,7 +3682,7 @@ export const SixDOFConstraintSettings = {
         out.motorSettings[5]!.maxForceLimit = mem.f32[(address + 344) >> 2]!;
         out.motorSettings[5]!.minTorqueLimit = mem.f32[(address + 348) >> 2]!;
         out.motorSettings[5]!.maxTorqueLimit = mem.f32[(address + 352) >> 2]!;
-        out.constraintPriority = mem.i32[(address + 356) >> 2]!;
+        out.constraintPriority = mem.u32[(address + 356) >> 2]!;
         out.numVelocityStepsOverride = mem.u32[(address + 360) >> 2]!;
         out.numPositionStepsOverride = mem.u32[(address + 364) >> 2]!;
         return out;
@@ -3779,7 +3779,7 @@ export const SixDOFConstraintSettings = {
         mem.f32[(address + 344) >> 2] = value.motorSettings[5]!.maxForceLimit;
         mem.f32[(address + 348) >> 2] = value.motorSettings[5]!.minTorqueLimit;
         mem.f32[(address + 352) >> 2] = value.motorSettings[5]!.maxTorqueLimit;
-        mem.i32[(address + 356) >> 2] = value.constraintPriority;
+        mem.u32[(address + 356) >> 2] = value.constraintPriority;
         mem.u32[(address + 360) >> 2] = value.numVelocityStepsOverride;
         mem.u32[(address + 364) >> 2] = value.numPositionStepsOverride;
     },
@@ -3874,7 +3874,7 @@ export const SixDOFConstraintSettings = {
         view.setFloat32(offset + 344, value.motorSettings[5]!.maxForceLimit, true);
         view.setFloat32(offset + 348, value.motorSettings[5]!.minTorqueLimit, true);
         view.setFloat32(offset + 352, value.motorSettings[5]!.maxTorqueLimit, true);
-        view.setInt32(offset + 356, value.constraintPriority, true);
+        view.setUint32(offset + 356, value.constraintPriority, true);
         view.setUint32(offset + 360, value.numVelocityStepsOverride, true);
         view.setUint32(offset + 364, value.numPositionStepsOverride, true);
     },
@@ -3969,7 +3969,7 @@ export const SixDOFConstraintSettings = {
         out.motorSettings[5]!.maxForceLimit = view.getFloat32(offset + 344, true);
         out.motorSettings[5]!.minTorqueLimit = view.getFloat32(offset + 348, true);
         out.motorSettings[5]!.maxTorqueLimit = view.getFloat32(offset + 352, true);
-        out.constraintPriority = view.getInt32(offset + 356, true);
+        out.constraintPriority = view.getUint32(offset + 356, true);
         out.numVelocityStepsOverride = view.getUint32(offset + 360, true);
         out.numPositionStepsOverride = view.getUint32(offset + 364, true);
         return out;

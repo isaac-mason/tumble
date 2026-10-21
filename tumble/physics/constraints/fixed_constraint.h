@@ -51,7 +51,7 @@ struct FixedConstraintSettings {
     /** world space only: place the attachment point between the bodies' centers of mass, weighted towards the lighter body */
     bool auto_detect_point = false;
     /** higher numbers are more likely to be solved correctly (solved later) */
-    int32_t constraint_priority = 0;
+    uint32_t constraint_priority = 0;
     /** 0 takes the world's iteration counts */
     uint32_t num_velocity_steps_override = 0;
     uint32_t num_position_steps_override = 0;

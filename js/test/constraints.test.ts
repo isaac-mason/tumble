@@ -309,6 +309,11 @@ describe('constraints', () => {
         expect(() => SliderConstraint.create(world, frame, door, { limitsMax: -1 })).toThrow(RangeError);
         expect(() => DistanceConstraint.create(world, frame, door, { minDistance: 2, maxDistance: 1 })).toThrow(RangeError);
         expect(() => ConeConstraint.create(world, frame, door, { halfConeAngle: 4 })).toThrow(RangeError);
+        // a priority is jolt's uint32, which a negative or fractional one would not round trip through
+        expect(() => PointConstraint.create(world, frame, door, { constraintPriority: -1 })).toThrow(RangeError);
+        expect(() => SixDOFConstraint.create(world, frame, door, { constraintPriority: 1.5 })).toThrow(RangeError);
+        expect(() => FixedConstraint.create(world, frame, door, { constraintPriority: 2 ** 32 })).toThrow(RangeError);
+        expect(Constraint.exists(world, FixedConstraint.create(world, frame, door, { constraintPriority: 0xffffffff }))).toBe(true);
         // equal limits on a soft spring are allowed
         const soft = HingeConstraint.create(world, frame, door, {
             limitsMin: 0,

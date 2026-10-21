@@ -46,7 +46,7 @@ export type MotorSettings = {
 type Common = {
     /** WORLD (the default), or LOCAL: relative to each body's centre of mass and orientation */
     space?: ConstraintSpace;
-    /** solved in ascending order, so the highest is solved last and is most likely to hold */
+    /** an integer in [0, 2^32), solved in ascending order, so the highest is solved last and is most likely to hold */
     constraintPriority?: number;
     /** 0 (the default) takes the world's iteration counts */
     numVelocityStepsOverride?: number;
@@ -120,6 +120,15 @@ function expectAxis(axis: number, count: number): void {
     expect(Number.isInteger(axis) && axis >= 0 && axis < count, `an axis is an integer in [0, ${count})`);
 }
 
+/** a priority is an integer in [0, 2^32), as jolt's uint32 */
+function expectCommon(settings: Common): void {
+    const priority = settings.constraintPriority;
+    expect(
+        priority === undefined || (Number.isInteger(priority) && priority >= 0 && priority <= 0xffffffff),
+        'constraintPriority is an integer in [0, 2^32)',
+    );
+}
+
 function created(id: ConstraintId): ConstraintId {
     if (id === INVALID_CONSTRAINT_ID) Low.getWasm().check();
     return id;
@@ -162,6 +171,7 @@ const pointDefaults = defaultsOf(Low.PointConstraint.defaultSettings, Low.PointC
 /** a point on each body held together: a ball and socket, free to turn */
 export const PointConstraint = {
     create(world: World, bodyA: BodyId, bodyB: BodyId, settings: PointConstraintSettings = {}): ConstraintId {
+        expectCommon(settings);
         Low.errorClear();
         return created(Low.PointConstraint.create(world, bodyA, bodyB, over(pointDefaults(), settings)));
     },
@@ -190,6 +200,7 @@ const distanceDefaults = defaultsOf(Low.DistanceConstraint.defaultSettings, Low.
 /** the distance between a point on each body kept within [min, max]: a rope, a rod, a bungee */
 export const DistanceConstraint = {
     create(world: World, bodyA: BodyId, bodyB: BodyId, settings: DistanceConstraintSettings = {}): ConstraintId {
+        expectCommon(settings);
         const native = over(distanceDefaults(), settings);
         if (native.minDistance >= 0 && native.maxDistance >= 0) {
             expect(native.minDistance <= native.maxDistance, 'minDistance is at most maxDistance');
@@ -238,6 +249,7 @@ const hingeDefaults = defaultsOf(Low.HingeConstraint.defaultSettings, Low.HingeC
 /** turning only about one axis, with optional angle limits, friction and a motor: a door, a wheel */
 export const HingeConstraint = {
     create(world: World, bodyA: BodyId, bodyB: BodyId, settings: HingeConstraintSettings = {}): ConstraintId {
+        expectCommon(settings);
         const native = over(hingeDefaults(), settings);
         expectHingeLimits(native.limitsMin, native.limitsMax);
         expectRange(native.limitsMin, native.limitsMax, native.limitsSpringSettings);
@@ -315,6 +327,7 @@ const sliderDefaults = defaultsOf(Low.SliderConstraint.defaultSettings, Low.Slid
 /** moving only along one axis, with optional limits, friction and a motor: a piston, a lift, a drawer */
 export const SliderConstraint = {
     create(world: World, bodyA: BodyId, bodyB: BodyId, settings: SliderConstraintSettings = {}): ConstraintId {
+        expectCommon(settings);
         const native = over(sliderDefaults(), settings);
         expectSliderLimits(native.limitsMin, native.limitsMax);
         expectRange(native.limitsMin, native.limitsMax, native.limitsSpringSettings);
@@ -396,6 +409,7 @@ const fixedDefaults = defaultsOf(Low.FixedConstraint.defaultSettings, Low.FixedC
 /** two bodies welded, moving as one */
 export const FixedConstraint = {
     create(world: World, bodyA: BodyId, bodyB: BodyId, settings: FixedConstraintSettings = {}): ConstraintId {
+        expectCommon(settings);
         Low.errorClear();
         return created(Low.FixedConstraint.create(world, bodyA, bodyB, over(fixedDefaults(), settings)));
     },
@@ -429,6 +443,7 @@ function expectHalfConeAngle(angle: number): void {
 /** a point on each body held together, the twist axes kept within a cone; twisting about them stays free */
 export const ConeConstraint = {
     create(world: World, bodyA: BodyId, bodyB: BodyId, settings: ConeConstraintSettings = {}): ConstraintId {
+        expectCommon(settings);
         const native = over(coneDefaults(), settings);
         expectHalfConeAngle(native.halfConeAngle);
         Low.errorClear();
@@ -484,6 +499,7 @@ const swingTwistDefaults = defaultsOf(Low.SwingTwistConstraint.defaultSettings, 
 /** a point on each body held together, the turn limited apart in swing and twist, with optional friction and motors: a ragdoll's joint */
 export const SwingTwistConstraint = {
     create(world: World, bodyA: BodyId, bodyB: BodyId, settings: SwingTwistConstraintSettings = {}): ConstraintId {
+        expectCommon(settings);
         const native = over(swingTwistDefaults(), settings);
         expectMotor(native.swingMotorSettings);
         expectMotor(native.twistMotorSettings);
@@ -602,6 +618,7 @@ const sixDOFDefaults = defaultsOf(Low.SixDofConstraint.defaultSettings, Low.SixD
 /** each of the six axes free, fixed or limited, with optional friction and a motor */
 export const SixDOFConstraint = {
     create(world: World, bodyA: BodyId, bodyB: BodyId, settings: SixDOFConstraintSettings = {}): ConstraintId {
+        expectCommon(settings);
         expect((settings.limitsSpringSettings?.length ?? 0) <= 3, 'limitsSpringSettings has one per translation axis');
         expect((settings.motorSettings?.length ?? 0) <= 6, 'motorSettings has one per axis');
         const native = over(sixDOFDefaults(), settings);

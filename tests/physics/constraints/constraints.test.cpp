@@ -40,14 +40,14 @@ void test_constraints_pools(TestCtx &ctx) {
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
     ConstraintId ids[20];
     for (uint32_t i = 0; i < 20; i++) {
-        ids[i] = point_constraint::create(*scene.world, a, b, {.constraint_priority = (int32_t)i});
+        ids[i] = point_constraint::create(*scene.world, a, b, {.constraint_priority = i});
     }
     const ConstraintId fixed = fixed_constraint::create(*scene.world, a, b, {});
     CHECK(ctx, points.count == 20 && scene.world->constraints.pools[constraint_id::FIXED].count == 1);
     bool intact = true;
     for (uint32_t i = 0; i < 20; i++) {
         const constraints::ConstraintBase *base = constraints::get(scene.world->constraints, ids[i]);
-        intact = intact && base != nullptr && base->index == i && base->constraint_priority == (int32_t)i && base->id == ids[i];
+        intact = intact && base != nullptr && base->index == i && base->constraint_priority == i && base->id == ids[i];
     }
     CHECK(ctx, intact);
     CHECK(ctx, constraint_id::index(fixed) == 0 && constraints::get(scene.world->constraints, fixed)->id == fixed);
@@ -168,14 +168,14 @@ void test_constraints_overrides_and_sort(TestCtx &ctx) {
     ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
-    const ConstraintId p0 = point_constraint::create(*scene.world, a, b, {.constraint_priority = 2});
-    const ConstraintId p1 = point_constraint::create(*scene.world, a, b, {.constraint_priority = 0});
+    const ConstraintId p0 = point_constraint::create(*scene.world, a, b, {.constraint_priority = 3});
+    const ConstraintId p1 = point_constraint::create(*scene.world, a, b, {.constraint_priority = 1});
     const ConstraintId d0 = distance_constraint::create(
         *scene.world, a, b,
-        {.constraint_priority = 1, .num_velocity_steps_override = 12, .num_position_steps_override = 4});
-    const ConstraintId f0 = fixed_constraint::create(*scene.world, a, b, {.constraint_priority = 2});
-    const ConstraintId c0 = cone_constraint::create(*scene.world, a, b, {.constraint_priority = -1});
-    const ConstraintId p2 = point_constraint::create(*scene.world, a, b, {.constraint_priority = 0});
+        {.constraint_priority = 2, .num_velocity_steps_override = 12, .num_position_steps_override = 4});
+    const ConstraintId f0 = fixed_constraint::create(*scene.world, a, b, {.constraint_priority = 3});
+    const ConstraintId c0 = cone_constraint::create(*scene.world, a, b, {.constraint_priority = 0});
+    const ConstraintId p2 = point_constraint::create(*scene.world, a, b, {.constraint_priority = 1});
 
     constraints::ConstraintIterationOverrides overrides;
     constraints::get_constraint_iteration_overrides(overrides, scene.world->constraints, d0);
@@ -190,7 +190,7 @@ void test_constraints_overrides_and_sort(TestCtx &ctx) {
     // the index is the place in the list of every constraint, across types, as jolt's constraint index
     constraints::ConstraintSortFields fields;
     constraints::get_constraint_sort_fields(fields, scene.world->constraints, p2);
-    CHECK(ctx, fields.priority == 0 && fields.index == 5);
+    CHECK(ctx, fields.priority == 1 && fields.index == 5);
 
     // lower priority first (the highest is solved last, so most likely satisfied), then by index, whatever the types:
     // p0 was made before f0, so it goes first

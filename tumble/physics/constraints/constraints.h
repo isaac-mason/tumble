@@ -40,7 +40,7 @@ struct ConstraintBase {
     /** the place in Constraints::list, which orders the solve at equal priority, as jolt's constraint index; ~0u when not in it */
     uint32_t list_index;
     /** solved in ascending order, so the highest priority is solved last and is most likely to hold */
-    int32_t constraint_priority;
+    uint32_t constraint_priority;
     /** 0 takes the world's iteration counts */
     uint32_t num_velocity_steps_override;
     uint32_t num_position_steps_override;
@@ -98,7 +98,7 @@ struct ConstraintIterationOverrides {
 };
 
 struct ConstraintSortFields {
-    int32_t priority;
+    uint32_t priority;
     uint32_t index;
 };
 

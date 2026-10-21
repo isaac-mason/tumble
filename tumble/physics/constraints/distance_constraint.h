@@ -54,7 +54,7 @@ struct DistanceConstraintSettings {
     spring_settings::SpringSettings spring_settings = {};
     constraints::ConstraintSpace space = constraints::SPACE_WORLD;
     /** higher numbers are more likely to be solved correctly (solved later) */
-    int32_t constraint_priority = 0;
+    uint32_t constraint_priority = 0;
     /** 0 takes the world's iteration counts */
     uint32_t num_velocity_steps_override = 0;
     uint32_t num_position_steps_override = 0;
