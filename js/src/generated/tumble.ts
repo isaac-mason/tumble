@@ -7,7 +7,7 @@
 import type { Instance } from '../module.js';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x843dff72;
+export const SCHEMA_HASH = 0xe7b83d4f;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 368;
 
@@ -18,7 +18,14 @@ declare const HANDLE_OF: unique symbol;
 export type Pointer<To> = number & { readonly [POINTER_TO]: To };
 declare const POINTER_TO: unique symbol;
 
-let wasm: Instance;
+/** before init, the wasm: any use of it throws, saying what to do, rather than failing on undefined */
+const UNBOOTED = new Proxy({} as Instance, {
+    get() {
+        throw new Error('tumble: await init() before anything else');
+    },
+});
+
+let wasm: Instance = UNBOOTED;
 
 /** binds the realm's wasm; the loader calls it once the wasm is initialised. */
 export function setWasm(booted: Instance): void {
@@ -27,12 +34,12 @@ export function setWasm(booted: Instance): void {
 
 /** the realm's wasm; throws when none has booted, which is a boot-order bug, not a runtime condition. */
 export function getWasm(): Instance {
-    if (wasm === undefined) throw new Error('tumble: await init() before anything else');
+    if (wasm === UNBOOTED) throw new Error('tumble: await init() before anything else');
     return wasm;
 }
 
 export function hasWasm(): boolean {
-    return wasm !== undefined;
+    return wasm !== UNBOOTED;
 }
 
 export const KCC_CONTACT_STRIDE = 96;
@@ -5975,6 +5982,19 @@ export const World = {
         wasm.grew();
         return r !== 0;
     },
+
+    getGravity(out: Vec3, world: World): Vec3 {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_world_get_gravity(scratch + 0, world);
+        Vec3.read(out, scratch + 0);
+        return out;
+    },
+
+    setGravity(world: World, gravity: Vec3): void {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, gravity);
+        wasm.exports.tumble_world_set_gravity(world, scratch + 0);
+    },
 };
 
 export type Shape = Handle<'Shape'>;
@@ -7001,6 +7021,13 @@ export const HingeConstraint = {
         return r !== 0;
     },
 
+    getMotorSettings(out: MotorSettings, world: World, constraint: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_hinge_constraint_get_motor_settings(scratch + 0, world, constraint);
+        MotorSettings.read(out, scratch + 0);
+        return r !== 0;
+    },
+
     setMotorState(world: World, constraint: number, state: number): boolean {
         const r = wasm.exports.tumble_hinge_constraint_set_motor_state(world, constraint, state);
         return r !== 0;
@@ -7064,6 +7091,13 @@ export const SliderConstraint = {
         const scratch = wasm.scratch;
         MotorSettings.write(scratch + 0, settings);
         const r = wasm.exports.tumble_slider_constraint_set_motor_settings(world, constraint, scratch + 0);
+        return r !== 0;
+    },
+
+    getMotorSettings(out: MotorSettings, world: World, constraint: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_slider_constraint_get_motor_settings(scratch + 0, world, constraint);
+        MotorSettings.read(out, scratch + 0);
         return r !== 0;
     },
 
@@ -7262,6 +7296,20 @@ export const SwingTwistConstraint = {
         return r !== 0;
     },
 
+    getSwingMotorSettings(out: MotorSettings, world: World, constraint: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_swing_twist_constraint_get_swing_motor_settings(scratch + 0, world, constraint);
+        MotorSettings.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    getTwistMotorSettings(out: MotorSettings, world: World, constraint: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_swing_twist_constraint_get_twist_motor_settings(scratch + 0, world, constraint);
+        MotorSettings.read(out, scratch + 0);
+        return r !== 0;
+    },
+
     setSwingMotorState(world: World, constraint: number, state: number): boolean {
         const r = wasm.exports.tumble_swing_twist_constraint_set_swing_motor_state(world, constraint, state);
         return r !== 0;
@@ -7378,6 +7426,13 @@ export const SixDofConstraint = {
         const scratch = wasm.scratch;
         MotorSettings.write(scratch + 0, settings);
         const r = wasm.exports.tumble_six_dof_constraint_set_motor_settings(world, constraint, axis, scratch + 0);
+        return r !== 0;
+    },
+
+    getMotorSettings(out: MotorSettings, world: World, constraint: number, axis: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_six_dof_constraint_get_motor_settings(scratch + 0, world, constraint, axis);
+        MotorSettings.read(out, scratch + 0);
         return r !== 0;
     },
 
@@ -8246,6 +8301,8 @@ export type WasmExports = {
     tumble_world_step_end(world: number): void;
     tumble_world_woken(world: number): number;
     tumble_world_set_materials(world: number, frictionRestitution: number, count: number): number;
+    tumble_world_get_gravity(out: number, world: number): void;
+    tumble_world_set_gravity(world: number, gravity: number): void;
     tumble_events_pairs(world: number): number;
     tumble_events_read_pair(out: number, world: number, index: number): number;
     tumble_events_contacts_added(world: number): number;
@@ -8385,6 +8442,7 @@ export type WasmExports = {
     tumble_hinge_constraint_set_limits_spring_settings(world: number, constraint: number, settings: number): number;
     tumble_hinge_constraint_set_max_friction_torque(world: number, constraint: number, torque: number): number;
     tumble_hinge_constraint_set_motor_settings(world: number, constraint: number, settings: number): number;
+    tumble_hinge_constraint_get_motor_settings(out: number, world: number, constraint: number): number;
     tumble_hinge_constraint_set_motor_state(world: number, constraint: number, state: number): number;
     tumble_hinge_constraint_set_target_angular_velocity(world: number, constraint: number, velocity: number): number;
     tumble_hinge_constraint_set_target_angle(world: number, constraint: number, angle: number): number;
@@ -8396,6 +8454,7 @@ export type WasmExports = {
     tumble_slider_constraint_set_limits(world: number, constraint: number, min: number, max: number): number;
     tumble_slider_constraint_set_limits_spring_settings(world: number, constraint: number, settings: number): number;
     tumble_slider_constraint_set_motor_settings(world: number, constraint: number, settings: number): number;
+    tumble_slider_constraint_get_motor_settings(out: number, world: number, constraint: number): number;
     tumble_slider_constraint_set_motor_state(world: number, constraint: number, state: number): number;
     tumble_slider_constraint_set_target_velocity(world: number, constraint: number, velocity: number): number;
     tumble_slider_constraint_set_target_position(world: number, constraint: number, position: number): number;
@@ -8428,6 +8487,8 @@ export type WasmExports = {
     tumble_swing_twist_constraint_set_max_friction_torque(world: number, constraint: number, torque: number): number;
     tumble_swing_twist_constraint_set_swing_motor_settings(world: number, constraint: number, settings: number): number;
     tumble_swing_twist_constraint_set_twist_motor_settings(world: number, constraint: number, settings: number): number;
+    tumble_swing_twist_constraint_get_swing_motor_settings(out: number, world: number, constraint: number): number;
+    tumble_swing_twist_constraint_get_twist_motor_settings(out: number, world: number, constraint: number): number;
     tumble_swing_twist_constraint_set_swing_motor_state(world: number, constraint: number, state: number): number;
     tumble_swing_twist_constraint_set_twist_motor_state(world: number, constraint: number, state: number): number;
     tumble_swing_twist_constraint_set_target_angular_velocity_cs(world: number, constraint: number, velocity: number): number;
@@ -8456,6 +8517,7 @@ export type WasmExports = {
         settings: number,
     ): number;
     tumble_six_dof_constraint_set_motor_settings(world: number, constraint: number, axis: number, settings: number): number;
+    tumble_six_dof_constraint_get_motor_settings(out: number, world: number, constraint: number, axis: number): number;
     tumble_six_dof_constraint_set_motor_state(world: number, constraint: number, axis: number, state: number): number;
     tumble_six_dof_constraint_set_target_velocity_cs(world: number, constraint: number, velocity: number): number;
     tumble_six_dof_constraint_set_target_angular_velocity_cs(world: number, constraint: number, velocity: number): number;

@@ -86,6 +86,10 @@ uint32_t woken(const tumble::world::World *world);
 /** the surfaces material ids name, as friction and restitution pairs; false (error set) when the allocator fails */
 bool set_materials(tumble::world::World *world, const float *friction_restitution, uint32_t count);
 
+void get_gravity(tumble::Float3 &out, const tumble::world::World *world);
+/** from the next step on */
+void set_gravity(tumble::world::World *world, const tumble::Float3 &gravity);
+
 }  // namespace world
 
 /** events::PairEvent as js reads it: bodies by id, user data in halves */
@@ -480,6 +484,7 @@ bool set_limits_spring_settings(tumble::world::World *world, tumble::constraint_
                                 const tumble::spring_settings::SpringSettings &settings);
 bool set_max_friction_torque(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float torque);
 bool set_motor_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::motor_settings::MotorSettings &settings);
+bool get_motor_settings(tumble::motor_settings::MotorSettings &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 bool set_motor_state(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t state);
 bool set_target_angular_velocity(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float velocity);
 bool set_target_angle(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float angle);
@@ -498,6 +503,7 @@ bool set_limits(tumble::world::World *world, tumble::constraint_id::ConstraintId
 bool set_limits_spring_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id,
                                 const tumble::spring_settings::SpringSettings &settings);
 bool set_motor_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::motor_settings::MotorSettings &settings);
+bool get_motor_settings(tumble::motor_settings::MotorSettings &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 bool set_motor_state(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t state);
 bool set_target_velocity(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float velocity);
 bool set_target_position(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float position);
@@ -550,6 +556,8 @@ bool set_swing_motor_settings(tumble::world::World *world, tumble::constraint_id
                               const tumble::motor_settings::MotorSettings &settings);
 bool set_twist_motor_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id,
                               const tumble::motor_settings::MotorSettings &settings);
+bool get_swing_motor_settings(tumble::motor_settings::MotorSettings &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+bool get_twist_motor_settings(tumble::motor_settings::MotorSettings &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 bool set_swing_motor_state(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t state);
 bool set_twist_motor_state(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t state);
 bool set_target_angular_velocity_cs(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::Float3 &velocity);
@@ -579,6 +587,8 @@ bool set_limits_spring_settings(tumble::world::World *world, tumble::constraint_
                                 const tumble::spring_settings::SpringSettings &settings);
 bool set_motor_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t axis,
                         const tumble::motor_settings::MotorSettings &settings);
+bool get_motor_settings(tumble::motor_settings::MotorSettings &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id,
+                        uint32_t axis);
 bool set_motor_state(tumble::world::World *world, tumble::constraint_id::ConstraintId id, uint32_t axis, uint32_t state);
 bool set_target_velocity_cs(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::Float3 &velocity);
 bool set_target_angular_velocity_cs(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::Float3 &velocity);

@@ -210,4 +210,28 @@ describe('the step', () => {
         releaseScene(scene);
         Sphere.destroy(ball);
     });
+
+    test('gravity changed after the world is made, from the next step', async () => {
+        const scene = await makeScene();
+        const { world } = scene;
+        const ball = Sphere.create({ radius: 0.5 });
+        const body = RigidBody.create(world, {
+            shape: ball,
+            objectLayer: scene.moving,
+            motionType: MotionType.DYNAMIC,
+            position: [0, 50, 0],
+        });
+        const gravity: Vec3 = [0, 0, 0];
+        expect(World.getGravity(gravity, world)).toEqual([0, Math.fround(-9.81), 0]);
+        World.setGravity(world, [3, 0, 0]);
+        expect(World.getGravity(gravity, world)).toEqual([3, 0, 0]);
+        steps(world, 60);
+        const velocity: Vec3 = [0, 0, 0];
+        RigidBody.getLinearVelocity(velocity, world, body);
+        // a second sideways at 3 m/s/s, less a little damping, and no fall
+        expect(velocity[0]).toBeGreaterThan(2.8);
+        expect(Math.abs(velocity[1])).toBeLessThan(1e-6);
+        releaseScene(scene);
+        Sphere.destroy(ball);
+    });
 });

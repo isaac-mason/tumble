@@ -34,7 +34,9 @@ export function init(options: InitOptions = {}): Promise<void> {
     if (booting === null) {
         booting = (async () => {
             const source = options.wasm ?? defaultWasmUrl();
-            const wasm = source instanceof URL || typeof source === 'string' ? await bytesFrom(new URL(source)) : source;
+            // a relative string resolves against the page, as fetch would resolve it
+            const url = typeof source === 'string' ? new URL(source, globalThis.location?.href) : source;
+            const wasm = url instanceof URL ? await bytesFrom(url) : url;
             await instantiate(wasm);
         })();
     }

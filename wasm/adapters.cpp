@@ -86,6 +86,10 @@ bool set_materials(tumble::world::World *world, const float *friction_restitutio
     return tumble::world::set_materials(*world, materials.v.data, count);
 }
 
+void get_gravity(Float3 &out, const tumble::world::World *world) { out = world->settings.gravity; }
+
+void set_gravity(tumble::world::World *world, const Float3 &gravity) { world->settings.gravity = gravity; }
+
 }  // namespace world
 
 namespace events {
@@ -873,6 +877,13 @@ bool set_motor_settings(tumble::world::World *world, ConstraintId id, const moto
     return true;
 }
 
+bool get_motor_settings(motor_settings::MotorSettings &out, tumble::world::World *world, ConstraintId id) {
+    const tumble::hinge_constraint::HingeConstraint *constraint = found(tumble::hinge_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    out = constraint->motor_settings;
+    return true;
+}
+
 bool set_motor_state(tumble::world::World *world, ConstraintId id, uint32_t state) {
     tumble::hinge_constraint::HingeConstraint *constraint = found(tumble::hinge_constraint::get(*world, id));
     if (constraint == nullptr) return false;
@@ -937,6 +948,13 @@ bool set_motor_settings(tumble::world::World *world, ConstraintId id, const moto
     tumble::slider_constraint::SliderConstraint *constraint = found(tumble::slider_constraint::get(*world, id));
     if (constraint == nullptr) return false;
     constraint->motor_settings = settings;
+    return true;
+}
+
+bool get_motor_settings(motor_settings::MotorSettings &out, tumble::world::World *world, ConstraintId id) {
+    const tumble::slider_constraint::SliderConstraint *constraint = found(tumble::slider_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    out = constraint->motor_settings;
     return true;
 }
 
@@ -1130,6 +1148,20 @@ bool set_twist_motor_settings(tumble::world::World *world, ConstraintId id, cons
     return true;
 }
 
+bool get_swing_motor_settings(motor_settings::MotorSettings &out, tumble::world::World *world, ConstraintId id) {
+    const tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    out = constraint->swing_motor_settings;
+    return true;
+}
+
+bool get_twist_motor_settings(motor_settings::MotorSettings &out, tumble::world::World *world, ConstraintId id) {
+    const tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
+    if (constraint == nullptr) return false;
+    out = constraint->twist_motor_settings;
+    return true;
+}
+
 bool set_swing_motor_state(tumble::world::World *world, ConstraintId id, uint32_t state) {
     tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
     if (constraint == nullptr) return false;
@@ -1249,6 +1281,13 @@ bool set_motor_settings(tumble::world::World *world, ConstraintId id, uint32_t a
     SixDOFConstraint *constraint = found_axis(world, id, axis, tumble::six_dof_constraint::NUM);
     if (constraint == nullptr) return false;
     constraint->motor_settings[axis] = settings;
+    return true;
+}
+
+bool get_motor_settings(motor_settings::MotorSettings &out, tumble::world::World *world, ConstraintId id, uint32_t axis) {
+    const SixDOFConstraint *constraint = found_axis(world, id, axis, tumble::six_dof_constraint::NUM);
+    if (constraint == nullptr) return false;
+    out = constraint->motor_settings[axis];
     return true;
 }
 

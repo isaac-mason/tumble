@@ -101,4 +101,13 @@ export const World = {
         const ok = withCopies((copy) => Low.World.setMaterials(world, copy.f32(values), materials.length));
         if (!ok) Low.getWasm().check();
     },
+
+    getGravity(out: Vec3, world: World): Vec3 {
+        Low.World.getGravity(out, world);
+        return out;
+    },
+    /** from the next step on */
+    setGravity(world: World, value: Vec3): void {
+        Low.World.setGravity(world, value);
+    },
 };

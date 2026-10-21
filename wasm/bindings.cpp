@@ -99,6 +99,8 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::world::step_end), names("world"), GROWS);
     bind::fn(b, BIND(adapters::world::woken), names("world"));
     bind::fn(b, BIND(adapters::world::set_materials), names("world", "frictionRestitution", "count"), GROWS);
+    bind::fn(b, BIND(adapters::world::get_gravity), names("out", "world"));
+    bind::fn(b, BIND(adapters::world::set_gravity), names("world", "gravity"));
 
     VALUE_AS(contact_constraints::ContactSettings, "ContactSettings")
         .field(FIELD(contact_constraints::ContactSettings, combined_friction))
@@ -528,6 +530,7 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::hinge_constraint::set_limits_spring_settings), names("world", "constraint", "settings"));
     bind::fn(b, BIND(adapters::hinge_constraint::set_max_friction_torque), names("world", "constraint", "torque"));
     bind::fn(b, BIND(adapters::hinge_constraint::set_motor_settings), names("world", "constraint", "settings"));
+    bind::fn(b, BIND(adapters::hinge_constraint::get_motor_settings), names("out", "world", "constraint"));
     bind::fn(b, BIND(adapters::hinge_constraint::set_motor_state), names("world", "constraint", "state"));
     bind::fn(b, BIND(adapters::hinge_constraint::set_target_angular_velocity), names("world", "constraint", "velocity"));
     bind::fn(b, BIND(adapters::hinge_constraint::set_target_angle), names("world", "constraint", "angle"));
@@ -557,6 +560,7 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::slider_constraint::set_limits), names("world", "constraint", "min", "max"));
     bind::fn(b, BIND(adapters::slider_constraint::set_limits_spring_settings), names("world", "constraint", "settings"));
     bind::fn(b, BIND(adapters::slider_constraint::set_motor_settings), names("world", "constraint", "settings"));
+    bind::fn(b, BIND(adapters::slider_constraint::get_motor_settings), names("out", "world", "constraint"));
     bind::fn(b, BIND(adapters::slider_constraint::set_motor_state), names("world", "constraint", "state"));
     bind::fn(b, BIND(adapters::slider_constraint::set_target_velocity), names("world", "constraint", "velocity"));
     bind::fn(b, BIND(adapters::slider_constraint::set_target_position), names("world", "constraint", "position"));
@@ -633,6 +637,8 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::swing_twist_constraint::set_max_friction_torque), names("world", "constraint", "torque"));
     bind::fn(b, BIND(adapters::swing_twist_constraint::set_swing_motor_settings), names("world", "constraint", "settings"));
     bind::fn(b, BIND(adapters::swing_twist_constraint::set_twist_motor_settings), names("world", "constraint", "settings"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::get_swing_motor_settings), names("out", "world", "constraint"));
+    bind::fn(b, BIND(adapters::swing_twist_constraint::get_twist_motor_settings), names("out", "world", "constraint"));
     bind::fn(b, BIND(adapters::swing_twist_constraint::set_swing_motor_state), names("world", "constraint", "state"));
     bind::fn(b, BIND(adapters::swing_twist_constraint::set_twist_motor_state), names("world", "constraint", "state"));
     bind::fn(b, BIND(adapters::swing_twist_constraint::set_target_angular_velocity_cs), names("world", "constraint", "velocity"));
@@ -669,6 +675,7 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::six_dof_constraint::set_rotation_limits), names("world", "constraint", "limitMin", "limitMax"));
     bind::fn(b, BIND(adapters::six_dof_constraint::set_limits_spring_settings), names("world", "constraint", "axis", "settings"));
     bind::fn(b, BIND(adapters::six_dof_constraint::set_motor_settings), names("world", "constraint", "axis", "settings"));
+    bind::fn(b, BIND(adapters::six_dof_constraint::get_motor_settings), names("out", "world", "constraint", "axis"));
     bind::fn(b, BIND(adapters::six_dof_constraint::set_motor_state), names("world", "constraint", "axis", "state"));
     bind::fn(b, BIND(adapters::six_dof_constraint::set_target_velocity_cs), names("world", "constraint", "velocity"));
     bind::fn(b, BIND(adapters::six_dof_constraint::set_target_angular_velocity_cs), names("world", "constraint", "velocity"));

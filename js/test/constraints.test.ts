@@ -97,6 +97,40 @@ describe('constraints', () => {
         releaseScene(scene);
     });
 
+    test('motor settings read back, and set in part over what the motor has', async () => {
+        const scene = await makeScene();
+        const parts = makeParts();
+        const { world } = scene;
+        const frame = anchor(scene, parts, [0, 3, 0]);
+        const door = dynamic(scene, parts.door, [0.5, 3, 0]);
+        const hinge = HingeConstraint.create(world, frame, door, {
+            pointA: [0, 3, 0],
+            pointB: [0, 3, 0],
+            motorSettings: { spring: { frequencyOrStiffness: 7, damping: 0.5 } },
+        });
+        // only the torque given: the spring stays as created
+        expect(HingeConstraint.setMotorSettings(world, hinge, { minTorqueLimit: -40, maxTorqueLimit: 40 })).toBe(true);
+        const read = {
+            spring: { mode: SpringMode.FREQUENCY_AND_DAMPING, frequencyOrStiffness: 0, damping: 0 },
+            minForceLimit: 0,
+            maxForceLimit: 0,
+            minTorqueLimit: 0,
+            maxTorqueLimit: 0,
+        };
+        expect(HingeConstraint.getMotorSettings(read, world, hinge)).toBe(true);
+        expect(read.maxTorqueLimit).toBe(40);
+        expect(read.minTorqueLimit).toBe(-40);
+        expect(read.spring.frequencyOrStiffness).toBe(7);
+        expect(read.spring.damping).toBe(0.5);
+        expect(() => HingeConstraint.setMotorSettings(world, hinge, { minTorqueLimit: 50 })).toThrow(RangeError);
+
+        HingeConstraint.remove(world, hinge);
+        expect(HingeConstraint.getMotorSettings(read, world, hinge)).toBe(false);
+        expect(HingeConstraint.setMotorSettings(world, hinge, { maxTorqueLimit: 1 })).toBe(false);
+        releaseParts(parts);
+        releaseScene(scene);
+    });
+
     test('a pendulum swings at its length; a bungee stops at its most', async () => {
         const scene = await makeScene();
         const parts = makeParts();

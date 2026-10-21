@@ -60,6 +60,33 @@ function expect(holds: boolean, what: string): void {
     if (!holds) throw new RangeError(`tumble: ${what}`);
 }
 
+const motor = Low.MotorSettings.create();
+
+/** a constraint's motor settings into out: false for an id naming no constraint of the type */
+function readMotor(out: MotorSettings, read: (scratch: Low.MotorSettings) => boolean): boolean {
+    if (!read(motor)) return false;
+    out.spring.mode = motor.spring.mode as SpringMode;
+    out.spring.frequencyOrStiffness = motor.spring.frequencyOrStiffness;
+    out.spring.damping = motor.spring.damping;
+    out.minForceLimit = motor.minForceLimit;
+    out.maxForceLimit = motor.maxForceLimit;
+    out.minTorqueLimit = motor.minTorqueLimit;
+    out.maxTorqueLimit = motor.maxTorqueLimit;
+    return true;
+}
+
+/** the given fields over a constraint's current motor settings: false for an id naming no constraint of the type */
+function writeMotor(
+    given: Given<MotorSettings>,
+    read: (scratch: Low.MotorSettings) => boolean,
+    write: (settings: Low.MotorSettings) => boolean,
+): boolean {
+    if (!read(motor)) return false;
+    const settings = over(motor, given);
+    expectMotor(settings);
+    return write(settings);
+}
+
 /** what a motor is held to before it runs */
 function expectMotor(settings: Low.MotorSettings): void {
     const { spring } = settings;
@@ -232,9 +259,16 @@ export const HingeConstraint = {
     setMaxFrictionTorque(world: World, constraint: ConstraintId, torque: number): boolean {
         return Low.HingeConstraint.setMaxFrictionTorque(world, constraint, torque);
     },
-    setMotorSettings(world: World, constraint: ConstraintId, settings: MotorSettings): boolean {
-        expectMotor(settings);
-        return Low.HingeConstraint.setMotorSettings(world, constraint, settings);
+    getMotorSettings(out: MotorSettings, world: World, constraint: ConstraintId): boolean {
+        return readMotor(out, (scratch) => Low.HingeConstraint.getMotorSettings(scratch, world, constraint));
+    },
+    /** the given fields over the current ones */
+    setMotorSettings(world: World, constraint: ConstraintId, settings: Given<MotorSettings>): boolean {
+        return writeMotor(
+            settings,
+            (scratch) => Low.HingeConstraint.getMotorSettings(scratch, world, constraint),
+            (native) => Low.HingeConstraint.setMotorSettings(world, constraint, native),
+        );
     },
     setMotorState(world: World, constraint: ConstraintId, state: MotorState): boolean {
         return Low.HingeConstraint.setMotorState(world, constraint, state);
@@ -309,9 +343,16 @@ export const SliderConstraint = {
     getMaxFrictionForce(world: World, constraint: ConstraintId): number {
         return Low.SliderConstraint.getMaxFrictionForce(world, constraint);
     },
-    setMotorSettings(world: World, constraint: ConstraintId, settings: MotorSettings): boolean {
-        expectMotor(settings);
-        return Low.SliderConstraint.setMotorSettings(world, constraint, settings);
+    getMotorSettings(out: MotorSettings, world: World, constraint: ConstraintId): boolean {
+        return readMotor(out, (scratch) => Low.SliderConstraint.getMotorSettings(scratch, world, constraint));
+    },
+    /** the given fields over the current ones */
+    setMotorSettings(world: World, constraint: ConstraintId, settings: Given<MotorSettings>): boolean {
+        return writeMotor(
+            settings,
+            (scratch) => Low.SliderConstraint.getMotorSettings(scratch, world, constraint),
+            (native) => Low.SliderConstraint.setMotorSettings(world, constraint, native),
+        );
     },
     setMotorState(world: World, constraint: ConstraintId, state: MotorState): boolean {
         return Low.SliderConstraint.setMotorState(world, constraint, state);
@@ -467,13 +508,27 @@ export const SwingTwistConstraint = {
     setMaxFrictionTorque(world: World, constraint: ConstraintId, torque: number): boolean {
         return Low.SwingTwistConstraint.setMaxFrictionTorque(world, constraint, torque);
     },
-    setSwingMotorSettings(world: World, constraint: ConstraintId, settings: MotorSettings): boolean {
-        expectMotor(settings);
-        return Low.SwingTwistConstraint.setSwingMotorSettings(world, constraint, settings);
+    getSwingMotorSettings(out: MotorSettings, world: World, constraint: ConstraintId): boolean {
+        return readMotor(out, (scratch) => Low.SwingTwistConstraint.getSwingMotorSettings(scratch, world, constraint));
     },
-    setTwistMotorSettings(world: World, constraint: ConstraintId, settings: MotorSettings): boolean {
-        expectMotor(settings);
-        return Low.SwingTwistConstraint.setTwistMotorSettings(world, constraint, settings);
+    getTwistMotorSettings(out: MotorSettings, world: World, constraint: ConstraintId): boolean {
+        return readMotor(out, (scratch) => Low.SwingTwistConstraint.getTwistMotorSettings(scratch, world, constraint));
+    },
+    /** the given fields over the current ones */
+    setSwingMotorSettings(world: World, constraint: ConstraintId, settings: Given<MotorSettings>): boolean {
+        return writeMotor(
+            settings,
+            (scratch) => Low.SwingTwistConstraint.getSwingMotorSettings(scratch, world, constraint),
+            (native) => Low.SwingTwistConstraint.setSwingMotorSettings(world, constraint, native),
+        );
+    },
+    /** the given fields over the current ones */
+    setTwistMotorSettings(world: World, constraint: ConstraintId, settings: Given<MotorSettings>): boolean {
+        return writeMotor(
+            settings,
+            (scratch) => Low.SwingTwistConstraint.getTwistMotorSettings(scratch, world, constraint),
+            (native) => Low.SwingTwistConstraint.setTwistMotorSettings(world, constraint, native),
+        );
     },
     setSwingMotorState(world: World, constraint: ConstraintId, state: MotorState): boolean {
         return Low.SwingTwistConstraint.setSwingMotorState(world, constraint, state);
@@ -568,10 +623,18 @@ export const SixDOFConstraint = {
         expectAxis(axis, 3);
         return Low.SixDofConstraint.setLimitsSpringSettings(world, constraint, axis, settings);
     },
-    setMotorSettings(world: World, constraint: ConstraintId, axis: SixDOFAxis, settings: MotorSettings): boolean {
+    getMotorSettings(out: MotorSettings, world: World, constraint: ConstraintId, axis: SixDOFAxis): boolean {
         expectAxis(axis, 6);
-        expectMotor(settings);
-        return Low.SixDofConstraint.setMotorSettings(world, constraint, axis, settings);
+        return readMotor(out, (scratch) => Low.SixDofConstraint.getMotorSettings(scratch, world, constraint, axis));
+    },
+    /** the given fields over the axis's current ones */
+    setMotorSettings(world: World, constraint: ConstraintId, axis: SixDOFAxis, settings: Given<MotorSettings>): boolean {
+        expectAxis(axis, 6);
+        return writeMotor(
+            settings,
+            (scratch) => Low.SixDofConstraint.getMotorSettings(scratch, world, constraint, axis),
+            (native) => Low.SixDofConstraint.setMotorSettings(world, constraint, axis, native),
+        );
     },
     setMotorState(world: World, constraint: ConstraintId, axis: SixDOFAxis, state: MotorState): boolean {
         expectAxis(axis, 6);
