@@ -49,6 +49,24 @@ COMMON="--target=wasm32 $OPT $FEATURES -nostdlib -nostdlibinc -ffreestanding -fv
 # module, and with no entry point the linker then runs that list on every export call.
 CXXFLAGS="$COMMON -std=c++20 -Wall -Wextra -Werror -Wglobal-constructors -I$ROOT"
 
+# the shipped build's cold sources, run at setup, on a query from js or to debug draw, never per step: built for size,
+# -Oz after $OPT so it wins, for 42 KB (8 KB gzipped) at no measured cost in a step. the bits are the same at any level
+COLD_SOURCES="
+tumble/physics/debug.cpp
+tumble/physics/filter.cpp
+tumble/physics/layers.cpp
+tumble/physics/world.cpp
+tumble/physics/shapes/dispatch.cpp
+tumble/physics/shapes/utils/convex_hull_builder.cpp
+tumble/physics/shapes/utils/convex_hull_builder_2d.cpp
+tumble/physics/shapes/utils/static_compound_bvh.cpp
+tumble/physics/shapes/utils/triangle_mesh_builder.cpp
+tumble/physics/shapes/utils/triangle_mesh_data.cpp
+wasm/adapters.cpp
+wasm/generated/exports.cpp
+"
+COLD_FLAGS="-Oz"
+
 LDFLAGS="--no-entry --import-memory --export-dynamic --export=__heap_base --export=__data_end --stack-first -z stack-size=1048576"
 
 # the object list the compile functions append to, in a fixed order so the link is stable.
@@ -92,6 +110,21 @@ compile_set() {
 # compile_tree <dir> <extra cxxflags> : every .cpp under dir
 compile_tree() {
     compile_set "$CXXFLAGS $2" $(find "$1" -name '*.cpp' | sort)
+}
+
+# compile_split <file...> : the files, the COLD_SOURCES among them with COLD_FLAGS
+compile_split() {
+    hot=""
+    cold=""
+    for f in "$@"; do
+        case "$COLD_SOURCES" in
+            *"${f#$ROOT/}"*) cold="$cold $f" ;;
+            *) hot="$hot $f" ;;
+        esac
+    done
+    [ -n "$hot" ] && compile_set "$CXXFLAGS" $hot
+    [ -n "$cold" ] && compile_set "$CXXFLAGS $COLD_FLAGS" $cold
+    return 0
 }
 
 # link_wasm <out> [names] : links $OBJS. "names" is the test and schema builds: the name section is
