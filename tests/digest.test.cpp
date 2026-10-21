@@ -204,6 +204,6 @@ uint32_t digest() {
 }
 
 /** a change that moves any bit of the primitives or the pile changes this; the runners print the new value */
-constexpr uint32_t PINNED_DIGEST = 0xf510af7cu;
+constexpr uint32_t PINNED_DIGEST = 0xaebcf3d7u;
 
 void test_digest_matches_the_pin(TestCtx &ctx) { CHECK(ctx, digest() == PINNED_DIGEST); }

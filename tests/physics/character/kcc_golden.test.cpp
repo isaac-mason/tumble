@@ -407,7 +407,7 @@ void test_kcc_golden_steps_up_and_down(TestCtx &ctx) {
         }
     }
     CHECK_NEAR(ctx, y_of(*character), 0.0f, 0.01f);
-    check_golden(ctx, "steps_up_and_down", golden.physics.value, 0x875d209au);
+    check_golden(ctx, "steps_up_and_down", golden.physics.value, 0x4442b504u);
     release(scene, character, filter);
 }
 
@@ -436,7 +436,7 @@ void test_kcc_golden_slopes(TestCtx &ctx) {
     // not up the steep slope, whose foot is near x -2.7
     CHECK(ctx, x_of(*character) > -3.0f);
     CHECK_NEAR(ctx, y_of(*character), 0.0f, 0.01f);
-    check_golden(ctx, "slopes", golden.physics.value, 0xf578bb56u);
+    check_golden(ctx, "slopes", golden.physics.value, 0xc3c5013cu);
     release(scene, character, filter);
 }
 
@@ -461,7 +461,7 @@ void test_kcc_golden_walls_and_a_wedge(TestCtx &ctx) {
     // in the corner, touching both walls and the floor
     CHECK(ctx, character->contacts.length >= 3);
     CHECK(ctx, x_of(*character) < 5.2f);
-    check_golden(ctx, "walls_and_a_wedge", golden.physics.value, 0x763b4d1bu);
+    check_golden(ctx, "walls_and_a_wedge", golden.physics.value, 0xc7d2201bu);
     release(scene, character, filter);
 }
 
@@ -498,7 +498,7 @@ void test_kcc_golden_platforms(TestCtx &ctx) {
     // standing still, carried round by the turning platform
     CHECK(ctx, character->ground.body_id == turner->id);
     CHECK(ctx, z_of(*character) < turning_from - 1.0f);
-    check_golden(ctx, "platforms", golden.physics.value, 0xef12e144u);
+    check_golden(ctx, "platforms", golden.physics.value, 0xf307ee2bu);
     release(scene, character, filter);
 }
 
@@ -526,7 +526,7 @@ void test_kcc_golden_pushing_and_standing_on_dynamics(TestCtx &ctx) {
     CHECK(ctx, small_crate->position.x > 5.5f);
     CHECK(ctx, character->ground.body_id == slab->id);
     CHECK_NEAR(ctx, y_of(*character), 0.3f, 0.01f);
-    check_golden(ctx, "pushing_and_standing_on_dynamics", golden.physics.value, 0x48e9daaau);
+    check_golden(ctx, "pushing_and_standing_on_dynamics", golden.physics.value, 0x93f0c1feu);
     release(scene, character, filter);
 }
 
@@ -590,7 +590,7 @@ void test_kcc_golden_mesh_terrain(TestCtx &ctx) {
     }
     CHECK(ctx, at_the_hit_limit);
     CHECK(ctx, x_of(*ball) < -1.0f);
-    check_golden(ctx, "mesh_terrain", golden.physics.value, 0x3d03ebdcu);
+    check_golden(ctx, "mesh_terrain", golden.physics.value, 0x5d69378cu);
 
     release(scene, ball, filter);
     triangle_mesh_data::destroy(data);
@@ -647,7 +647,7 @@ void test_kcc_golden_crouch_teleport_and_a_sensor(TestCtx &ctx) {
     // through the sensor at x -3 and out past it, told of it coming and going
     CHECK(ctx, x_of(*character) < -5.5f);
     CHECK(ctx, rules.watched_added && rules.watched_removed);
-    check_golden(ctx, "crouch_teleport_and_a_sensor", golden.physics.value, 0x95689fb3u);
+    check_golden(ctx, "crouch_teleport_and_a_sensor", golden.physics.value, 0x80c96ab3u);
     check_golden(ctx, "crouch_teleport_and_a_sensor log", golden.log.value, 0x675f03a8u);
     release(scene, character, filter);
 }
@@ -674,7 +674,7 @@ void test_kcc_golden_conveyor(TestCtx &ctx) {
         // two seconds standing still, carried at the belt's 2 m/s
         if (i == 149) CHECK_NEAR(ctx, x_of(*character) - boarded, 4.0f, 0.05f);
     }
-    check_golden(ctx, "conveyor", golden.physics.value, 0x7293f453u);
+    check_golden(ctx, "conveyor", golden.physics.value, 0x2ab1e17cu);
     check_golden(ctx, "conveyor log", golden.log.value, 0xf97c6c7fu);
     release(scene, character, filter);
 }
@@ -702,7 +702,7 @@ void test_kcc_golden_unpushable_crate(TestCtx &ctx) {
     }
     CHECK_NEAR(ctx, unpushable->position.x, 1.5f, 1e-3f);
     CHECK(ctx, pushable->position.x > 3.5f);
-    check_golden(ctx, "unpushable_crate", golden.physics.value, 0x43fcd8ecu);
+    check_golden(ctx, "unpushable_crate", golden.physics.value, 0xdec1a1ecu);
     check_golden(ctx, "unpushable_crate log", golden.log.value, 0x203281ebu);
     release(scene, character, filter);
 }
@@ -751,7 +751,7 @@ void test_kcc_golden_pusher_that_cannot_push(TestCtx &ctx) {
     }
     // the other pusher shoved it along
     CHECK(ctx, x_of(*character) > 1.0f);
-    check_golden(ctx, "pusher_that_cannot_push", golden.physics.value, 0xdf87185cu);
+    check_golden(ctx, "pusher_that_cannot_push", golden.physics.value, 0x73bac05cu);
     check_golden(ctx, "pusher_that_cannot_push log", golden.log.value, 0xdc226d9au);
     release(scene, character, filter);
 }

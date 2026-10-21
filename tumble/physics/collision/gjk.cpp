@@ -33,11 +33,13 @@ void compute_closest_point_on_line(ClosestPointResult &out, Vec3f a, Vec3f b, fl
 
 void compute_closest_point_on_triangle(ClosestPointResult &out, Vec3f in_a, Vec3f in_b, Vec3f in_c, bool must_include_c,
                                        float squared_tolerance) {
-    // the most accurate normal is calculated by using the two shortest edges
-    const Vec3f in_ac = vec3f::subtract(in_c, in_a);
+    // the most accurate normal is calculated by using the two shortest edges. the normals differ most when one edge is
+    // much shorter than the others (which are then about as long as each other), so the shorter of the two edges at b
+    // will do with the third: a and c are swapped so that ab is the shorter one
+    const Vec3f in_ba = vec3f::subtract(in_a, in_b);
     const Vec3f in_bc = vec3f::subtract(in_c, in_b);
 
-    const bool swap_ac = vec3f::dot(in_bc, in_bc) < vec3f::dot(in_ac, in_ac);
+    const bool swap_ac = vec3f::dot(in_bc, in_bc) < vec3f::dot(in_ba, in_ba);
 
     const Vec3f a = swap_ac ? in_c : in_a;
     const Vec3f c = swap_ac ? in_a : in_c;
