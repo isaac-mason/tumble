@@ -12,7 +12,8 @@ canvas { display: block; width: 100%; height: 100%; }
 <body>
 <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
 <script>
-var Module = { canvas: document.getElementById('canvas') };
+// ?a=<arg>&a=<arg>: the app's command line, as the headless screenshots pass it
+var Module = { canvas: document.getElementById('canvas'), arguments: new URLSearchParams(location.search).getAll('a') };
 </script>
 {{{ SCRIPT }}}
 </body>

@@ -1,4 +1,7 @@
 #include <stdio.h>
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 
@@ -249,7 +252,12 @@ static void step_world(const Example &example, float delta_time) {
 }
 
 static void save_screenshot() {
-#if !defined(__EMSCRIPTEN__)
+#if defined(__EMSCRIPTEN__)
+    // the page holds this frame, and the headless browser takes the picture
+    state.paused = true;
+    EM_ASM({ window.labsScreenshotReady = true; });
+    return;
+#else
     const int width = sapp_width();
     const int height = sapp_height();
     uint8_t *pixels = (uint8_t *)malloc((size_t)width * height * 3);
