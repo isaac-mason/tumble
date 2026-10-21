@@ -4,7 +4,9 @@
 #include "wasm/adapters.h"
 
 #include "tumble/math/quatf.h"
+#include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
+#include "tumble/math/vec4f.h"
 #include "tumble/physics/body/rigid_body.h"
 #include "tumble/physics/events.h"
 #include "tumble/physics/shapes/dispatch.h"
@@ -1671,6 +1673,38 @@ void read_state(KCCState &out, const KCC *character) {
 }
 
 void set_linear_velocity(KCC *character, const Float3 &velocity) { character->linear_velocity = vec3f::load(velocity); }
+
+void get_tuning(KCCTuning &out, const KCC *character) {
+    const KCC &c = *character;
+    out = {float3_of(c.shape_offset), c.mass, c.max_strength, float3_of(c.up), c.max_slope_angle, c.predictive_contact_distance,
+           c.character_padding, c.max_collision_iterations, c.max_constraint_iterations, c.collision_tolerance, c.penetration_recovery_speed,
+           c.min_time_remaining, c.max_num_hits, c.hit_reduction_cos_max_angle, c.back_face_mode, c.enhanced_internal_edge_removal,
+           {vec4f::x(c.supporting_volume_plane), vec4f::y(c.supporting_volume_plane), vec4f::z(c.supporting_volume_plane),
+            vec4f::w(c.supporting_volume_plane)}};
+}
+
+void set_tuning(KCC *character, const KCCTuning &t) {
+    KCC &c = *character;
+    c.shape_offset = vec3f::load(t.shape_offset);
+    c.mass = t.mass;
+    c.max_strength = t.max_strength;
+    c.up = vec3f::normalize(vec3f::load(t.up));
+    c.max_slope_angle = t.max_slope_angle;
+    c.cos_max_slope_angle = scalar::cos(t.max_slope_angle);
+    c.predictive_contact_distance = t.predictive_contact_distance;
+    c.character_padding = t.character_padding;
+    c.max_collision_iterations = t.max_collision_iterations;
+    c.max_constraint_iterations = t.max_constraint_iterations;
+    c.collision_tolerance = t.collision_tolerance;
+    c.penetration_recovery_speed = t.penetration_recovery_speed;
+    c.min_time_remaining = t.min_time_remaining;
+    c.max_num_hits = t.max_num_hits;
+    c.hit_reduction_cos_max_angle = t.hit_reduction_cos_max_angle;
+    c.back_face_mode = (tumble::kcc::BackFaceMode)t.back_face_mode;
+    c.enhanced_internal_edge_removal = t.enhanced_internal_edge_removal;
+    c.supporting_volume_plane = vec4f::make(t.supporting_volume_plane.x, t.supporting_volume_plane.y, t.supporting_volume_plane.z,
+                                            t.supporting_volume_plane.w);
+}
 
 uint8_t *contacts(KCC *character) { return reinterpret_cast<uint8_t *>(character->contacts.data); }
 

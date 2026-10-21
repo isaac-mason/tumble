@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+    BackFaceMode,
     Box,
     Capsule,
     createDefaultUpdateSettings,
@@ -292,6 +293,48 @@ describe('character controller', () => {
         expect(highest).toBeGreaterThan(2.5);
         expect(character.ground.bodyId).toBe(platform);
         expect(character.position[1]).toBeCloseTo(2.1, 2);
+        release(scene, [character]);
+    });
+
+    test('tuning after create: the slope it can walk, read back as set, up normalized', async () => {
+        const scene = await makeScene();
+        const character = KCC.create({ shape: standingShape(scene), maxSlopeAngle: 0.5 }, [0, 0, 0], [0, 0, 0, 1]);
+        const tuning = KCC.getTuning(
+            {
+                shapeOffset: [0, 0, 0],
+                mass: 0,
+                maxStrength: 0,
+                up: [0, 0, 0],
+                maxSlopeAngle: 0,
+                predictiveContactDistance: 0,
+                characterPadding: 0,
+                maxCollisionIterations: 0,
+                maxConstraintIterations: 0,
+                collisionTolerance: 0,
+                penetrationRecoverySpeed: 0,
+                minTimeRemaining: 0,
+                maxNumHits: 0,
+                hitReductionCosMaxAngle: 0,
+                backFaceMode: BackFaceMode.COLLIDE,
+                enhancedInternalEdgeRemoval: false,
+                supportingVolumePlane: [0, 0, 0, 0],
+            },
+            character,
+        );
+        expect(tuning.maxSlopeAngle).toBe(Math.fround(0.5));
+        // without a plane at create, anything below it can support it
+        expect(tuning.supportingVolumePlane).toEqual([0, 1, 0, Math.fround(-1e10)]);
+        // a 40 degree normal: too steep at 0.5 rad (29 degrees), walkable once the limit is 1
+        const normal: Vec3 = [Math.sin((40 * Math.PI) / 180), Math.cos((40 * Math.PI) / 180), 0];
+        expect(KCC.isSlopeTooSteep(character, normal)).toBe(true);
+        KCC.setTuning(character, { maxSlopeAngle: 1, up: [0, 2, 0], enhancedInternalEdgeRemoval: true });
+        expect(KCC.isSlopeTooSteep(character, normal)).toBe(false);
+        KCC.getTuning(tuning, character);
+        expect(tuning.up).toEqual([0, 1, 0]);
+        expect(character.up).toEqual([0, 1, 0]);
+        expect(tuning.enhancedInternalEdgeRemoval).toBe(true);
+        // the rest as they were
+        expect(tuning.supportingVolumePlane[3]).toBe(Math.fround(-1e10));
         release(scene, [character]);
     });
 

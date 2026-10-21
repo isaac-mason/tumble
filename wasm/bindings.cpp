@@ -851,6 +851,24 @@ TUMBLE_BINDINGS {
         .field(FIELD(kcc::UpdateSettings, walk_stairs_step_forward_test))
         .field(FIELD(kcc::UpdateSettings, walk_stairs_cos_angle_forward_contact))
         .field(FIELD(kcc::UpdateSettings, walk_stairs_step_down_extra));
+    VALUE_AS(adapters::KCCTuning, "KCCTuning")
+        .field(FIELD(adapters::KCCTuning, shape_offset))
+        .field(FIELD(adapters::KCCTuning, mass))
+        .field(FIELD(adapters::KCCTuning, max_strength))
+        .field(FIELD(adapters::KCCTuning, up))
+        .field(FIELD(adapters::KCCTuning, max_slope_angle))
+        .field(FIELD(adapters::KCCTuning, predictive_contact_distance))
+        .field(FIELD(adapters::KCCTuning, character_padding))
+        .field(FIELD(adapters::KCCTuning, max_collision_iterations))
+        .field(FIELD(adapters::KCCTuning, max_constraint_iterations))
+        .field(FIELD(adapters::KCCTuning, collision_tolerance))
+        .field(FIELD(adapters::KCCTuning, penetration_recovery_speed))
+        .field(FIELD(adapters::KCCTuning, min_time_remaining))
+        .field(FIELD(adapters::KCCTuning, max_num_hits))
+        .field(FIELD(adapters::KCCTuning, hit_reduction_cos_max_angle))
+        .field(FIELD(adapters::KCCTuning, back_face_mode))
+        .field(FIELD(adapters::KCCTuning, enhanced_internal_edge_removal))
+        .field(FIELD(adapters::KCCTuning, supporting_volume_plane));
     VALUE_AS(adapters::KCCState, "KCCState")
         .field(FIELD(adapters::KCCState, position))
         .field(FIELD(adapters::KCCState, quaternion))
@@ -915,6 +933,8 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::kcc::remove), names("world", "character"));
     bind::fn(b, BIND(adapters::kcc::read_state), names("out", "character"));
     bind::fn(b, BIND(adapters::kcc::set_linear_velocity), names("character", "velocity"));
+    bind::fn(b, BIND(adapters::kcc::get_tuning), names("out", "character"));
+    bind::fn(b, BIND(adapters::kcc::set_tuning), names("character", "tuning"));
     bind::fn(b, BIND(adapters::kcc::contacts), names("character"));
     bind::fn(b, BIND(adapters::kcc::read_contact_event), names("out", "character", "index"));
     bind::fn(b, BIND(adapters::kcc::set_position), names("world", "character", "position"), GROWS);

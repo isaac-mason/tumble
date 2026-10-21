@@ -799,6 +799,29 @@ struct KCCSolve {
     float time_simulated;
 };
 
+/** what a character's settings can change after create: the shape has set_shape; the inner body's are fixed when added */
+struct KCCTuning {
+    tumble::Float3 shape_offset;
+    float mass;
+    float max_strength;
+    /** normalized when set */
+    tumble::Float3 up;
+    float max_slope_angle;
+    float predictive_contact_distance;
+    float character_padding;
+    uint32_t max_collision_iterations;
+    uint32_t max_constraint_iterations;
+    float collision_tolerance;
+    float penetration_recovery_speed;
+    float min_time_remaining;
+    uint32_t max_num_hits;
+    float hit_reduction_cos_max_angle;
+    uint32_t back_face_mode;
+    bool enhanced_internal_edge_removal;
+    /** normal xyz and constant w in the character's frame; create's default, for none, is up at -1e10 */
+    tumble::Float4 supporting_volume_plane;
+};
+
 // characters by handle, bodies by id, filters with the query's group and mask written into them; the character's
 // contacts are rows in its memory at contacts(), contact_count of them, CharacterContact's layout under the KCC_CONTACT
 // constants, until the next call that moves it
@@ -814,6 +837,9 @@ void remove(tumble::world::World *world, tumble::kcc::KCC *character);
 
 void read_state(KCCState &out, const tumble::kcc::KCC *character);
 void set_linear_velocity(tumble::kcc::KCC *character, const tumble::Float3 &velocity);
+void get_tuning(KCCTuning &out, const tumble::kcc::KCC *character);
+/** as create sets them: up normalized, the slope's cosine with its angle */
+void set_tuning(tumble::kcc::KCC *character, const KCCTuning &tuning);
 uint8_t *contacts(tumble::kcc::KCC *character);
 bool read_contact_event(KCCContactEvent &out, const tumble::kcc::KCC *character, uint32_t index);
 

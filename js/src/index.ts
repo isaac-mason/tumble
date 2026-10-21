@@ -58,6 +58,7 @@ export {
     type KCCSettings,
     type KCCSolveResult,
     type KCCSweepContact,
+    type KCCTuning,
     type KCCUpdateSettings,
 } from './kcc';
 export type { Box3, Mat4, Quat, Vec2, Vec3 } from './math';

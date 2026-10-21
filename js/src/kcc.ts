@@ -129,6 +129,31 @@ export type KCCSettings = {
     innerRigidBody?: { shape: Shape; objectLayer: number };
 };
 
+/** what a character's settings can change after create, the fields KCCSettings gives at create */
+export type KCCTuning = {
+    shapeOffset: Vec3;
+    mass: number;
+    maxStrength: number;
+    /** normalized when set */
+    up: Vec3;
+    maxSlopeAngle: number;
+    predictiveContactDistance: number;
+    characterPadding: number;
+    maxCollisionIterations: number;
+    maxConstraintIterations: number;
+    collisionTolerance: number;
+    penetrationRecoverySpeed: number;
+    minTimeRemaining: number;
+    maxNumHits: number;
+    hitReductionCosMaxAngle: number;
+    backFaceMode: BackFaceMode;
+    enhancedInternalEdgeRemoval: boolean;
+    /** normal xyz and constant w in the character's frame; without one given at create, up at -1e10 */
+    supportingVolumePlane: [x: number, y: number, z: number, w: number];
+};
+
+const tuning = Low.KCCTuning.create();
+
 export type KCCUpdateSettings = Low.KCCUpdateSettings;
 
 export function createDefaultUpdateSettings(): KCCUpdateSettings {
@@ -593,6 +618,34 @@ export const KCC = {
     /** from the ground body, its turning and the policy's surface velocity included */
     updateGroundVelocity(world: World, character: KCC, policy: KCCPolicy | undefined): void {
         moving(character, () => Low.Kcc.updateGroundVelocity(world, character.handle, policyOf(policy)));
+    },
+
+    getTuning(out: KCCTuning, character: KCC): KCCTuning {
+        Low.Kcc.getTuning(tuning, character.handle);
+        copyVec3(out.shapeOffset, tuning.shapeOffset);
+        out.mass = tuning.mass;
+        out.maxStrength = tuning.maxStrength;
+        copyVec3(out.up, tuning.up);
+        out.maxSlopeAngle = tuning.maxSlopeAngle;
+        out.predictiveContactDistance = tuning.predictiveContactDistance;
+        out.characterPadding = tuning.characterPadding;
+        out.maxCollisionIterations = tuning.maxCollisionIterations;
+        out.maxConstraintIterations = tuning.maxConstraintIterations;
+        out.collisionTolerance = tuning.collisionTolerance;
+        out.penetrationRecoverySpeed = tuning.penetrationRecoverySpeed;
+        out.minTimeRemaining = tuning.minTimeRemaining;
+        out.maxNumHits = tuning.maxNumHits;
+        out.hitReductionCosMaxAngle = tuning.hitReductionCosMaxAngle;
+        out.backFaceMode = tuning.backFaceMode as BackFaceMode;
+        out.enhancedInternalEdgeRemoval = tuning.enhancedInternalEdgeRemoval;
+        for (let i = 0; i < 4; i++) out.supportingVolumePlane[i] = tuning.supportingVolumePlane[i]!;
+        return out;
+    },
+    /** the given fields over the character's current ones, as create sets them: up normalized */
+    setTuning(character: KCC, given: Given<KCCTuning>): void {
+        Low.Kcc.getTuning(tuning, character.handle);
+        Low.Kcc.setTuning(character.handle, over(tuning, given));
+        character.pull();
     },
 
     /** on ground or on steep ground */

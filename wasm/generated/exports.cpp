@@ -281,6 +281,8 @@ WASM_EXPORT void tumble_kcc_add(world::World * world, kcc::KCC * character) { ad
 WASM_EXPORT void tumble_kcc_remove(world::World * world, kcc::KCC * character) { adapters::kcc::remove(world, character); }
 WASM_EXPORT void tumble_kcc_read_state(adapters::KCCState * out, const kcc::KCC * character) { adapters::kcc::read_state(*out, character); }
 WASM_EXPORT void tumble_kcc_set_linear_velocity(kcc::KCC * character, const Float3 * velocity) { adapters::kcc::set_linear_velocity(character, *velocity); }
+WASM_EXPORT void tumble_kcc_get_tuning(adapters::KCCTuning * out, const kcc::KCC * character) { adapters::kcc::get_tuning(*out, character); }
+WASM_EXPORT void tumble_kcc_set_tuning(kcc::KCC * character, const adapters::KCCTuning * tuning) { adapters::kcc::set_tuning(character, *tuning); }
 WASM_EXPORT uint8_t * tumble_kcc_contacts(kcc::KCC * character) { return adapters::kcc::contacts(character); }
 WASM_EXPORT bool tumble_kcc_read_contact_event(adapters::KCCContactEvent * out, const kcc::KCC * character, uint32_t index) { return adapters::kcc::read_contact_event(*out, character, index); }
 WASM_EXPORT void tumble_kcc_set_position(world::World * world, kcc::KCC * character, const Float3 * position) { adapters::kcc::set_position(world, character, *position); }

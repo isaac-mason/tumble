@@ -7,7 +7,7 @@
 import type { Instance } from '../module';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x9d91dbd9;
+export const SCHEMA_HASH = 0x843dff72;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 368;
 
@@ -4857,6 +4857,162 @@ export const KCCUpdateSettings = {
     },
 };
 
+export type KCCTuning = {
+    shapeOffset: Vec3;
+    mass: number;
+    maxStrength: number;
+    up: Vec3;
+    maxSlopeAngle: number;
+    predictiveContactDistance: number;
+    characterPadding: number;
+    maxCollisionIterations: number;
+    maxConstraintIterations: number;
+    collisionTolerance: number;
+    penetrationRecoverySpeed: number;
+    minTimeRemaining: number;
+    maxNumHits: number;
+    hitReductionCosMaxAngle: number;
+    backFaceMode: number;
+    enhancedInternalEdgeRemoval: boolean;
+    supportingVolumePlane: Quat;
+};
+export const KCCTuning = {
+    size: 96,
+    create(): KCCTuning {
+        return {
+            shapeOffset: Vec3.create(),
+            mass: 0,
+            maxStrength: 0,
+            up: Vec3.create(),
+            maxSlopeAngle: 0,
+            predictiveContactDistance: 0,
+            characterPadding: 0,
+            maxCollisionIterations: 0,
+            maxConstraintIterations: 0,
+            collisionTolerance: 0,
+            penetrationRecoverySpeed: 0,
+            minTimeRemaining: 0,
+            maxNumHits: 0,
+            hitReductionCosMaxAngle: 0,
+            backFaceMode: 0,
+            enhancedInternalEdgeRemoval: false,
+            supportingVolumePlane: Quat.create(),
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: KCCTuning, address: number): KCCTuning {
+        const mem = wasm.mem;
+        out.shapeOffset[0] = mem.f32[(address + 0) >> 2]!;
+        out.shapeOffset[1] = mem.f32[(address + 4) >> 2]!;
+        out.shapeOffset[2] = mem.f32[(address + 8) >> 2]!;
+        out.mass = mem.f32[(address + 12) >> 2]!;
+        out.maxStrength = mem.f32[(address + 16) >> 2]!;
+        out.up[0] = mem.f32[(address + 20) >> 2]!;
+        out.up[1] = mem.f32[(address + 24) >> 2]!;
+        out.up[2] = mem.f32[(address + 28) >> 2]!;
+        out.maxSlopeAngle = mem.f32[(address + 32) >> 2]!;
+        out.predictiveContactDistance = mem.f32[(address + 36) >> 2]!;
+        out.characterPadding = mem.f32[(address + 40) >> 2]!;
+        out.maxCollisionIterations = mem.u32[(address + 44) >> 2]!;
+        out.maxConstraintIterations = mem.u32[(address + 48) >> 2]!;
+        out.collisionTolerance = mem.f32[(address + 52) >> 2]!;
+        out.penetrationRecoverySpeed = mem.f32[(address + 56) >> 2]!;
+        out.minTimeRemaining = mem.f32[(address + 60) >> 2]!;
+        out.maxNumHits = mem.u32[(address + 64) >> 2]!;
+        out.hitReductionCosMaxAngle = mem.f32[(address + 68) >> 2]!;
+        out.backFaceMode = mem.u32[(address + 72) >> 2]!;
+        out.enhancedInternalEdgeRemoval = mem.u8[address + 76]! !== 0;
+        out.supportingVolumePlane[0] = mem.f32[(address + 80) >> 2]!;
+        out.supportingVolumePlane[1] = mem.f32[(address + 84) >> 2]!;
+        out.supportingVolumePlane[2] = mem.f32[(address + 88) >> 2]!;
+        out.supportingVolumePlane[3] = mem.f32[(address + 92) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: KCCTuning): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.shapeOffset[0];
+        mem.f32[(address + 4) >> 2] = value.shapeOffset[1];
+        mem.f32[(address + 8) >> 2] = value.shapeOffset[2];
+        mem.f32[(address + 12) >> 2] = value.mass;
+        mem.f32[(address + 16) >> 2] = value.maxStrength;
+        mem.f32[(address + 20) >> 2] = value.up[0];
+        mem.f32[(address + 24) >> 2] = value.up[1];
+        mem.f32[(address + 28) >> 2] = value.up[2];
+        mem.f32[(address + 32) >> 2] = value.maxSlopeAngle;
+        mem.f32[(address + 36) >> 2] = value.predictiveContactDistance;
+        mem.f32[(address + 40) >> 2] = value.characterPadding;
+        mem.u32[(address + 44) >> 2] = value.maxCollisionIterations;
+        mem.u32[(address + 48) >> 2] = value.maxConstraintIterations;
+        mem.f32[(address + 52) >> 2] = value.collisionTolerance;
+        mem.f32[(address + 56) >> 2] = value.penetrationRecoverySpeed;
+        mem.f32[(address + 60) >> 2] = value.minTimeRemaining;
+        mem.u32[(address + 64) >> 2] = value.maxNumHits;
+        mem.f32[(address + 68) >> 2] = value.hitReductionCosMaxAngle;
+        mem.u32[(address + 72) >> 2] = value.backFaceMode;
+        mem.u8[address + 76] = value.enhancedInternalEdgeRemoval ? 1 : 0;
+        mem.f32[(address + 80) >> 2] = value.supportingVolumePlane[0];
+        mem.f32[(address + 84) >> 2] = value.supportingVolumePlane[1];
+        mem.f32[(address + 88) >> 2] = value.supportingVolumePlane[2];
+        mem.f32[(address + 92) >> 2] = value.supportingVolumePlane[3];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: KCCTuning): void {
+        view.setFloat32(offset + 0, value.shapeOffset[0], true);
+        view.setFloat32(offset + 4, value.shapeOffset[1], true);
+        view.setFloat32(offset + 8, value.shapeOffset[2], true);
+        view.setFloat32(offset + 12, value.mass, true);
+        view.setFloat32(offset + 16, value.maxStrength, true);
+        view.setFloat32(offset + 20, value.up[0], true);
+        view.setFloat32(offset + 24, value.up[1], true);
+        view.setFloat32(offset + 28, value.up[2], true);
+        view.setFloat32(offset + 32, value.maxSlopeAngle, true);
+        view.setFloat32(offset + 36, value.predictiveContactDistance, true);
+        view.setFloat32(offset + 40, value.characterPadding, true);
+        view.setUint32(offset + 44, value.maxCollisionIterations, true);
+        view.setUint32(offset + 48, value.maxConstraintIterations, true);
+        view.setFloat32(offset + 52, value.collisionTolerance, true);
+        view.setFloat32(offset + 56, value.penetrationRecoverySpeed, true);
+        view.setFloat32(offset + 60, value.minTimeRemaining, true);
+        view.setUint32(offset + 64, value.maxNumHits, true);
+        view.setFloat32(offset + 68, value.hitReductionCosMaxAngle, true);
+        view.setUint32(offset + 72, value.backFaceMode, true);
+        view.setUint8(offset + 76, value.enhancedInternalEdgeRemoval ? 1 : 0);
+        view.setFloat32(offset + 80, value.supportingVolumePlane[0], true);
+        view.setFloat32(offset + 84, value.supportingVolumePlane[1], true);
+        view.setFloat32(offset + 88, value.supportingVolumePlane[2], true);
+        view.setFloat32(offset + 92, value.supportingVolumePlane[3], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: KCCTuning, view: DataView, offset: number): KCCTuning {
+        out.shapeOffset[0] = view.getFloat32(offset + 0, true);
+        out.shapeOffset[1] = view.getFloat32(offset + 4, true);
+        out.shapeOffset[2] = view.getFloat32(offset + 8, true);
+        out.mass = view.getFloat32(offset + 12, true);
+        out.maxStrength = view.getFloat32(offset + 16, true);
+        out.up[0] = view.getFloat32(offset + 20, true);
+        out.up[1] = view.getFloat32(offset + 24, true);
+        out.up[2] = view.getFloat32(offset + 28, true);
+        out.maxSlopeAngle = view.getFloat32(offset + 32, true);
+        out.predictiveContactDistance = view.getFloat32(offset + 36, true);
+        out.characterPadding = view.getFloat32(offset + 40, true);
+        out.maxCollisionIterations = view.getUint32(offset + 44, true);
+        out.maxConstraintIterations = view.getUint32(offset + 48, true);
+        out.collisionTolerance = view.getFloat32(offset + 52, true);
+        out.penetrationRecoverySpeed = view.getFloat32(offset + 56, true);
+        out.minTimeRemaining = view.getFloat32(offset + 60, true);
+        out.maxNumHits = view.getUint32(offset + 64, true);
+        out.hitReductionCosMaxAngle = view.getFloat32(offset + 68, true);
+        out.backFaceMode = view.getUint32(offset + 72, true);
+        out.enhancedInternalEdgeRemoval = view.getUint8(offset + 76) !== 0;
+        out.supportingVolumePlane[0] = view.getFloat32(offset + 80, true);
+        out.supportingVolumePlane[1] = view.getFloat32(offset + 84, true);
+        out.supportingVolumePlane[2] = view.getFloat32(offset + 88, true);
+        out.supportingVolumePlane[3] = view.getFloat32(offset + 92, true);
+        return out;
+    },
+};
+
 export type KCCState = {
     position: Vec3;
     quaternion: Quat;
@@ -7584,6 +7740,19 @@ export const Kcc = {
         wasm.exports.tumble_kcc_set_linear_velocity(character, scratch + 0);
     },
 
+    getTuning(out: KCCTuning, character: KCC): KCCTuning {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_kcc_get_tuning(scratch + 0, character);
+        KCCTuning.read(out, scratch + 0);
+        return out;
+    },
+
+    setTuning(character: KCC, tuning: KCCTuning): void {
+        const scratch = wasm.scratch;
+        KCCTuning.write(scratch + 0, tuning);
+        wasm.exports.tumble_kcc_set_tuning(character, scratch + 0);
+    },
+
     contacts(character: KCC): Pointer<'u8'> {
         const r = wasm.exports.tumble_kcc_contacts(character);
         return r as Pointer<'u8'>;
@@ -8385,6 +8554,8 @@ export type WasmExports = {
     tumble_kcc_remove(world: number, character: number): void;
     tumble_kcc_read_state(out: number, character: number): void;
     tumble_kcc_set_linear_velocity(character: number, velocity: number): void;
+    tumble_kcc_get_tuning(out: number, character: number): void;
+    tumble_kcc_set_tuning(character: number, tuning: number): void;
     tumble_kcc_contacts(character: number): number;
     tumble_kcc_read_contact_event(out: number, character: number, index: number): number;
     tumble_kcc_set_position(world: number, character: number, position: number): void;
