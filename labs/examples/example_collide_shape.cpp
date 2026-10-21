@@ -1,0 +1,109 @@
+#include <math.h>
+
+#include "app/app.h"
+#include "app/examples.h"
+#include "app/vec.h"
+#include "imgui.h"
+#include "tumble/physics/query.h"
+#include "tumble/physics/shapes/box.h"
+
+using namespace tumble;
+
+static constexpr float AMPLITUDE = 6.0f;
+static constexpr float FREQUENCY = 1.0f;
+
+static struct {
+    uint32_t layer;
+    shapes::Shape *query_shape;
+    filter::Filter filter;
+    collide_shape::CollideShapeCollector collector;
+    bool hit;
+    int steps;
+} state;
+
+static Color hex(uint32_t rgb, float alpha = 1.0f) {
+    return {(float)((rgb >> 16) & 255) / 255.0f, (float)((rgb >> 8) & 255) / 255.0f, (float)(rgb & 255) / 255.0f, alpha};
+}
+
+static ImU32 hex_u32(uint32_t rgb, float alpha = 1.0f) {
+    const Color color = hex(rgb, alpha);
+    return ImGui::ColorConvertFloat4ToU32({color.r, color.g, color.b, color.a});
+}
+
+/** a world-space label as crashcat's sprites are: a box `width` by `height` facing the camera, its text a fraction of the height */
+static void label(const App &app, Float3 at, const char *text, float width, float height, float text_fraction, ImU32 background, ImU32 color) {
+    const ImVec2 display = ImGui::GetIO().DisplaySize;
+    const float *m = app.camera.view_projection.m;
+    const auto project = [&](Float3 p, ImVec2 &out) {
+        const float w = m[3] * p.x + m[7] * p.y + m[11] * p.z + m[15];
+        if (w <= 1e-4f) return false;
+        const float x = (m[0] * p.x + m[4] * p.y + m[8] * p.z + m[12]) / w;
+        const float y = (m[1] * p.x + m[5] * p.y + m[9] * p.z + m[13]) / w;
+        out = {(x * 0.5f + 0.5f) * display.x, (0.5f - y * 0.5f) * display.y};
+        return true;
+    };
+    ImVec2 centre, top;
+    if (!project(at, centre) || !project(vec::scale_and_add(at, app.camera.up, height * 0.5f), top)) return;
+    const float half_height = sqrtf((top.x - centre.x) * (top.x - centre.x) + (top.y - centre.y) * (top.y - centre.y));
+    const float half_width = half_height * width / height;
+    ImDrawList *draw = ImGui::GetBackgroundDrawList();
+    if (background != 0) draw->AddRectFilled({centre.x - half_width, centre.y - half_height}, {centre.x + half_width, centre.y + half_height}, background);
+    const float size = 2.0f * half_height * text_fraction;
+    const ImVec2 extent = ImGui::GetFont()->CalcTextSizeA(size, 1e9f, 0.0f, text);
+    const ImVec2 corner = {centre.x - extent.x * 0.5f, centre.y - extent.y * 0.5f};
+    // twice, a pixel apart, for crashcat's bold
+    draw->AddText(ImGui::GetFont(), size, corner, color, text);
+    draw->AddText(ImGui::GetFont(), size, {corner.x + 1.0f, corner.y}, color, text);
+}
+
+static void init(App &app) {
+    state.steps = 0;
+    state.hit = false;
+
+    world_settings::WorldSettings settings = world_settings::create();
+    state.layer = world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
+    world_settings::enable_collision(settings, state.layer, state.layer);
+    settings.gravity = {0.0f, 0.0f, 0.0f};
+    app.world = world::create(settings);
+    world_settings::release(settings);
+
+    rigid_body::RigidBodySettings box_settings;
+    box_settings.shape = app::keep(app, box::create({.half_extents = {2.0f, 2.0f, 2.0f}}));
+    box_settings.object_layer = state.layer;
+    box_settings.motion_type = motion_type::MOTION_STATIC;
+    box_settings.position = {0.0f, 2.0f, 0.0f};
+    rigid_body::create(*app.world, box_settings);
+
+    state.query_shape = app::keep(app, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}));
+    state.filter = filter::create(app.world->settings.layers);
+    state.collector = collide_shape::create_collector(collector::COLLECT_ALL);
+
+    // no ground here
+    app.drawing.grid = false;
+    camera::look_at(app.camera, {0.0f, 5.0f, 15.0f}, {0.0f, 2.0f, 0.0f});
+}
+
+static void step(App &, float) { state.steps++; }
+
+static void update(App &app, float) {
+    // crashcat's clock, as steps
+    const float time = (float)state.steps / 60.0f;
+    const float x = sinf(time * FREQUENCY) * AMPLITUDE;
+    const Transformf transform = {{x, 2.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}};
+
+    collide_shape::reset(state.collector);
+    query::collide_shape(*app.world, state.collector, collide_shape::default_settings(), state.query_shape, transform, state.filter);
+    state.hit = state.collector.hits.length > 0;
+
+    renderer::mesh(app.renderer, renderer::mesh_of(app.renderer, state.query_shape), matrix::compose(transform.position, transform.quaternion),
+                   state.hit ? hex(0x00ff00, 0.7f) : hex(0xff00ff, 0.7f));
+    label(app, {x, 4.5f, 0.0f}, state.hit ? "hit" : "no hit", 4.0f, 1.0f, 0.5f, hex_u32(0x5f5f5f), state.hit ? hex_u32(0x4caf50) : hex_u32(0xf44336));
+}
+
+static void shutdown(App &) {
+    collide_shape::release(state.collector);
+    filter::release(state.filter);
+}
+
+static const Example EXAMPLE_COLLIDE_SHAPE = {"Collide Shape", init, step, update, nullptr, shutdown};
+static const examples::Registration REGISTERED(EXAMPLE_COLLIDE_SHAPE);

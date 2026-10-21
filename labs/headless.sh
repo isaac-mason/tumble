@@ -30,5 +30,10 @@ cmake -S "$root" -B "$build" -G Ninja -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_TOOLCHAIN_FILE="$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake" \
     -DTUMBLE_BUILD_LABS=ON -DTUMBLE_BUILD_TESTS=OFF -DTUMBLE_BUILD_EXAMPLES=OFF \
     -DTUMBLE_LABS_EXAMPLES="$examples" "${fetched[@]}" >/dev/null
-cmake --build "$build" 2>&1 | grep -E "error|warning: " || true
+log="$build/headless-build.log"
+if ! cmake --build "$build" >"$log" 2>&1; then
+    grep -E "error" "$log" | grep -v "Building CXX" || cat "$log"
+    exit 1
+fi
+grep -E "warning: " "$log" || true
 node "$root/labs/screenshot.mjs" "$build/labs" "$out" "$title" --screenshot page --frames "$frames"

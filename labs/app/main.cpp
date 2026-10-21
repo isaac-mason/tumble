@@ -145,6 +145,8 @@ static void select_example(int index) {
     state.click = {};
     state.body_colors.length = 0;
     state.camera = camera::create();
+    // each example starts from these, changing what it shows in its init
+    state.drawing = {true, true, false, false, false, false, true, debug::COLOR_MOTION_TYPE};
     examples::at(current_example).init(state);
 }
 
@@ -164,7 +166,6 @@ static void init() {
     state.renderer = renderer::create();
     state.debug = debug::create();
     state.step_rate = 60;
-    state.drawing = {true, true, false, false, false, false, true, debug::COLOR_MOTION_TYPE};
 
     select_example(initial_example);
 }
@@ -246,7 +247,11 @@ static void step_world(const Example &example, float delta_time) {
     for (int i = 0; i < steps; i++) {
         if (example.step) example.step(state, step);
         const double start = app::now_milliseconds();
-        world::step(*state.world, step);
+        if (example.step_world) {
+            example.step_world(state, step);
+        } else {
+            world::step(*state.world, step);
+        }
         state.step_milliseconds = app::now_milliseconds() - start;
     }
 }

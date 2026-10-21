@@ -14,7 +14,7 @@ Camera create() {
     camera.yaw = -0.8f;
     camera.pitch = 0.5f;
     camera.distance = 20;
-    camera.fov_y = 60.0f * 3.14159265f / 180.0f;
+    camera.fov_y = 75.0f * 3.14159265f / 180.0f;
     return camera;
 }
 

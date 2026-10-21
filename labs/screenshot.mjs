@@ -20,7 +20,8 @@ const server = createServer(async (request, response) => {
 }).listen(0, '127.0.0.1');
 await new Promise((resolve) => server.once('listening', resolve));
 
-const browser = await chromium.launch();
+// the gpu, not the software rasterizer, which drops lines
+const browser = await chromium.launch({ args: ['--use-angle=metal', '--enable-gpu'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 const errors = [];
 page.on('console', (message) => {

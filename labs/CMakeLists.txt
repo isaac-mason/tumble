@@ -34,7 +34,8 @@ add_executable(tumble_labs ${TUMBLE_LABS_SOURCES})
 target_include_directories(tumble_labs PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${sokol_SOURCE_DIR} ${sokol_SOURCE_DIR}/util ${cgltf_SOURCE_DIR})
 target_link_libraries(tumble_labs PRIVATE tumble::tumble tumble_labs_imgui)
 if(NOT MSVC)
-    target_compile_options(tumble_labs PRIVATE -Wall -Wextra)
+    # an example lists the hooks it has and leaves the rest off the end
+    target_compile_options(tumble_labs PRIVATE -Wall -Wextra -Wno-missing-field-initializers)
 endif()
 
 if(EMSCRIPTEN)
