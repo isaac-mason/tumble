@@ -290,8 +290,7 @@ static void get_adjusted_body_velocity(const KCC &character, const RigidBody &bo
 
 /** a contact's properties from a hit on `body`: position on the body, normals, distance, ids, motion type and point velocity */
 static void fill_contact_properties(CharacterContact &contact, const KCC &character, const RigidBody &body, const CharacterListener *listener,
-                                    Vec3f point_b, Vec3f contact_normal, float distance, sub_shape::SubShapeId sub_shape_id,
-                                    int32_t material_id) {
+                                    Vec3f point_b, Vec3f contact_normal, float distance, sub_shape::SubShapeId sub_shape_id) {
     // position is the contact point on shape b (the world body)
     contact.position = point_b;
     contact.contact_normal = contact_normal;
@@ -312,7 +311,7 @@ static void fill_contact_properties(CharacterContact &contact, const KCC &charac
     contact.distance = distance;
     contact.body_id = body.id;
     contact.sub_shape_id = sub_shape_id;
-    contact.material_id = material_id;
+    contact.material_id = shapes::get_shape_material(body.shape, sub_shape_id);
     contact.motion_type = body.motion_type;
     contact.is_sensor = body.sensor;
 
@@ -441,7 +440,7 @@ static void character_collide_add_hit(collide_shape::CollideShapeCollector &coll
 
     // distance is negative penetration (negative = penetrating); a static collision has no sweep fraction
     fill_contact_properties(*contact, *context.character, *body, context.listener, hit.point_b, contact_normal, -hit.penetration,
-                            hit.sub_shape_id_b, hit.material_id_b);
+                            hit.sub_shape_id_b);
     contact->fraction = 0.0f;
     contact->had_collision = false;
     contact->was_discarded = false;
@@ -543,7 +542,7 @@ static void character_cast_add_hit(cast_shape::CastShapeCollector &collector, co
     CharacterContact contact;
     reset_contact(contact);
     fill_contact_properties(contact, *context.character, *body, context.listener, hit.point_b, hit.normal, -hit.penetration_depth,
-                            hit.sub_shape_id_b, hit.material_id_b);
+                            hit.sub_shape_id_b);
     contact.fraction = hit.fraction;
     contact.had_collision = true;
     contact.was_discarded = false;

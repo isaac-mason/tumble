@@ -30,8 +30,6 @@ struct ContactManifold {
     float penetration_depth;
     sub_shape::SubShapeId sub_shape_id_a;
     sub_shape::SubShapeId sub_shape_id_b;
-    int32_t material_id_a;
-    int32_t material_id_b;
 };
 
 inline void reset(ContactManifold &m) {
@@ -41,8 +39,6 @@ inline void reset(ContactManifold &m) {
     m.penetration_depth = 0.0f;
     m.sub_shape_id_a = sub_shape::EMPTY_SUB_SHAPE_ID;
     m.sub_shape_id_b = sub_shape::EMPTY_SUB_SHAPE_ID;
-    m.material_id_a = -1;
-    m.material_id_b = -1;
 }
 
 inline ContactManifold create() {
@@ -59,7 +55,7 @@ inline Vec3f get_world_space_contact_point_on_b(const ContactManifold &m, uint32
     return vec3f::add(m.base_offset, m.relative_contact_points_on_b[index]);
 }
 
-/** a and b change places: points swapped, normal negated, ids and materials swapped */
+/** a and b change places: points swapped, normal negated, ids swapped */
 void swap_shapes(ContactManifold &m);
 
 /** cuts the manifold to MAX_CONTACT_POINTS, keeping the deepest point and the three that span the most area. the axis is unit */

@@ -271,7 +271,7 @@ void test_shape_tables(TestCtx &ctx) {
 void test_world_tier_types(TestCtx &ctx) {
     // the w1 headers: a manifold starts empty and relative to nothing, its world points add the base offset
     manifold::ContactManifold m = manifold::create();
-    CHECK(ctx, m.num_contact_points == 0 && m.penetration_depth == 0.0f && m.material_id_a == -1);
+    CHECK(ctx, m.num_contact_points == 0 && m.penetration_depth == 0.0f);
     CHECK(ctx, m.sub_shape_id_a == sub_shape::EMPTY_SUB_SHAPE_ID && m.sub_shape_id_b == sub_shape::EMPTY_SUB_SHAPE_ID);
     m.base_offset = vec3f::make(10.0f, 0.0f, 0.0f);
     m.relative_contact_points_on_b[3] = vec3f::make(1.0f, 2.0f, 3.0f);

@@ -237,14 +237,11 @@ void test_manifold_swap_shapes(TestCtx &ctx) {
     m.world_space_normal = vec3f::make(0, 1, 0);
     m.sub_shape_id_a = 7;
     m.sub_shape_id_b = 9;
-    m.material_id_a = 2;
-    m.material_id_b = 5;
 
     manifold::swap_shapes(m);
 
     CHECK(ctx, near3(m.world_space_normal, 0, -1, 0, 0));
     CHECK(ctx, m.sub_shape_id_a == 9 && m.sub_shape_id_b == 7);
-    CHECK(ctx, m.material_id_a == 5 && m.material_id_b == 2);
     CHECK(ctx, near3(m.relative_contact_points_on_a[0], -1, -2, -3, 0) && near3(m.relative_contact_points_on_a[1], -4, -5, -6, 0));
     CHECK(ctx, near3(m.relative_contact_points_on_b[0], 1, 2, 3, 0) && near3(m.relative_contact_points_on_b[1], 4, 5, 6, 0));
 }

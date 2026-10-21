@@ -15,10 +15,6 @@ void swap_shapes(ContactManifold &m) {
     m.sub_shape_id_a = m.sub_shape_id_b;
     m.sub_shape_id_b = sub_shape_id;
 
-    const int32_t material_id = m.material_id_a;
-    m.material_id_a = m.material_id_b;
-    m.material_id_b = material_id;
-
     for (uint32_t i = 0; i < m.num_contact_points; i++) {
         const Vec3f point = m.relative_contact_points_on_a[i];
         m.relative_contact_points_on_a[i] = m.relative_contact_points_on_b[i];

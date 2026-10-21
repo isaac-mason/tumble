@@ -156,8 +156,9 @@ void test_contact_constraints_event_carries_the_manifold(TestCtx &ctx) {
     ContactScene scene = make_contact_scene();
     BoxOnGround scenario = make_box_on_ground(scene);
     scenario.manifold.penetration_depth = 0.01f;
-    scenario.manifold.material_id_a = 3;
-    scenario.manifold.material_id_b = 7;
+    // the event's materials are the shapes', looked up by the manifold's sub shape ids
+    scenario.ground->shape->material_id = 3;
+    scenario.box->shape->material_id = 7;
 
     // handed over in b, a order: the event still puts the lower id first, with the manifold swapped to match
     begin_contact_step(scene);
@@ -430,8 +431,6 @@ void test_contact_constraints_from_cache_keeps_the_materials(TestCtx &ctx) {
     contact_manifold.world_space_normal = vec3f::normalize(hit.penetration_axis);
     contact_manifold.sub_shape_id_a = hit.sub_shape_id_a;
     contact_manifold.sub_shape_id_b = hit.sub_shape_id_b;
-    contact_manifold.material_id_a = hit.material_id_a;
-    contact_manifold.material_id_b = hit.material_id_b;
     collide_shape::release(collector);
 
     begin_contact_step(scene);

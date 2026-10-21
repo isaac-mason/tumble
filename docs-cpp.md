@@ -1369,6 +1369,10 @@ printf("the egg rests at y %.2f\n", body->position.y);
 A type that is not convex leaves `set_support` null and gives its own pairs with `shapes::set_collide_shape_fn` and
 `shapes::set_cast_shape_fn` after `dispatch::init`.
 
+A contact's material is its shape's `get_material` for the contact's sub shape id, as in Jolt, whatever the hits that
+found it carried. So a type made of parts with materials of their own, such as cells of a grid, answers by sub shape id
+there, and its collide functions need not write materials into the hits.
+
 A type whose sub shape ids name state you keep between steps, such as a pool of hits you clear before each step, sets
 `skips_pair_cache`. A pair that barely moved normally reuses last step's contacts, which would name state you have
 since cleared. With it set, the type's pairs always collide anew.

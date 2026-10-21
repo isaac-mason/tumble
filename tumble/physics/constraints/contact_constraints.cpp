@@ -495,13 +495,15 @@ bool add_contact_constraint(ContactConstraints &contact_constraints, contacts::C
         vec3f::store(local_positions_b[i], to_body_space(rotation_b, contact_manifold.relative_contact_points_on_b[i], com_minus_base_b));
     }
 
-    const ContactSettings contact_settings =
-        make_contact_settings(contact_constraints, body_a, contact_manifold.material_id_a, body_b, contact_manifold.material_id_b);
+    // a contact's materials are its shapes', by sub shape id, as jolt's: what the hits found carries none
+    const int32_t material_id_a = shapes::get_shape_material(body_a.shape, contact_manifold.sub_shape_id_a);
+    const int32_t material_id_b = shapes::get_shape_material(body_b.shape, contact_manifold.sub_shape_id_b);
+    const ContactSettings contact_settings = make_contact_settings(contact_constraints, body_a, material_id_a, body_b, material_id_b);
 
     // the event the caller may answer through contact_override before the solve
     if (persisted) write.flags |= contacts::MANIFOLD_FLAG_CONTACT_PERSISTED;
     append_contact_event(events, persisted, contact->contact_index, body_a, body_b, contact_manifold.sub_shape_id_a,
-                         contact_manifold.sub_shape_id_b, contact_manifold.material_id_a, contact_manifold.material_id_b,
+                         contact_manifold.sub_shape_id_b, material_id_a, material_id_b,
                          contact_manifold.world_space_normal, contact_manifold.penetration_depth, num_points, positions_a, positions_b,
                          contact_settings);
 

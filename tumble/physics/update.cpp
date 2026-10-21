@@ -164,8 +164,6 @@ static void start_manifold(manifold::ContactManifold &m, Vec3f base_offset, Vec3
     m.penetration_depth = hit.penetration;
     m.sub_shape_id_a = hit.sub_shape_id_a;
     m.sub_shape_id_b = hit.sub_shape_id_b;
-    m.material_id_a = hit.material_id_a;
-    m.material_id_b = hit.material_id_b;
 }
 
 /** with manifold reduction: the hit's points join the manifold whose first normal it is within the max delta rotation of */
@@ -592,8 +590,9 @@ static void ccd_add_hit(cast_shape::CastShapeCollector &collector, const cast_sh
     }
 
     contact_constraints::ContactSettings &settings = ccd_body.contact_settings;
-    contact_constraints::combine_materials(settings, sweep.world->contact_constraints, *sweep.body_a, hit.material_id_a, *sweep.body_b,
-                                           hit.material_id_b);
+    contact_constraints::combine_materials(settings, sweep.world->contact_constraints, *sweep.body_a,
+                                           shapes::get_shape_material(sweep.body_a->shape, hit.sub_shape_id_a), *sweep.body_b,
+                                           shapes::get_shape_material(sweep.body_b->shape, hit.sub_shape_id_b));
     // ccd supports no sensors; the scales stay 1
     settings.is_sensor = false;
 
@@ -662,8 +661,9 @@ static void visit_ccd_body(body_visitor::BodyVisitor *visitor, RigidBody *body_b
 /** the contact of a ccd hit: the combined material, and the contact and its event under the pair (made when the broadphase never found it) */
 static void on_ccd_contact_added(World &world, RigidBody &body_a, RigidBody &body_b, const manifold::ContactManifold &contact_manifold,
                                  contact_constraints::ContactSettings &contact_settings) {
-    contact_constraints::combine_materials(contact_settings, world.contact_constraints, body_a, contact_manifold.material_id_a, body_b,
-                                           contact_manifold.material_id_b);
+    contact_constraints::combine_materials(contact_settings, world.contact_constraints, body_a,
+                                           shapes::get_shape_material(body_a.shape, contact_manifold.sub_shape_id_a), body_b,
+                                           shapes::get_shape_material(body_b.shape, contact_manifold.sub_shape_id_b));
     contact_settings.is_sensor = body_a.sensor || body_b.sensor;
 
     // the contact keeps body a's id at most b's, as add_contact_constraint orders them
@@ -710,8 +710,8 @@ static void on_ccd_contact_added(World &world, RigidBody &body_a, RigidBody &bod
     event.user_data_b = ordered_b->user_data;
     event.sub_shape_id_a = ordered_manifold->sub_shape_id_a;
     event.sub_shape_id_b = ordered_manifold->sub_shape_id_b;
-    event.material_id_a = ordered_manifold->material_id_a;
-    event.material_id_b = ordered_manifold->material_id_b;
+    event.material_id_a = shapes::get_shape_material(ordered_a->shape, ordered_manifold->sub_shape_id_a);
+    event.material_id_b = shapes::get_shape_material(ordered_b->shape, ordered_manifold->sub_shape_id_b);
     vec3f::store(event.normal, ordered_manifold->world_space_normal);
     event.penetration = ordered_manifold->penetration_depth;
     // an unpruned ccd manifold reports its first MAX_CONTACT_POINTS
@@ -769,8 +769,6 @@ static void find_ccd_contacts(World &world, float delta_time) {
                                                  world.settings.narrowphase.manifold_tolerance, hit.face_a, hit.face_b);
             contact_manifold.sub_shape_id_a = hit.sub_shape_id_a;
             contact_manifold.sub_shape_id_b = hit.sub_shape_id_b;
-            contact_manifold.material_id_a = hit.material_id_a;
-            contact_manifold.material_id_b = hit.material_id_b;
             contact_manifold.penetration_depth = hit.penetration_depth;
             contact_manifold.world_space_normal = ccd_body.contact_normal;
 
