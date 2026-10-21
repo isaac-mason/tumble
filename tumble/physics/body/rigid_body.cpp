@@ -305,6 +305,8 @@ void set_shape(world::World &world, RigidBody *body, shapes::Shape *shape) {
 
 void update_shape(world::World &world, RigidBody *body, Vec3f previous_center_of_mass) {
     update_body_shape(body);
+    // the pair cache would rebuild last step's contacts, made with the old shape
+    pairs::invalidate_body_cache(world.pairs, *body);
     constraints::notify_shape_changed(world.constraints, *body, vec3f::subtract(vec3f::load(body->shape->center_of_mass), previous_center_of_mass));
     notify_bounds_changed(world, body);
 }

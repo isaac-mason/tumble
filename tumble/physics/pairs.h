@@ -87,6 +87,8 @@ int32_t add_pair_record(Pairs &pairs, rigid_body::RigidBody &body_a, rigid_body:
 void set_cache(Pairs &pairs, int32_t record, Vec3f delta_position, Quatf delta_rotation);
 /** the record of the pair, or INVALID_PAIR_KEY */
 int32_t find_pair_record(const Pairs &pairs, const rigid_body::RigidBody &body_a, const rigid_body::RigidBody &body_b);
+/** every pair of the body runs the narrowphase next step instead of reusing its cached manifolds: its shape changed */
+void invalidate_body_cache(Pairs &pairs, const rigid_body::RigidBody &body);
 /** unlinks and frees every record of the body, destroying their contact chains */
 void purge_body_pairs(Pairs &pairs, contacts::Contacts &contacts, bodies::Bodies &bodies, rigid_body::RigidBody &body,
                       events::PhysicsEvents &events);

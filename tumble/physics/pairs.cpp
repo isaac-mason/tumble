@@ -206,6 +206,15 @@ int32_t find_pair_record(const Pairs &pairs, const RigidBody &body_a, const Rigi
     return INVALID_PAIR_KEY;
 }
 
+void invalidate_body_cache(Pairs &pairs, const RigidBody &body) {
+    int32_t edge_key = body.head_pair_key;
+    while (edge_key != INVALID_PAIR_KEY) {
+        const int32_t record = get_pair_edge_record(edge_key);
+        pairs.pose_cache[(uint32_t)record].valid = false;
+        edge_key = pairs.records[(uint32_t)record].edges[get_pair_edge_side(edge_key)].next;
+    }
+}
+
 void purge_body_pairs(Pairs &pairs, contacts::Contacts &contacts, bodies::Bodies &bodies, RigidBody &body, events::PhysicsEvents &events) {
     int32_t edge_key = body.head_pair_key;
     while (edge_key != INVALID_PAIR_KEY) {

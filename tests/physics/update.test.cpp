@@ -752,6 +752,21 @@ void test_update_landed_box_not_launched_by_a_longer_step(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
+void test_update_new_shape_not_given_the_old_shapes_cached_contacts(TestCtx &ctx) {
+    WorldScene scene = make_world_scene(ctx, [](world_settings::WorldSettings &settings) { settings.sleeping.allow_sleeping = false; });
+    add_floor(scene);
+    RigidBody *box = add_unit_box(scene, {0.0f, 0.5f, 0.0f});
+    for (uint32_t i = 0; i < 60; i++) step_world(*scene.world);
+    CHECK_NEAR(ctx, box->position.y, 0.5f, 0.01f);
+
+    // twice as tall, its bottom a half metre into the floor: the pair barely moved, but its cached contacts are the old
+    // shape's, so it runs the narrowphase and is pushed out
+    rigid_body::set_shape(*scene.world, box, box::create({.half_extents = {0.5f, 1.0f, 0.5f}}));
+    for (uint32_t i = 0; i < 120; i++) step_world(*scene.world);
+    CHECK_NEAR(ctx, box->position.y, 1.0f, 0.03f);
+    release_world_scene(scene);
+}
+
 // friction lever arms
 
 void test_update_speculative_friction_acts_at_each_bodys_point(TestCtx &ctx) {
