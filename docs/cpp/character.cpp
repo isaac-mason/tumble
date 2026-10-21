@@ -4,6 +4,7 @@
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/body/rigid_body.h"
 #include "tumble/physics/character/kcc.h"
+#include "tumble/physics/character/kcc_policy.h"
 #include "tumble/physics/contact_pairs.h"
 #include "tumble/physics/filter.h"
 #include "tumble/physics/shapes/box.h"
@@ -14,22 +15,6 @@
 
 using namespace tumble;
 
-/* SNIPPET_START: listener */
-// the listener is the C++ way into a move, called as the character meets each body: here crates may be pushed, but
-// only by a character that is not crouching
-struct Rules {
-    uint64_t crate_user_data;
-    bool crouching;
-    uint32_t touched;
-};
-
-void on_contact_added(const kcc::KCC &, const rigid_body::RigidBody &body, sub_shape::SubShapeId, Vec3f, Vec3f,
-                      kcc::CharacterContactSettings &io_settings, void *context) {
-    Rules &rules = *static_cast<Rules *>(context);
-    rules.touched++;
-    if (body.user_data == rules.crate_user_data) io_settings.can_receive_impulses = !rules.crouching;
-}
-/* SNIPPET_END: listener */
 
 int main() {
     dispatch::init();
@@ -47,6 +32,10 @@ int main() {
     // a 30 cm step 4 m ahead
     rigid_body::create(*world, {.shape = step_shape, .object_layer = not_moving, .motion_type = motion_type::MOTION_STATIC,
                                 .position = {5.0f, 0.15f, 0.0f}});
+    // a crate beside the way
+    shapes::Shape *crate_shape = box::create({.half_extents = {0.4f, 0.4f, 0.4f}, .density = 20.0f});
+    rigid_body::RigidBody *crate = rigid_body::create(*world, {.shape = crate_shape, .object_layer = moving, .motion_type = motion_type::MOTION_DYNAMIC,
+                                                               .position = {2.0f, 0.4f, 3.0f}});
 
     /* SNIPPET_START: create */
     // a capsule standing on its feet: the character's position is its feet, the capsule raised 0.8 m to stand on them.
@@ -67,10 +56,12 @@ int main() {
     filter::set_from_layer(filter, world->settings.layers, moving, 0xffffffffu, 0xffffffffu);
     /* SNIPPET_END: create */
 
-    Rules rules = {.crate_user_data = 9, .crouching = false, .touched = 0};
-    kcc::CharacterListener listener = {};
-    listener.on_contact_added = on_contact_added;
-    listener.context = &rules;
+    /* SNIPPET_START: policy */
+    // how characters treat the bodies they meet, by body, the rest taking the policy's defaults; one policy serves any
+    // number of characters. here the crate may be pushed (until the character crouches, below)
+    kcc_policy::Policy policy = kcc_policy::create();
+    kcc_policy::set(policy, crate->id, {.can_receive_impulses = true});
+    /* SNIPPET_END: policy */
 
     const float delta_time = 1.0f / 60.0f;
     const Vec3f gravity = vec3f::load(world->settings.gravity);
@@ -85,7 +76,7 @@ int main() {
                              : vec3f::scale(character->up, vec3f::dot(character->linear_velocity, character->up));
         velocity = vec3f::scale_and_add(velocity, gravity, delta_time);
         character->linear_velocity = vec3f::add(velocity, input);
-        kcc::update(*world, *character, delta_time, gravity, update_settings, &listener, filter);
+        kcc::update(*world, *character, delta_time, gravity, update_settings, &policy, filter);
         world::step(*world, delta_time);
     }
     printf("at x %.2f y %.2f, %s\n", vec3f::x(character->position), vec3f::y(character->position),
@@ -93,23 +84,38 @@ int main() {
     /* SNIPPET_END: update */
     /* HIDE_START */
     // three seconds at 3 m/s: past the step and onto its top, then off it again, on the ground throughout
-    if (vec3f::x(character->position) < 8.0f || character->ground.state != kcc::ON_GROUND || rules.touched == 0) return 1;
+    if (vec3f::x(character->position) < 8.0f || character->ground.state != kcc::ON_GROUND) return 1;
     /* HIDE_END */
 
     /* SNIPPET_START: crouch */
     // a shorter shape, on the same feet, where it fits: refused, false, if it would sink deeper than the given depth
     shapes::Shape *crouching_capsule = capsule::create({.half_height_of_cylinder = 0.2f, .radius = 0.3f});
     shapes::Shape *crouching = transformed::create({.shape = crouching_capsule, .position = {0.0f, 0.5f, 0.0f}});
-    if (kcc::set_shape(*world, *character, crouching, filter, &listener, 0.01f)) rules.crouching = true;
+    const bool crouched = kcc::set_shape(*world, *character, crouching, filter, &policy, 0.01f);
+    if (crouched) kcc_policy::set(policy, crate->id, {.can_receive_impulses = false});
     /* SNIPPET_END: crouch */
     /* HIDE_START */
-    if (!rules.crouching || character->shape != crouching) return 1;
+    if (!crouched || character->shape != crouching || kcc_policy::get(&policy, crate->id).can_receive_impulses) return 1;
+    /* HIDE_END */
+
+    /* SNIPPET_START: events */
+    // what the character met in its last update (or refresh_contacts, or set_shape): each contact added or persisted as
+    // it was first touched, and each gone by the end
+    uint32_t touching = 0;
+    for (uint32_t i = 0; i < character->contact_events.length; i++) {
+        const kcc::ContactEvent &event = character->contact_events[i];
+        if (event.kind != kcc::CONTACT_REMOVED) touching++;
+    }
+    printf("touching %u bodies\n", touching);
+    /* SNIPPET_END: events */
+    /* HIDE_START */
+    if (touching == 0) return 1;
     /* HIDE_END */
 
     /* SNIPPET_START: contacts */
     // its contacts as data, through its inner body, in a contact pairs frame
     contact_pairs::begin(*world);
-    kcc::refresh_contacts(*world, *character, filter, &listener);
+    kcc::refresh_contacts(*world, *character, filter, &policy);
     contact_pairs::record_character_contacts(*world, *character);
     contact_pairs::end(*world);
     /* SNIPPET_END: contacts */
@@ -124,12 +130,14 @@ int main() {
     kcc::destroy(character);
     /* SNIPPET_END: remove */
 
+    kcc_policy::release(policy);
     filter::release(filter);
     world::destroy(world);
     transformed::destroy(crouching);
     transformed::destroy(standing);
     capsule::destroy(crouching_capsule);
     capsule::destroy(standing_capsule);
+    box::destroy(crate_shape);
     box::destroy(step_shape);
     box::destroy(ground_shape);
     return 0;

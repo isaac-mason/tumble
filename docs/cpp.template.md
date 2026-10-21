@@ -357,13 +357,18 @@ follows it, is its presence in the world for bodies, queries and contact pairs.
 
 Give every shape the character's feet as its origin, and swap them freely.
 
-### Listener
+### Policy
 
-<Snippet source="./cpp/character.cpp" select="listener" />
+<Snippet source="./cpp/character.cpp" select="policy" />
 
-Every callback is optional. Each takes the listener's `context`.
+A body's policy: `ignore` passes through it, `can_push_character` false blocks without moving the character,
+`can_receive_impulses` false keeps the character from pushing it, `slide_on_walkable` false stops the character on a
+still, walkable surface of it, and `surface_linear_velocity` and `surface_angular_velocity` move the character as a
+conveyor's belt would.
 
 ### Contacts
+
+<Snippet source="./cpp/character.cpp" select="events" />
 
 <Snippet source="./cpp/character.cpp" select="contacts" />
 

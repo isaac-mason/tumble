@@ -8,6 +8,7 @@
 #include "tumble/physics/body/body_id.h"
 #include "tumble/physics/body/motion_type.h"
 #include "tumble/physics/body/sub_shape.h"
+#include "tumble/physics/character/kcc_policy.h"
 #include "tumble/physics/filter.h"
 #include "tumble/physics/shapes/shapes.h"
 #include "tumble/physics/world.h"
@@ -60,7 +61,7 @@ struct CharacterContact {
     bool is_sensor;
     /** a real collision, not only a predictive contact */
     bool had_collision;
-    /** rejected by the listener's validation */
+    /** passed over: its body ignored by the policy, a sensor once met, or the shallower of two opposing contacts on one body */
     bool was_discarded;
     bool can_push_character;
     /** the character may apply impulses to the body */
@@ -98,45 +99,41 @@ struct GroundInfo {
     Vec3f position;
 };
 
-/** per contact; the listener's added and persisted callbacks may change them */
+/** a contact's push settings, from the policy for its body */
 struct CharacterContactSettings {
     bool can_push_character;
     /** the character may apply impulses to the body */
     bool can_receive_impulses;
 };
 
-/** tracks which contacts are new, persisted or removed */
-struct ListenerContactValue {
+/** a contact the tracking has seen this frame or the last */
+struct TrackedContact {
     body_id::BodyId body_id;
     sub_shape::SubShapeId sub_shape_id;
     /** 0 when not seen this frame */
     uint32_t count;
-    /** as the listener left them */
+    /** as the policy gave them when the contact was first met this frame */
     CharacterContactSettings settings;
 };
 
-struct KCC;
+enum ContactEventKind : uint32_t {
+    /** first met this frame, not touching last frame */
+    CONTACT_ADDED = 0,
+    /** first met this frame, touching last frame too */
+    CONTACT_PERSISTED = 1,
+    /** touching last frame, not at the end of this one; the body may have been removed */
+    CONTACT_REMOVED = 2,
+};
 
-/** called in the middle of the solve; any may be null. normals point away from the character */
-struct CharacterListener {
-    /** before collision detection, e.g. for conveyor belts */
-    void (*on_adjust_body_velocity)(const KCC &character, const rigid_body::RigidBody &body, Vec3f &io_linear_velocity,
-                                    Vec3f &io_angular_velocity, void *context);
-    /** false rejects the contact */
-    bool (*on_contact_validate)(const KCC &character, const rigid_body::RigidBody &body, sub_shape::SubShapeId sub_shape_id,
-                                Vec3f contact_position, Vec3f contact_normal, void *context);
-    void (*on_contact_added)(const KCC &character, const rigid_body::RigidBody &body, sub_shape::SubShapeId sub_shape_id,
-                             Vec3f contact_position, Vec3f contact_normal, CharacterContactSettings &io_settings, void *context);
-    void (*on_contact_persisted)(const KCC &character, const rigid_body::RigidBody &body, sub_shape::SubShapeId sub_shape_id,
-                                 Vec3f contact_position, Vec3f contact_normal, CharacterContactSettings &io_settings,
-                                 void *context);
-    /** may change the character's velocity */
-    void (*on_contact_solve)(const KCC &character, const rigid_body::RigidBody &body, sub_shape::SubShapeId sub_shape_id,
-                             Vec3f contact_position, Vec3f contact_normal, Vec3f contact_velocity,
-                             Vec3f character_velocity, Vec3f &io_character_velocity, void *context);
-    /** with the body id: the body may have been removed */
-    void (*on_contact_removed)(const KCC &character, body_id::BodyId body_id, sub_shape::SubShapeId sub_shape_id, void *context);
-    void *context;
+/** what the tracking saw: a contact added or persisted as the character first met it, or removed at the frame's end */
+struct ContactEvent {
+    ContactEventKind kind;
+    body_id::BodyId body_id;
+    sub_shape::SubShapeId sub_shape_id;
+    /** on the body; zero for a removal */
+    Vec3f position;
+    /** away from the character, into the body; zero for a removal */
+    Vec3f normal;
 };
 
 struct KCCSettings {
@@ -239,7 +236,9 @@ struct KCC {
     /** this frame's */
     collections::Vec<CharacterContact> contacts;
 
-    collections::Vec<ListenerContactValue> listener_contacts;
+    collections::Vec<TrackedContact> tracked_contacts;
+    /** since the frame began: update, refresh_contacts and set_shape begin one, and a move adds to it */
+    collections::Vec<ContactEvent> contact_events;
     /** update's, for the supporting contact velocity check */
     float last_delta_time;
 
@@ -288,11 +287,11 @@ void set_position(world::World &world, KCC &character, Vec3f position);
 /** the inner body follows */
 void set_quaternion(world::World &world, KCC &character, Quatf quaternion);
 
-/** from the ground body, its rotation and the listener's adjustment included */
-void update_ground_velocity(world::World &world, KCC &character, const CharacterListener *listener);
+/** from the ground body, its rotation and the policy's surface velocity included */
+void update_ground_velocity(world::World &world, KCC &character, const kcc_policy::Policy *policy);
 
 /** the contacts and the ground state where the character is now; for after a teleport */
-void refresh_contacts(world::World &world, KCC &character, const filter::Filter &filter, const CharacterListener *listener);
+void refresh_contacts(world::World &world, KCC &character, const filter::Filter &filter, const kcc_policy::Policy *policy);
 
 /** this frame */
 bool has_collided_with(const KCC &character, body_id::BodyId body_id);
@@ -301,28 +300,28 @@ bool has_collided_with(const KCC &character, body_id::BodyId body_id);
 bool can_walk_stairs(const KCC &character, Vec3f linear_velocity);
 
 /** refused, false, when the new shape would penetrate deeper than max_penetration_depth; FLT_MAX skips the test */
-bool set_shape(world::World &world, KCC &character, shapes::Shape *new_shape, const filter::Filter &filter, const CharacterListener *listener,
+bool set_shape(world::World &world, KCC &character, shapes::Shape *new_shape, const filter::Filter &filter, const kcc_policy::Policy *policy,
                float max_penetration_depth);
 
 /**
  * by the velocity, with collision resolution; the ground state and the inner body follow, and a dynamic ground body is
  * pushed by the character's weight. without update's contact tracking, stairs and floor sticking
  */
-void move(world::World &world, KCC &character, float delta_time, Vec3f gravity, const CharacterListener *listener,
+void move(world::World &world, KCC &character, float delta_time, Vec3f gravity, const kcc_policy::Policy *policy,
           const filter::Filter &filter);
 
 /** sweeps down by step_down onto a floor; true if one was found */
 bool stick_to_floor(world::World &world, KCC &character, Vec3f step_down, const filter::Filter &filter,
-                    const CharacterListener *listener);
+                    const kcc_policy::Policy *policy);
 
 /** up, forward and down onto a walkable floor; true if the step succeeded */
 bool walk_stairs(world::World &world, KCC &character, float delta_time, Vec3f step_up, Vec3f step_forward,
                  Vec3f step_forward_test, Vec3f step_down_extra, const filter::Filter &filter,
-                 const CharacterListener *listener);
+                 const kcc_policy::Policy *policy);
 
 /** move with contact tracking, velocity cancelled toward steep slopes, floor sticking and stair walking */
 void update(world::World &world, KCC &character, float delta_time, Vec3f gravity, const UpdateSettings &settings,
-            const CharacterListener *listener, const filter::Filter &filter);
+            const kcc_policy::Policy *policy, const filter::Filter &filter);
 
 }  // namespace kcc
 

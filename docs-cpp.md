@@ -64,7 +64,7 @@ it shows.
   - [Motors and springs](#motors-and-springs)
 - [Character controller](#character-controller)
   - [Changing shape](#changing-shape)
-  - [Listener](#listener)
+  - [Policy](#policy)
   - [Contacts](#contacts)
 - [Custom shapes](#custom-shapes)
 - [Debug drawing](#debug-drawing)
@@ -1022,7 +1022,7 @@ for (int frame = 0; frame < 180; frame++) {
                          : vec3f::scale(character->up, vec3f::dot(character->linear_velocity, character->up));
     velocity = vec3f::scale_and_add(velocity, gravity, delta_time);
     character->linear_velocity = vec3f::add(velocity, input);
-    kcc::update(*world, *character, delta_time, gravity, update_settings, &listener, filter);
+    kcc::update(*world, *character, delta_time, gravity, update_settings, &policy, filter);
     world::step(*world, delta_time);
 }
 printf("at x %.2f y %.2f, %s\n", vec3f::x(character->position), vec3f::y(character->position),
@@ -1038,38 +1038,43 @@ printf("at x %.2f y %.2f, %s\n", vec3f::x(character->position), vec3f::y(charact
 // a shorter shape, on the same feet, where it fits: refused, false, if it would sink deeper than the given depth
 shapes::Shape *crouching_capsule = capsule::create({.half_height_of_cylinder = 0.2f, .radius = 0.3f});
 shapes::Shape *crouching = transformed::create({.shape = crouching_capsule, .position = {0.0f, 0.5f, 0.0f}});
-if (kcc::set_shape(*world, *character, crouching, filter, &listener, 0.01f)) rules.crouching = true;
+const bool crouched = kcc::set_shape(*world, *character, crouching, filter, &policy, 0.01f);
+if (crouched) kcc_policy::set(policy, crate->id, {.can_receive_impulses = false});
 ```
 
 Give every shape the character's feet as its origin, and swap them freely.
 
-### Listener
+### Policy
 
 ```cpp
-// the listener is the C++ way into a move, called as the character meets each body: here crates may be pushed, but
-// only by a character that is not crouching
-struct Rules {
-    uint64_t crate_user_data;
-    bool crouching;
-    uint32_t touched;
-};
-
-void on_contact_added(const kcc::KCC &, const rigid_body::RigidBody &body, sub_shape::SubShapeId, Vec3f, Vec3f,
-                      kcc::CharacterContactSettings &io_settings, void *context) {
-    Rules &rules = *static_cast<Rules *>(context);
-    rules.touched++;
-    if (body.user_data == rules.crate_user_data) io_settings.can_receive_impulses = !rules.crouching;
-}
+// how characters treat the bodies they meet, by body, the rest taking the policy's defaults; one policy serves any
+// number of characters. here the crate may be pushed (until the character crouches, below)
+kcc_policy::Policy policy = kcc_policy::create();
+kcc_policy::set(policy, crate->id, {.can_receive_impulses = true});
 ```
 
-Every callback is optional. Each takes the listener's `context`.
+A body's policy: `ignore` passes through it, `can_push_character` false blocks without moving the character,
+`can_receive_impulses` false keeps the character from pushing it, `slide_on_walkable` false stops the character on a
+still, walkable surface of it, and `surface_linear_velocity` and `surface_angular_velocity` move the character as a
+conveyor's belt would.
 
 ### Contacts
 
 ```cpp
+// what the character met in its last update (or refresh_contacts, or set_shape): each contact added or persisted as
+// it was first touched, and each gone by the end
+uint32_t touching = 0;
+for (uint32_t i = 0; i < character->contact_events.length; i++) {
+    const kcc::ContactEvent &event = character->contact_events[i];
+    if (event.kind != kcc::CONTACT_REMOVED) touching++;
+}
+printf("touching %u bodies\n", touching);
+```
+
+```cpp
 // its contacts as data, through its inner body, in a contact pairs frame
 contact_pairs::begin(*world);
-kcc::refresh_contacts(*world, *character, filter, &listener);
+kcc::refresh_contacts(*world, *character, filter, &policy);
 contact_pairs::record_character_contacts(*world, *character);
 contact_pairs::end(*world);
 ```

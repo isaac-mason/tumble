@@ -50,30 +50,7 @@ kcc::UpdateSettings no_stairs_no_stick() {
     return settings;
 }
 
-/** gravity into the velocity, the character, then the world */
-void step_falling(world::World &world, kcc::KCC &character, const kcc::UpdateSettings &settings, const filter::Filter &filter,
-                  const kcc::CharacterListener *listener = nullptr) {
-    character.linear_velocity = vec3f::scale_and_add(character.linear_velocity, vec3f::load(GRAVITY), DT);
-    kcc::update(world, character, DT, vec3f::load(GRAVITY), settings, listener, filter);
-    step_world(world, DT);
-}
-
-/**
- * a character game loop: on ground the velocity starts from the ground's, otherwise from the vertical part
- * of the last; then gravity and the horizontal input
- */
-void step_walking(world::World &world, kcc::KCC &character, const Float3 &input, const kcc::UpdateSettings &settings,
-                  const filter::Filter &filter, const kcc::CharacterListener *listener = nullptr) {
-    Vec3f velocity = character.ground.state == kcc::ON_GROUND
-                         ? character.ground.velocity
-                         : vec3f::scale(character.up, vec3f::dot(character.linear_velocity, character.up));
-    velocity = vec3f::scale_and_add(velocity, vec3f::load(GRAVITY), DT);
-    character.linear_velocity = vec3f::add(velocity, vec3f::load(input));
-    kcc::update(world, character, DT, vec3f::load(GRAVITY), settings, listener, filter);
-    step_world(world, DT);
-}
-
-/** what the listener saw, by body id */
+/** what the character reported, by body id */
 struct ContactLog {
     body_id::BodyId added[64];
     uint32_t added_count;
@@ -90,30 +67,39 @@ bool log_has(const body_id::BodyId *ids, uint32_t count, body_id::BodyId id) {
     return false;
 }
 
-void log_added(const kcc::KCC &, const RigidBody &body, sub_shape::SubShapeId, Vec3f, Vec3f, kcc::CharacterContactSettings &,
-               void *context) {
-    ContactLog &log = *static_cast<ContactLog *>(context);
-    if (log.added_count < 64) log.added[log.added_count++] = body.id;
+/** the events of the character's last update into the log */
+void log_events(ContactLog &log, const kcc::KCC &character) {
+    for (uint32_t i = 0; i < character.contact_events.length; i++) {
+        const kcc::ContactEvent &event = character.contact_events[i];
+        if (event.kind == kcc::CONTACT_ADDED && log.added_count < 64) log.added[log.added_count++] = event.body_id;
+        if (event.kind == kcc::CONTACT_PERSISTED && log.persisted_count < 64) log.persisted[log.persisted_count++] = event.body_id;
+        if (event.kind == kcc::CONTACT_REMOVED && log.removed_count < 64) log.removed[log.removed_count++] = event.body_id;
+    }
 }
 
-void log_persisted(const kcc::KCC &, const RigidBody &body, sub_shape::SubShapeId, Vec3f, Vec3f, kcc::CharacterContactSettings &,
-                   void *context) {
-    ContactLog &log = *static_cast<ContactLog *>(context);
-    if (log.persisted_count < 64) log.persisted[log.persisted_count++] = body.id;
+/** gravity into the velocity, the character, then the world */
+void step_falling(world::World &world, kcc::KCC &character, const kcc::UpdateSettings &settings, const filter::Filter &filter,
+                  ContactLog *log = nullptr) {
+    character.linear_velocity = vec3f::scale_and_add(character.linear_velocity, vec3f::load(GRAVITY), DT);
+    kcc::update(world, character, DT, vec3f::load(GRAVITY), settings, nullptr, filter);
+    if (log != nullptr) log_events(*log, character);
+    step_world(world, DT);
 }
 
-void log_removed(const kcc::KCC &, body_id::BodyId id, sub_shape::SubShapeId, void *context) {
-    ContactLog &log = *static_cast<ContactLog *>(context);
-    if (log.removed_count < 64) log.removed[log.removed_count++] = id;
-}
-
-kcc::CharacterListener logging_listener(ContactLog &log) {
-    kcc::CharacterListener listener = {};
-    listener.on_contact_added = log_added;
-    listener.on_contact_persisted = log_persisted;
-    listener.on_contact_removed = log_removed;
-    listener.context = &log;
-    return listener;
+/**
+ * a character game loop: on ground the velocity starts from the ground's, otherwise from the vertical part
+ * of the last; then gravity and the horizontal input
+ */
+void step_walking(world::World &world, kcc::KCC &character, const Float3 &input, const kcc::UpdateSettings &settings,
+                  const filter::Filter &filter, ContactLog *log = nullptr) {
+    Vec3f velocity = character.ground.state == kcc::ON_GROUND
+                         ? character.ground.velocity
+                         : vec3f::scale(character.up, vec3f::dot(character.linear_velocity, character.up));
+    velocity = vec3f::scale_and_add(velocity, vec3f::load(GRAVITY), DT);
+    character.linear_velocity = vec3f::add(velocity, vec3f::load(input));
+    kcc::update(world, character, DT, vec3f::load(GRAVITY), settings, nullptr, filter);
+    if (log != nullptr) log_events(*log, character);
+    step_world(world, DT);
 }
 
 uint32_t contacts_with(const kcc::KCC &character, body_id::BodyId id) {
@@ -188,7 +174,7 @@ void test_kcc_wedged_between_two_bodies_keeps_both_contacts(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// listener contact identity
+// contact identity in the events
 void test_kcc_recycled_body_slot_is_a_new_contact(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     world::World &world = *scene.world;
@@ -200,10 +186,9 @@ void test_kcc_recycled_body_slot_is_a_new_contact(TestCtx &ctx) {
     filter::Filter filter = filter::create(world.settings.layers);
     const kcc::UpdateSettings settings;
     ContactLog log = {};
-    const kcc::CharacterListener listener = logging_listener(log);
 
     // settle onto floor a: added once, then persisted
-    for (int i = 0; i < 5; i++) step_falling(world, *character, settings, filter, &listener);
+    for (int i = 0; i < 5; i++) step_falling(world, *character, settings, filter, &log);
     CHECK(ctx, log_has(log.added, log.added_count, floor_a->id));
     CHECK(ctx, log_has(log.persisted, log.persisted_count, floor_a->id));
 
@@ -215,7 +200,7 @@ void test_kcc_recycled_body_slot_is_a_new_contact(TestCtx &ctx) {
     CHECK(ctx, floor_b->id != floor_a_id);
 
     log = {};
-    for (int i = 0; i < 3; i++) step_falling(world, *character, settings, filter, &listener);
+    for (int i = 0; i < 3; i++) step_falling(world, *character, settings, filter, &log);
 
     // the recycled slot is a new contact, and the old id never persists
     CHECK(ctx, log_has(log.added, log.added_count, floor_b->id));
@@ -239,16 +224,15 @@ void test_kcc_destroying_the_ground_reports_its_removal(TestCtx &ctx) {
     filter::Filter filter = filter::create(world.settings.layers);
     const kcc::UpdateSettings settings;
     ContactLog log = {};
-    const kcc::CharacterListener listener = logging_listener(log);
 
-    for (int i = 0; i < 5; i++) step_falling(world, *character, settings, filter, &listener);
+    for (int i = 0; i < 5; i++) step_falling(world, *character, settings, filter, &log);
     CHECK(ctx, log.removed_count == 0);
     CHECK(ctx, character->ground.state == kcc::ON_GROUND);
     CHECK(ctx, character->ground.body_id == floor->id);
 
     const body_id::BodyId floor_id = floor->id;
     CHECK(ctx, rigid_body::remove(world, floor));
-    step_falling(world, *character, settings, filter, &listener);
+    step_falling(world, *character, settings, filter, &log);
     CHECK(ctx, log_has(log.removed, log.removed_count, floor_id));
     CHECK(ctx, character->ground.state == kcc::IN_AIR);
 
@@ -546,16 +530,15 @@ void test_kcc_reports_a_sensor_and_walks_through_it(TestCtx &ctx) {
     filter::Filter filter = filter::create(world.settings.layers);
     const kcc::UpdateSettings settings;
     ContactLog log = {};
-    const kcc::CharacterListener listener = logging_listener(log);
 
     // 3 m at 2 m/s: into the sensor at x = 1 and out past its far side at x = 2
     bool saw_sensor_contact = false;
     for (int i = 0; i < 90; i++) {
-        step_walking(world, *character, {2.0f, 0.0f, 0.0f}, settings, filter, &listener);
+        step_walking(world, *character, {2.0f, 0.0f, 0.0f}, settings, filter, &log);
         if (contacts_with(*character, sensor->id) > 0) saw_sensor_contact = true;
     }
 
-    // reported to the listener and in the contacts, but it never blocked the walk
+    // reported in the events and the contacts, but it never blocked the walk
     CHECK(ctx, saw_sensor_contact);
     CHECK(ctx, log_has(log.added, log.added_count, sensor->id));
     CHECK(ctx, log_has(log.removed, log.removed_count, sensor->id));
