@@ -313,7 +313,8 @@ describe('constraints', () => {
         expect(() => PointConstraint.create(world, frame, door, { constraintPriority: -1 })).toThrow(RangeError);
         expect(() => SixDOFConstraint.create(world, frame, door, { constraintPriority: 1.5 })).toThrow(RangeError);
         expect(() => FixedConstraint.create(world, frame, door, { constraintPriority: 2 ** 32 })).toThrow(RangeError);
-        expect(Constraint.exists(world, FixedConstraint.create(world, frame, door, { constraintPriority: 0xffffffff }))).toBe(true);
+        const highest = FixedConstraint.create(world, frame, door, { constraintPriority: 0xffffffff });
+        expect(Constraint.exists(world, highest)).toBe(true);
         // equal limits on a soft spring are allowed
         const soft = HingeConstraint.create(world, frame, door, {
             limitsMin: 0,
