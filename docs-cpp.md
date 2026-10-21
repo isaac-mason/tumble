@@ -65,6 +65,7 @@ it shows.
 - [Character controller](#character-controller)
   - [Changing shape](#changing-shape)
   - [Policy](#policy)
+  - [Your own loop](#your-own-loop)
   - [Contacts](#contacts)
 - [Custom shapes](#custom-shapes)
 - [Debug drawing](#debug-drawing)
@@ -1057,6 +1058,55 @@ A body's policy: `ignore` passes through it, `can_push_character` false blocks w
 `can_receive_impulses` false keeps the character from pushing it, `slide_on_walkable` false stops the character on a
 still, walkable surface of it, and `surface_linear_velocity` and `surface_angular_velocity` move the character as a
 conveyor's belt would.
+
+### Your own loop
+
+```cpp
+// update is the whole move in one call; the toolkit is its phases, for a loop of your own that edits the contacts
+// between collide and solve. here a one-way platform overhead, jumped up through: from below, its contacts and the
+// sweep's hit on it are passed over
+shapes::Shape *platform_shape = box::create({.half_extents = {1.5f, 0.1f, 1.5f}});
+rigid_body::RigidBody *platform = rigid_body::create(*world, {.shape = platform_shape, .object_layer = not_moving,
+                                                              .motion_type = motion_type::MOTION_STATIC,
+                                                              .position = {vec3f::x(character->position), 1.8f, 0.0f}});
+const auto from_below = [&](const kcc::CharacterContact &contact) {
+    return contact.body_id == platform->id && vec3f::y(contact.contact_normal) < 0.5f;
+};
+character->linear_velocity = vec3f::make(0.0f, 7.0f, 0.0f);
+for (int frame = 0; frame < 90; frame++) {
+    character->linear_velocity = vec3f::scale_and_add(character->linear_velocity, gravity, delta_time);
+    Vec3f position = character->position;
+    Vec3f velocity = character->linear_velocity;
+    float time_remaining = delta_time;
+    for (uint32_t iteration = 0; iteration < character->max_collision_iterations && time_remaining >= character->min_time_remaining; iteration++) {
+        kcc::collide(*world, *character, position, vec3f::normalize(velocity), filter, &policy);
+        for (uint32_t i = 0; i < character->contacts.length; i++) {
+            if (from_below(character->contacts[i])) character->contacts[i].was_discarded = true;
+        }
+        Vec3f displacement;
+        float time_simulated = kcc::solve(*world, *character, velocity, delta_time, time_remaining, &policy, displacement);
+        kcc::CharacterContact hit;
+        if (kcc::cast(hit, *world, *character, position, displacement, filter, &policy) && !from_below(hit)) {
+            displacement = vec3f::scale(displacement, hit.fraction);
+            time_simulated *= hit.fraction;
+        }
+        position = vec3f::add(position, displacement);
+        time_remaining -= time_simulated;
+    }
+    kcc::set_position(*world, *character, position);
+    kcc::update_ground(*world, *character, delta_time, false, &policy);
+    // landed, coming down
+    if (character->ground.state == kcc::ON_GROUND && vec3f::y(character->linear_velocity) <= 0.0f) {
+        character->linear_velocity = vec3f::make(0.0f, 0.0f, 0.0f);
+    }
+    world::step(*world, delta_time);
+}
+```
+
+`collide`, `solve` and `cast` are a move's phases, as `move` runs them each collision iteration. Between `collide` and
+`solve` a contact's `was_discarded` and `linear_velocity` are yours: the solve, the sweep and the ground pass over a
+discarded one. `update` is the same phases with contact tracking (`begin_contact_tracking`, `end_contact_tracking`),
+`cancel_velocity_towards_steep_slopes` before, and `stick_to_floor` and `walk_stairs` after.
 
 ### Contacts
 

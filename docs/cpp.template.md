@@ -366,6 +366,15 @@ A body's policy: `ignore` passes through it, `can_push_character` false blocks w
 still, walkable surface of it, and `surface_linear_velocity` and `surface_angular_velocity` move the character as a
 conveyor's belt would.
 
+### Your own loop
+
+<Snippet source="./cpp/character.cpp" select="toolkit" />
+
+`collide`, `solve` and `cast` are a move's phases, as `move` runs them each collision iteration. Between `collide` and
+`solve` a contact's `was_discarded` and `linear_velocity` are yours: the solve, the sweep and the ground pass over a
+discarded one. `update` is the same phases with contact tracking (`begin_contact_tracking`, `end_contact_tracking`),
+`cancel_velocity_towards_steep_slopes` before, and `stick_to_floor` and `walk_stairs` after.
+
 ### Contacts
 
 <Snippet source="./cpp/character.cpp" select="events" />

@@ -174,6 +174,83 @@ struct Golden {
     Hash log;
 };
 
+/** update's frames run through toolkit_update instead, for test_kcc_golden_toolkit_composes_update */
+bool use_toolkit = false;
+
+/** move, from the toolkit's phases alone, as a caller's own loop would run them */
+void toolkit_move(world::World &world, kcc::KCC &character, float delta_time, Vec3f gravity, const kcc_policy::Policy *policy,
+                  const filter::Filter &filter) {
+    if (delta_time <= 0.0f) return;
+    Vec3f position = character.position;
+    Vec3f velocity = character.linear_velocity;
+    Vec3f direction = vec3f::make(0.0f, 0.0f, 0.0f);
+    const float speed_sq = vec3f::squared_length(velocity);
+    if (speed_sq > 1e-12f) direction = vec3f::scale(velocity, 1.0f / scalar::sqrt(speed_sq));
+    float time_remaining = delta_time;
+    for (uint32_t iteration = 0; iteration < character.max_collision_iterations; iteration++) {
+        if (time_remaining < character.min_time_remaining) break;
+        kcc::collide(world, character, position, direction, filter, policy);
+        Vec3f displacement;
+        float time_simulated = kcc::solve(world, character, velocity, delta_time, time_remaining, policy, displacement);
+        kcc::CharacterContact hit;
+        if (kcc::cast(hit, world, character, position, displacement, filter, policy)) {
+            displacement = vec3f::scale(displacement, hit.fraction);
+            time_simulated *= hit.fraction;
+        }
+        position = vec3f::add(position, displacement);
+        time_remaining -= time_simulated;
+        if (vec3f::squared_length(displacement) < 1e-8f) break;
+    }
+    kcc::set_position(world, character, position);
+    kcc::update_ground(world, character, delta_time, false, policy);
+    kcc::apply_weight(world, character, gravity, delta_time);
+}
+
+/** update, from the toolkit's phases and the public calls alone: proof a caller's loop can do all update does */
+void toolkit_update(world::World &world, kcc::KCC &character, float delta_time, Vec3f gravity, const kcc::UpdateSettings &settings,
+                    const kcc_policy::Policy *policy, const filter::Filter &filter) {
+    kcc::begin_contact_tracking(character);
+    const Vec3f desired_velocity = character.linear_velocity;
+    character.linear_velocity = kcc::cancel_velocity_towards_steep_slopes(character, desired_velocity);
+    const Vec3f old_position = character.position;
+    bool ground_to_air = kcc::is_supported(character);
+
+    toolkit_move(world, character, delta_time, gravity, policy, filter);
+
+    if (kcc::is_supported(character)) ground_to_air = false;
+    if (ground_to_air && vec3f::squared_length(vec3f::load(settings.stick_to_floor_step_down)) > 1e-12f) {
+        const Vec3f step = vec3f::subtract(character.position, old_position);
+        if (vec3f::dot(step, character.up) / delta_time <= 1e-6f) {
+            kcc::stick_to_floor(world, character, vec3f::load(settings.stick_to_floor_step_down), filter, policy);
+        }
+    }
+    if (vec3f::squared_length(vec3f::load(settings.walk_stairs_step_up)) > 1e-12f) {
+        Vec3f desired_step = vec3f::scale(desired_velocity, delta_time);
+        desired_step = vec3f::scale_and_add(desired_step, character.up, -vec3f::dot(desired_step, character.up));
+        const float desired_length = vec3f::length(desired_step);
+        if (desired_length > 0.0f) {
+            Vec3f achieved = vec3f::subtract(character.position, old_position);
+            achieved = vec3f::scale_and_add(achieved, character.up, -vec3f::dot(achieved, character.up));
+            const Vec3f forward = vec3f::scale(desired_step, 1.0f / desired_length);
+            const float achieved_forward = scalar::max(0.0f, vec3f::dot(achieved, forward));
+            achieved = vec3f::scale(forward, achieved_forward);
+            const float achieved_length = vec3f::length(achieved);
+            if (achieved_length + 1e-4f < desired_length && kcc::can_walk_stairs(character, desired_velocity)) {
+                const Vec3f step_forward = vec3f::scale(forward, scalar::max(settings.walk_stairs_min_step_forward, desired_length - achieved_length));
+                Vec3f step_forward_test = vec3f::negate(character.ground.normal);
+                step_forward_test = vec3f::scale_and_add(step_forward_test, character.up, -vec3f::dot(step_forward_test, character.up));
+                const float test_length_sq = vec3f::squared_length(step_forward_test);
+                step_forward_test = test_length_sq > 1e-12f ? vec3f::scale(step_forward_test, 1.0f / scalar::sqrt(test_length_sq)) : forward;
+                if (vec3f::dot(step_forward_test, forward) < settings.walk_stairs_cos_angle_forward_contact) step_forward_test = forward;
+                step_forward_test = vec3f::scale(step_forward_test, settings.walk_stairs_step_forward_test);
+                kcc::walk_stairs(world, character, delta_time, vec3f::load(settings.walk_stairs_step_up), step_forward, step_forward_test,
+                                 vec3f::load(settings.walk_stairs_step_down_extra), filter, policy);
+            }
+        }
+    }
+    kcc::end_contact_tracking(character);
+}
+
 /**
  * a frame of a game: the ground velocity brought up to date, the velocity from the ground's when standing (else the
  * vertical part of the last), gravity and the input; the character's update, then the world's step
@@ -186,7 +263,8 @@ void frame(Golden &golden, world::World &world, kcc::KCC &character, Vec3f input
                                                               : vec3f::scale(character.up, vec3f::dot(character.linear_velocity, character.up));
     velocity = vec3f::scale_and_add(velocity, vec3f::load(GRAVITY), DT);
     character.linear_velocity = vec3f::add(velocity, input);
-    kcc::update(world, character, DT, vec3f::load(GRAVITY), settings, policy, filter);
+    if (use_toolkit) toolkit_update(world, character, DT, vec3f::load(GRAVITY), settings, policy, filter);
+    else kcc::update(world, character, DT, vec3f::load(GRAVITY), settings, policy, filter);
     if (rules != nullptr) log_events(*rules, character);
     step_world(world, DT);
     hash_frame(golden.physics, world, character);
@@ -653,4 +731,22 @@ void test_kcc_golden_slide_prevention(TestCtx &ctx) {
         check_golden(ctx, prevent == 1 ? "slide_prevention log" : "slide_prevention off log", golden.log.value, prevent == 1 ? 0x07825431u : 0x07825431u);
         release(scene, character, filter);
     }
+}
+
+// every scene again, each update run from the toolkit's phases by a caller's own loop: the same, bit for bit
+void test_kcc_golden_toolkit_composes_update(TestCtx &ctx) {
+    use_toolkit = true;
+    test_kcc_golden_steps_up_and_down(ctx);
+    test_kcc_golden_slopes(ctx);
+    test_kcc_golden_walls_and_a_wedge(ctx);
+    test_kcc_golden_platforms(ctx);
+    test_kcc_golden_pushing_and_standing_on_dynamics(ctx);
+    test_kcc_golden_mesh_terrain(ctx);
+    test_kcc_golden_crouch_teleport_and_a_sensor(ctx);
+    test_kcc_golden_conveyor(ctx);
+    test_kcc_golden_unpushable_crate(ctx);
+    test_kcc_golden_ignored_wall(ctx);
+    test_kcc_golden_pusher_that_cannot_push(ctx);
+    test_kcc_golden_slide_prevention(ctx);
+    use_toolkit = false;
 }

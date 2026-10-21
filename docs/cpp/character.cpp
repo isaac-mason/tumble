@@ -125,6 +125,56 @@ int main() {
     if (pair.a.body_id != character->inner_rigid_body_id || pair.normal.y > -0.99f) return 1;
     /* HIDE_END */
 
+    /* HIDE_START */
+    const float under_x = vec3f::x(character->position);
+    /* HIDE_END */
+    /* SNIPPET_START: toolkit */
+    // update is the whole move in one call; the toolkit is its phases, for a loop of your own that edits the contacts
+    // between collide and solve. here a one-way platform overhead, jumped up through: from below, its contacts and the
+    // sweep's hit on it are passed over
+    shapes::Shape *platform_shape = box::create({.half_extents = {1.5f, 0.1f, 1.5f}});
+    rigid_body::RigidBody *platform = rigid_body::create(*world, {.shape = platform_shape, .object_layer = not_moving,
+                                                                  .motion_type = motion_type::MOTION_STATIC,
+                                                                  .position = {vec3f::x(character->position), 1.8f, 0.0f}});
+    const auto from_below = [&](const kcc::CharacterContact &contact) {
+        return contact.body_id == platform->id && vec3f::y(contact.contact_normal) < 0.5f;
+    };
+    character->linear_velocity = vec3f::make(0.0f, 7.0f, 0.0f);
+    for (int frame = 0; frame < 90; frame++) {
+        character->linear_velocity = vec3f::scale_and_add(character->linear_velocity, gravity, delta_time);
+        Vec3f position = character->position;
+        Vec3f velocity = character->linear_velocity;
+        float time_remaining = delta_time;
+        for (uint32_t iteration = 0; iteration < character->max_collision_iterations && time_remaining >= character->min_time_remaining; iteration++) {
+            kcc::collide(*world, *character, position, vec3f::normalize(velocity), filter, &policy);
+            for (uint32_t i = 0; i < character->contacts.length; i++) {
+                if (from_below(character->contacts[i])) character->contacts[i].was_discarded = true;
+            }
+            Vec3f displacement;
+            float time_simulated = kcc::solve(*world, *character, velocity, delta_time, time_remaining, &policy, displacement);
+            kcc::CharacterContact hit;
+            if (kcc::cast(hit, *world, *character, position, displacement, filter, &policy) && !from_below(hit)) {
+                displacement = vec3f::scale(displacement, hit.fraction);
+                time_simulated *= hit.fraction;
+            }
+            position = vec3f::add(position, displacement);
+            time_remaining -= time_simulated;
+        }
+        kcc::set_position(*world, *character, position);
+        kcc::update_ground(*world, *character, delta_time, false, &policy);
+        // landed, coming down
+        if (character->ground.state == kcc::ON_GROUND && vec3f::y(character->linear_velocity) <= 0.0f) {
+            character->linear_velocity = vec3f::make(0.0f, 0.0f, 0.0f);
+        }
+        world::step(*world, delta_time);
+    }
+    /* SNIPPET_END: toolkit */
+    /* HIDE_START */
+    // up through the platform and stood on its top at 1.9, where it jumped
+    if (character->ground.body_id != platform->id || vec3f::y(character->position) < 1.89f || vec3f::y(character->position) > 1.91f) return 1;
+    if (vec3f::x(character->position) != under_x) return 1;
+    /* HIDE_END */
+
     /* SNIPPET_START: remove */
     kcc::remove(*world, *character);
     kcc::destroy(character);
@@ -138,6 +188,7 @@ int main() {
     capsule::destroy(crouching_capsule);
     capsule::destroy(standing_capsule);
     box::destroy(crate_shape);
+    box::destroy(platform_shape);
     box::destroy(step_shape);
     box::destroy(ground_shape);
     return 0;

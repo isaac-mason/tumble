@@ -828,3 +828,70 @@ void test_kcc_max_hits_does_not_stop_the_query_while_reduction_can_free_a_slot(T
     release_world_scene(scene);
 }
 
+
+namespace {
+
+/** move from the toolkit, the platform's contacts from below passed over: a caller's one-way platform */
+void one_way_move(world::World &world, kcc::KCC &character, body_id::BodyId platform, const filter::Filter &filter) {
+    Vec3f position = character.position;
+    Vec3f velocity = character.linear_velocity;
+    const Vec3f direction = vec3f::normalize(velocity);
+    float time_remaining = DT;
+    for (uint32_t iteration = 0; iteration < character.max_collision_iterations && time_remaining >= character.min_time_remaining; iteration++) {
+        kcc::collide(world, character, position, direction, filter, nullptr);
+        // the platform from below: its normal toward the character points down
+        for (uint32_t i = 0; i < character.contacts.length; i++) {
+            kcc::CharacterContact &contact = character.contacts[i];
+            if (contact.body_id == platform && vec3f::y(contact.contact_normal) < 0.5f) contact.was_discarded = true;
+        }
+        Vec3f displacement;
+        float time_simulated = kcc::solve(world, character, velocity, DT, time_remaining, nullptr, displacement);
+        kcc::CharacterContact hit;
+        const bool blocked = kcc::cast(hit, world, character, position, displacement, filter, nullptr) &&
+                             !(hit.body_id == platform && vec3f::y(hit.contact_normal) < 0.5f);
+        if (blocked) {
+            displacement = vec3f::scale(displacement, hit.fraction);
+            time_simulated *= hit.fraction;
+        }
+        position = vec3f::add(position, displacement);
+        time_remaining -= time_simulated;
+        if (vec3f::squared_length(displacement) < 1e-8f) break;
+    }
+    kcc::set_position(world, character, position);
+    kcc::update_ground(world, character, DT, false, nullptr);
+}
+
+}  // namespace
+
+// the toolkit's contract: a contact discarded between collide and solve is passed over by the solve, the sweep and
+// the ground. jumped up through a platform, the character lands on it
+void test_kcc_toolkit_one_way_platform(TestCtx &ctx) {
+    WorldScene scene = make_world_scene(ctx);
+    world::World &world = *scene.world;
+    add_floor(scene);
+    RigidBody *platform = add_static_box(scene, {2.0f, 0.1f, 2.0f}, {0.0f, 2.0f, 0.0f});
+    step_world(world, DT);
+
+    kcc::KCC *character = make_footed_character({0.0f, 0.0f, 0.0f});
+    filter::Filter filter = filter::create(world.settings.layers);
+    character->linear_velocity = vec3f::make(0.0f, 9.0f, 0.0f);
+    float highest = 0.0f;
+    for (int i = 0; i < 120; i++) {
+        character->linear_velocity = vec3f::scale_and_add(character->linear_velocity, vec3f::load(GRAVITY), DT);
+        one_way_move(world, *character, platform->id, filter);
+        // landed only coming down: rising out through the platform's top it is under the character, but not yet stood on
+        if (character->ground.state == kcc::ON_GROUND && vec3f::y(character->linear_velocity) <= 0.0f) {
+            character->linear_velocity = vec3f::make(0.0f, 0.0f, 0.0f);
+        }
+        highest = scalar::max(highest, vec3f::y(character->position));
+        step_world(world, DT);
+    }
+    // up past the platform's top at 2.1, then down onto it
+    CHECK(ctx, highest > 2.5f);
+    CHECK(ctx, character->ground.body_id == platform->id);
+    CHECK_NEAR(ctx, vec3f::y(character->position), 2.1f, 0.01f);
+
+    kcc::destroy(character);
+    filter::release(filter);
+    release_world_scene(scene);
+}

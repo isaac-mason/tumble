@@ -323,6 +323,46 @@ bool walk_stairs(world::World &world, KCC &character, float delta_time, Vec3f st
 void update(world::World &world, KCC &character, float delta_time, Vec3f gravity, const UpdateSettings &settings,
             const kcc_policy::Policy *policy, const filter::Filter &filter);
 
+// a move's phases, as move runs them each collision iteration: collide, solve, cast, then the position advanced by
+// the cast's share of the displacement; after the iterations the position committed (set_position), the ground
+// updated and the character's weight applied. a caller's own loop runs them in turn, and between collide and solve may
+// edit a contact's was_discarded (the solve and the cast then pass it over) and linear_velocity. update adds contact
+// tracking around them, velocity cancelled toward steep slopes before, and stick_to_floor and walk_stairs after
+
+/**
+ * the character's contacts at a position: the shape collided with the world (movement_direction, unit or zero, for
+ * active edges), sorted by body and sub shape, the padding taken off their distances, and of each pair of opposing
+ * contacts on one body the shallower discarded
+ */
+void collide(world::World &world, KCC &character, Vec3f position, Vec3f movement_direction, const filter::Filter &filter,
+             const kcc_policy::Policy *policy);
+
+/**
+ * the slide over the contacts for up to time_remaining: each contact the character moves into validated, met and
+ * pushed by the policy for its body, and slid along (or two at once). velocity in and out; the displacement into
+ * out_displacement, and the time simulated returned
+ */
+float solve(world::World &world, KCC &character, Vec3f &io_velocity, float delta_time, float time_remaining, const kcc_policy::Policy *policy,
+            Vec3f &out_displacement);
+
+/** the first contact sweeping by the displacement from a position, past the discarded contacts: true, with it in out */
+bool cast(CharacterContact &out, world::World &world, KCC &character, Vec3f position, Vec3f displacement, const filter::Filter &filter,
+          const kcc_policy::Policy *policy);
+
+/** the ground from the contacts, flagging those near enough as touching unless moving away (with the velocity check) */
+void update_ground(world::World &world, KCC &character, float delta_time, bool skip_contact_velocity_check, const kcc_policy::Policy *policy);
+
+/** the character's weight on a dynamic ground body, along the ground normal, over delta_time */
+void apply_weight(world::World &world, KCC &character, Vec3f gravity, float delta_time);
+
+/** the frame of contact tracking begun: contact_events cleared, the contacts touching now remembered */
+void begin_contact_tracking(KCC &character);
+/** the frame ended: the remembered contacts not touching now reported removed */
+void end_contact_tracking(KCC &character);
+
+/** the velocity without its horizontal part into steep slopes the character touches, unless on ground or in the air */
+Vec3f cancel_velocity_towards_steep_slopes(const KCC &character, Vec3f velocity);
+
 }  // namespace kcc
 
 TUMBLE_NAMESPACE_END
