@@ -13,6 +13,7 @@ it shows.
   - [Without CMake](#without-cmake)
 - [Quick start](#quick-start)
 - [Conventions](#conventions)
+  - [Public API](#public-api)
 - [Memory](#memory)
   - [Errors](#errors)
 - [The world](#the-world)
@@ -173,6 +174,31 @@ The rest of this guide leaves out the includes, `using namespace tumble;` and th
 - Units are metres, kilograms, seconds and radians.
 - What you create, you free: shapes, filters, collectors, debug buffers and worlds. Bodies and constraints belong to
   their world.
+
+### Public API
+
+These headers are tumble's API. The rest are its internals, which change without notice, and nothing in them is needed
+to use tumble:
+
+- **The world:** `world.h`, `world_settings.h`, `layers.h`, `filter.h`, `update.h` (the phases of a step you answer
+  between), `events.h`, `contact_pairs.h` and `debug.h`.
+- **Bodies:** `body/rigid_body.h`, `body/body_id.h`, `body/motion_type.h`, `body/dof.h`, `body/mass_properties.h` and
+  `body/sub_shape.h`. A body's fields are yours to read; change them through `rigid_body`'s calls, which keep the
+  broadphase, the pairs and the sleep state in step.
+- **Shapes:** each shape's header under `shapes/`, `shapes/dispatch.h`, and the builders and data in `shapes/utils/`:
+  `convex_hull_builder.h`, `triangle_mesh_builder.h` and `triangle_mesh_data.h`.
+- **Queries:** `query.h`, `broadphase_query.h`, and the collectors, settings and hits in `collision/collector.h`,
+  `collision/cast_ray_vs_shape.h`, `collision/cast_shape_vs_shape.h`, `collision/collide_point_vs_shape.h` and
+  `collision/collide_shape_vs_shape.h`; also `collision/estimate_collision_response.h`.
+- **Constraints:** each constraint's header under `constraints/`, `constraints/constraint_id.h`,
+  `constraints/contact_settings.h`, `constraints/constraint_part/motor_settings.h` and
+  `constraints/constraint_part/spring_settings.h`. `contact_constraints::Material` is what `world::set_materials`
+  takes; the rest of `contact_constraints.h` is internal.
+- **Characters:** `character/kcc.h`, `character/kcc_policy.h`, and `character/character_constraints.h` for a
+  controller of your own.
+- **Custom shapes:** `shapes/shapes.h` (`ShapeDef`, `allocate`, the collide and cast tables), `collision/narrowphase.h`
+  to collide or cast the shapes inside yours, `collision/support.h` for a convex type's support, and `utils/face.h`.
+- **Maths and memory:** `tumble/math/`, `util/alloc.h`, `util/error.h` and `util/collections.h`.
 
 ## Memory
 
