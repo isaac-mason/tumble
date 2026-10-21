@@ -80,6 +80,9 @@ stacks from jittering.
 
 <Snippet source="../js/docs/world.ts" select="materials" />
 
+A query's hit names the part it met by sub shape id: `RigidBody.getMaterial(world, hit.bodyIdB, hit.subShapeId)` is that
+part's material id.
+
 ## Rigid bodies
 
 ### Creating and removing

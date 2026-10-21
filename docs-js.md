@@ -250,6 +250,9 @@ const iceShape = Box.create({ halfExtents: [5, 0.1, 5], materialId: 0 });
 RigidBody.create(world, { shape: iceShape, objectLayer: scenery, motionType: MotionType.STATIC, position: [10, 0.1, 0] });
 ```
 
+A query's hit names the part it met by sub shape id: `RigidBody.getMaterial(world, hit.bodyIdB, hit.subShapeId)` is that
+part's material id.
+
 ## Rigid bodies
 
 ### Creating and removing

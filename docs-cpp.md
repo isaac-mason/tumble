@@ -575,7 +575,8 @@ rigid_body::RigidBody *ball = rigid_body::create(*world, {.shape = box_shape,
 ```
 
 `world::set_materials` gives the world a table of surfaces. A shape's or a triangle's `material_id` picks a surface,
-which then stands in for the body's friction and restitution on that side of a contact.
+which then stands in for the body's friction and restitution on that side of a contact. A query's hit names the part it
+met by sub shape id: `rigid_body::get_material(body, hit.sub_shape_id)` is that part's material id.
 
 ### Sensors
 
@@ -1368,9 +1369,9 @@ printf("the egg rests at y %.2f\n", body->position.y);
 A type that is not convex leaves `set_support` null and gives its own pairs with `shapes::set_collide_shape_fn` and
 `shapes::set_cast_shape_fn` after `dispatch::init`.
 
-A contact's material is its shape's `get_material` for the contact's sub shape id, as in Jolt, whatever the hits that
-found it carried. So a type made of parts with materials of their own, such as cells of a grid, answers by sub shape id
-there, and its collide functions need not write materials into the hits.
+A contact's material is its shape's `get_material` for the contact's sub shape id, as in Jolt; hits carry none, and
+`rigid_body::get_material` gives a hit's. So a type made of parts with materials of their own, such as cells of a grid,
+answers by sub shape id there.
 
 A type whose sub shape ids name state you keep between steps, such as a pool of hits you clear before each step, sets
 `skips_pair_cache`. A pair that barely moved normally reuses last step's contacts, which would name state you have

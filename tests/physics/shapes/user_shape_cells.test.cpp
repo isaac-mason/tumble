@@ -235,6 +235,7 @@ void init_cells() {
         shapes::set_cast_shape_fn(shapes::SHAPE_USER_2, other, cast_cells_vs_shape);
     }
     shapes::set_collide_shape_fn(shapes::SHAPE_USER_2, shapes::SHAPE_USER_2, collide_cells_vs_shape);
+    shapes::set_cast_shape_fn(shapes::SHAPE_USER_2, shapes::SHAPE_USER_2, cast_cells_vs_shape);
 }
 
 shapes::Shape *create_cells(Cells &cells) {
@@ -415,6 +416,25 @@ void test_user_shape_cells_queries_name_the_cell_they_meet(TestCtx &ctx) {
     }
     cast_shape::release(sweep);
     sphere::destroy(probe);
+
+    // a plank of cells swept down onto the floor of cells: its low face, at its origin, meets the top at y 0
+    uint8_t plank_solid[8] = {1, 1, 0, 0, 0, 0, 0, 0};
+    int32_t plank_materials[8] = {};
+    Cells plank_cells = {2, plank_solid, plank_materials, cube};
+    shapes::Shape *plank = create_cells(plank_cells);
+    cast_shape::CastShapeCollector drop = cast_shape::create_collector(collector::COLLECT_CLOSEST);
+    const Transformf above = {{-1.7f, 3.0f, 0.2f}, {0.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}};
+    query::cast_shape(*scene.world, drop, cast_shape::default_settings(), plank, above, vec3f::make(0.0f, -4.0f, 0.0f), filter);
+    const cast_shape::CastShapeHit *landing = cast_shape::hit(drop);
+    CHECK(ctx, landing != nullptr);
+    if (landing != nullptr) {
+        CHECK_NEAR(ctx, landing->fraction, 0.75f, 1e-3f);
+        uint32_t index;
+        sub_shape::SubShapeId remainder;
+        CHECK(ctx, pop_cell(index, remainder, plank_cells, landing->sub_shape_id_a) && pop_cell(index, remainder, floor.cells, landing->sub_shape_id_b));
+    }
+    cast_shape::release(drop);
+    shapes::release(plank);
 
     filter::release(filter);
     release_world_scene(scene);
