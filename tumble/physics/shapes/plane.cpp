@@ -191,7 +191,6 @@ void cast_ray_vs_plane(cast_ray::CastRayCollector &collector, const cast_ray::Ca
         hit.status = cast_ray::COLLIDING;
         hit.fraction = 0.0f;
         hit.sub_shape_id = sub_shape_id.value;
-        hit.material_id = shape->material_id;
         hit.body_id_b = collector.body_id_b;
         cast_ray::add_hit(collector, hit);
     }
@@ -215,7 +214,6 @@ void cast_ray_vs_plane(cast_ray::CastRayCollector &collector, const cast_ray::Ca
         hit.status = cast_ray::COLLIDING;
         hit.fraction = fraction;
         hit.sub_shape_id = sub_shape_id.value;
-        hit.material_id = shape->material_id;
         hit.body_id_b = collector.body_id_b;
         cast_ray::add_hit(collector, hit);
     } else {
@@ -235,7 +233,6 @@ void collide_point_vs_plane(collide_point::CollidePointCollector &collector, con
     if (plane3f::distance_to_point(plane, point) < 0.0f) {
         collide_point::CollidePointHit hit = collide_point::create_hit();
         hit.sub_shape_id_b = sub_shape_id_b.value;
-        hit.material_id = shape_b->material_id;
         hit.body_id_b = collector.body_id_b;
         collide_point::add_hit(collector, hit);
     }
@@ -326,8 +323,6 @@ void collide_convex_vs_plane(collide_shape::CollideShapeCollector &collector, co
         hit.penetration = penetration;
         hit.sub_shape_id_a = sub_shape_id_a.value;
         hit.sub_shape_id_b = sub_shape_id_b.value;
-        hit.material_id_a = shape_a->material_id;
-        hit.material_id_b = shape_b->material_id;
         hit.body_id_b = collector.body_id_b;
 
         // gather supporting faces if requested
@@ -440,8 +435,6 @@ void cast_convex_vs_plane(cast_shape::CastShapeCollector &collector, const cast_
     hit.normal = vec3f::normalize(hit.normal);
     hit.sub_shape_id_a = sub_shape_id_a.value;
     hit.sub_shape_id_b = sub_shape_id_b.value;
-    hit.material_id_a = shape_a->material_id;
-    hit.material_id_b = shape_b->material_id;
     hit.body_id_b = collector.body_id_b;
 
     // gather faces if requested

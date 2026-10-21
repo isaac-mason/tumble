@@ -29,8 +29,6 @@ void inverted_add_hit(CastShapeCollector &c, const CastShapeHit &h) {
     swapped.normal = vec3f::negate(swapped.normal);
     swapped.sub_shape_id_a = h.sub_shape_id_b;
     swapped.sub_shape_id_b = h.sub_shape_id_a;
-    swapped.material_id_a = h.material_id_b;
-    swapped.material_id_b = h.material_id_a;
     shift_face(swapped.face_a, h.face_b, delta);
     shift_face(swapped.face_b, h.face_a, delta);
     swapped.body_id_b = h.body_id_b;

@@ -243,6 +243,7 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::rigid_body::get_user_data_low), names("world", "body"));
     bind::fn(b, BIND(adapters::rigid_body::get_user_data_high), names("world", "body"));
     bind::fn(b, BIND(adapters::rigid_body::get_shape), names("world", "body"));
+    bind::fn(b, BIND(adapters::rigid_body::get_material), names("world", "body", "subShapeId"));
     bind::fn(b, BIND(adapters::rigid_body::is_sleeping), names("world", "body"));
     bind::fn(b, BIND(adapters::rigid_body::set_position), names("world", "body", "position", "wake"), GROWS);
     bind::fn(b, BIND(adapters::rigid_body::set_quaternion), names("world", "body", "quaternion", "wake"), GROWS);
@@ -723,8 +724,7 @@ TUMBLE_BINDINGS {
         .field(FIELD(cast_ray::CastRayHit, status))
         .field(FIELD(cast_ray::CastRayHit, fraction))
         .field(FIELD(cast_ray::CastRayHit, sub_shape_id))
-        .field(FIELD(cast_ray::CastRayHit, body_id_b))
-        .field(FIELD(cast_ray::CastRayHit, material_id));
+        .field(FIELD(cast_ray::CastRayHit, body_id_b));
     bind::float_constant(b, "INITIAL_EARLY_OUT_FRACTION", collector::INITIAL_EARLY_OUT_FRACTION,
                    "a cast collector's early out fraction before any hit");
     bind::float_constant(b, "UNBOUNDED_EARLY_OUT", collector::UNBOUNDED, "a collide collector's before any hit: no bound on the penetration");
@@ -754,8 +754,6 @@ TUMBLE_BINDINGS {
         .field(FIELD(adapters::CastShapeHit, normal))
         .field(FIELD(adapters::CastShapeHit, sub_shape_id_a))
         .field(FIELD(adapters::CastShapeHit, sub_shape_id_b))
-        .field(FIELD(adapters::CastShapeHit, material_id_a))
-        .field(FIELD(adapters::CastShapeHit, material_id_b))
         .field(FIELD(adapters::CastShapeHit, body_id_b));
     bind::fn(b, BIND(adapters::query::default_cast_shape_settings), names("out"));
     bind::fn(b, BIND(adapters::query::cast_shape),
@@ -779,8 +777,6 @@ TUMBLE_BINDINGS {
         .field(FIELD(adapters::CollideShapeHit, penetration))
         .field(FIELD(adapters::CollideShapeHit, sub_shape_id_a))
         .field(FIELD(adapters::CollideShapeHit, sub_shape_id_b))
-        .field(FIELD(adapters::CollideShapeHit, material_id_a))
-        .field(FIELD(adapters::CollideShapeHit, material_id_b))
         .field(FIELD(adapters::CollideShapeHit, body_id_b));
     bind::fn(b, BIND(adapters::query::default_collide_shape_settings), names("out"));
     bind::fn(b, BIND(adapters::query::collide_shape),
@@ -792,8 +788,7 @@ TUMBLE_BINDINGS {
     VALUE_AS(collide_point::CollidePointSettings, "CollidePointSettings").field(FIELD(collide_point::CollidePointSettings, collision_tolerance));
     VALUE_AS(collide_point::CollidePointHit, "CollidePointHit")
         .field(FIELD(collide_point::CollidePointHit, sub_shape_id_b))
-        .field(FIELD(collide_point::CollidePointHit, body_id_b))
-        .field(FIELD(collide_point::CollidePointHit, material_id));
+        .field(FIELD(collide_point::CollidePointHit, body_id_b));
     bind::fn(b, BIND(adapters::query::default_collide_point_settings), names("out"));
     bind::fn(b, BIND(adapters::query::collide_point), names("world", "kind", "settings", "point", "filter", "collisionGroups", "collisionMask"),
              GROWS);

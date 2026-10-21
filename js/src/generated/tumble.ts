@@ -7,7 +7,7 @@
 import type { Instance } from '../module.js';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x22157f39;
+export const SCHEMA_HASH = 0x5ce46deb;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 368;
 
@@ -4016,11 +4016,11 @@ export const CastRaySettings = {
     },
 };
 
-export type CastRayHit = { status: number; fraction: number; subShapeId: number; bodyIdB: number; materialId: number };
+export type CastRayHit = { status: number; fraction: number; subShapeId: number; bodyIdB: number };
 export const CastRayHit = {
-    size: 20,
+    size: 16,
     create(): CastRayHit {
-        return { status: 0, fraction: 0, subShapeId: 0, bodyIdB: 0, materialId: 0 };
+        return { status: 0, fraction: 0, subShapeId: 0, bodyIdB: 0 };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: CastRayHit, address: number): CastRayHit {
@@ -4029,7 +4029,6 @@ export const CastRayHit = {
         out.fraction = mem.f32[(address + 4) >> 2]!;
         out.subShapeId = mem.u32[(address + 8) >> 2]!;
         out.bodyIdB = mem.u32[(address + 12) >> 2]!;
-        out.materialId = mem.i32[(address + 16) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -4039,7 +4038,6 @@ export const CastRayHit = {
         mem.f32[(address + 4) >> 2] = value.fraction;
         mem.u32[(address + 8) >> 2] = value.subShapeId;
         mem.u32[(address + 12) >> 2] = value.bodyIdB;
-        mem.i32[(address + 16) >> 2] = value.materialId;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: CastRayHit): void {
@@ -4047,7 +4045,6 @@ export const CastRayHit = {
         view.setFloat32(offset + 4, value.fraction, true);
         view.setUint32(offset + 8, value.subShapeId, true);
         view.setUint32(offset + 12, value.bodyIdB, true);
-        view.setInt32(offset + 16, value.materialId, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: CastRayHit, view: DataView, offset: number): CastRayHit {
@@ -4055,7 +4052,6 @@ export const CastRayHit = {
         out.fraction = view.getFloat32(offset + 4, true);
         out.subShapeId = view.getUint32(offset + 8, true);
         out.bodyIdB = view.getUint32(offset + 12, true);
-        out.materialId = view.getInt32(offset + 16, true);
         return out;
     },
 };
@@ -4158,12 +4154,10 @@ export type CastShapeHit = {
     normal: Vec3;
     subShapeIdA: number;
     subShapeIdB: number;
-    materialIdA: number;
-    materialIdB: number;
     bodyIdB: number;
 };
 export const CastShapeHit = {
-    size: 80,
+    size: 72,
     create(): CastShapeHit {
         return {
             status: 0,
@@ -4175,8 +4169,6 @@ export const CastShapeHit = {
             normal: Vec3.create(),
             subShapeIdA: 0,
             subShapeIdB: 0,
-            materialIdA: 0,
-            materialIdB: 0,
             bodyIdB: 0,
         };
     },
@@ -4200,9 +4192,7 @@ export const CastShapeHit = {
         out.normal[2] = mem.f32[(address + 56) >> 2]!;
         out.subShapeIdA = mem.u32[(address + 60) >> 2]!;
         out.subShapeIdB = mem.u32[(address + 64) >> 2]!;
-        out.materialIdA = mem.i32[(address + 68) >> 2]!;
-        out.materialIdB = mem.i32[(address + 72) >> 2]!;
-        out.bodyIdB = mem.u32[(address + 76) >> 2]!;
+        out.bodyIdB = mem.u32[(address + 68) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -4225,9 +4215,7 @@ export const CastShapeHit = {
         mem.f32[(address + 56) >> 2] = value.normal[2];
         mem.u32[(address + 60) >> 2] = value.subShapeIdA;
         mem.u32[(address + 64) >> 2] = value.subShapeIdB;
-        mem.i32[(address + 68) >> 2] = value.materialIdA;
-        mem.i32[(address + 72) >> 2] = value.materialIdB;
-        mem.u32[(address + 76) >> 2] = value.bodyIdB;
+        mem.u32[(address + 68) >> 2] = value.bodyIdB;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: CastShapeHit): void {
@@ -4248,9 +4236,7 @@ export const CastShapeHit = {
         view.setFloat32(offset + 56, value.normal[2], true);
         view.setUint32(offset + 60, value.subShapeIdA, true);
         view.setUint32(offset + 64, value.subShapeIdB, true);
-        view.setInt32(offset + 68, value.materialIdA, true);
-        view.setInt32(offset + 72, value.materialIdB, true);
-        view.setUint32(offset + 76, value.bodyIdB, true);
+        view.setUint32(offset + 68, value.bodyIdB, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: CastShapeHit, view: DataView, offset: number): CastShapeHit {
@@ -4271,9 +4257,7 @@ export const CastShapeHit = {
         out.normal[2] = view.getFloat32(offset + 56, true);
         out.subShapeIdA = view.getUint32(offset + 60, true);
         out.subShapeIdB = view.getUint32(offset + 64, true);
-        out.materialIdA = view.getInt32(offset + 68, true);
-        out.materialIdB = view.getInt32(offset + 72, true);
-        out.bodyIdB = view.getUint32(offset + 76, true);
+        out.bodyIdB = view.getUint32(offset + 68, true);
         return out;
     },
 };
@@ -4361,12 +4345,10 @@ export type CollideShapeHit = {
     penetration: number;
     subShapeIdA: number;
     subShapeIdB: number;
-    materialIdA: number;
-    materialIdB: number;
     bodyIdB: number;
 };
 export const CollideShapeHit = {
-    size: 60,
+    size: 52,
     create(): CollideShapeHit {
         return {
             pointA: Vec3.create(),
@@ -4375,8 +4357,6 @@ export const CollideShapeHit = {
             penetration: 0,
             subShapeIdA: 0,
             subShapeIdB: 0,
-            materialIdA: 0,
-            materialIdB: 0,
             bodyIdB: 0,
         };
     },
@@ -4395,9 +4375,7 @@ export const CollideShapeHit = {
         out.penetration = mem.f32[(address + 36) >> 2]!;
         out.subShapeIdA = mem.u32[(address + 40) >> 2]!;
         out.subShapeIdB = mem.u32[(address + 44) >> 2]!;
-        out.materialIdA = mem.i32[(address + 48) >> 2]!;
-        out.materialIdB = mem.i32[(address + 52) >> 2]!;
-        out.bodyIdB = mem.u32[(address + 56) >> 2]!;
+        out.bodyIdB = mem.u32[(address + 48) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -4415,9 +4393,7 @@ export const CollideShapeHit = {
         mem.f32[(address + 36) >> 2] = value.penetration;
         mem.u32[(address + 40) >> 2] = value.subShapeIdA;
         mem.u32[(address + 44) >> 2] = value.subShapeIdB;
-        mem.i32[(address + 48) >> 2] = value.materialIdA;
-        mem.i32[(address + 52) >> 2] = value.materialIdB;
-        mem.u32[(address + 56) >> 2] = value.bodyIdB;
+        mem.u32[(address + 48) >> 2] = value.bodyIdB;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: CollideShapeHit): void {
@@ -4433,9 +4409,7 @@ export const CollideShapeHit = {
         view.setFloat32(offset + 36, value.penetration, true);
         view.setUint32(offset + 40, value.subShapeIdA, true);
         view.setUint32(offset + 44, value.subShapeIdB, true);
-        view.setInt32(offset + 48, value.materialIdA, true);
-        view.setInt32(offset + 52, value.materialIdB, true);
-        view.setUint32(offset + 56, value.bodyIdB, true);
+        view.setUint32(offset + 48, value.bodyIdB, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: CollideShapeHit, view: DataView, offset: number): CollideShapeHit {
@@ -4451,9 +4425,7 @@ export const CollideShapeHit = {
         out.penetration = view.getFloat32(offset + 36, true);
         out.subShapeIdA = view.getUint32(offset + 40, true);
         out.subShapeIdB = view.getUint32(offset + 44, true);
-        out.materialIdA = view.getInt32(offset + 48, true);
-        out.materialIdB = view.getInt32(offset + 52, true);
-        out.bodyIdB = view.getUint32(offset + 56, true);
+        out.bodyIdB = view.getUint32(offset + 48, true);
         return out;
     },
 };
@@ -4486,18 +4458,17 @@ export const CollidePointSettings = {
     },
 };
 
-export type CollidePointHit = { subShapeIdB: number; bodyIdB: number; materialId: number };
+export type CollidePointHit = { subShapeIdB: number; bodyIdB: number };
 export const CollidePointHit = {
-    size: 12,
+    size: 8,
     create(): CollidePointHit {
-        return { subShapeIdB: 0, bodyIdB: 0, materialId: 0 };
+        return { subShapeIdB: 0, bodyIdB: 0 };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: CollidePointHit, address: number): CollidePointHit {
         const mem = wasm.mem;
         out.subShapeIdB = mem.u32[(address + 0) >> 2]!;
         out.bodyIdB = mem.u32[(address + 4) >> 2]!;
-        out.materialId = mem.i32[(address + 8) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -4505,19 +4476,16 @@ export const CollidePointHit = {
         const mem = wasm.mem;
         mem.u32[(address + 0) >> 2] = value.subShapeIdB;
         mem.u32[(address + 4) >> 2] = value.bodyIdB;
-        mem.i32[(address + 8) >> 2] = value.materialId;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: CollidePointHit): void {
         view.setUint32(offset + 0, value.subShapeIdB, true);
         view.setUint32(offset + 4, value.bodyIdB, true);
-        view.setInt32(offset + 8, value.materialId, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: CollidePointHit, view: DataView, offset: number): CollidePointHit {
         out.subShapeIdB = view.getUint32(offset + 0, true);
         out.bodyIdB = view.getUint32(offset + 4, true);
-        out.materialId = view.getInt32(offset + 8, true);
         return out;
     },
 };
@@ -6476,6 +6444,11 @@ export const RigidBody = {
         return r === 0 ? null : (r as Shape);
     },
 
+    getMaterial(world: World, body: number, subShapeId: number): number {
+        const r = wasm.exports.tumble_rigid_body_get_material(world, body, subShapeId);
+        return r;
+    },
+
     isSleeping(world: World, body: number): boolean {
         const r = wasm.exports.tumble_rigid_body_is_sleeping(world, body);
         return r !== 0;
@@ -8354,6 +8327,7 @@ export type WasmExports = {
     tumble_rigid_body_get_user_data_low(world: number, body: number): number;
     tumble_rigid_body_get_user_data_high(world: number, body: number): number;
     tumble_rigid_body_get_shape(world: number, body: number): number;
+    tumble_rigid_body_get_material(world: number, body: number, subShapeId: number): number;
     tumble_rigid_body_is_sleeping(world: number, body: number): number;
     tumble_rigid_body_set_position(world: number, body: number, position: number, wake: number): number;
     tumble_rigid_body_set_quaternion(world: number, body: number, quaternion: number, wake: number): number;

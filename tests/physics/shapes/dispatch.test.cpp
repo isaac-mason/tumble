@@ -154,7 +154,7 @@ void test_dispatch_sphere_vs_sphere(TestCtx &ctx) {
     // each contact on its own sphere's surface, along the line
     CHECK(ctx, near3(hit.point_a, centre_a.x + vec3f::x(line), centre_a.y + vec3f::y(line), centre_a.z + vec3f::z(line), 1e-5f));
     CHECK(ctx, near3(hit.point_b, centre_b.x - vec3f::x(line) * 0.5f, centre_b.y - vec3f::y(line) * 0.5f, centre_b.z - vec3f::z(line) * 0.5f, 1e-5f));
-    CHECK(ctx, hit.material_id_a == 3 && hit.material_id_b == 7);
+    CHECK(ctx, shapes::get_shape_material(a, hit.sub_shape_id_a) == 3 && shapes::get_shape_material(b, hit.sub_shape_id_b) == 7);
 
     // a uniform scale of 2 on b: radius 1, 0.7 overlap
     collide_shape::reset(collector);
@@ -194,7 +194,7 @@ void test_dispatch_sphere_vs_box(TestCtx &ctx) {
     CHECK(ctx, near3(hit.penetration_axis, 0, -1, 0, 1e-6f));
     CHECK(ctx, near3(hit.point_a, 0.3f, 0.9f, -0.2f, 1e-5f));
     CHECK(ctx, near3(hit.point_b, 0.3f, 1.0f, -0.2f, 1e-5f));
-    CHECK(ctx, hit.material_id_a == 2 && hit.material_id_b == 5);
+    CHECK(ctx, shapes::get_shape_material(s, hit.sub_shape_id_a) == 2 && shapes::get_shape_material(b, hit.sub_shape_id_b) == 5);
     // the box's face is its +y face, the sphere has none
     CHECK(ctx, hit.face_a.num_vertices == 0 && hit.face_b.num_vertices == 4);
     for (uint32_t i = 0; i < 4; i++) CHECK_NEAR(ctx, vec3f::y(hit.face_b.vertices[i]), 1.0f, 1e-6f);
@@ -225,7 +225,7 @@ void test_dispatch_sphere_vs_box(TestCtx &ctx) {
     CHECK(ctx, near3(reversed.penetration_axis, 0, 1, 0, 1e-6f));
     CHECK(ctx, near3(reversed.point_a, 0.3f, 1.0f, -0.2f, 1e-5f));
     CHECK(ctx, near3(reversed.point_b, 0.3f, 0.9f, -0.2f, 1e-5f));
-    CHECK(ctx, reversed.material_id_a == 5 && reversed.material_id_b == 2);
+    CHECK(ctx, shapes::get_shape_material(b, reversed.sub_shape_id_a) == 5 && shapes::get_shape_material(s, reversed.sub_shape_id_b) == 2);
     CHECK(ctx, reversed.face_a.num_vertices == 4 && reversed.face_b.num_vertices == 0);
 
     // the analytic handler agrees with the generic path on a shallow contact
@@ -295,7 +295,7 @@ void test_dispatch_ray_vs_box(TestCtx &ctx) {
     ray(collector, settings, {-5, 0.3f, 0.2f}, {1, 0, 0}, 10.0f, b, pose({0, 0, 0}));
     CHECK(ctx, collector.has_hit);
     CHECK_NEAR(ctx, collector.hits[0].fraction, 0.4f, 1e-6f);
-    CHECK(ctx, collector.hits[0].material_id == 4);
+    CHECK(ctx, shapes::get_shape_material(b, collector.hits[0].sub_shape_id) == 4);
 
     // turned a quarter about y the box reaches 3 along x: entry at x = -3, 2 of 10
     cast_ray::reset(collector);
@@ -404,7 +404,7 @@ void test_dispatch_point_vs_sphere_and_box(TestCtx &ctx) {
     CHECK(ctx, !point_hits({1 + vec3f::x(out) * 2.1f, 2 + vec3f::y(out) * 2.1f, 3 + vec3f::z(out) * 2.1f}, s, transform_s));
     collide_point::CollidePointCollector collector = collide_point::create_collector(collector::COLLECT_ALL);
     def_of(s).collide_point(collector, collide_point::default_settings(), vec3f::make(1, 2, 3), s, NO_SUB_SHAPE, transform_s);
-    CHECK(ctx, collector.hits.length == 1 && collector.hits[0].material_id == 6);
+    CHECK(ctx, collector.hits.length == 1 && shapes::get_shape_material(s, collector.hits[0].sub_shape_id_b) == 6);
     collide_point::release(collector);
 
     // the box turned a quarter about y: its z extent 3 lies along x

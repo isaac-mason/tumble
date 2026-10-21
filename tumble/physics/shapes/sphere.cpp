@@ -109,7 +109,6 @@ void collide_point_vs_sphere(collide_point::CollidePointCollector &collector, co
     if (vec3f::squared_length(local) <= radius * radius) {
         collide_point::CollidePointHit hit = collide_point::create_hit();
         hit.sub_shape_id_b = sub_shape_id_b.value;
-        hit.material_id = shape_b->material_id;
         hit.body_id_b = collector.body_id_b;
         collide_point::add_hit(collector, hit);
     }
@@ -161,8 +160,6 @@ void collide_sphere_vs_sphere(collide_shape::CollideShapeCollector &collector, c
     hit.penetration = penetration;
     hit.sub_shape_id_a = sub_shape_id_a.value;
     hit.sub_shape_id_b = sub_shape_id_b.value;
-    hit.material_id_a = shape_a->material_id;
-    hit.material_id_b = shape_b->material_id;
     hit.body_id_b = collector.body_id_b;
     collide_shape::add_hit(collector, hit);
 }

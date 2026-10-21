@@ -15,8 +15,6 @@ void inverted_add_hit(CollideShapeCollector &c, const CollideShapeHit &h) {
     swapped.penetration = h.penetration;
     swapped.sub_shape_id_a = h.sub_shape_id_b;
     swapped.sub_shape_id_b = h.sub_shape_id_a;
-    swapped.material_id_a = h.material_id_b;
-    swapped.material_id_b = h.material_id_a;
     face::copy(swapped.face_a, h.face_b);
     face::copy(swapped.face_b, h.face_a);
     swapped.body_id_b = h.body_id_b;

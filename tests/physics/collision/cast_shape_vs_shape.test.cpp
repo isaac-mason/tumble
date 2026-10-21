@@ -368,7 +368,7 @@ void test_cast_shape_vs_shape_reversed(TestCtx &ctx) {
     CHECK(ctx, near3(r->normal, -vec3f::x(f->normal), -vec3f::y(f->normal), -vec3f::z(f->normal), 1e-6f));
     CHECK_NEAR(ctx, vec3f::x(r->normal), 1.0f, 1e-3f);
 
-    CHECK(ctx, r->material_id_a == 7 && r->material_id_b == 3);
+    CHECK(ctx, shapes::get_shape_material(block, r->sub_shape_id_a) == 7 && shapes::get_shape_material(ball, r->sub_shape_id_b) == 3);
 
     // shape a (the box) is reported in its swept frame: centre at x = -1.5, face at x = -2.5
     CHECK_NEAR(ctx, vec3f::x(r->point_a), -2.5f, 1e-3f);

@@ -3,12 +3,16 @@ import {
     Box,
     type Box3,
     Capsule,
+    CastRayStatus,
     Compound,
     ConvexHull,
     ConvexHullBuildError,
     ConvexHullBuildResult,
     ConvexHullData,
     Cylinder,
+    castRay,
+    createClosestCastRayCollector,
+    createDefaultCastRaySettings,
     Empty,
     init,
     type Listener,
@@ -182,6 +186,12 @@ describe('triangle meshes', () => {
         RigidBody.getPosition(position, world, body);
         expect(position[1]).toBeCloseTo(3.48, 1);
         expect(material).toBe(8);
+
+        // a ray down onto the first triangle: its hit names the triangle, whose material the body gives
+        const down = createClosestCastRayCollector();
+        castRay(world, down, createDefaultCastRaySettings(), [3, 10, -3], [0, -1, 0], 20);
+        expect(down.hit.status).toBe(CastRayStatus.COLLIDING);
+        expect(RigidBody.getMaterial(world, down.hit.bodyIdB, down.hit.subShapeId)).toBe(7);
         releaseScene(scene);
         Box.destroy(crate);
         TriangleMesh.destroy(mesh);

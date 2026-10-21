@@ -206,7 +206,6 @@ void cast_ray_vs_triangle_mesh(cast_ray::CastRayCollector &collector, const cast
                     hit.status = cast_ray::COLLIDING;
                     hit.fraction = hit_result.fraction;
                     hit.sub_shape_id = triangle_sub_shape_id.value;
-                    hit.material_id = triangle_mesh_data::get_material_id(data, triangle_index);
                     hit.body_id_b = collector.body_id_b;
                     cast_ray::add_hit(collector, hit);
 
@@ -241,7 +240,6 @@ void cast_ray_vs_triangle_mesh(cast_ray::CastRayCollector &collector, const cast
 /** counts every crossing of the parity ray, never early-outs */
 struct HitCountContext {
     uint32_t hit_count;
-    int32_t last_material_id;
     sub_shape::SubShapeId last_sub_shape_id;
 };
 
@@ -249,7 +247,6 @@ static void hit_count_add_hit(cast_ray::CastRayCollector &collector, const cast_
     HitCountContext &context = *static_cast<HitCountContext *>(collector.context);
     context.hit_count++;
     context.last_sub_shape_id = hit.sub_shape_id;
-    context.last_material_id = hit.material_id;
 }
 
 static bool hit_count_should_early_out(const cast_ray::CastRayCollector &) {
@@ -282,7 +279,7 @@ void collide_point_vs_triangle_mesh(collide_point::CollidePointCollector &collec
     cast_ray_settings.collide_with_backfaces_triangles = true;
     cast_ray_settings.collide_with_backfaces_convex = true;
 
-    HitCountContext context = {0, -1, sub_shape::EMPTY_SUB_SHAPE_ID};
+    HitCountContext context = {0, sub_shape::EMPTY_SUB_SHAPE_ID};
     cast_ray::CastRayCollector hit_counter = cast_ray::create_collector(collector::COLLECT_CUSTOM);
     hit_counter.body_id_b = collector.body_id_b;
     hit_counter.custom_add_hit = hit_count_add_hit;
@@ -299,7 +296,6 @@ void collide_point_vs_triangle_mesh(collide_point::CollidePointCollector &collec
     if ((context.hit_count & 1) != 0) {
         collide_point::CollidePointHit hit = collide_point::create_hit();
         hit.sub_shape_id_b = context.last_sub_shape_id;
-        hit.material_id = context.last_material_id;
         hit.body_id_b = collector.body_id_b;
         collide_point::add_hit(collector, hit);
     }
@@ -485,8 +481,6 @@ void cast_convex_vs_triangle_mesh(cast_shape::CastShapeCollector &collector, con
                 sub_shape::SubShapeIdBuilder triangle_sub_shape_id;
                 sub_shape::push_index(triangle_sub_shape_id, sub_shape_id_b, triangle_index, data.triangle_count);
                 hit.sub_shape_id_b = triangle_sub_shape_id.value;
-                hit.material_id_a = shape_a->material_id;
-                hit.material_id_b = triangle_mesh_data::get_material_id(data, triangle_index);
                 hit.body_id_b = collector.body_id_b;
 
                 // gather faces if requested
@@ -732,8 +726,6 @@ void collide_convex_vs_triangle_mesh(collide_shape::CollideShapeCollector &colle
                 hit.penetration = penetration;
                 hit.sub_shape_id_a = sub_shape_id_a.value;
                 hit.sub_shape_id_b = triangle_sub_shape_id.value;
-                hit.material_id_a = shape_a->material_id;
-                hit.material_id_b = triangle_mesh_data::get_material_id(data, triangle_index);
                 hit.body_id_b = collector.body_id_b;
 
                 // collect faces if requested
@@ -902,8 +894,6 @@ void collide_sphere_vs_triangle_mesh(collide_shape::CollideShapeCollector &colle
                 hit.penetration = penetration_depth;
                 hit.sub_shape_id_a = sub_shape_id_a.value;
                 hit.sub_shape_id_b = triangle_sub_shape_id.value;
-                hit.material_id_a = shape_a->material_id;
-                hit.material_id_b = triangle_mesh_data::get_material_id(data, triangle_index);
                 hit.body_id_b = collector.body_id_b;
 
                 // collect faces if requested
@@ -996,8 +986,6 @@ static void cast_sphere_vs_triangle_mesh_add_hit(const CastSphereContext &contex
     hit.penetration_depth = vec3f::distance(hit.point_a, hit.point_b);
     hit.sub_shape_id_a = context.sub_shape_id_a;
     hit.sub_shape_id_b = triangle_sub_shape_id.value;
-    hit.material_id_a = context.sphere_shape->material_id;
-    hit.material_id_b = triangle_mesh_data::get_material_id(*context.data, triangle_index);
     hit.body_id_b = context.collector->body_id_b;
     face::clear(hit.face_a);  // sphere has no face
     face::clear(hit.face_b);  // don't collect faces for swept tests

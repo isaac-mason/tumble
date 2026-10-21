@@ -243,8 +243,8 @@ void test_collide_shape_vs_shape_cylinders(TestCtx &ctx) {
 
 void test_collide_shape_vs_shape_reversed_pair_materials(TestCtx &ctx) {
     dispatch::init();
-    // sphere vs box runs the specialised handler; box vs sphere runs it reversed, and the hit's materials must follow
-    // the shape order like its points and sub shape ids do
+    // sphere vs box runs the specialised handler; box vs sphere runs it reversed, and the hit's sub shape ids must follow
+    // the shape order like its points do, so each names its own shape's material
     shapes::Shape *ball = sphere::create({.radius = 1.0f, .material_id = 3});
     shapes::Shape *unit = box::create({.half_extents = {1, 1, 1}, .material_id = 5});
     CollideShapeSettings with_faces = collide_shape::default_settings();
@@ -252,13 +252,13 @@ void test_collide_shape_vs_shape_reversed_pair_materials(TestCtx &ctx) {
 
     CollideShapeCollector forward = hits_at(ball, unit, {1.5f, 0, 0}, with_faces);
     CHECK(ctx, forward.hits.length == 1);
-    CHECK(ctx, forward.hits[0].material_id_a == 3 && forward.hits[0].material_id_b == 5);
+    CHECK(ctx, shapes::get_shape_material(ball, forward.hits[0].sub_shape_id_a) == 3 && shapes::get_shape_material(unit, forward.hits[0].sub_shape_id_b) == 5);
     CHECK(ctx, vec3f::x(forward.hits[0].penetration_axis) > 0.0f);
 
     CollideShapeCollector reversed = hits_at(unit, ball, {1.5f, 0, 0}, with_faces);
     CHECK(ctx, reversed.hits.length == 1);
     const CollideShapeHit &hit = reversed.hits[0];
-    CHECK(ctx, hit.material_id_a == 5 && hit.material_id_b == 3);
+    CHECK(ctx, shapes::get_shape_material(unit, hit.sub_shape_id_a) == 5 && shapes::get_shape_material(ball, hit.sub_shape_id_b) == 3);
     CHECK(ctx, vec3f::x(hit.penetration_axis) > 0.0f);
     CHECK_NEAR(ctx, hit.penetration, 0.5f, 1e-5f);
     // a's point on the box face at x = 1, b's on the sphere at x = 0.5; the box face moves to face_a

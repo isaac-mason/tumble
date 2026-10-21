@@ -468,6 +468,8 @@ void move_kinematic(world::World &world, RigidBody *body, Vec3f target_position,
     sleep::wake(world.bodies, body);
 }
 
+int32_t get_material(const RigidBody *body, sub_shape::SubShapeId sub_shape_id) { return shapes::get_shape_material(body->shape, sub_shape_id); }
+
 Vec3f get_world_space_surface_normal(const RigidBody *body, sub_shape::SubShapeId sub_shape_id, Vec3f world_position) {
     // transform world position to local space (relative to shape origin)
     const Quatf rotation = quatf::load(body->quaternion);

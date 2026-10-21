@@ -360,7 +360,7 @@ void test_transformed_box_vs_sphere_collide(TestCtx &ctx) {
         CHECK(ctx, near3(unit(hit.penetration_axis), 0, 1, 0, 1e-5f));
         CHECK(ctx, near3(hit.point_a, 5, 1, 0, 1e-5f));
         CHECK(ctx, near3(hit.point_b, 5, 0.5f, 0, 1e-5f));
-        CHECK(ctx, hit.material_id_a == 4 && hit.material_id_b == 9);
+        CHECK(ctx, shapes::get_shape_material(t, hit.sub_shape_id_a) == 4 && shapes::get_shape_material(s, hit.sub_shape_id_b) == 9);
     }
 
     // the other way round: the axis flips, the points and materials swap
@@ -373,7 +373,7 @@ void test_transformed_box_vs_sphere_collide(TestCtx &ctx) {
         CHECK(ctx, near3(unit(hit.penetration_axis), 0, -1, 0, 1e-5f));
         CHECK(ctx, near3(hit.point_a, 5, 0.5f, 0, 1e-5f));
         CHECK(ctx, near3(hit.point_b, 5, 1, 0, 1e-5f));
-        CHECK(ctx, hit.material_id_a == 9 && hit.material_id_b == 4);
+        CHECK(ctx, shapes::get_shape_material(s, hit.sub_shape_id_a) == 9 && shapes::get_shape_material(t, hit.sub_shape_id_b) == 4);
     }
 
     // over the x face rather than the y face: the unturned box would reach x = 6, the turned one only to 7 - so 0.5 into

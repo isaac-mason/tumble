@@ -368,7 +368,7 @@ void test_compound_collide_two_boxes_vs_sphere(TestCtx &ctx) {
     CHECK_NEAR(ctx, hit.penetration, 0.1f, 1e-4f);
     CHECK(ctx, vec3f::dot(unit(hit.penetration_axis), vec3f::make(0, 1, 0)) > 0.9999f);
     CHECK(ctx, near3(hit.point_a, 2, 0.5f, 0, 1e-4f));
-    CHECK(ctx, hit.material_id_a == 4 && hit.material_id_b == 9);
+    CHECK(ctx, shapes::get_shape_material(c, hit.sub_shape_id_a) == 4 && shapes::get_shape_material(s, hit.sub_shape_id_b) == 9);
 
     // the other way round: the compound is b, the axis points down into it
     collide_shape::reset(collector);
@@ -795,7 +795,7 @@ void test_compound_material(TestCtx &ctx) {
     cast_ray::CastRayCollector rays = cast_ray::create_collector(collector::COLLECT_CLOSEST);
     const cast_ray::Rayf ray = {vec3f::make(4, 10, 0), vec3f::make(0, -1, 0), 20.0f};
     shapes::def_of(c).cast_ray(rays, cast_ray::default_settings(), ray, c, NO_SUB_SHAPE, pose({0, 0, 0}));
-    CHECK(ctx, rays.has_hit && rays.hits[0].material_id == 9);
+    CHECK(ctx, rays.has_hit && shapes::get_shape_material(c, rays.hits[0].sub_shape_id) == 9);
     CHECK(ctx, rays.has_hit && shapes::get_shape_material(c, rays.hits[0].sub_shape_id) == 9);
     cast_ray::release(rays);
 

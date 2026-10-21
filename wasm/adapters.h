@@ -259,6 +259,8 @@ uint32_t get_object_layer(tumble::world::World *world, tumble::body_id::BodyId i
 uint32_t get_user_data_low(tumble::world::World *world, tumble::body_id::BodyId id);
 uint32_t get_user_data_high(tumble::world::World *world, tumble::body_id::BodyId id);
 tumble::shapes::Shape *get_shape(tumble::world::World *world, tumble::body_id::BodyId id);
+/** the material id of the part of the body's shape the sub shape id names; -1 for none or a body id naming no body */
+int32_t get_material(tumble::world::World *world, tumble::body_id::BodyId id, uint32_t sub_shape_id);
 bool is_sleeping(tumble::world::World *world, tumble::body_id::BodyId id);
 
 // writers: false when the id names no body
@@ -636,8 +638,6 @@ struct CastShapeHit {
     tumble::Float3 normal;
     uint32_t sub_shape_id_a;
     uint32_t sub_shape_id_b;
-    int32_t material_id_a;
-    int32_t material_id_b;
     tumble::body_id::BodyId body_id_b;
 };
 
@@ -662,8 +662,6 @@ struct CollideShapeHit {
     float penetration;
     uint32_t sub_shape_id_a;
     uint32_t sub_shape_id_b;
-    int32_t material_id_a;
-    int32_t material_id_b;
     tumble::body_id::BodyId body_id_b;
 };
 

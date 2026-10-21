@@ -167,6 +167,10 @@ export const RigidBody = {
     getShape(world: World, body: BodyId): Shape | null {
         return Low.RigidBody.getShape(world, body);
     },
+    /** the material id of the part of the body's shape a hit's or a contact's sub shape id names; -1 for none */
+    getMaterial(world: World, body: BodyId, subShapeId: number): number {
+        return Low.RigidBody.getMaterial(world, body, subShapeId);
+    },
     isSleeping(world: World, body: BodyId): boolean {
         return Low.RigidBody.isSleeping(world, body);
     },

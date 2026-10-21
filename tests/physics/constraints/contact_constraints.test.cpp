@@ -423,7 +423,7 @@ void test_contact_constraints_from_cache_keeps_the_materials(TestCtx &ctx) {
         return;
     }
     const collide_shape::CollideShapeHit &hit = collector.hits[0];
-    CHECK(ctx, hit.material_id_a == 3 && hit.material_id_b == 5);
+    CHECK(ctx, shapes::get_shape_material(ball->shape, hit.sub_shape_id_a) == 3 && shapes::get_shape_material(floor->shape, hit.sub_shape_id_b) == 5);
     Float3 hit_point_a;
     vec3f::store(hit_point_a, hit.point_a);
     manifold::ContactManifold contact_manifold = touching_manifold(&hit_point_a, 1, {0.0f, -1.0f, 0.0f}, hit.penetration);

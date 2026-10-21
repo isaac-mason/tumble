@@ -15,9 +15,6 @@ TUMBLE_NAMESPACE_BEGIN
 
 namespace convex {
 
-static int32_t material_id_of(const Shape *shape) {
-    return shape->material_id;
-}
 
 int32_t get_convex_material(const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
     TUMBLE_ASSERT(sub_shape::is_empty(sub_shape_id));
@@ -60,7 +57,6 @@ void cast_ray_vs_convex(cast_ray::CastRayCollector &collector, const cast_ray::C
     cast_ray::CastRayHit hit = cast_ray::create_hit();
     hit.status = cast_ray::COLLIDING;
     hit.sub_shape_id = sub_shape_id.value;
-    hit.material_id = material_id_of(shape);
     hit.body_id_b = collector.body_id_b;
     bool hit_added = false;
 
@@ -135,7 +131,6 @@ void collide_point_vs_convex(collide_point::CollidePointCollector &collector, co
     if (gjk_result.squared_distance <= tolerance_sq) {
         collide_point::CollidePointHit hit = collide_point::create_hit();
         hit.sub_shape_id_b = sub_shape_id_b.value;
-        hit.material_id = material_id_of(shape_b);
         hit.body_id_b = collector.body_id_b;
         collide_point::add_hit(collector, hit);
     }
@@ -278,8 +273,6 @@ void collide_convex_vs_convex_local(collide_shape::CollideShapeCollector &collec
     hit.penetration = penetration;
     hit.sub_shape_id_a = sub_shape_id_a;
     hit.sub_shape_id_b = sub_shape_id_b;
-    hit.material_id_a = material_id_of(shape_a);
-    hit.material_id_b = material_id_of(shape_b);
     hit.body_id_b = collector.body_id_b;
 
     // gather faces
@@ -397,8 +390,6 @@ void cast_convex_vs_convex_local(cast_shape::CastShapeCollector &collector, cons
     hit.fraction = gjk_result.lambda;
     hit.sub_shape_id_a = sub_shape_id_a;
     hit.sub_shape_id_b = sub_shape_id_b;
-    hit.material_id_a = material_id_of(shape_a);
-    hit.material_id_b = material_id_of(shape_b);
     hit.body_id_b = collector.body_id_b;
 
     // extract supporting faces if requested

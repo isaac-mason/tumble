@@ -286,6 +286,9 @@ void move_kinematic(world::World &world, RigidBody *body, Vec3f target_position,
 /** world space */
 Vec3f get_world_space_surface_normal(const RigidBody *body, sub_shape::SubShapeId sub_shape_id, Vec3f world_position);
 
+/** the material id of the part of the body's shape a sub shape id names, as a hit or a contact gives it; -1 for none */
+int32_t get_material(const RigidBody *body, sub_shape::SubShapeId sub_shape_id);
+
 /** queried relative to the shape's origin, not the centre of mass */
 Float3 &get_surface_normal(Float3 &out, const RigidBody *body, const Float3 &world_position, sub_shape::SubShapeId sub_shape_id);
 

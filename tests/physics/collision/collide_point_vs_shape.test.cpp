@@ -73,7 +73,7 @@ void test_collide_point_vs_shape_box(TestCtx &ctx) {
     collide(any, {0, 0, 0}, unit, pose({0, 0, 0}));
     CHECK(ctx, any.has_hit && collide_point::hit(any)->body_id_b == 1);
     // the box reports its material
-    CHECK(ctx, collide_point::hit(any)->material_id == 7);
+    CHECK(ctx, shapes::get_shape_material(unit, collide_point::hit(any)->sub_shape_id_b) == 7);
     collide_point::release(any);
 
     CHECK(ctx, inside({1, 1, 1}, two, pose({0, 0, 0})));

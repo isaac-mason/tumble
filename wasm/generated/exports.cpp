@@ -77,6 +77,7 @@ WASM_EXPORT uint32_t tumble_rigid_body_get_object_layer(world::World * world, ui
 WASM_EXPORT uint32_t tumble_rigid_body_get_user_data_low(world::World * world, uint32_t body) { return adapters::rigid_body::get_user_data_low(world, body); }
 WASM_EXPORT uint32_t tumble_rigid_body_get_user_data_high(world::World * world, uint32_t body) { return adapters::rigid_body::get_user_data_high(world, body); }
 WASM_EXPORT shapes::Shape * tumble_rigid_body_get_shape(world::World * world, uint32_t body) { return adapters::rigid_body::get_shape(world, body); }
+WASM_EXPORT int32_t tumble_rigid_body_get_material(world::World * world, uint32_t body, uint32_t subShapeId) { return adapters::rigid_body::get_material(world, body, subShapeId); }
 WASM_EXPORT bool tumble_rigid_body_is_sleeping(world::World * world, uint32_t body) { return adapters::rigid_body::is_sleeping(world, body); }
 WASM_EXPORT bool tumble_rigid_body_set_position(world::World * world, uint32_t body, const Float3 * position, bool wake) { return adapters::rigid_body::set_position(world, body, *position, wake); }
 WASM_EXPORT bool tumble_rigid_body_set_quaternion(world::World * world, uint32_t body, const Float4 * quaternion, bool wake) { return adapters::rigid_body::set_quaternion(world, body, *quaternion, wake); }

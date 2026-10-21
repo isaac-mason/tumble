@@ -327,8 +327,6 @@ void collide_sphere_vs_box(collide_shape::CollideShapeCollector &collector, cons
     hit.penetration = penetration;
     hit.sub_shape_id_a = sub_shape_id_a.value;
     hit.sub_shape_id_b = sub_shape_id_b.value;
-    hit.material_id_a = shape_a->material_id;
-    hit.material_id_b = shape_b->material_id;
     hit.body_id_b = collector.body_id_b;
 
     if (settings.collect_faces) {
@@ -406,7 +404,6 @@ void cast_ray_vs_box(cast_ray::CastRayCollector &collector, const cast_ray::Cast
     cast_ray::CastRayHit hit = cast_ray::create_hit();
     hit.status = cast_ray::COLLIDING;
     hit.sub_shape_id = sub_shape_id.value;
-    hit.material_id = shape->material_id;
     hit.body_id_b = collector.body_id_b;
     bool hit_added = false;
 
@@ -447,7 +444,6 @@ void collide_point_vs_box(collide_point::CollidePointCollector &collector, const
     if (scalar::abs(vec3f::x(local)) <= scaled_half_x && scalar::abs(vec3f::y(local)) <= scaled_half_y && scalar::abs(vec3f::z(local)) <= scaled_half_z) {
         collide_point::CollidePointHit hit = collide_point::create_hit();
         hit.sub_shape_id_b = sub_shape_id_b.value;
-        hit.material_id = shape_b->material_id;
         hit.body_id_b = collector.body_id_b;
         collide_point::add_hit(collector, hit);
     }

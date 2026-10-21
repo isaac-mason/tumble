@@ -133,8 +133,6 @@ export type CastRayHit = {
     fraction: number;
     subShapeId: number;
     bodyIdB: BodyId;
-    /** -1 for none */
-    materialId: number;
 };
 
 export function createDefaultCastRaySettings(): CastRaySettings {
@@ -142,7 +140,7 @@ export function createDefaultCastRaySettings(): CastRaySettings {
 }
 
 function createCastRayHit(): CastRayHit {
-    return { status: CastRayStatus.NOT_COLLIDING, fraction: 1, subShapeId: 0, bodyIdB: 0, materialId: -1 };
+    return { status: CastRayStatus.NOT_COLLIDING, fraction: 1, subShapeId: 0, bodyIdB: 0 };
 }
 
 function clearCastRayHit(hit: CastRayHit): void {
@@ -150,7 +148,6 @@ function clearCastRayHit(hit: CastRayHit): void {
     hit.fraction = 1;
     hit.subShapeId = 0;
     hit.bodyIdB = 0;
-    hit.materialId = -1;
 }
 
 function copyCastRayHit(out: CastRayHit, from: Low.CastRayHit): void {
@@ -158,7 +155,6 @@ function copyCastRayHit(out: CastRayHit, from: Low.CastRayHit): void {
     out.fraction = from.fraction;
     out.subShapeId = from.subShapeId;
     out.bodyIdB = from.bodyIdB;
-    out.materialId = from.materialId;
 }
 
 export class ClosestCastRayCollector {
@@ -285,8 +281,6 @@ export type CastShapeHit = {
     normal: Vec3;
     subShapeIdA: number;
     subShapeIdB: number;
-    materialIdA: number;
-    materialIdB: number;
     bodyIdB: BodyId;
 };
 
@@ -305,8 +299,6 @@ function createCastShapeHit(): CastShapeHit {
         normal: [0, 0, 0],
         subShapeIdA: 0,
         subShapeIdB: 0,
-        materialIdA: -1,
-        materialIdB: -1,
         bodyIdB: 0,
     };
 }
@@ -317,8 +309,6 @@ function clearCastShapeHit(hit: CastShapeHit): void {
     hit.penetrationDepth = 0;
     hit.subShapeIdA = 0;
     hit.subShapeIdB = 0;
-    hit.materialIdA = -1;
-    hit.materialIdB = -1;
     hit.bodyIdB = 0;
 }
 
@@ -332,8 +322,6 @@ function copyCastShapeHit(out: CastShapeHit, from: Low.CastShapeHit): void {
     copyVec3(out.normal, from.normal);
     out.subShapeIdA = from.subShapeIdA;
     out.subShapeIdB = from.subShapeIdB;
-    out.materialIdA = from.materialIdA;
-    out.materialIdB = from.materialIdB;
     out.bodyIdB = from.bodyIdB;
 }
 
@@ -466,8 +454,6 @@ export type CollideShapeHit = {
     penetration: number;
     subShapeIdA: number;
     subShapeIdB: number;
-    materialIdA: number;
-    materialIdB: number;
     bodyIdB: BodyId;
 };
 
@@ -483,8 +469,6 @@ function createCollideShapeHit(): CollideShapeHit {
         penetration: 0,
         subShapeIdA: 0,
         subShapeIdB: 0,
-        materialIdA: -1,
-        materialIdB: -1,
         bodyIdB: 0,
     };
 }
@@ -496,8 +480,6 @@ function copyCollideShapeHit(out: CollideShapeHit, from: Low.CollideShapeHit): v
     out.penetration = from.penetration;
     out.subShapeIdA = from.subShapeIdA;
     out.subShapeIdB = from.subShapeIdB;
-    out.materialIdA = from.materialIdA;
-    out.materialIdB = from.materialIdB;
     out.bodyIdB = from.bodyIdB;
 }
 
@@ -646,7 +628,6 @@ export type CollidePointHit = {
     bodyIdB: BodyId;
     /** the empty sub shape id unless the shape is a compound */
     subShapeIdB: number;
-    materialId: number;
 };
 
 export function createDefaultCollidePointSettings(): CollidePointSettings {
@@ -654,13 +635,12 @@ export function createDefaultCollidePointSettings(): CollidePointSettings {
 }
 
 function createCollidePointHit(): CollidePointHit {
-    return { bodyIdB: 0, subShapeIdB: 0, materialId: -1 };
+    return { bodyIdB: 0, subShapeIdB: 0 };
 }
 
 function copyCollidePointHit(out: CollidePointHit, from: Low.CollidePointHit): void {
     out.bodyIdB = from.bodyIdB;
     out.subShapeIdB = from.subShapeIdB;
-    out.materialId = from.materialId;
 }
 
 export class AnyCollidePointCollector {

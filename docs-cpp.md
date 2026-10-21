@@ -1293,7 +1293,6 @@ void ellipsoid_collide_point(collide_point::CollidePointCollector &collector, co
     collide_point::CollidePointHit hit = collide_point::create_hit();
     hit.sub_shape_id_b = sub_shape_id.value;
     hit.body_id_b = collector.body_id_b;
-    hit.material_id = shape->material_id;
     collide_point::add_hit(collector, hit);
 }
 

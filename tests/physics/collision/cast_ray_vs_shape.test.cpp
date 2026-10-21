@@ -84,7 +84,7 @@ void test_cast_ray_vs_shape_box(TestCtx &ctx) {
     ray(collector, settings, {0, 0, 0}, {1, 0, 0}, 1000, shape, pose({5, 0, 0}));
     CHECK(ctx, collector.hits.length == 1);
     CHECK_NEAR(ctx, collector.hits[0].fraction, 0.004f, 1e-6f);
-    CHECK(ctx, collector.hits[0].material_id == 4);
+    CHECK(ctx, shapes::get_shape_material(shape, collector.hits[0].sub_shape_id) == 4);
 
     // pointing away
     cast_ray::reset(collector);
@@ -246,12 +246,12 @@ void test_cast_ray_vs_shape_collectors(TestCtx &ctx) {
     ray(closest, settings, {0, 0, 0}, {1, 0, 0}, 10, far_sphere, pose({8, 0, 0}));
     CHECK_NEAR(ctx, closest.early_out_fraction, 0.7f, 1e-5f);
     ray(closest, settings, {0, 0, 0}, {1, 0, 0}, 10, near_box, pose({3, 0, 0}));
-    CHECK(ctx, closest.hits.length == 1 && cast_ray::hit(closest)->material_id == 1);
+    CHECK(ctx, closest.hits.length == 1);
     CHECK_NEAR(ctx, cast_ray::hit(closest)->fraction, 0.2f, 1e-5f);
     CHECK_NEAR(ctx, closest.early_out_fraction, 0.2f, 1e-5f);
     // the sphere again, now behind the bound: not taken
     ray(closest, settings, {0, 0, 0}, {1, 0, 0}, 10, far_sphere, pose({8, 0, 0}));
-    CHECK(ctx, cast_ray::hit(closest)->material_id == 1);
+    CHECK_NEAR(ctx, cast_ray::hit(closest)->fraction, 0.2f, 1e-5f);
     CHECK(ctx, !cast_ray::should_early_out(closest));
 
     // any: the first hit stops the query
@@ -259,7 +259,7 @@ void test_cast_ray_vs_shape_collectors(TestCtx &ctx) {
     CHECK(ctx, !cast_ray::should_early_out(any));
     ray(any, settings, {0, 0, 0}, {1, 0, 0}, 10, far_sphere, pose({8, 0, 0}));
     CHECK(ctx, cast_ray::should_early_out(any) && any.early_out_fraction == collector::SHOULD_EARLY_OUT_FRACTION);
-    CHECK(ctx, cast_ray::hit(any)->material_id == 2);
+    CHECK_NEAR(ctx, cast_ray::hit(any)->fraction, 0.7f, 1e-5f);
 
     cast_ray::release(closest);
     cast_ray::release(any);

@@ -172,7 +172,7 @@ void test_plane_cast_ray(TestCtx &ctx) {
     cast_ray::CastRayCollector collector = cast_ray::create_collector(collector::COLLECT_CLOSEST);
     const cast_ray::Rayf ray = {vec3f::make(0, 5, 0), vec3f::make(0, -1, 0), 10.0f};
     shapes::def_of(stone).cast_ray(collector, cast_ray::default_settings(), ray, stone, NO_SUB_SHAPE, origin);
-    CHECK(ctx, collector.has_hit && collector.hits[0].material_id == 6);
+    CHECK(ctx, collector.has_hit && shapes::get_shape_material(stone, collector.hits[0].sub_shape_id) == 6);
     cast_ray::release(collector);
 
     // from inside the solid with back faces on: the hit at 0, and the surface still tested from behind
@@ -220,7 +220,7 @@ void test_plane_collide_point(TestCtx &ctx) {
     collide_point::CollidePointCollector collector = collide_point::create_collector(collector::COLLECT_ALL);
     shapes::def_of(stone).collide_point(collector, collide_point::default_settings(), vec3f::make(0, -1, 0), stone, NO_SUB_SHAPE, pose({0, 0, 0}));
     CHECK(ctx, collector.hits.length == 1);
-    if (collector.hits.length == 1) CHECK(ctx, collector.hits[0].material_id == 6);
+    if (collector.hits.length == 1) CHECK(ctx, shapes::get_shape_material(stone, collector.hits[0].sub_shape_id_b) == 6);
     collide_point::release(collector);
 
     plane::destroy(ground);
@@ -314,7 +314,7 @@ void test_plane_collide_faces(TestCtx &ctx) {
     CHECK(ctx, collector.hits.length == 1);
     if (collector.hits.length == 1) {
         const collide_shape::CollideShapeHit &hit = collector.hits[0];
-        CHECK(ctx, hit.material_id_a == 7 && hit.material_id_b == 2);
+        CHECK(ctx, shapes::get_shape_material(b, hit.sub_shape_id_a) == 7 && shapes::get_shape_material(ground, hit.sub_shape_id_b) == 2);
         CHECK(ctx, hit.face_a.num_vertices == 4 && hit.face_b.num_vertices == 4);
         const float size = scalar::sqrt(12.0f);
         for (uint32_t i = 0; i < 4; i++) {
@@ -454,7 +454,7 @@ void test_plane_reversed_cast(TestCtx &ctx) {
         // the normal points from b (the sphere) towards a (the plane)
         CHECK(ctx, near3(hit.normal, 0, -1, 0, 1e-5f));
         CHECK(ctx, vec3f::y(hit.penetration_axis) > 0.0f);
-        CHECK(ctx, hit.material_id_a == 5 && hit.material_id_b == 3);
+        CHECK(ctx, shapes::get_shape_material(ground, hit.sub_shape_id_a) == 5 && shapes::get_shape_material(s, hit.sub_shape_id_b) == 3);
     }
 
     // and a collide through the transformed wrapper: the sphere moved to (2, 0, 0) sits with its centre on the ground,

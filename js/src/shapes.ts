@@ -339,7 +339,7 @@ export const TriangleMeshData = {
  * ones: a mesh has no volume, so a dynamic body over one needs massPropertiesOverride
  */
 export type TriangleMeshSettings = ({ data: TriangleMeshData } | TriangleMeshBuildSettings) & {
-    /** the shape's own material, for queries that report it; hits report the hit triangle's */
+    /** unread: a mesh's materials are its triangles', which RigidBody.getMaterial gives by sub shape id */
     materialId?: number;
 };
 

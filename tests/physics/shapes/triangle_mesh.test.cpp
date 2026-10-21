@@ -430,13 +430,13 @@ void test_triangle_mesh_ray_materials_and_sub_shapes(TestCtx &ctx) {
     cast_ray::CastRayCollector collector = cast_ray::create_collector(collector::COLLECT_CLOSEST);
 
     ray_cast(collector, RAY_FRONT, quad, pose({0, 0, 0}), {0.8f, 3, 0.2f}, {0, -1, 0}, 4);
-    CHECK(ctx, collector.has_hit && collector.hits[0].material_id == 3);
+    CHECK(ctx, collector.has_hit && shapes::get_shape_material(quad, collector.hits[0].sub_shape_id) == 3);
     const uint32_t first = triangle_of(quad, collector.hits[0].sub_shape_id);
     CHECK(ctx, triangle_mesh_data::get_material_id(*quad->triangle_mesh.data, first) == 3);
 
     cast_ray::reset(collector);
     ray_cast(collector, RAY_FRONT, quad, pose({0, 0, 0}), {0.2f, 3, 0.8f}, {0, -1, 0}, 4);
-    CHECK(ctx, collector.has_hit && collector.hits[0].material_id == 7);
+    CHECK(ctx, collector.has_hit && shapes::get_shape_material(quad, collector.hits[0].sub_shape_id) == 7);
     const uint32_t second = triangle_of(quad, collector.hits[0].sub_shape_id);
     CHECK(ctx, second != first && triangle_mesh_data::get_material_id(*quad->triangle_mesh.data, second) == 7);
 
@@ -491,7 +491,7 @@ void test_triangle_mesh_collide_point(TestCtx &ctx) {
                                           pose({0, 0, 0}));
     CHECK(ctx, collector.hits.length == 1);
     // the only crossing going up is the top face (y = 1), material 4
-    CHECK(ctx, collector.hits[0].material_id == 4);
+    CHECK(ctx, shapes::get_shape_material(painted, collector.hits[0].sub_shape_id_b) == 4);
     const uint32_t top = triangle_of(painted, collector.hits[0].sub_shape_id_b);
     CHECK(ctx, triangle_mesh_data::get_material_id(*painted->triangle_mesh.data, top) == 4);
     collide_point::release(collector);
@@ -521,7 +521,7 @@ void test_triangle_mesh_sphere_resting_on_quad(TestCtx &ctx) {
     CHECK(ctx, near3(unit(hit.penetration_axis), 0, -1, 0, 1e-5f));
     CHECK(ctx, near3(hit.point_a, 1.6f, -0.1f, 0.3f, 1e-5f));
     CHECK(ctx, near3(hit.point_b, 1.6f, 0, 0.3f, 1e-5f));
-    CHECK(ctx, hit.material_id_a == 1 && hit.material_id_b == 8);
+    CHECK(ctx, shapes::get_shape_material(ball, hit.sub_shape_id_a) == 1 && shapes::get_shape_material(quad, hit.sub_shape_id_b) == 8);
 
     // next to the diagonal (0.14 from it): the other triangle is touched at its diagonal edge too. with active
     // edges (the default) that inactive edge gives the face normal, so no contact pushes sideways
@@ -642,7 +642,7 @@ void test_triangle_mesh_convex_collide(TestCtx &ctx) {
     CHECK(ctx, collector.hits.length == 1);
     CHECK_NEAR(ctx, collector.hits[0].penetration, 0.3f, 1e-4f);
     CHECK(ctx, near3(unit(collector.hits[0].penetration_axis), 0, 0, -1, 1e-4f));
-    CHECK(ctx, collector.hits[0].material_id_a == 6 && collector.hits[0].material_id_b == -1);
+    CHECK(ctx, shapes::get_shape_material(cube, collector.hits[0].sub_shape_id_a) == 6 && shapes::get_shape_material(tri, collector.hits[0].sub_shape_id_b) == -1);
     CHECK(ctx, triangle_of(tri, collector.hits[0].sub_shape_id_b) == 0);
 
     // a capsule lying in the face (its axis is y), a box past an edge, a box far off
@@ -862,7 +862,7 @@ void test_triangle_mesh_sphere_cast(TestCtx &ctx) {
     // the axis points a to b, +z; the normal is its negated unit
     CHECK(ctx, near3(unit(hit.penetration_axis), 0, 0, 1, 1e-5f));
     CHECK(ctx, near3(hit.normal, 0, 0, -1, 1e-5f));
-    CHECK(ctx, hit.material_id_a == 2 && hit.material_id_b == -1);
+    CHECK(ctx, shapes::get_shape_material(ball, hit.sub_shape_id_a) == 2 && shapes::get_shape_material(down, hit.sub_shape_id_b) == -1);
     CHECK(ctx, hit.face_a.num_vertices == 0 && hit.face_b.num_vertices == 0);
 
     // sideways past it: nothing
@@ -1007,7 +1007,7 @@ void test_triangle_mesh_convex_cast(TestCtx &ctx) {
     CHECK_NEAR(ctx, hit.fraction, 0.6f, 1e-3f);
     CHECK(ctx, vec3f::z(unit(hit.penetration_axis)) > 0.9999f);
     CHECK(ctx, near3(hit.normal, 0, 0, -1, 1e-4f));
-    CHECK(ctx, hit.material_id_a == 3 && hit.material_id_b == -1);
+    CHECK(ctx, shapes::get_shape_material(cube, hit.sub_shape_id_a) == 3 && shapes::get_shape_material(down, hit.sub_shape_id_b) == -1);
     CHECK(ctx, triangle_of(down, hit.sub_shape_id_b) == 0);
     CHECK(ctx, hit.face_a.num_vertices == 0 && hit.face_b.num_vertices == 0);
 
@@ -1210,7 +1210,7 @@ void test_triangle_mesh_reversed_pairs(TestCtx &ctx) {
     CHECK(ctx, near3(unit(collector.hits[0].penetration_axis), 0, 1, 0, 1e-5f));
     CHECK(ctx, near3(collector.hits[0].point_a, 1.6f, 0, 0.3f, 1e-5f));
     CHECK(ctx, near3(collector.hits[0].point_b, 1.6f, -0.1f, 0.3f, 1e-5f));
-    CHECK(ctx, collector.hits[0].material_id_a == 5 && collector.hits[0].material_id_b == 1);
+    CHECK(ctx, shapes::get_shape_material(quad, collector.hits[0].sub_shape_id_a) == 5 && shapes::get_shape_material(ball, collector.hits[0].sub_shape_id_b) == 1);
     CHECK(ctx, triangle_of(quad, collector.hits[0].sub_shape_id_a) < 2);
 
     // and against a box through gjk
@@ -1220,7 +1220,7 @@ void test_triangle_mesh_reversed_pairs(TestCtx &ctx) {
     CHECK_NEAR(ctx, deepest_penetration(collector), 0.1f, 1e-4f);
     for (uint32_t i = 0; i < collector.hits.length; i++) {
         CHECK(ctx, vec3f::y(unit(collector.hits[i].penetration_axis)) > 0.9999f);
-        CHECK(ctx, collector.hits[i].material_id_a == 5 && collector.hits[i].material_id_b == 2);
+        CHECK(ctx, shapes::get_shape_material(quad, collector.hits[i].sub_shape_id_a) == 5 && shapes::get_shape_material(crate, collector.hits[i].sub_shape_id_b) == 2);
     }
 
     // the mesh swept down onto a resting body: the same contact as the body swept up into the mesh, seen from
@@ -1239,7 +1239,7 @@ void test_triangle_mesh_reversed_pairs(TestCtx &ctx) {
     CHECK(ctx, near3(swept.normal, 0, 1, 0, 1e-5f));
     CHECK(ctx, near3(swept.point_a, 1.6f, 0.5f, 0.3f, 1e-4f));
     CHECK(ctx, near3(swept.point_b, 1.6f, 0.5f, 0.3f, 1e-4f));
-    CHECK(ctx, swept.material_id_a == -1 && swept.material_id_b == 1);
+    CHECK(ctx, shapes::get_shape_material(ceiling, swept.sub_shape_id_a) == -1 && shapes::get_shape_material(ball, swept.sub_shape_id_b) == 1);
     CHECK(ctx, triangle_of(ceiling, swept.sub_shape_id_a) < 2 && swept.sub_shape_id_b == sub_shape::EMPTY_SUB_SHAPE_ID);
 
     // and onto the box's top at 0.5, through the convex sweep
@@ -1389,7 +1389,7 @@ void test_triangle_mesh_material(TestCtx &ctx) {
     // the id a ray hit carries looks up the material the hit reported: the top face (y = 1) is 4
     cast_ray::CastRayCollector collector = cast_ray::create_collector(collector::COLLECT_CLOSEST);
     ray_cast(collector, RAY_FRONT, painted, pose({0, 0, 0}), {0.3f, 3, 0.1f}, {0, -1, 0}, 4);
-    CHECK(ctx, collector.has_hit && collector.hits[0].material_id == 4);
+    CHECK(ctx, collector.has_hit && shapes::get_shape_material(painted, collector.hits[0].sub_shape_id) == 4);
     CHECK(ctx, collector.has_hit && shapes::get_shape_material(painted, collector.hits[0].sub_shape_id) == 4);
     cast_ray::release(collector);
     drop(painted);

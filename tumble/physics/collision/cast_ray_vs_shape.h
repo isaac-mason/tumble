@@ -35,10 +35,9 @@ struct CastRayHit {
     float fraction;
     sub_shape::SubShapeId sub_shape_id;
     body_id::BodyId body_id_b;
-    int32_t material_id;
 };
 
-inline CastRayHit create_hit() { return {NOT_COLLIDING, 1.0f, sub_shape::EMPTY_SUB_SHAPE_ID, body_id::INVALID_BODY_ID, -1}; }
+inline CastRayHit create_hit() { return {NOT_COLLIDING, 1.0f, sub_shape::EMPTY_SUB_SHAPE_ID, body_id::INVALID_BODY_ID}; }
 
 struct CastRaySettings {
     /** back facing triangles (triangle meshes) are hit, otherwise they are ignored */

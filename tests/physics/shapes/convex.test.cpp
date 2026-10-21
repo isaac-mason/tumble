@@ -64,7 +64,7 @@ void test_convex_collide_spheres_overlapping(TestCtx &ctx) {
     // a's point on a's surface, b's on b's
     CHECK(ctx, near3(hit.point_a, vec3f::add(vec3f::load(centre_a), line), 1e-5f));
     CHECK(ctx, near3(hit.point_b, vec3f::scale_and_add(vec3f::load(centre_a), line, 0.8f), 1e-5f));
-    CHECK(ctx, hit.material_id_a == 3 && hit.material_id_b == 7);
+    CHECK(ctx, shapes::get_shape_material(a, hit.sub_shape_id_a) == 3 && shapes::get_shape_material(b, hit.sub_shape_id_b) == 7);
     CHECK(ctx, hit.sub_shape_id_a == sub_shape::EMPTY_SUB_SHAPE_ID && hit.sub_shape_id_b == sub_shape::EMPTY_SUB_SHAPE_ID);
     // faces not asked for
     CHECK(ctx, hit.face_a.num_vertices == 0 && hit.face_b.num_vertices == 0);
@@ -269,7 +269,7 @@ void test_convex_cast_sphere_onto_box(TestCtx &ctx) {
     CHECK(ctx, near3(hit.point_b, -1, 0.25f, 0.5f, 1e-3f));
     CHECK(ctx, near3(hit.normal, -1, 0, 0, 1e-4f));
     CHECK(ctx, vec3f::x(unit(hit.penetration_axis)) > 0.9999f);
-    CHECK(ctx, hit.material_id_a == 2 && hit.material_id_b == 5);
+    CHECK(ctx, shapes::get_shape_material(s, hit.sub_shape_id_a) == 2 && shapes::get_shape_material(b, hit.sub_shape_id_b) == 5);
     // the sphere has no face; the box's is its -x face
     CHECK(ctx, hit.face_a.num_vertices == 0 && hit.face_b.num_vertices == 4);
     for (uint32_t i = 0; i < 4; i++) CHECK_NEAR(ctx, vec3f::x(hit.face_b.vertices[i]), -1.0f, 1e-5f);
@@ -461,7 +461,7 @@ void test_convex_cast_ray_sphere_and_box(TestCtx &ctx) {
     CHECK(ctx, collector.hits.length == 1);
     CHECK(ctx, collector.hits[0].status == cast_ray::COLLIDING);
     CHECK_NEAR(ctx, collector.hits[0].fraction, 0.4f, 1e-4f);
-    CHECK(ctx, collector.hits[0].material_id == 4);
+    CHECK(ctx, shapes::get_shape_material(s, collector.hits[0].sub_shape_id) == 4);
     CHECK(ctx, collector.hits[0].sub_shape_id == sub_shape::EMPTY_SUB_SHAPE_ID);
 
     // an oblique ray through the sphere's centre still enters one radius early
@@ -478,7 +478,7 @@ void test_convex_cast_ray_sphere_and_box(TestCtx &ctx) {
     ray(collector, settings, vec3f::make(0, 0, 0), vec3f::make(0, 0, 1), 10.0f, b, pose({0, 0, 5}, stored_axis_angle(vec3f::make(1, 0, 0), scalar::PI * 0.5f)));
     CHECK(ctx, collector.hits.length == 1);
     CHECK_NEAR(ctx, collector.hits[0].fraction, 0.3f, 1e-4f);
-    CHECK(ctx, collector.hits[0].material_id == 9);
+    CHECK(ctx, shapes::get_shape_material(b, collector.hits[0].sub_shape_id) == 9);
 
     // too short, or off to the side: nothing
     cast_ray::reset(collector);
@@ -610,7 +610,7 @@ void test_convex_collide_point(TestCtx &ctx) {
     collector.body_id_b = 42;
     convex::collide_point_vs_convex(collector, collide_point::default_settings(), vec3f::make(1, 2, 3), b, NO_SUB_SHAPE, transform);
     CHECK(ctx, collector.hits.length == 1);
-    CHECK(ctx, collector.hits[0].material_id == 6 && collector.hits[0].body_id_b == 42);
+    CHECK(ctx, shapes::get_shape_material(b, collector.hits[0].sub_shape_id_b) == 6 && collector.hits[0].body_id_b == 42);
     CHECK(ctx, collector.hits[0].sub_shape_id_b == sub_shape::EMPTY_SUB_SHAPE_ID);
     collide_point::release(collector);
 

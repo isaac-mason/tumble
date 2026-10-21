@@ -18,10 +18,9 @@ struct CollidePointHit {
     /** EMPTY_SUB_SHAPE_ID unless shape b is a compound */
     sub_shape::SubShapeId sub_shape_id_b;
     body_id::BodyId body_id_b;
-    int32_t material_id;
 };
 
-inline CollidePointHit create_hit() { return {sub_shape::EMPTY_SUB_SHAPE_ID, body_id::INVALID_BODY_ID, -1}; }
+inline CollidePointHit create_hit() { return {sub_shape::EMPTY_SUB_SHAPE_ID, body_id::INVALID_BODY_ID}; }
 
 struct CollidePointSettings {
     float collision_tolerance;

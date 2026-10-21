@@ -436,6 +436,11 @@ shapes::Shape *get_shape(tumble::world::World *world, body_id::BodyId id) {
     return body == nullptr ? nullptr : body->shape;
 }
 
+int32_t get_material(tumble::world::World *world, body_id::BodyId id, uint32_t sub_shape_id) {
+    const tumble::rigid_body::RigidBody *body = resolve(world, id);
+    return body == nullptr ? -1 : tumble::rigid_body::get_material(body, sub_shape_id);
+}
+
 bool is_sleeping(tumble::world::World *world, body_id::BodyId id) {
     const tumble::rigid_body::RigidBody *body = resolve(world, id);
     return body != nullptr && body->sleeping;
@@ -1540,8 +1545,6 @@ bool read_cast_shape_hit(CastShapeHit &out, uint32_t index) {
     vec3f::store(out.normal, hit.normal);
     out.sub_shape_id_a = hit.sub_shape_id_a;
     out.sub_shape_id_b = hit.sub_shape_id_b;
-    out.material_id_a = hit.material_id_a;
-    out.material_id_b = hit.material_id_b;
     out.body_id_b = hit.body_id_b;
     return true;
 }
@@ -1593,8 +1596,6 @@ bool read_collide_shape_hit(CollideShapeHit &out, uint32_t index) {
     out.penetration = hit.penetration;
     out.sub_shape_id_a = hit.sub_shape_id_a;
     out.sub_shape_id_b = hit.sub_shape_id_b;
-    out.material_id_a = hit.material_id_a;
-    out.material_id_b = hit.material_id_b;
     out.body_id_b = hit.body_id_b;
     return true;
 }

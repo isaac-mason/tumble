@@ -1114,7 +1114,7 @@ void test_convex_hull_collide_sphere(TestCtx &ctx) {
     CHECK(ctx, vec3f::dot(unit(hit.penetration_axis), vec3f::axis_y()) > 0.9999f);
     CHECK(ctx, near3(hit.point_a, 0.3f, 1.0f, -0.2f, 1e-4f));
     CHECK(ctx, near3(hit.point_b, 0.3f, 0.9f, -0.2f, 1e-4f));
-    CHECK(ctx, hit.material_id_a == 5 && hit.material_id_b == 2);
+    CHECK(ctx, shapes::get_shape_material(h, hit.sub_shape_id_a) == 5 && shapes::get_shape_material(s, hit.sub_shape_id_b) == 2);
     // the hull's face is its +y face
     CHECK(ctx, hit.face_a.num_vertices == 4);
     for (uint32_t i = 0; i < 4; i++) CHECK_NEAR(ctx, vec3f::y(hit.face_a.vertices[i]), 1.0f, 1e-6f);

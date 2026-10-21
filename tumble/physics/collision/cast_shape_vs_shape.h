@@ -42,8 +42,6 @@ struct CastShapeHit {
     Vec3f normal;
     sub_shape::SubShapeId sub_shape_id_a;
     sub_shape::SubShapeId sub_shape_id_b;
-    int32_t material_id_a;
-    int32_t material_id_b;
     /** supporting faces, world space, filled when the settings ask */
     face::Face face_a;
     face::Face face_b;
@@ -56,8 +54,6 @@ inline CastShapeHit create_hit() {
     h.fraction = 1.0f;
     h.sub_shape_id_a = sub_shape::EMPTY_SUB_SHAPE_ID;
     h.sub_shape_id_b = sub_shape::EMPTY_SUB_SHAPE_ID;
-    h.material_id_a = -1;
-    h.material_id_b = -1;
     h.body_id_b = body_id::INVALID_BODY_ID;
     return h;
 }
@@ -73,8 +69,6 @@ inline void copy_hit(CastShapeHit &out, const CastShapeHit &h) {
     out.normal = h.normal;
     out.sub_shape_id_a = h.sub_shape_id_a;
     out.sub_shape_id_b = h.sub_shape_id_b;
-    out.material_id_a = h.material_id_a;
-    out.material_id_b = h.material_id_b;
     face::copy(out.face_a, h.face_a);
     face::copy(out.face_b, h.face_b);
     out.body_id_b = h.body_id_b;
