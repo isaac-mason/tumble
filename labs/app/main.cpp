@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #if defined(__EMSCRIPTEN__)
 #include <emscripten.h>
@@ -16,6 +17,7 @@
 
 #include "app/app.h"
 #include "app/examples.h"
+#include "app/vec.h"
 #include "imgui.h"
 #include "sokol_app.h"
 #include "sokol_gfx.h"
@@ -94,6 +96,47 @@ void set_color(App &app, const rigid_body::RigidBody *body, Color color) {
     const uint32_t index = body_id::index(body->id);
     while (app.body_colors.length <= index) app.body_colors.push({0, 0, 0, 0});
     app.body_colors[index] = color;
+}
+
+static ImU32 packed(Color color) {
+    return ImGui::ColorConvertFloat4ToU32({color.r, color.g, color.b, color.a});
+}
+
+/** a world point's place on the screen, false behind the camera */
+static bool project(const Camera &camera, Float3 at, ImVec2 &out) {
+    const float *m = camera.view_projection.m;
+    const float w = m[3] * at.x + m[7] * at.y + m[11] * at.z + m[15];
+    if (w <= 1e-4f) return false;
+    const float x = (m[0] * at.x + m[4] * at.y + m[8] * at.z + m[12]) / w;
+    const float y = (m[1] * at.x + m[5] * at.y + m[9] * at.z + m[13]) / w;
+    const ImVec2 display = ImGui::GetIO().DisplaySize;
+    out = {(x * 0.5f + 0.5f) * display.x, (0.5f - y * 0.5f) * display.y};
+    return true;
+}
+
+void label(const App &app, Float3 at, const char *text, const LabelStyle &style) {
+    ImDrawList *draw = ImGui::GetBackgroundDrawList();
+    ImVec2 centre;
+    if (!project(app.camera, at, centre)) return;
+    if (style.height <= 0.0f) {
+        const ImVec2 size = ImGui::CalcTextSize(text);
+        draw->AddText({centre.x - 0.5f * size.x, centre.y - 0.5f * size.y}, packed(style.color), text);
+        return;
+    }
+    // the label's half height on screen, from its top's projection
+    ImVec2 top;
+    if (!project(app.camera, vec::scale_and_add(at, app.camera.up, style.height * 0.5f), top)) return;
+    const float half_height = sqrtf((top.x - centre.x) * (top.x - centre.x) + (top.y - centre.y) * (top.y - centre.y));
+    const float half_width = half_height * style.width / style.height;
+    if (style.background.a > 0.0f) {
+        draw->AddRectFilled({centre.x - half_width, centre.y - half_height}, {centre.x + half_width, centre.y + half_height}, packed(style.background));
+    }
+    const float size = 2.0f * half_height * style.text_fraction;
+    const ImVec2 extent = ImGui::GetFont()->CalcTextSizeA(size, 1e9f, 0.0f, text);
+    const ImVec2 corner = {centre.x - extent.x * 0.5f, centre.y - extent.y * 0.5f};
+    // twice, a pixel apart, bold as crashcat's
+    draw->AddText(ImGui::GetFont(), size, corner, packed(style.color), text);
+    draw->AddText(ImGui::GetFont(), size, {corner.x + 1.0f, corner.y}, packed(style.color), text);
 }
 
 DrawList &frame(App &app) { return app.renderer.frame; }

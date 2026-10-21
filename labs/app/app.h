@@ -86,6 +86,20 @@ tumble::shapes::Shape *keep(App &app, tumble::shapes::Shape *shape);
 tumble::convex_hull::ConvexHullData *keep(App &app, tumble::convex_hull::ConvexHullData *hull);
 tumble::triangle_mesh_data::TriangleMeshData *keep(App &app, tumble::triangle_mesh_data::TriangleMeshData *data);
 
+struct LabelStyle {
+    /** the label's size in the world, as crashcat's text sprites; a height of 0 draws plain text at screen size */
+    float width = 0.0f;
+    float height = 0.0f;
+    /** of the height, the text's */
+    float text_fraction = 0.5f;
+    /** none when its alpha is 0 */
+    Color background = {0.0f, 0.0f, 0.0f, 0.0f};
+    Color color = {1.0f, 1.0f, 1.0f, 1.0f};
+};
+
+/** text centred on a world point, over the scene; call it each frame from update or ui */
+void label(const App &app, tumble::Float3 at, const char *text, const LabelStyle &style = {});
+
 void set_color(App &app, const tumble::rigid_body::RigidBody *body, Color color);
 DrawList &frame(App &app);
 double now_milliseconds();

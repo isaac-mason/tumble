@@ -50,31 +50,6 @@ static void add_label(const char *text, float x, float y, float z) {
 }
 
 /** a world-space label as crashcat's sprites are: a box `width` by `height` facing the camera, its text a fraction of the height */
-static void label(const App &app, Float3 at, const char *text, float width, float height, float text_fraction, ImU32 background, ImU32 color) {
-    const ImVec2 display = ImGui::GetIO().DisplaySize;
-    const float *m = app.camera.view_projection.m;
-    const auto project = [&](Float3 p, ImVec2 &out) {
-        const float w = m[3] * p.x + m[7] * p.y + m[11] * p.z + m[15];
-        if (w <= 1e-4f) return false;
-        const float x = (m[0] * p.x + m[4] * p.y + m[8] * p.z + m[12]) / w;
-        const float y = (m[1] * p.x + m[5] * p.y + m[9] * p.z + m[13]) / w;
-        out = {(x * 0.5f + 0.5f) * display.x, (0.5f - y * 0.5f) * display.y};
-        return true;
-    };
-    ImVec2 centre, top;
-    if (!project(at, centre) || !project(vec::scale_and_add(at, app.camera.up, height * 0.5f), top)) return;
-    const float half_height = sqrtf((top.x - centre.x) * (top.x - centre.x) + (top.y - centre.y) * (top.y - centre.y));
-    const float half_width = half_height * width / height;
-    ImDrawList *draw = ImGui::GetBackgroundDrawList();
-    if (background != 0) draw->AddRectFilled({centre.x - half_width, centre.y - half_height}, {centre.x + half_width, centre.y + half_height}, background);
-    const float size = 2.0f * half_height * text_fraction;
-    const ImVec2 extent = ImGui::GetFont()->CalcTextSizeA(size, 1e9f, 0.0f, text);
-    const ImVec2 corner = {centre.x - extent.x * 0.5f, centre.y - extent.y * 0.5f};
-    // twice, a pixel apart, for crashcat's bold
-    draw->AddText(ImGui::GetFont(), size, corner, color, text);
-    draw->AddText(ImGui::GetFont(), size, {corner.x + 1.0f, corner.y}, color, text);
-}
-
 static rigid_body::RigidBody *create_body(App &app, shapes::Shape *shape, Float3 position, motion_type::MotionType motion_type) {
     rigid_body::RigidBodySettings settings;
     settings.shape = shape;
@@ -253,8 +228,7 @@ static void init(App &app) {
 }
 
 static void update(App &app, float) {
-    const ImU32 white = IM_COL32(255, 255, 255, 255);
-    for (int i = 0; i < state.label_count; i++) label(app, state.labels[i].position, state.labels[i].text, 4.0f, 1.0f, 0.375f, 0, white);
+    for (int i = 0; i < state.label_count; i++) app::label(app, state.labels[i].position, state.labels[i].text, {4.0f, 1.0f, 0.375f});
 }
 
 /** a step by its phases, joined bodies' pairs rejected so the links of a chain pass through each other */
