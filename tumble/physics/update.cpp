@@ -88,10 +88,6 @@ void step_begin(World &world, float delta_time) {
         return;
     }
 
-    for (uint32_t i = 0; i < shapes::SHAPE_TYPE_COUNT; i++) {
-        if (shapes::shape_defs[i].step_begin != nullptr) shapes::shape_defs[i].step_begin(world);
-    }
-
     // the contact removals queued by body removal since the last step
     contacts::flush_pending_contact_removed(world.contacts, world.events);
 

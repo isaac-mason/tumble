@@ -236,8 +236,6 @@ typedef void (*CastShapeVsShapeFn)(cast_shape::CastShapeCollector &collector, co
                                    Vec3f displacement_a, const Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b,
                                    const Transformf &transform_b);
 
-/** at the start of every step of every world, before anything in it; for state a type keeps across a step */
-typedef void (*StepBeginFn)(world::World &world);
 /** appends the shape's wireframe at `transform` (scale included) to `out`, through debug::line */
 typedef void (*DrawFn)(debug::DebugBuffers &out, const Shape *shape, const Transformf &transform, Vec3f color);
 
@@ -256,13 +254,12 @@ struct ShapeDef {
     GetSubShapeTransformedShapeFn get_sub_shape_transformed_shape;
     CastRayFn cast_ray;
     CollidePointFn collide_point;
-    /** null for none */
-    StepBeginFn step_begin;
     /** null draws the shape's bounds */
     DrawFn draw;
     /**
-     * the body pair cache rebuilds a pair's contacts from last step's when the bodies barely moved; a type whose
-     * contacts name state it renews each step (as hits a step_begin evicts) sets this so its pairs always collide anew
+     * the body pair cache rebuilds a pair's contacts from last step's when the bodies barely moved; a type whose sub
+     * shape ids name state its owner renews between steps (as a pool of hits it clears) sets this so its pairs always
+     * collide anew
      */
     bool skips_pair_cache;
 };

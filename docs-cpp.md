@@ -1312,12 +1312,11 @@ printf("the egg rests at y %.2f\n", body->position.y);
 ```
 
 A type that is not convex leaves `set_support` null and gives its own pairs with `shapes::set_collide_shape_fn` and
-`shapes::set_cast_shape_fn` after `dispatch::init`. Two more def fields serve a type that keeps state between steps,
-such as a pool of hits that its sub shape ids name:
+`shapes::set_cast_shape_fn` after `dispatch::init`.
 
-- `step_begin` runs first in every step of every world, with the world: the place to drop last step's state.
-- `skips_pair_cache`: a pair that barely moved normally reuses last step's contacts, which would name state that
-  `step_begin` dropped. With this set, the type's pairs always collide anew.
+A type whose sub shape ids name state you keep between steps, such as a pool of hits you clear before each step, sets
+`skips_pair_cache`. A pair that barely moved normally reuses last step's contacts, which would name state you have
+since cleared. With it set, the type's pairs always collide anew.
 
 ## Debug drawing
 

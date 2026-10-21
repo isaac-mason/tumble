@@ -18,8 +18,6 @@ struct Ball {
 
 struct Counters {
     uint32_t supports;
-    uint32_t step_begins;
-    const world::World *last_world;
     uint32_t own_collides;
 };
 
@@ -46,11 +44,6 @@ void ball_collide_point(collide_point::CollidePointCollector &collector, const c
                         const shapes::Shape *shape, const sub_shape::SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
     sphere::collide_point_vs_sphere(collector, settings, point, inner_of(shape), sub_shape_id, transform);
 }
-void ball_step_begin(world::World &world) {
-    counters.step_begins++;
-    counters.last_world = &world;
-}
-
 shapes::ShapeDef ball_def(bool skips_pair_cache) {
     shapes::ShapeDef def = {};
     def.type = shapes::SHAPE_USER_1;
@@ -62,7 +55,6 @@ shapes::ShapeDef ball_def(bool skips_pair_cache) {
     def.get_inner_radius = ball_get_inner_radius;
     def.cast_ray = convex::cast_ray_vs_convex;
     def.collide_point = ball_collide_point;
-    def.step_begin = ball_step_begin;
     def.skips_pair_cache = skips_pair_cache;
     return shapes::define_shape(def);
 }
@@ -141,18 +133,6 @@ void test_user_shape_rests_through_the_generic_rows(TestCtx &ctx) {
     compound::destroy(compound_shape);
     scaled::destroy(scaled_shape);
     destroy_ball(shape, ball);
-}
-
-void test_user_shape_step_begin_runs_once_a_step_with_the_world(TestCtx &ctx) {
-    init_with_ball();
-    WorldScene first = make_floor_scene();
-    WorldScene second = make_floor_scene();
-    for (uint32_t i = 0; i < 3; i++) step_world(*first.world);
-    CHECK(ctx, counters.step_begins == 3 && counters.last_world == first.world);
-    step_world(*second.world);
-    CHECK(ctx, counters.step_begins == 4 && counters.last_world == second.world);
-    release_world_scene(first);
-    release_world_scene(second);
 }
 
 /** steps a ball resting on the floor and counts the steps whose narrowphase asked it for no support: the cached ones */
