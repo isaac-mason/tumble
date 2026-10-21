@@ -104,33 +104,12 @@ function capitalize(name: string): string {
  * the innermost namespace names it. a js namespace the manifest names replaces it in both: `runtime::init` bound in
  * `wasm` is Wasm.init, tumble_wasm_init.
  */
-function functionNames(f: FunctionDesc): { ns: string; name: string; symbol: string; exported: string } {
+function functionNames(f: FunctionDesc): { ns: string; name: string; symbol: string } {
     const parts = f.cpp.split('::');
     if (parts.length < 2) throw new Error(`${f.cpp}: a bound function needs a namespace; it becomes the js one`);
     const bare = parts[parts.length - 1]!;
     const ns = f.jsNamespace ?? parts[parts.length - 2]!;
-    const symbol = `tumble_${ns}_${bare}`;
-    // the runtime's keep their names, as module.ts calls them before any generated code runs
-    return { ns: pascal(ns), name: camel(bare), symbol, exported: ns === 'wasm' ? symbol : shortExportName(f) };
-}
-
-const EXPORT_NAME_FIRST = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-const EXPORT_NAME_REST = `${EXPORT_NAME_FIRST}0123456789`;
-
-/**
- * the wasm export of a generated function: a name of a few letters, by its place in the schema, as both the module's
- * export section and the js calling it carry every name. the c++ wrapper keeps its readable symbol
- */
-function shortExportName(f: FunctionDesc): string {
-    let index = schema.functions.indexOf(f);
-    let name = EXPORT_NAME_FIRST[index % EXPORT_NAME_FIRST.length]!;
-    index = Math.floor(index / EXPORT_NAME_FIRST.length);
-    while (index > 0) {
-        index--;
-        name += EXPORT_NAME_REST[index % EXPORT_NAME_REST.length]!;
-        index = Math.floor(index / EXPORT_NAME_REST.length);
-    }
-    return name;
+    return { ns: pascal(ns), name: camel(bare), symbol: `tumble_${ns}_${bare}` };
 }
 
 /** a record's js name is its type name; a value's drops the trailing f. */
@@ -532,7 +511,7 @@ function emitFunction(f: FunctionDesc, indent: string, moduleLevel: boolean): st
         }
     }
     const exportsOf = 'wasm.exports';
-    const callee = `${nothing ? '' : 'const r = '}${exportsOf}.${functionNames(f).exported}(`;
+    const callee = `${nothing ? '' : 'const r = '}${exportsOf}.${functionNames(f).symbol}(`;
     const flatCall = `${callee}${args.join(', ')});`;
     // an argument per line past the formatter's width, as biome would print it
     if (`${indent}    ${flatCall}`.length <= LINE_WIDTH || args.length === 0) body.push(flatCall);
@@ -879,12 +858,11 @@ function emitExportsType(): string[] {
     lines.push('    __data_end: WebAssembly.Global;');
     for (const f of schema.functions) {
         const params = f.params.map((p, i) => `${paramName(p, i)}: number`);
-        const { symbol, exported } = functionNames(f);
+        const { symbol } = functionNames(f);
         const returns = returnsNothing(f) ? 'void' : 'number';
-        if (exported !== symbol) lines.push(`    /** ${symbol} */`);
-        const flat = `    ${exported}(${params.join(', ')}): ${returns};`;
+        const flat = `    ${symbol}(${params.join(', ')}): ${returns};`;
         if (flat.length <= LINE_WIDTH) lines.push(flat);
-        else lines.push(`    ${exported}(`, ...params.map((p) => `        ${p},`), `    ): ${returns};`);
+        else lines.push(`    ${symbol}(`, ...params.map((p) => `        ${p},`), `    ): ${returns};`);
     }
     lines.push('};');
     return lines;
@@ -1007,13 +985,13 @@ function exportsModule(): string {
     for (const inc of schema.includes) lines.push(`#include "${inc}"`);
     lines.push('', 'using namespace tumble;', '');
     for (const f of schema.functions) {
-        const { symbol, exported } = functionNames(f);
+        const { symbol } = functionNames(f);
         const params = f.params.map((p, i) => `${cppParam(p.type, f.cpp)} ${paramName(p, i)}`);
         const args = f.params.map((p, i) => wrapperArg(p.type, paramName(p, i)));
         const r = f.returns;
         const call = `${f.cpp}(${args.join(', ')})${r.kind === 'scalar' && r.bits ? '.bits' : ''}`;
         lines.push(
-            `WASM_EXPORT${exported === symbol ? '' : ` __attribute__((export_name("${exported}")))`} ${cppReturn(f)} ${symbol}(${params.join(', ')}) { ${returnsNothing(f) ? call : `return ${call}`}; }`,
+            `WASM_EXPORT ${cppReturn(f)} ${symbol}(${params.join(', ')}) { ${returnsNothing(f) ? call : `return ${call}`}; }`,
         );
     }
     lines.push('', '#endif', '');
