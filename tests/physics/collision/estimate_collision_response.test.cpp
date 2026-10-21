@@ -49,7 +49,10 @@ static void make_scene(Scene &scene, const Float3 &velocity) {
 
 /** a contact's settings with just its materials */
 static contact_constraints::ContactSettings materials(float friction, float restitution) {
-    return {.combined_friction = friction, .combined_restitution = restitution};
+    contact_constraints::ContactSettings settings = {};
+    settings.combined_friction = friction;
+    settings.combined_restitution = restitution;
+    return settings;
 }
 
 static void release_scene(Scene &scene) {
