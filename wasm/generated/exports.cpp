@@ -19,324 +19,324 @@ WASM_EXPORT void tumble_wasm_error_clear() { adapters::wasm::error_clear(); }
 WASM_EXPORT void * tumble_wasm_alloc_bytes(uint32_t bytes) { return adapters::wasm::alloc_bytes(bytes); }
 WASM_EXPORT void tumble_wasm_free_bytes(void * block, uint32_t bytes) { adapters::wasm::free_bytes(block, bytes); }
 WASM_EXPORT uint32_t tumble_wasm_allocated_bytes() { return adapters::wasm::allocated_bytes(); }
-WASM_EXPORT world_settings::WorldSettings * tumble_world_settings_create() { return adapters::world_settings::create(); }
-WASM_EXPORT void tumble_world_settings_destroy(world_settings::WorldSettings * worldSettings) { adapters::world_settings::destroy(worldSettings); }
-WASM_EXPORT uint32_t tumble_world_settings_add_broadphase_layer(world_settings::WorldSettings * settings) { return adapters::world_settings::add_broadphase_layer(settings); }
-WASM_EXPORT uint32_t tumble_world_settings_add_object_layer(world_settings::WorldSettings * settings, uint32_t broadphaseLayer) { return adapters::world_settings::add_object_layer(settings, broadphaseLayer); }
-WASM_EXPORT void tumble_world_settings_enable_collision(world_settings::WorldSettings * settings, uint32_t objectLayerA, uint32_t objectLayerB) { adapters::world_settings::enable_collision(settings, objectLayerA, objectLayerB); }
-WASM_EXPORT world::World * tumble_world_create(const world_settings::WorldSettings * settings) { return adapters::world::create(settings); }
-WASM_EXPORT void tumble_world_destroy(world::World * world) { adapters::world::destroy(world); }
-WASM_EXPORT void tumble_world_step(world::World * world, float deltaTime) { adapters::world::step(world, deltaTime); }
-WASM_EXPORT void tumble_world_step_begin(world::World * world, float deltaTime) { adapters::world::step_begin(world, deltaTime); }
-WASM_EXPORT void tumble_world_find_pairs(world::World * world) { adapters::world::find_pairs(world); }
-WASM_EXPORT void tumble_world_narrowphase(world::World * world) { adapters::world::narrowphase(world); }
-WASM_EXPORT void tumble_world_solve(world::World * world) { adapters::world::solve(world); }
-WASM_EXPORT void tumble_world_step_end(world::World * world) { adapters::world::step_end(world); }
-WASM_EXPORT uint32_t tumble_world_woken(const world::World * world) { return adapters::world::woken(world); }
-WASM_EXPORT bool tumble_world_set_materials(world::World * world, const float * frictionRestitution, uint32_t count) { return adapters::world::set_materials(world, frictionRestitution, count); }
-WASM_EXPORT void tumble_world_get_gravity(Float3 * out, const world::World * world) { adapters::world::get_gravity(*out, world); }
-WASM_EXPORT void tumble_world_set_gravity(world::World * world, const Float3 * gravity) { adapters::world::set_gravity(world, *gravity); }
-WASM_EXPORT uint32_t tumble_events_pairs(const world::World * world) { return adapters::events::pairs(world); }
-WASM_EXPORT bool tumble_events_read_pair(adapters::PairEvent * out, const world::World * world, uint32_t index) { return adapters::events::read_pair(*out, world, index); }
-WASM_EXPORT uint32_t tumble_events_contacts_added(const world::World * world) { return adapters::events::contacts_added(world); }
-WASM_EXPORT bool tumble_events_read_contact_added(adapters::ContactEvent * out, const world::World * world, uint32_t index) { return adapters::events::read_contact_added(*out, world, index); }
-WASM_EXPORT uint32_t tumble_events_contacts_persisted(const world::World * world) { return adapters::events::contacts_persisted(world); }
-WASM_EXPORT bool tumble_events_read_contact_persisted(adapters::ContactEvent * out, const world::World * world, uint32_t index) { return adapters::events::read_contact_persisted(*out, world, index); }
-WASM_EXPORT uint32_t tumble_events_contacts_removed(const world::World * world) { return adapters::events::contacts_removed(world); }
-WASM_EXPORT bool tumble_events_read_contact_removed(adapters::ContactRemovedEvent * out, const world::World * world, uint32_t index) { return adapters::events::read_contact_removed(*out, world, index); }
-WASM_EXPORT uint32_t tumble_events_moved(const world::World * world) { return adapters::events::moved(world); }
-WASM_EXPORT uint32_t tumble_events_moved_body(const world::World * world, uint32_t index) { return adapters::events::moved_body(world, index); }
-WASM_EXPORT adapters::Poses * tumble_poses_create(world::World * world) { return adapters::poses::create(world); }
-WASM_EXPORT void tumble_poses_destroy(adapters::Poses * poses) { adapters::poses::destroy(poses); }
-WASM_EXPORT uint32_t tumble_poses_add(adapters::Poses * poses, uint32_t body) { return adapters::poses::add(poses, body); }
-WASM_EXPORT bool tumble_poses_remove(adapters::Poses * poses, uint32_t slot) { return adapters::poses::remove(poses, slot); }
-WASM_EXPORT uint32_t tumble_poses_read(adapters::Poses * poses) { return adapters::poses::read(poses); }
-WASM_EXPORT uint32_t tumble_poses_slots(const adapters::Poses * poses) { return adapters::poses::slots(poses); }
-WASM_EXPORT uint32_t tumble_poses_body(const adapters::Poses * poses, uint32_t slot) { return adapters::poses::body(poses, slot); }
-WASM_EXPORT const float * tumble_poses_positions(const adapters::Poses * poses) { return adapters::poses::positions(poses); }
-WASM_EXPORT const float * tumble_poses_quaternions(const adapters::Poses * poses) { return adapters::poses::quaternions(poses); }
-WASM_EXPORT const uint32_t * tumble_poses_changed(const adapters::Poses * poses) { return adapters::poses::changed(poses); }
-WASM_EXPORT bool tumble_answers_reject_pair(world::World * world, uint32_t index) { return adapters::answers::reject_pair(world, index); }
-WASM_EXPORT bool tumble_answers_override_contact(world::World * world, uint32_t index, const contact_constraints::ContactSettings * settings) { return adapters::answers::override_contact(world, index, *settings); }
-WASM_EXPORT bool tumble_answers_reject_contact(world::World * world, uint32_t index) { return adapters::answers::reject_contact(world, index); }
-WASM_EXPORT void tumble_rigid_body_default_settings(adapters::BodySettings * out) { adapters::rigid_body::default_settings(*out); }
-WASM_EXPORT uint32_t tumble_rigid_body_create(world::World * world, const adapters::BodySettings * settings) { return adapters::rigid_body::create(world, *settings); }
-WASM_EXPORT bool tumble_rigid_body_remove(world::World * world, uint32_t body) { return adapters::rigid_body::remove(world, body); }
-WASM_EXPORT bool tumble_rigid_body_exists(world::World * world, uint32_t body) { return adapters::rigid_body::exists(world, body); }
-WASM_EXPORT bool tumble_rigid_body_get_position(Float3 * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_position(*out, world, body); }
-WASM_EXPORT bool tumble_rigid_body_get_quaternion(Float4 * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_quaternion(*out, world, body); }
-WASM_EXPORT bool tumble_rigid_body_get_transform(Float3 * outPosition, Float4 * outQuaternion, world::World * world, uint32_t body) { return adapters::rigid_body::get_transform(*outPosition, *outQuaternion, world, body); }
-WASM_EXPORT bool tumble_rigid_body_get_center_of_mass_position(Float3 * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_center_of_mass_position(*out, world, body); }
-WASM_EXPORT bool tumble_rigid_body_get_linear_velocity(Float3 * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_linear_velocity(*out, world, body); }
-WASM_EXPORT bool tumble_rigid_body_get_angular_velocity(Float3 * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_angular_velocity(*out, world, body); }
-WASM_EXPORT bool tumble_rigid_body_get_velocity_at_point(Float3 * out, world::World * world, uint32_t body, const Float3 * point) { return adapters::rigid_body::get_velocity_at_point(*out, world, body, *point); }
-WASM_EXPORT bool tumble_rigid_body_get_aabb(Box3f * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_aabb(*out, world, body); }
-WASM_EXPORT float tumble_rigid_body_get_mass(world::World * world, uint32_t body) { return adapters::rigid_body::get_mass(world, body); }
-WASM_EXPORT uint32_t tumble_rigid_body_get_motion_type(world::World * world, uint32_t body) { return adapters::rigid_body::get_motion_type(world, body); }
-WASM_EXPORT uint32_t tumble_rigid_body_get_object_layer(world::World * world, uint32_t body) { return adapters::rigid_body::get_object_layer(world, body); }
-WASM_EXPORT uint32_t tumble_rigid_body_get_user_data_low(world::World * world, uint32_t body) { return adapters::rigid_body::get_user_data_low(world, body); }
-WASM_EXPORT uint32_t tumble_rigid_body_get_user_data_high(world::World * world, uint32_t body) { return adapters::rigid_body::get_user_data_high(world, body); }
-WASM_EXPORT shapes::Shape * tumble_rigid_body_get_shape(world::World * world, uint32_t body) { return adapters::rigid_body::get_shape(world, body); }
-WASM_EXPORT bool tumble_rigid_body_is_sleeping(world::World * world, uint32_t body) { return adapters::rigid_body::is_sleeping(world, body); }
-WASM_EXPORT bool tumble_rigid_body_set_position(world::World * world, uint32_t body, const Float3 * position, bool wake) { return adapters::rigid_body::set_position(world, body, *position, wake); }
-WASM_EXPORT bool tumble_rigid_body_set_quaternion(world::World * world, uint32_t body, const Float4 * quaternion, bool wake) { return adapters::rigid_body::set_quaternion(world, body, *quaternion, wake); }
-WASM_EXPORT bool tumble_rigid_body_set_transform(world::World * world, uint32_t body, const Float3 * position, const Float4 * quaternion, bool wake) { return adapters::rigid_body::set_transform(world, body, *position, *quaternion, wake); }
-WASM_EXPORT bool tumble_rigid_body_set_linear_velocity(world::World * world, uint32_t body, const Float3 * velocity) { return adapters::rigid_body::set_linear_velocity(world, body, *velocity); }
-WASM_EXPORT bool tumble_rigid_body_set_angular_velocity(world::World * world, uint32_t body, const Float3 * velocity) { return adapters::rigid_body::set_angular_velocity(world, body, *velocity); }
-WASM_EXPORT bool tumble_rigid_body_add_linear_velocity(world::World * world, uint32_t body, const Float3 * velocity) { return adapters::rigid_body::add_linear_velocity(world, body, *velocity); }
-WASM_EXPORT bool tumble_rigid_body_add_angular_velocity(world::World * world, uint32_t body, const Float3 * velocity) { return adapters::rigid_body::add_angular_velocity(world, body, *velocity); }
-WASM_EXPORT bool tumble_rigid_body_add_force(world::World * world, uint32_t body, const Float3 * force, bool wake) { return adapters::rigid_body::add_force(world, body, *force, wake); }
-WASM_EXPORT bool tumble_rigid_body_add_torque(world::World * world, uint32_t body, const Float3 * torque, bool wake) { return adapters::rigid_body::add_torque(world, body, *torque, wake); }
-WASM_EXPORT bool tumble_rigid_body_add_force_at_position(world::World * world, uint32_t body, const Float3 * force, const Float3 * position, bool wake) { return adapters::rigid_body::add_force_at_position(world, body, *force, *position, wake); }
-WASM_EXPORT bool tumble_rigid_body_add_impulse(world::World * world, uint32_t body, const Float3 * impulse) { return adapters::rigid_body::add_impulse(world, body, *impulse); }
-WASM_EXPORT bool tumble_rigid_body_add_impulse_at_position(world::World * world, uint32_t body, const Float3 * impulse, const Float3 * position) { return adapters::rigid_body::add_impulse_at_position(world, body, *impulse, *position); }
-WASM_EXPORT bool tumble_rigid_body_add_angular_impulse(world::World * world, uint32_t body, const Float3 * impulse) { return adapters::rigid_body::add_angular_impulse(world, body, *impulse); }
-WASM_EXPORT bool tumble_rigid_body_set_motion_type(world::World * world, uint32_t body, uint32_t motionType, bool wake) { return adapters::rigid_body::set_motion_type(world, body, motionType, wake); }
-WASM_EXPORT bool tumble_rigid_body_set_object_layer(world::World * world, uint32_t body, uint32_t objectLayer) { return adapters::rigid_body::set_object_layer(world, body, objectLayer); }
-WASM_EXPORT bool tumble_rigid_body_set_shape(world::World * world, uint32_t body, shapes::Shape * shape) { return adapters::rigid_body::set_shape(world, body, shape); }
-WASM_EXPORT bool tumble_rigid_body_move_kinematic(world::World * world, uint32_t body, const Float3 * position, const Float4 * quaternion, float deltaTime) { return adapters::rigid_body::move_kinematic(world, body, *position, *quaternion, deltaTime); }
-WASM_EXPORT bool tumble_rigid_body_sleep(world::World * world, uint32_t body) { return adapters::rigid_body::sleep(world, body); }
-WASM_EXPORT bool tumble_rigid_body_wake(world::World * world, uint32_t body) { return adapters::rigid_body::wake(world, body); }
-WASM_EXPORT bool tumble_rigid_body_set_user_data(world::World * world, uint32_t body, uint32_t low, uint32_t high) { return adapters::rigid_body::set_user_data(world, body, low, high); }
-WASM_EXPORT bool tumble_rigid_body_set_friction(world::World * world, uint32_t body, float friction) { return adapters::rigid_body::set_friction(world, body, friction); }
-WASM_EXPORT bool tumble_rigid_body_set_restitution(world::World * world, uint32_t body, float restitution) { return adapters::rigid_body::set_restitution(world, body, restitution); }
-WASM_EXPORT uint32_t tumble_shape_get_type(const shapes::Shape * shape) { return adapters::shape::get_type(shape); }
-WASM_EXPORT void tumble_shape_get_local_bounds(Box3f * out, const shapes::Shape * shape) { adapters::shape::get_local_bounds(*out, shape); }
-WASM_EXPORT void tumble_shape_get_center_of_mass(Float3 * out, const shapes::Shape * shape) { adapters::shape::get_center_of_mass(*out, shape); }
-WASM_EXPORT float tumble_shape_get_volume(const shapes::Shape * shape) { return adapters::shape::get_volume(shape); }
-WASM_EXPORT void tumble_shape_get_mass_properties(mass_properties::MassProperties * out, const shapes::Shape * shape) { adapters::shape::get_mass_properties(*out, shape); }
-WASM_EXPORT void tumble_box_default_settings(box::BoxShapeSettings * out) { adapters::box::default_settings(*out); }
-WASM_EXPORT shapes::Shape * tumble_box_create(const box::BoxShapeSettings * settings) { return adapters::box::create(*settings); }
-WASM_EXPORT void tumble_box_destroy(shapes::Shape * shape) { adapters::box::destroy(shape); }
-WASM_EXPORT void tumble_sphere_default_settings(sphere::SphereShapeSettings * out) { adapters::sphere::default_settings(*out); }
-WASM_EXPORT shapes::Shape * tumble_sphere_create(const sphere::SphereShapeSettings * settings) { return adapters::sphere::create(*settings); }
-WASM_EXPORT void tumble_sphere_destroy(shapes::Shape * shape) { adapters::sphere::destroy(shape); }
-WASM_EXPORT void tumble_capsule_default_settings(capsule::CapsuleShapeSettings * out) { adapters::capsule::default_settings(*out); }
-WASM_EXPORT shapes::Shape * tumble_capsule_create(const capsule::CapsuleShapeSettings * settings) { return adapters::capsule::create(*settings); }
-WASM_EXPORT void tumble_capsule_destroy(shapes::Shape * shape) { adapters::capsule::destroy(shape); }
-WASM_EXPORT void tumble_cylinder_default_settings(cylinder::CylinderShapeSettings * out) { adapters::cylinder::default_settings(*out); }
-WASM_EXPORT shapes::Shape * tumble_cylinder_create(const cylinder::CylinderShapeSettings * settings) { return adapters::cylinder::create(*settings); }
-WASM_EXPORT void tumble_cylinder_destroy(shapes::Shape * shape) { adapters::cylinder::destroy(shape); }
-WASM_EXPORT void tumble_plane_default_settings(plane::PlaneShapeSettings * out) { adapters::plane::default_settings(*out); }
-WASM_EXPORT shapes::Shape * tumble_plane_create(const plane::PlaneShapeSettings * settings) { return adapters::plane::create(*settings); }
-WASM_EXPORT void tumble_plane_destroy(shapes::Shape * shape) { adapters::plane::destroy(shape); }
-WASM_EXPORT shapes::Shape * tumble_empty_create() { return adapters::empty::create(); }
-WASM_EXPORT void tumble_empty_destroy(shapes::Shape * shape) { adapters::empty::destroy(shape); }
-WASM_EXPORT void tumble_convex_hull_data_default_settings(convex_hull::ConvexHullBuildSettings * out) { adapters::convex_hull_data::default_settings(*out); }
-WASM_EXPORT bool tumble_convex_hull_data_build(adapters::ConvexHullBuild * out, const convex_hull::ConvexHullBuildSettings * settings) { return adapters::convex_hull_data::build(*out, *settings); }
-WASM_EXPORT void tumble_convex_hull_data_release(convex_hull::ConvexHullData * data) { adapters::convex_hull_data::release(data); }
-WASM_EXPORT void tumble_convex_hull_default_settings(convex_hull::ConvexHullShapeSettings * out) { adapters::convex_hull::default_settings(*out); }
-WASM_EXPORT shapes::Shape * tumble_convex_hull_create(const convex_hull::ConvexHullShapeSettings * settings) { return adapters::convex_hull::create(*settings); }
-WASM_EXPORT void tumble_convex_hull_destroy(shapes::Shape * shape) { adapters::convex_hull::destroy(shape); }
-WASM_EXPORT void tumble_triangle_mesh_data_default_settings(triangle_mesh_builder::TriangleMeshBuilderSettings * out) { adapters::triangle_mesh_data::default_settings(*out); }
-WASM_EXPORT triangle_mesh_data::TriangleMeshData * tumble_triangle_mesh_data_build(const triangle_mesh_builder::TriangleMeshBuilderSettings * settings) { return adapters::triangle_mesh_data::build(*settings); }
-WASM_EXPORT void tumble_triangle_mesh_data_release(triangle_mesh_data::TriangleMeshData * data) { adapters::triangle_mesh_data::release(data); }
-WASM_EXPORT void tumble_triangle_mesh_default_settings(triangle_mesh::TriangleMeshShapeSettings * out) { adapters::triangle_mesh::default_settings(*out); }
-WASM_EXPORT shapes::Shape * tumble_triangle_mesh_create(const triangle_mesh::TriangleMeshShapeSettings * settings) { return adapters::triangle_mesh::create(*settings); }
-WASM_EXPORT void tumble_triangle_mesh_destroy(shapes::Shape * shape) { adapters::triangle_mesh::destroy(shape); }
-WASM_EXPORT shapes::Shape * tumble_compound_create(const uint8_t * children, uint32_t count) { return adapters::compound::create(children, count); }
-WASM_EXPORT void tumble_compound_destroy(shapes::Shape * shape) { adapters::compound::destroy(shape); }
-WASM_EXPORT uint32_t tumble_static_compound_default_bvh_max_leaf_children() { return adapters::static_compound::default_bvh_max_leaf_children(); }
-WASM_EXPORT shapes::Shape * tumble_static_compound_create(const uint8_t * children, uint32_t count, uint32_t bvhMaxLeafChildren) { return adapters::static_compound::create(children, count, bvhMaxLeafChildren); }
-WASM_EXPORT void tumble_static_compound_destroy(shapes::Shape * shape) { adapters::static_compound::destroy(shape); }
-WASM_EXPORT void tumble_transformed_default_settings(transformed::TransformedShapeSettings * out) { adapters::transformed::default_settings(*out); }
-WASM_EXPORT shapes::Shape * tumble_transformed_create(const transformed::TransformedShapeSettings * settings) { return adapters::transformed::create(*settings); }
-WASM_EXPORT void tumble_transformed_destroy(shapes::Shape * shape) { adapters::transformed::destroy(shape); }
-WASM_EXPORT void tumble_scaled_default_settings(scaled::ScaledShapeSettings * out) { adapters::scaled::default_settings(*out); }
-WASM_EXPORT shapes::Shape * tumble_scaled_create(const scaled::ScaledShapeSettings * settings) { return adapters::scaled::create(*settings); }
-WASM_EXPORT void tumble_scaled_destroy(shapes::Shape * shape) { adapters::scaled::destroy(shape); }
-WASM_EXPORT void tumble_offset_center_of_mass_default_settings(offset_center_of_mass::OffsetCenterOfMassShapeSettings * out) { adapters::offset_center_of_mass::default_settings(*out); }
-WASM_EXPORT shapes::Shape * tumble_offset_center_of_mass_create(const offset_center_of_mass::OffsetCenterOfMassShapeSettings * settings) { return adapters::offset_center_of_mass::create(*settings); }
-WASM_EXPORT void tumble_offset_center_of_mass_destroy(shapes::Shape * shape) { adapters::offset_center_of_mass::destroy(shape); }
-WASM_EXPORT uint32_t tumble_constraint_get_type(uint32_t constraint) { return adapters::constraint::get_type(constraint); }
-WASM_EXPORT bool tumble_constraint_exists(world::World * world, uint32_t constraint) { return adapters::constraint::exists(world, constraint); }
-WASM_EXPORT bool tumble_constraint_set_enabled(world::World * world, uint32_t constraint, bool enabled) { return adapters::constraint::set_enabled(world, constraint, enabled); }
-WASM_EXPORT bool tumble_constraint_is_enabled(world::World * world, uint32_t constraint) { return adapters::constraint::is_enabled(world, constraint); }
-WASM_EXPORT void tumble_point_constraint_default_settings(point_constraint::PointConstraintSettings * out) { adapters::point_constraint::default_settings(*out); }
-WASM_EXPORT uint32_t tumble_point_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const point_constraint::PointConstraintSettings * settings) { return adapters::point_constraint::create(world, bodyA, bodyB, *settings); }
-WASM_EXPORT bool tumble_point_constraint_remove(world::World * world, uint32_t constraint) { return adapters::point_constraint::remove(world, constraint); }
-WASM_EXPORT bool tumble_point_constraint_get_total_lambda(Float3 * out, world::World * world, uint32_t constraint) { return adapters::point_constraint::get_total_lambda(*out, world, constraint); }
-WASM_EXPORT void tumble_distance_constraint_default_settings(distance_constraint::DistanceConstraintSettings * out) { adapters::distance_constraint::default_settings(*out); }
-WASM_EXPORT uint32_t tumble_distance_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const distance_constraint::DistanceConstraintSettings * settings) { return adapters::distance_constraint::create(world, bodyA, bodyB, *settings); }
-WASM_EXPORT bool tumble_distance_constraint_remove(world::World * world, uint32_t constraint) { return adapters::distance_constraint::remove(world, constraint); }
-WASM_EXPORT float tumble_distance_constraint_get_total_lambda(world::World * world, uint32_t constraint) { return adapters::distance_constraint::get_total_lambda(world, constraint); }
-WASM_EXPORT bool tumble_distance_constraint_set_distance(world::World * world, uint32_t constraint, float minDistance, float maxDistance) { return adapters::distance_constraint::set_distance(world, constraint, minDistance, maxDistance); }
-WASM_EXPORT bool tumble_distance_constraint_set_limits_spring_settings(world::World * world, uint32_t constraint, const spring_settings::SpringSettings * settings) { return adapters::distance_constraint::set_limits_spring_settings(world, constraint, *settings); }
-WASM_EXPORT void tumble_hinge_constraint_default_settings(hinge_constraint::HingeConstraintSettings * out) { adapters::hinge_constraint::default_settings(*out); }
-WASM_EXPORT uint32_t tumble_hinge_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const hinge_constraint::HingeConstraintSettings * settings) { return adapters::hinge_constraint::create(world, bodyA, bodyB, *settings); }
-WASM_EXPORT bool tumble_hinge_constraint_remove(world::World * world, uint32_t constraint) { return adapters::hinge_constraint::remove(world, constraint); }
-WASM_EXPORT bool tumble_hinge_constraint_set_limits(world::World * world, uint32_t constraint, float min, float max) { return adapters::hinge_constraint::set_limits(world, constraint, min, max); }
-WASM_EXPORT bool tumble_hinge_constraint_set_limits_spring_settings(world::World * world, uint32_t constraint, const spring_settings::SpringSettings * settings) { return adapters::hinge_constraint::set_limits_spring_settings(world, constraint, *settings); }
-WASM_EXPORT bool tumble_hinge_constraint_set_max_friction_torque(world::World * world, uint32_t constraint, float torque) { return adapters::hinge_constraint::set_max_friction_torque(world, constraint, torque); }
-WASM_EXPORT bool tumble_hinge_constraint_set_motor_settings(world::World * world, uint32_t constraint, const motor_settings::MotorSettings * settings) { return adapters::hinge_constraint::set_motor_settings(world, constraint, *settings); }
-WASM_EXPORT bool tumble_hinge_constraint_get_motor_settings(motor_settings::MotorSettings * out, world::World * world, uint32_t constraint) { return adapters::hinge_constraint::get_motor_settings(*out, world, constraint); }
-WASM_EXPORT bool tumble_hinge_constraint_set_motor_state(world::World * world, uint32_t constraint, uint32_t state) { return adapters::hinge_constraint::set_motor_state(world, constraint, state); }
-WASM_EXPORT bool tumble_hinge_constraint_set_target_angular_velocity(world::World * world, uint32_t constraint, float velocity) { return adapters::hinge_constraint::set_target_angular_velocity(world, constraint, velocity); }
-WASM_EXPORT bool tumble_hinge_constraint_set_target_angle(world::World * world, uint32_t constraint, float angle) { return adapters::hinge_constraint::set_target_angle(world, constraint, angle); }
-WASM_EXPORT float tumble_hinge_constraint_get_current_angle(world::World * world, uint32_t constraint) { return adapters::hinge_constraint::get_current_angle(world, constraint); }
-WASM_EXPORT void tumble_slider_constraint_default_settings(slider_constraint::SliderConstraintSettings * out) { adapters::slider_constraint::default_settings(*out); }
-WASM_EXPORT uint32_t tumble_slider_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const slider_constraint::SliderConstraintSettings * settings) { return adapters::slider_constraint::create(world, bodyA, bodyB, *settings); }
-WASM_EXPORT bool tumble_slider_constraint_remove(world::World * world, uint32_t constraint) { return adapters::slider_constraint::remove(world, constraint); }
-WASM_EXPORT float tumble_slider_constraint_get_current_position(world::World * world, uint32_t constraint) { return adapters::slider_constraint::get_current_position(world, constraint); }
-WASM_EXPORT bool tumble_slider_constraint_set_limits(world::World * world, uint32_t constraint, float min, float max) { return adapters::slider_constraint::set_limits(world, constraint, min, max); }
-WASM_EXPORT bool tumble_slider_constraint_set_limits_spring_settings(world::World * world, uint32_t constraint, const spring_settings::SpringSettings * settings) { return adapters::slider_constraint::set_limits_spring_settings(world, constraint, *settings); }
-WASM_EXPORT bool tumble_slider_constraint_set_motor_settings(world::World * world, uint32_t constraint, const motor_settings::MotorSettings * settings) { return adapters::slider_constraint::set_motor_settings(world, constraint, *settings); }
-WASM_EXPORT bool tumble_slider_constraint_get_motor_settings(motor_settings::MotorSettings * out, world::World * world, uint32_t constraint) { return adapters::slider_constraint::get_motor_settings(*out, world, constraint); }
-WASM_EXPORT bool tumble_slider_constraint_set_motor_state(world::World * world, uint32_t constraint, uint32_t state) { return adapters::slider_constraint::set_motor_state(world, constraint, state); }
-WASM_EXPORT bool tumble_slider_constraint_set_target_velocity(world::World * world, uint32_t constraint, float velocity) { return adapters::slider_constraint::set_target_velocity(world, constraint, velocity); }
-WASM_EXPORT bool tumble_slider_constraint_set_target_position(world::World * world, uint32_t constraint, float position) { return adapters::slider_constraint::set_target_position(world, constraint, position); }
-WASM_EXPORT bool tumble_slider_constraint_set_max_friction_force(world::World * world, uint32_t constraint, float force) { return adapters::slider_constraint::set_max_friction_force(world, constraint, force); }
-WASM_EXPORT float tumble_slider_constraint_get_max_friction_force(world::World * world, uint32_t constraint) { return adapters::slider_constraint::get_max_friction_force(world, constraint); }
-WASM_EXPORT bool tumble_slider_constraint_get_total_lambda_position(Vec2f * out, world::World * world, uint32_t constraint) { return adapters::slider_constraint::get_total_lambda_position(*out, world, constraint); }
-WASM_EXPORT float tumble_slider_constraint_get_total_lambda_position_limits(world::World * world, uint32_t constraint) { return adapters::slider_constraint::get_total_lambda_position_limits(world, constraint); }
-WASM_EXPORT bool tumble_slider_constraint_get_total_lambda_rotation(Float3 * out, world::World * world, uint32_t constraint) { return adapters::slider_constraint::get_total_lambda_rotation(*out, world, constraint); }
-WASM_EXPORT float tumble_slider_constraint_get_total_lambda_motor(world::World * world, uint32_t constraint) { return adapters::slider_constraint::get_total_lambda_motor(world, constraint); }
-WASM_EXPORT void tumble_fixed_constraint_default_settings(fixed_constraint::FixedConstraintSettings * out) { adapters::fixed_constraint::default_settings(*out); }
-WASM_EXPORT uint32_t tumble_fixed_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const fixed_constraint::FixedConstraintSettings * settings) { return adapters::fixed_constraint::create(world, bodyA, bodyB, *settings); }
-WASM_EXPORT bool tumble_fixed_constraint_remove(world::World * world, uint32_t constraint) { return adapters::fixed_constraint::remove(world, constraint); }
-WASM_EXPORT bool tumble_fixed_constraint_get_total_lambda_position(Float3 * out, world::World * world, uint32_t constraint) { return adapters::fixed_constraint::get_total_lambda_position(*out, world, constraint); }
-WASM_EXPORT bool tumble_fixed_constraint_get_total_lambda_rotation(Float3 * out, world::World * world, uint32_t constraint) { return adapters::fixed_constraint::get_total_lambda_rotation(*out, world, constraint); }
-WASM_EXPORT void tumble_cone_constraint_default_settings(cone_constraint::ConeConstraintSettings * out) { adapters::cone_constraint::default_settings(*out); }
-WASM_EXPORT uint32_t tumble_cone_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const cone_constraint::ConeConstraintSettings * settings) { return adapters::cone_constraint::create(world, bodyA, bodyB, *settings); }
-WASM_EXPORT bool tumble_cone_constraint_remove(world::World * world, uint32_t constraint) { return adapters::cone_constraint::remove(world, constraint); }
-WASM_EXPORT bool tumble_cone_constraint_set_half_cone_angle(world::World * world, uint32_t constraint, float halfConeAngle) { return adapters::cone_constraint::set_half_cone_angle(world, constraint, halfConeAngle); }
-WASM_EXPORT float tumble_cone_constraint_get_half_cone_angle(world::World * world, uint32_t constraint) { return adapters::cone_constraint::get_half_cone_angle(world, constraint); }
-WASM_EXPORT float tumble_cone_constraint_get_cos_half_cone_angle(world::World * world, uint32_t constraint) { return adapters::cone_constraint::get_cos_half_cone_angle(world, constraint); }
-WASM_EXPORT bool tumble_cone_constraint_get_total_lambda_position(Float3 * out, world::World * world, uint32_t constraint) { return adapters::cone_constraint::get_total_lambda_position(*out, world, constraint); }
-WASM_EXPORT float tumble_cone_constraint_get_total_lambda_rotation(world::World * world, uint32_t constraint) { return adapters::cone_constraint::get_total_lambda_rotation(world, constraint); }
-WASM_EXPORT void tumble_swing_twist_constraint_default_settings(swing_twist_constraint::SwingTwistConstraintSettings * out) { adapters::swing_twist_constraint::default_settings(*out); }
-WASM_EXPORT uint32_t tumble_swing_twist_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const swing_twist_constraint::SwingTwistConstraintSettings * settings) { return adapters::swing_twist_constraint::create(world, bodyA, bodyB, *settings); }
-WASM_EXPORT bool tumble_swing_twist_constraint_remove(world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::remove(world, constraint); }
-WASM_EXPORT bool tumble_swing_twist_constraint_set_normal_half_cone_angle(world::World * world, uint32_t constraint, float angle) { return adapters::swing_twist_constraint::set_normal_half_cone_angle(world, constraint, angle); }
-WASM_EXPORT bool tumble_swing_twist_constraint_set_plane_half_cone_angle(world::World * world, uint32_t constraint, float angle) { return adapters::swing_twist_constraint::set_plane_half_cone_angle(world, constraint, angle); }
-WASM_EXPORT bool tumble_swing_twist_constraint_set_twist_min_angle(world::World * world, uint32_t constraint, float angle) { return adapters::swing_twist_constraint::set_twist_min_angle(world, constraint, angle); }
-WASM_EXPORT bool tumble_swing_twist_constraint_set_twist_max_angle(world::World * world, uint32_t constraint, float angle) { return adapters::swing_twist_constraint::set_twist_max_angle(world, constraint, angle); }
-WASM_EXPORT bool tumble_swing_twist_constraint_set_max_friction_torque(world::World * world, uint32_t constraint, float torque) { return adapters::swing_twist_constraint::set_max_friction_torque(world, constraint, torque); }
-WASM_EXPORT bool tumble_swing_twist_constraint_set_swing_motor_settings(world::World * world, uint32_t constraint, const motor_settings::MotorSettings * settings) { return adapters::swing_twist_constraint::set_swing_motor_settings(world, constraint, *settings); }
-WASM_EXPORT bool tumble_swing_twist_constraint_set_twist_motor_settings(world::World * world, uint32_t constraint, const motor_settings::MotorSettings * settings) { return adapters::swing_twist_constraint::set_twist_motor_settings(world, constraint, *settings); }
-WASM_EXPORT bool tumble_swing_twist_constraint_get_swing_motor_settings(motor_settings::MotorSettings * out, world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_swing_motor_settings(*out, world, constraint); }
-WASM_EXPORT bool tumble_swing_twist_constraint_get_twist_motor_settings(motor_settings::MotorSettings * out, world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_twist_motor_settings(*out, world, constraint); }
-WASM_EXPORT bool tumble_swing_twist_constraint_set_swing_motor_state(world::World * world, uint32_t constraint, uint32_t state) { return adapters::swing_twist_constraint::set_swing_motor_state(world, constraint, state); }
-WASM_EXPORT bool tumble_swing_twist_constraint_set_twist_motor_state(world::World * world, uint32_t constraint, uint32_t state) { return adapters::swing_twist_constraint::set_twist_motor_state(world, constraint, state); }
-WASM_EXPORT bool tumble_swing_twist_constraint_set_target_angular_velocity_cs(world::World * world, uint32_t constraint, const Float3 * velocity) { return adapters::swing_twist_constraint::set_target_angular_velocity_cs(world, constraint, *velocity); }
-WASM_EXPORT bool tumble_swing_twist_constraint_set_target_orientation_cs(world::World * world, uint32_t constraint, const Float4 * orientation) { return adapters::swing_twist_constraint::set_target_orientation_cs(world, constraint, *orientation); }
-WASM_EXPORT bool tumble_swing_twist_constraint_set_target_orientation_bs(world::World * world, uint32_t constraint, const Float4 * orientation) { return adapters::swing_twist_constraint::set_target_orientation_bs(world, constraint, *orientation); }
-WASM_EXPORT bool tumble_swing_twist_constraint_get_rotation_in_constraint_space(Float4 * out, world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_rotation_in_constraint_space(*out, world, constraint); }
-WASM_EXPORT bool tumble_swing_twist_constraint_get_total_lambda_position(Float3 * out, world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_total_lambda_position(*out, world, constraint); }
-WASM_EXPORT float tumble_swing_twist_constraint_get_total_lambda_twist(world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_total_lambda_twist(world, constraint); }
-WASM_EXPORT float tumble_swing_twist_constraint_get_total_lambda_swing_y(world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_total_lambda_swing_y(world, constraint); }
-WASM_EXPORT float tumble_swing_twist_constraint_get_total_lambda_swing_z(world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_total_lambda_swing_z(world, constraint); }
-WASM_EXPORT bool tumble_swing_twist_constraint_get_total_lambda_motor(Float3 * out, world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_total_lambda_motor(*out, world, constraint); }
-WASM_EXPORT void tumble_six_dof_constraint_default_settings(six_dof_constraint::SixDOFConstraintSettings * out) { adapters::six_dof_constraint::default_settings(*out); }
-WASM_EXPORT uint32_t tumble_six_dof_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const six_dof_constraint::SixDOFConstraintSettings * settings) { return adapters::six_dof_constraint::create(world, bodyA, bodyB, *settings); }
-WASM_EXPORT bool tumble_six_dof_constraint_remove(world::World * world, uint32_t constraint) { return adapters::six_dof_constraint::remove(world, constraint); }
-WASM_EXPORT bool tumble_six_dof_constraint_set_translation_limits(world::World * world, uint32_t constraint, const Float3 * limitMin, const Float3 * limitMax) { return adapters::six_dof_constraint::set_translation_limits(world, constraint, *limitMin, *limitMax); }
-WASM_EXPORT bool tumble_six_dof_constraint_set_rotation_limits(world::World * world, uint32_t constraint, const Float3 * limitMin, const Float3 * limitMax) { return adapters::six_dof_constraint::set_rotation_limits(world, constraint, *limitMin, *limitMax); }
-WASM_EXPORT bool tumble_six_dof_constraint_set_limits_spring_settings(world::World * world, uint32_t constraint, uint32_t axis, const spring_settings::SpringSettings * settings) { return adapters::six_dof_constraint::set_limits_spring_settings(world, constraint, axis, *settings); }
-WASM_EXPORT bool tumble_six_dof_constraint_set_motor_settings(world::World * world, uint32_t constraint, uint32_t axis, const motor_settings::MotorSettings * settings) { return adapters::six_dof_constraint::set_motor_settings(world, constraint, axis, *settings); }
-WASM_EXPORT bool tumble_six_dof_constraint_get_motor_settings(motor_settings::MotorSettings * out, world::World * world, uint32_t constraint, uint32_t axis) { return adapters::six_dof_constraint::get_motor_settings(*out, world, constraint, axis); }
-WASM_EXPORT bool tumble_six_dof_constraint_set_motor_state(world::World * world, uint32_t constraint, uint32_t axis, uint32_t state) { return adapters::six_dof_constraint::set_motor_state(world, constraint, axis, state); }
-WASM_EXPORT bool tumble_six_dof_constraint_set_target_velocity_cs(world::World * world, uint32_t constraint, const Float3 * velocity) { return adapters::six_dof_constraint::set_target_velocity_cs(world, constraint, *velocity); }
-WASM_EXPORT bool tumble_six_dof_constraint_set_target_angular_velocity_cs(world::World * world, uint32_t constraint, const Float3 * velocity) { return adapters::six_dof_constraint::set_target_angular_velocity_cs(world, constraint, *velocity); }
-WASM_EXPORT bool tumble_six_dof_constraint_set_target_position_cs(world::World * world, uint32_t constraint, const Float3 * position) { return adapters::six_dof_constraint::set_target_position_cs(world, constraint, *position); }
-WASM_EXPORT bool tumble_six_dof_constraint_set_target_orientation_cs(world::World * world, uint32_t constraint, const Float4 * orientation) { return adapters::six_dof_constraint::set_target_orientation_cs(world, constraint, *orientation); }
-WASM_EXPORT bool tumble_six_dof_constraint_set_max_friction(world::World * world, uint32_t constraint, uint32_t axis, float friction) { return adapters::six_dof_constraint::set_max_friction(world, constraint, axis, friction); }
-WASM_EXPORT bool tumble_six_dof_constraint_make_free_axis(world::World * world, uint32_t constraint, uint32_t axis) { return adapters::six_dof_constraint::make_free_axis(world, constraint, axis); }
-WASM_EXPORT bool tumble_six_dof_constraint_make_fixed_axis(world::World * world, uint32_t constraint, uint32_t axis) { return adapters::six_dof_constraint::make_fixed_axis(world, constraint, axis); }
-WASM_EXPORT bool tumble_six_dof_constraint_set_limited_axis(world::World * world, uint32_t constraint, uint32_t axis, float min, float max) { return adapters::six_dof_constraint::set_limited_axis(world, constraint, axis, min, max); }
-WASM_EXPORT filter::Filter * tumble_filter_create(world::World * world) { return adapters::filter::create(world); }
-WASM_EXPORT void tumble_filter_destroy(filter::Filter * filter) { adapters::filter::destroy(filter); }
-WASM_EXPORT void tumble_filter_enable_all_layers(filter::Filter * filter, world::World * world) { adapters::filter::enable_all_layers(filter, world); }
-WASM_EXPORT void tumble_filter_disable_all_layers(filter::Filter * filter, world::World * world) { adapters::filter::disable_all_layers(filter, world); }
-WASM_EXPORT bool tumble_filter_enable_object_layer(filter::Filter * filter, world::World * world, uint32_t objectLayer) { return adapters::filter::enable_object_layer(filter, world, objectLayer); }
-WASM_EXPORT bool tumble_filter_disable_object_layer(filter::Filter * filter, world::World * world, uint32_t objectLayer) { return adapters::filter::disable_object_layer(filter, world, objectLayer); }
-WASM_EXPORT bool tumble_filter_enable_broadphase_layer(filter::Filter * filter, world::World * world, uint32_t broadphaseLayer) { return adapters::filter::enable_broadphase_layer(filter, world, broadphaseLayer); }
-WASM_EXPORT bool tumble_filter_disable_broadphase_layer(filter::Filter * filter, world::World * world, uint32_t broadphaseLayer) { return adapters::filter::disable_broadphase_layer(filter, world, broadphaseLayer); }
-WASM_EXPORT bool tumble_filter_is_object_layer_enabled(const filter::Filter * filter, uint32_t objectLayer) { return adapters::filter::is_object_layer_enabled(filter, objectLayer); }
-WASM_EXPORT bool tumble_filter_is_broadphase_layer_enabled(const filter::Filter * filter, uint32_t broadphaseLayer) { return adapters::filter::is_broadphase_layer_enabled(filter, broadphaseLayer); }
-WASM_EXPORT bool tumble_filter_set_from_body(filter::Filter * filter, world::World * world, uint32_t body) { return adapters::filter::set_from_body(filter, world, body); }
-WASM_EXPORT uint32_t tumble_filter_get_collision_groups(const filter::Filter * filter) { return adapters::filter::get_collision_groups(filter); }
-WASM_EXPORT uint32_t tumble_filter_get_collision_mask(const filter::Filter * filter) { return adapters::filter::get_collision_mask(filter); }
-WASM_EXPORT bool tumble_filter_copy(filter::Filter * out, const filter::Filter * source) { return adapters::filter::copy(out, source); }
-WASM_EXPORT void tumble_query_default_cast_ray_settings(cast_ray::CastRaySettings * out) { adapters::query::default_cast_ray_settings(*out); }
-WASM_EXPORT uint32_t tumble_query_cast_ray(world::World * world, uint32_t kind, float earlyOutFraction, const cast_ray::CastRaySettings * settings, const Float3 * origin, const Float3 * direction, float length, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { return adapters::query::cast_ray(world, kind, earlyOutFraction, *settings, *origin, *direction, length, filter, collisionGroups, collisionMask); }
-WASM_EXPORT bool tumble_query_read_cast_ray_hit(cast_ray::CastRayHit * out, uint32_t index) { return adapters::query::read_cast_ray_hit(*out, index); }
-WASM_EXPORT void tumble_query_default_cast_shape_settings(adapters::CastShapeSettings * out) { adapters::query::default_cast_shape_settings(*out); }
-WASM_EXPORT uint32_t tumble_query_cast_shape(world::World * world, uint32_t kind, float earlyOutFraction, const adapters::CastShapeSettings * settings, const shapes::Shape * shape, const Float3 * position, const Float4 * quaternion, const Float3 * scale, const Float3 * displacement, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { return adapters::query::cast_shape(world, kind, earlyOutFraction, *settings, shape, *position, *quaternion, *scale, *displacement, filter, collisionGroups, collisionMask); }
-WASM_EXPORT bool tumble_query_read_cast_shape_hit(adapters::CastShapeHit * out, uint32_t index) { return adapters::query::read_cast_shape_hit(*out, index); }
-WASM_EXPORT void tumble_query_default_collide_shape_settings(adapters::CollideShapeSettings * out) { adapters::query::default_collide_shape_settings(*out); }
-WASM_EXPORT uint32_t tumble_query_collide_shape(world::World * world, uint32_t kind, float earlyOutFraction, const adapters::CollideShapeSettings * settings, const shapes::Shape * shape, const Float3 * position, const Float4 * quaternion, const Float3 * scale, bool internalEdgeRemoval, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { return adapters::query::collide_shape(world, kind, earlyOutFraction, *settings, shape, *position, *quaternion, *scale, internalEdgeRemoval, filter, collisionGroups, collisionMask); }
-WASM_EXPORT bool tumble_query_read_collide_shape_hit(adapters::CollideShapeHit * out, uint32_t index) { return adapters::query::read_collide_shape_hit(*out, index); }
-WASM_EXPORT void tumble_query_default_collide_point_settings(collide_point::CollidePointSettings * out) { adapters::query::default_collide_point_settings(*out); }
-WASM_EXPORT uint32_t tumble_query_collide_point(world::World * world, uint32_t kind, const collide_point::CollidePointSettings * settings, const Float3 * point, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { return adapters::query::collide_point(world, kind, *settings, *point, filter, collisionGroups, collisionMask); }
-WASM_EXPORT bool tumble_query_read_collide_point_hit(collide_point::CollidePointHit * out, uint32_t index) { return adapters::query::read_collide_point_hit(*out, index); }
-WASM_EXPORT void tumble_kcc_policy_default_body_policy(kcc_policy::BodyPolicy * out) { adapters::kcc_policy::default_body_policy(*out); }
-WASM_EXPORT kcc_policy::Policy * tumble_kcc_policy_create() { return adapters::kcc_policy::create(); }
-WASM_EXPORT void tumble_kcc_policy_destroy(kcc_policy::Policy * policy) { adapters::kcc_policy::destroy(policy); }
-WASM_EXPORT void tumble_kcc_policy_get_defaults(kcc_policy::BodyPolicy * out, const kcc_policy::Policy * policy) { adapters::kcc_policy::get_defaults(*out, policy); }
-WASM_EXPORT void tumble_kcc_policy_set_defaults(kcc_policy::Policy * policy, const kcc_policy::BodyPolicy * bodyPolicy) { adapters::kcc_policy::set_defaults(policy, *bodyPolicy); }
-WASM_EXPORT bool tumble_kcc_policy_set(kcc_policy::Policy * policy, uint32_t body, const kcc_policy::BodyPolicy * bodyPolicy) { return adapters::kcc_policy::set(policy, body, *bodyPolicy); }
-WASM_EXPORT bool tumble_kcc_policy_remove(kcc_policy::Policy * policy, uint32_t body) { return adapters::kcc_policy::remove(policy, body); }
-WASM_EXPORT void tumble_kcc_policy_get(kcc_policy::BodyPolicy * out, const kcc_policy::Policy * policy, uint32_t body) { adapters::kcc_policy::get(*out, policy, body); }
-WASM_EXPORT void tumble_kcc_default_settings(adapters::KCCSettings * out) { adapters::kcc::default_settings(*out); }
-WASM_EXPORT void tumble_kcc_default_update_settings(kcc::UpdateSettings * out) { adapters::kcc::default_update_settings(*out); }
-WASM_EXPORT kcc::KCC * tumble_kcc_create(const adapters::KCCSettings * settings, const Float3 * position, const Float4 * quaternion) { return adapters::kcc::create(*settings, *position, *quaternion); }
-WASM_EXPORT void tumble_kcc_destroy(kcc::KCC * character) { adapters::kcc::destroy(character); }
-WASM_EXPORT void tumble_kcc_add(world::World * world, kcc::KCC * character) { adapters::kcc::add(world, character); }
-WASM_EXPORT void tumble_kcc_remove(world::World * world, kcc::KCC * character) { adapters::kcc::remove(world, character); }
-WASM_EXPORT void tumble_kcc_read_state(adapters::KCCState * out, const kcc::KCC * character) { adapters::kcc::read_state(*out, character); }
-WASM_EXPORT void tumble_kcc_set_linear_velocity(kcc::KCC * character, const Float3 * velocity) { adapters::kcc::set_linear_velocity(character, *velocity); }
-WASM_EXPORT void tumble_kcc_get_tuning(adapters::KCCTuning * out, const kcc::KCC * character) { adapters::kcc::get_tuning(*out, character); }
-WASM_EXPORT void tumble_kcc_set_tuning(kcc::KCC * character, const adapters::KCCTuning * tuning) { adapters::kcc::set_tuning(character, *tuning); }
-WASM_EXPORT uint8_t * tumble_kcc_contacts(kcc::KCC * character) { return adapters::kcc::contacts(character); }
-WASM_EXPORT bool tumble_kcc_read_contact_event(adapters::KCCContactEvent * out, const kcc::KCC * character, uint32_t index) { return adapters::kcc::read_contact_event(*out, character, index); }
-WASM_EXPORT void tumble_kcc_set_position(world::World * world, kcc::KCC * character, const Float3 * position) { adapters::kcc::set_position(world, character, *position); }
-WASM_EXPORT void tumble_kcc_set_quaternion(world::World * world, kcc::KCC * character, const Float4 * quaternion) { adapters::kcc::set_quaternion(world, character, *quaternion); }
-WASM_EXPORT bool tumble_kcc_is_slope_too_steep(const kcc::KCC * character, const Float3 * normal) { return adapters::kcc::is_slope_too_steep(character, *normal); }
-WASM_EXPORT void tumble_kcc_get_center_of_mass_transform(Float3 * outPosition, Float4 * outQuaternion, const kcc::KCC * character) { adapters::kcc::get_center_of_mass_transform(*outPosition, *outQuaternion, character); }
-WASM_EXPORT bool tumble_kcc_has_collided_with(const kcc::KCC * character, uint32_t body) { return adapters::kcc::has_collided_with(character, body); }
-WASM_EXPORT bool tumble_kcc_can_walk_stairs(const kcc::KCC * character, const Float3 * velocity) { return adapters::kcc::can_walk_stairs(character, *velocity); }
-WASM_EXPORT void tumble_kcc_cancel_velocity_towards_steep_slopes(Float3 * out, const kcc::KCC * character, const Float3 * velocity) { adapters::kcc::cancel_velocity_towards_steep_slopes(*out, character, *velocity); }
-WASM_EXPORT void tumble_kcc_update_ground_velocity(world::World * world, kcc::KCC * character, const kcc_policy::Policy * policy) { adapters::kcc::update_ground_velocity(world, character, policy); }
-WASM_EXPORT void tumble_kcc_refresh_contacts(world::World * world, kcc::KCC * character, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy) { adapters::kcc::refresh_contacts(world, character, filter, collisionGroups, collisionMask, policy); }
-WASM_EXPORT bool tumble_kcc_set_shape(world::World * world, kcc::KCC * character, shapes::Shape * shape, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy, float maxPenetrationDepth) { return adapters::kcc::set_shape(world, character, shape, filter, collisionGroups, collisionMask, policy, maxPenetrationDepth); }
-WASM_EXPORT void tumble_kcc_move(world::World * world, kcc::KCC * character, float deltaTime, const Float3 * gravity, const kcc_policy::Policy * policy, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { adapters::kcc::move(world, character, deltaTime, *gravity, policy, filter, collisionGroups, collisionMask); }
-WASM_EXPORT bool tumble_kcc_stick_to_floor(world::World * world, kcc::KCC * character, const Float3 * stepDown, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy) { return adapters::kcc::stick_to_floor(world, character, *stepDown, filter, collisionGroups, collisionMask, policy); }
-WASM_EXPORT bool tumble_kcc_walk_stairs(world::World * world, kcc::KCC * character, float deltaTime, const Float3 * stepUp, const Float3 * stepForward, const Float3 * stepForwardTest, const Float3 * stepDownExtra, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy) { return adapters::kcc::walk_stairs(world, character, deltaTime, *stepUp, *stepForward, *stepForwardTest, *stepDownExtra, filter, collisionGroups, collisionMask, policy); }
-WASM_EXPORT void tumble_kcc_update(world::World * world, kcc::KCC * character, float deltaTime, const Float3 * gravity, const kcc::UpdateSettings * settings, const kcc_policy::Policy * policy, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { adapters::kcc::update(world, character, deltaTime, *gravity, *settings, policy, filter, collisionGroups, collisionMask); }
-WASM_EXPORT void tumble_kcc_collide(world::World * world, kcc::KCC * character, const Float3 * position, const Float3 * movementDirection, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy) { adapters::kcc::collide(world, character, *position, *movementDirection, filter, collisionGroups, collisionMask, policy); }
-WASM_EXPORT void tumble_kcc_solve(adapters::KCCSolve * out, world::World * world, kcc::KCC * character, const Float3 * velocity, float deltaTime, float timeRemaining, const kcc_policy::Policy * policy) { adapters::kcc::solve(*out, world, character, *velocity, deltaTime, timeRemaining, policy); }
-WASM_EXPORT bool tumble_kcc_cast(adapters::KCCContact * out, world::World * world, kcc::KCC * character, const Float3 * position, const Float3 * displacement, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy) { return adapters::kcc::cast(*out, world, character, *position, *displacement, filter, collisionGroups, collisionMask, policy); }
-WASM_EXPORT void tumble_kcc_update_ground(world::World * world, kcc::KCC * character, float deltaTime, bool skipContactVelocityCheck, const kcc_policy::Policy * policy) { adapters::kcc::update_ground(world, character, deltaTime, skipContactVelocityCheck, policy); }
-WASM_EXPORT void tumble_kcc_apply_weight(world::World * world, kcc::KCC * character, const Float3 * gravity, float deltaTime) { adapters::kcc::apply_weight(world, character, *gravity, deltaTime); }
-WASM_EXPORT void tumble_kcc_begin_contact_tracking(kcc::KCC * character) { adapters::kcc::begin_contact_tracking(character); }
-WASM_EXPORT void tumble_kcc_end_contact_tracking(kcc::KCC * character) { adapters::kcc::end_contact_tracking(character); }
-WASM_EXPORT debug::DebugBuffers * tumble_debug_create() { return adapters::debug::create(); }
-WASM_EXPORT void tumble_debug_destroy(debug::DebugBuffers * buffers) { adapters::debug::destroy(buffers); }
-WASM_EXPORT void tumble_debug_clear(debug::DebugBuffers * buffers) { adapters::debug::clear(buffers); }
-WASM_EXPORT const float * tumble_debug_lines(const debug::DebugBuffers * buffers) { return adapters::debug::lines(buffers); }
-WASM_EXPORT uint32_t tumble_debug_line_count(const debug::DebugBuffers * buffers) { return adapters::debug::line_count(buffers); }
-WASM_EXPORT const float * tumble_debug_triangles(const debug::DebugBuffers * buffers) { return adapters::debug::triangles(buffers); }
-WASM_EXPORT uint32_t tumble_debug_triangle_count(const debug::DebugBuffers * buffers) { return adapters::debug::triangle_count(buffers); }
-WASM_EXPORT void tumble_debug_default_bodies_options(debug::BodiesOptions * out) { adapters::debug::default_bodies_options(*out); }
-WASM_EXPORT void tumble_debug_default_body_options(debug::BodyOptions * out) { adapters::debug::default_body_options(*out); }
-WASM_EXPORT void tumble_debug_default_shape_options(debug::ShapeOptions * out) { adapters::debug::default_shape_options(*out); }
-WASM_EXPORT void tumble_debug_default_joints_options(debug::JointsOptions * out) { adapters::debug::default_joints_options(*out); }
-WASM_EXPORT void tumble_debug_bodies(debug::DebugBuffers * out, const world::World * world, const debug::BodiesOptions * options) { adapters::debug::bodies(out, world, *options); }
-WASM_EXPORT bool tumble_debug_body(debug::DebugBuffers * out, world::World * world, uint32_t body, const debug::BodyOptions * options) { return adapters::debug::body(out, world, body, *options); }
-WASM_EXPORT void tumble_debug_line(debug::DebugBuffers * out, const Float3 * a, const Float3 * b, const Float3 * color) { adapters::debug::line(out, *a, *b, *color); }
-WASM_EXPORT void tumble_debug_shape(debug::DebugBuffers * out, const shapes::Shape * shape, const Float3 * position, const Float4 * quaternion, const debug::ShapeOptions * options) { adapters::debug::shape(out, shape, *position, *quaternion, *options); }
-WASM_EXPORT void tumble_debug_contacts(debug::DebugBuffers * out, const world::World * world) { adapters::debug::contacts(out, world); }
-WASM_EXPORT void tumble_debug_character_contacts(debug::DebugBuffers * out, const kcc::KCC * character) { adapters::debug::character_contacts(out, character); }
-WASM_EXPORT void tumble_debug_contact_constraints(debug::DebugBuffers * out, const world::World * world) { adapters::debug::contact_constraints(out, world); }
-WASM_EXPORT void tumble_debug_joints(debug::DebugBuffers * out, const world::World * world, const debug::JointsOptions * options) { adapters::debug::joints(out, world, *options); }
-WASM_EXPORT void tumble_contact_pairs_begin(world::World * world) { adapters::contact_pairs::begin(world); }
-WASM_EXPORT void tumble_contact_pairs_record_world_contacts(world::World * world, uint32_t firstAdded, uint32_t firstPersisted) { adapters::contact_pairs::record_world_contacts(world, firstAdded, firstPersisted); }
-WASM_EXPORT void tumble_contact_pairs_record_character_contacts(world::World * world, const kcc::KCC * character) { adapters::contact_pairs::record_character_contacts(world, character); }
-WASM_EXPORT void tumble_contact_pairs_end(world::World * world) { adapters::contact_pairs::end(world); }
-WASM_EXPORT uint32_t tumble_contact_pairs_active_count(const world::World * world) { return adapters::contact_pairs::active_count(world); }
-WASM_EXPORT bool tumble_contact_pairs_read_active(adapters::ContactPair * out, const world::World * world, uint32_t index) { return adapters::contact_pairs::read_active(*out, world, index); }
-WASM_EXPORT uint32_t tumble_contact_pairs_removed_count(const world::World * world) { return adapters::contact_pairs::removed_count(world); }
-WASM_EXPORT bool tumble_contact_pairs_read_removed(adapters::ContactPair * out, const world::World * world, uint32_t index) { return adapters::contact_pairs::read_removed(*out, world, index); }
+WASM_EXPORT __attribute__((export_name("j"))) world_settings::WorldSettings * tumble_world_settings_create() { return adapters::world_settings::create(); }
+WASM_EXPORT __attribute__((export_name("k"))) void tumble_world_settings_destroy(world_settings::WorldSettings * worldSettings) { adapters::world_settings::destroy(worldSettings); }
+WASM_EXPORT __attribute__((export_name("l"))) uint32_t tumble_world_settings_add_broadphase_layer(world_settings::WorldSettings * settings) { return adapters::world_settings::add_broadphase_layer(settings); }
+WASM_EXPORT __attribute__((export_name("m"))) uint32_t tumble_world_settings_add_object_layer(world_settings::WorldSettings * settings, uint32_t broadphaseLayer) { return adapters::world_settings::add_object_layer(settings, broadphaseLayer); }
+WASM_EXPORT __attribute__((export_name("n"))) void tumble_world_settings_enable_collision(world_settings::WorldSettings * settings, uint32_t objectLayerA, uint32_t objectLayerB) { adapters::world_settings::enable_collision(settings, objectLayerA, objectLayerB); }
+WASM_EXPORT __attribute__((export_name("o"))) world::World * tumble_world_create(const world_settings::WorldSettings * settings) { return adapters::world::create(settings); }
+WASM_EXPORT __attribute__((export_name("p"))) void tumble_world_destroy(world::World * world) { adapters::world::destroy(world); }
+WASM_EXPORT __attribute__((export_name("q"))) void tumble_world_step(world::World * world, float deltaTime) { adapters::world::step(world, deltaTime); }
+WASM_EXPORT __attribute__((export_name("r"))) void tumble_world_step_begin(world::World * world, float deltaTime) { adapters::world::step_begin(world, deltaTime); }
+WASM_EXPORT __attribute__((export_name("s"))) void tumble_world_find_pairs(world::World * world) { adapters::world::find_pairs(world); }
+WASM_EXPORT __attribute__((export_name("t"))) void tumble_world_narrowphase(world::World * world) { adapters::world::narrowphase(world); }
+WASM_EXPORT __attribute__((export_name("u"))) void tumble_world_solve(world::World * world) { adapters::world::solve(world); }
+WASM_EXPORT __attribute__((export_name("v"))) void tumble_world_step_end(world::World * world) { adapters::world::step_end(world); }
+WASM_EXPORT __attribute__((export_name("w"))) uint32_t tumble_world_woken(const world::World * world) { return adapters::world::woken(world); }
+WASM_EXPORT __attribute__((export_name("x"))) bool tumble_world_set_materials(world::World * world, const float * frictionRestitution, uint32_t count) { return adapters::world::set_materials(world, frictionRestitution, count); }
+WASM_EXPORT __attribute__((export_name("y"))) void tumble_world_get_gravity(Float3 * out, const world::World * world) { adapters::world::get_gravity(*out, world); }
+WASM_EXPORT __attribute__((export_name("z"))) void tumble_world_set_gravity(world::World * world, const Float3 * gravity) { adapters::world::set_gravity(world, *gravity); }
+WASM_EXPORT __attribute__((export_name("A"))) uint32_t tumble_events_pairs(const world::World * world) { return adapters::events::pairs(world); }
+WASM_EXPORT __attribute__((export_name("B"))) bool tumble_events_read_pair(adapters::PairEvent * out, const world::World * world, uint32_t index) { return adapters::events::read_pair(*out, world, index); }
+WASM_EXPORT __attribute__((export_name("C"))) uint32_t tumble_events_contacts_added(const world::World * world) { return adapters::events::contacts_added(world); }
+WASM_EXPORT __attribute__((export_name("D"))) bool tumble_events_read_contact_added(adapters::ContactEvent * out, const world::World * world, uint32_t index) { return adapters::events::read_contact_added(*out, world, index); }
+WASM_EXPORT __attribute__((export_name("E"))) uint32_t tumble_events_contacts_persisted(const world::World * world) { return adapters::events::contacts_persisted(world); }
+WASM_EXPORT __attribute__((export_name("F"))) bool tumble_events_read_contact_persisted(adapters::ContactEvent * out, const world::World * world, uint32_t index) { return adapters::events::read_contact_persisted(*out, world, index); }
+WASM_EXPORT __attribute__((export_name("G"))) uint32_t tumble_events_contacts_removed(const world::World * world) { return adapters::events::contacts_removed(world); }
+WASM_EXPORT __attribute__((export_name("H"))) bool tumble_events_read_contact_removed(adapters::ContactRemovedEvent * out, const world::World * world, uint32_t index) { return adapters::events::read_contact_removed(*out, world, index); }
+WASM_EXPORT __attribute__((export_name("I"))) uint32_t tumble_events_moved(const world::World * world) { return adapters::events::moved(world); }
+WASM_EXPORT __attribute__((export_name("J"))) uint32_t tumble_events_moved_body(const world::World * world, uint32_t index) { return adapters::events::moved_body(world, index); }
+WASM_EXPORT __attribute__((export_name("K"))) adapters::Poses * tumble_poses_create(world::World * world) { return adapters::poses::create(world); }
+WASM_EXPORT __attribute__((export_name("L"))) void tumble_poses_destroy(adapters::Poses * poses) { adapters::poses::destroy(poses); }
+WASM_EXPORT __attribute__((export_name("M"))) uint32_t tumble_poses_add(adapters::Poses * poses, uint32_t body) { return adapters::poses::add(poses, body); }
+WASM_EXPORT __attribute__((export_name("N"))) bool tumble_poses_remove(adapters::Poses * poses, uint32_t slot) { return adapters::poses::remove(poses, slot); }
+WASM_EXPORT __attribute__((export_name("O"))) uint32_t tumble_poses_read(adapters::Poses * poses) { return adapters::poses::read(poses); }
+WASM_EXPORT __attribute__((export_name("P"))) uint32_t tumble_poses_slots(const adapters::Poses * poses) { return adapters::poses::slots(poses); }
+WASM_EXPORT __attribute__((export_name("Q"))) uint32_t tumble_poses_body(const adapters::Poses * poses, uint32_t slot) { return adapters::poses::body(poses, slot); }
+WASM_EXPORT __attribute__((export_name("R"))) const float * tumble_poses_positions(const adapters::Poses * poses) { return adapters::poses::positions(poses); }
+WASM_EXPORT __attribute__((export_name("S"))) const float * tumble_poses_quaternions(const adapters::Poses * poses) { return adapters::poses::quaternions(poses); }
+WASM_EXPORT __attribute__((export_name("T"))) const uint32_t * tumble_poses_changed(const adapters::Poses * poses) { return adapters::poses::changed(poses); }
+WASM_EXPORT __attribute__((export_name("U"))) bool tumble_answers_reject_pair(world::World * world, uint32_t index) { return adapters::answers::reject_pair(world, index); }
+WASM_EXPORT __attribute__((export_name("V"))) bool tumble_answers_override_contact(world::World * world, uint32_t index, const contact_constraints::ContactSettings * settings) { return adapters::answers::override_contact(world, index, *settings); }
+WASM_EXPORT __attribute__((export_name("W"))) bool tumble_answers_reject_contact(world::World * world, uint32_t index) { return adapters::answers::reject_contact(world, index); }
+WASM_EXPORT __attribute__((export_name("X"))) void tumble_rigid_body_default_settings(adapters::BodySettings * out) { adapters::rigid_body::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Y"))) uint32_t tumble_rigid_body_create(world::World * world, const adapters::BodySettings * settings) { return adapters::rigid_body::create(world, *settings); }
+WASM_EXPORT __attribute__((export_name("Z"))) bool tumble_rigid_body_remove(world::World * world, uint32_t body) { return adapters::rigid_body::remove(world, body); }
+WASM_EXPORT __attribute__((export_name("aa"))) bool tumble_rigid_body_exists(world::World * world, uint32_t body) { return adapters::rigid_body::exists(world, body); }
+WASM_EXPORT __attribute__((export_name("ba"))) bool tumble_rigid_body_get_position(Float3 * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_position(*out, world, body); }
+WASM_EXPORT __attribute__((export_name("ca"))) bool tumble_rigid_body_get_quaternion(Float4 * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_quaternion(*out, world, body); }
+WASM_EXPORT __attribute__((export_name("da"))) bool tumble_rigid_body_get_transform(Float3 * outPosition, Float4 * outQuaternion, world::World * world, uint32_t body) { return adapters::rigid_body::get_transform(*outPosition, *outQuaternion, world, body); }
+WASM_EXPORT __attribute__((export_name("ea"))) bool tumble_rigid_body_get_center_of_mass_position(Float3 * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_center_of_mass_position(*out, world, body); }
+WASM_EXPORT __attribute__((export_name("fa"))) bool tumble_rigid_body_get_linear_velocity(Float3 * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_linear_velocity(*out, world, body); }
+WASM_EXPORT __attribute__((export_name("ga"))) bool tumble_rigid_body_get_angular_velocity(Float3 * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_angular_velocity(*out, world, body); }
+WASM_EXPORT __attribute__((export_name("ha"))) bool tumble_rigid_body_get_velocity_at_point(Float3 * out, world::World * world, uint32_t body, const Float3 * point) { return adapters::rigid_body::get_velocity_at_point(*out, world, body, *point); }
+WASM_EXPORT __attribute__((export_name("ia"))) bool tumble_rigid_body_get_aabb(Box3f * out, world::World * world, uint32_t body) { return adapters::rigid_body::get_aabb(*out, world, body); }
+WASM_EXPORT __attribute__((export_name("ja"))) float tumble_rigid_body_get_mass(world::World * world, uint32_t body) { return adapters::rigid_body::get_mass(world, body); }
+WASM_EXPORT __attribute__((export_name("ka"))) uint32_t tumble_rigid_body_get_motion_type(world::World * world, uint32_t body) { return adapters::rigid_body::get_motion_type(world, body); }
+WASM_EXPORT __attribute__((export_name("la"))) uint32_t tumble_rigid_body_get_object_layer(world::World * world, uint32_t body) { return adapters::rigid_body::get_object_layer(world, body); }
+WASM_EXPORT __attribute__((export_name("ma"))) uint32_t tumble_rigid_body_get_user_data_low(world::World * world, uint32_t body) { return adapters::rigid_body::get_user_data_low(world, body); }
+WASM_EXPORT __attribute__((export_name("na"))) uint32_t tumble_rigid_body_get_user_data_high(world::World * world, uint32_t body) { return adapters::rigid_body::get_user_data_high(world, body); }
+WASM_EXPORT __attribute__((export_name("oa"))) shapes::Shape * tumble_rigid_body_get_shape(world::World * world, uint32_t body) { return adapters::rigid_body::get_shape(world, body); }
+WASM_EXPORT __attribute__((export_name("pa"))) bool tumble_rigid_body_is_sleeping(world::World * world, uint32_t body) { return adapters::rigid_body::is_sleeping(world, body); }
+WASM_EXPORT __attribute__((export_name("qa"))) bool tumble_rigid_body_set_position(world::World * world, uint32_t body, const Float3 * position, bool wake) { return adapters::rigid_body::set_position(world, body, *position, wake); }
+WASM_EXPORT __attribute__((export_name("ra"))) bool tumble_rigid_body_set_quaternion(world::World * world, uint32_t body, const Float4 * quaternion, bool wake) { return adapters::rigid_body::set_quaternion(world, body, *quaternion, wake); }
+WASM_EXPORT __attribute__((export_name("sa"))) bool tumble_rigid_body_set_transform(world::World * world, uint32_t body, const Float3 * position, const Float4 * quaternion, bool wake) { return adapters::rigid_body::set_transform(world, body, *position, *quaternion, wake); }
+WASM_EXPORT __attribute__((export_name("ta"))) bool tumble_rigid_body_set_linear_velocity(world::World * world, uint32_t body, const Float3 * velocity) { return adapters::rigid_body::set_linear_velocity(world, body, *velocity); }
+WASM_EXPORT __attribute__((export_name("ua"))) bool tumble_rigid_body_set_angular_velocity(world::World * world, uint32_t body, const Float3 * velocity) { return adapters::rigid_body::set_angular_velocity(world, body, *velocity); }
+WASM_EXPORT __attribute__((export_name("va"))) bool tumble_rigid_body_add_linear_velocity(world::World * world, uint32_t body, const Float3 * velocity) { return adapters::rigid_body::add_linear_velocity(world, body, *velocity); }
+WASM_EXPORT __attribute__((export_name("wa"))) bool tumble_rigid_body_add_angular_velocity(world::World * world, uint32_t body, const Float3 * velocity) { return adapters::rigid_body::add_angular_velocity(world, body, *velocity); }
+WASM_EXPORT __attribute__((export_name("xa"))) bool tumble_rigid_body_add_force(world::World * world, uint32_t body, const Float3 * force, bool wake) { return adapters::rigid_body::add_force(world, body, *force, wake); }
+WASM_EXPORT __attribute__((export_name("ya"))) bool tumble_rigid_body_add_torque(world::World * world, uint32_t body, const Float3 * torque, bool wake) { return adapters::rigid_body::add_torque(world, body, *torque, wake); }
+WASM_EXPORT __attribute__((export_name("za"))) bool tumble_rigid_body_add_force_at_position(world::World * world, uint32_t body, const Float3 * force, const Float3 * position, bool wake) { return adapters::rigid_body::add_force_at_position(world, body, *force, *position, wake); }
+WASM_EXPORT __attribute__((export_name("Aa"))) bool tumble_rigid_body_add_impulse(world::World * world, uint32_t body, const Float3 * impulse) { return adapters::rigid_body::add_impulse(world, body, *impulse); }
+WASM_EXPORT __attribute__((export_name("Ba"))) bool tumble_rigid_body_add_impulse_at_position(world::World * world, uint32_t body, const Float3 * impulse, const Float3 * position) { return adapters::rigid_body::add_impulse_at_position(world, body, *impulse, *position); }
+WASM_EXPORT __attribute__((export_name("Ca"))) bool tumble_rigid_body_add_angular_impulse(world::World * world, uint32_t body, const Float3 * impulse) { return adapters::rigid_body::add_angular_impulse(world, body, *impulse); }
+WASM_EXPORT __attribute__((export_name("Da"))) bool tumble_rigid_body_set_motion_type(world::World * world, uint32_t body, uint32_t motionType, bool wake) { return adapters::rigid_body::set_motion_type(world, body, motionType, wake); }
+WASM_EXPORT __attribute__((export_name("Ea"))) bool tumble_rigid_body_set_object_layer(world::World * world, uint32_t body, uint32_t objectLayer) { return adapters::rigid_body::set_object_layer(world, body, objectLayer); }
+WASM_EXPORT __attribute__((export_name("Fa"))) bool tumble_rigid_body_set_shape(world::World * world, uint32_t body, shapes::Shape * shape) { return adapters::rigid_body::set_shape(world, body, shape); }
+WASM_EXPORT __attribute__((export_name("Ga"))) bool tumble_rigid_body_move_kinematic(world::World * world, uint32_t body, const Float3 * position, const Float4 * quaternion, float deltaTime) { return adapters::rigid_body::move_kinematic(world, body, *position, *quaternion, deltaTime); }
+WASM_EXPORT __attribute__((export_name("Ha"))) bool tumble_rigid_body_sleep(world::World * world, uint32_t body) { return adapters::rigid_body::sleep(world, body); }
+WASM_EXPORT __attribute__((export_name("Ia"))) bool tumble_rigid_body_wake(world::World * world, uint32_t body) { return adapters::rigid_body::wake(world, body); }
+WASM_EXPORT __attribute__((export_name("Ja"))) bool tumble_rigid_body_set_user_data(world::World * world, uint32_t body, uint32_t low, uint32_t high) { return adapters::rigid_body::set_user_data(world, body, low, high); }
+WASM_EXPORT __attribute__((export_name("Ka"))) bool tumble_rigid_body_set_friction(world::World * world, uint32_t body, float friction) { return adapters::rigid_body::set_friction(world, body, friction); }
+WASM_EXPORT __attribute__((export_name("La"))) bool tumble_rigid_body_set_restitution(world::World * world, uint32_t body, float restitution) { return adapters::rigid_body::set_restitution(world, body, restitution); }
+WASM_EXPORT __attribute__((export_name("Ma"))) uint32_t tumble_shape_get_type(const shapes::Shape * shape) { return adapters::shape::get_type(shape); }
+WASM_EXPORT __attribute__((export_name("Na"))) void tumble_shape_get_local_bounds(Box3f * out, const shapes::Shape * shape) { adapters::shape::get_local_bounds(*out, shape); }
+WASM_EXPORT __attribute__((export_name("Oa"))) void tumble_shape_get_center_of_mass(Float3 * out, const shapes::Shape * shape) { adapters::shape::get_center_of_mass(*out, shape); }
+WASM_EXPORT __attribute__((export_name("Pa"))) float tumble_shape_get_volume(const shapes::Shape * shape) { return adapters::shape::get_volume(shape); }
+WASM_EXPORT __attribute__((export_name("Qa"))) void tumble_shape_get_mass_properties(mass_properties::MassProperties * out, const shapes::Shape * shape) { adapters::shape::get_mass_properties(*out, shape); }
+WASM_EXPORT __attribute__((export_name("Ra"))) void tumble_box_default_settings(box::BoxShapeSettings * out) { adapters::box::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Sa"))) shapes::Shape * tumble_box_create(const box::BoxShapeSettings * settings) { return adapters::box::create(*settings); }
+WASM_EXPORT __attribute__((export_name("Ta"))) void tumble_box_destroy(shapes::Shape * shape) { adapters::box::destroy(shape); }
+WASM_EXPORT __attribute__((export_name("Ua"))) void tumble_sphere_default_settings(sphere::SphereShapeSettings * out) { adapters::sphere::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Va"))) shapes::Shape * tumble_sphere_create(const sphere::SphereShapeSettings * settings) { return adapters::sphere::create(*settings); }
+WASM_EXPORT __attribute__((export_name("Wa"))) void tumble_sphere_destroy(shapes::Shape * shape) { adapters::sphere::destroy(shape); }
+WASM_EXPORT __attribute__((export_name("Xa"))) void tumble_capsule_default_settings(capsule::CapsuleShapeSettings * out) { adapters::capsule::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Ya"))) shapes::Shape * tumble_capsule_create(const capsule::CapsuleShapeSettings * settings) { return adapters::capsule::create(*settings); }
+WASM_EXPORT __attribute__((export_name("Za"))) void tumble_capsule_destroy(shapes::Shape * shape) { adapters::capsule::destroy(shape); }
+WASM_EXPORT __attribute__((export_name("ab"))) void tumble_cylinder_default_settings(cylinder::CylinderShapeSettings * out) { adapters::cylinder::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("bb"))) shapes::Shape * tumble_cylinder_create(const cylinder::CylinderShapeSettings * settings) { return adapters::cylinder::create(*settings); }
+WASM_EXPORT __attribute__((export_name("cb"))) void tumble_cylinder_destroy(shapes::Shape * shape) { adapters::cylinder::destroy(shape); }
+WASM_EXPORT __attribute__((export_name("db"))) void tumble_plane_default_settings(plane::PlaneShapeSettings * out) { adapters::plane::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("eb"))) shapes::Shape * tumble_plane_create(const plane::PlaneShapeSettings * settings) { return adapters::plane::create(*settings); }
+WASM_EXPORT __attribute__((export_name("fb"))) void tumble_plane_destroy(shapes::Shape * shape) { adapters::plane::destroy(shape); }
+WASM_EXPORT __attribute__((export_name("gb"))) shapes::Shape * tumble_empty_create() { return adapters::empty::create(); }
+WASM_EXPORT __attribute__((export_name("hb"))) void tumble_empty_destroy(shapes::Shape * shape) { adapters::empty::destroy(shape); }
+WASM_EXPORT __attribute__((export_name("ib"))) void tumble_convex_hull_data_default_settings(convex_hull::ConvexHullBuildSettings * out) { adapters::convex_hull_data::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("jb"))) bool tumble_convex_hull_data_build(adapters::ConvexHullBuild * out, const convex_hull::ConvexHullBuildSettings * settings) { return adapters::convex_hull_data::build(*out, *settings); }
+WASM_EXPORT __attribute__((export_name("kb"))) void tumble_convex_hull_data_release(convex_hull::ConvexHullData * data) { adapters::convex_hull_data::release(data); }
+WASM_EXPORT __attribute__((export_name("lb"))) void tumble_convex_hull_default_settings(convex_hull::ConvexHullShapeSettings * out) { adapters::convex_hull::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("mb"))) shapes::Shape * tumble_convex_hull_create(const convex_hull::ConvexHullShapeSettings * settings) { return adapters::convex_hull::create(*settings); }
+WASM_EXPORT __attribute__((export_name("nb"))) void tumble_convex_hull_destroy(shapes::Shape * shape) { adapters::convex_hull::destroy(shape); }
+WASM_EXPORT __attribute__((export_name("ob"))) void tumble_triangle_mesh_data_default_settings(triangle_mesh_builder::TriangleMeshBuilderSettings * out) { adapters::triangle_mesh_data::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("pb"))) triangle_mesh_data::TriangleMeshData * tumble_triangle_mesh_data_build(const triangle_mesh_builder::TriangleMeshBuilderSettings * settings) { return adapters::triangle_mesh_data::build(*settings); }
+WASM_EXPORT __attribute__((export_name("qb"))) void tumble_triangle_mesh_data_release(triangle_mesh_data::TriangleMeshData * data) { adapters::triangle_mesh_data::release(data); }
+WASM_EXPORT __attribute__((export_name("rb"))) void tumble_triangle_mesh_default_settings(triangle_mesh::TriangleMeshShapeSettings * out) { adapters::triangle_mesh::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("sb"))) shapes::Shape * tumble_triangle_mesh_create(const triangle_mesh::TriangleMeshShapeSettings * settings) { return adapters::triangle_mesh::create(*settings); }
+WASM_EXPORT __attribute__((export_name("tb"))) void tumble_triangle_mesh_destroy(shapes::Shape * shape) { adapters::triangle_mesh::destroy(shape); }
+WASM_EXPORT __attribute__((export_name("ub"))) shapes::Shape * tumble_compound_create(const uint8_t * children, uint32_t count) { return adapters::compound::create(children, count); }
+WASM_EXPORT __attribute__((export_name("vb"))) void tumble_compound_destroy(shapes::Shape * shape) { adapters::compound::destroy(shape); }
+WASM_EXPORT __attribute__((export_name("wb"))) uint32_t tumble_static_compound_default_bvh_max_leaf_children() { return adapters::static_compound::default_bvh_max_leaf_children(); }
+WASM_EXPORT __attribute__((export_name("xb"))) shapes::Shape * tumble_static_compound_create(const uint8_t * children, uint32_t count, uint32_t bvhMaxLeafChildren) { return adapters::static_compound::create(children, count, bvhMaxLeafChildren); }
+WASM_EXPORT __attribute__((export_name("yb"))) void tumble_static_compound_destroy(shapes::Shape * shape) { adapters::static_compound::destroy(shape); }
+WASM_EXPORT __attribute__((export_name("zb"))) void tumble_transformed_default_settings(transformed::TransformedShapeSettings * out) { adapters::transformed::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Ab"))) shapes::Shape * tumble_transformed_create(const transformed::TransformedShapeSettings * settings) { return adapters::transformed::create(*settings); }
+WASM_EXPORT __attribute__((export_name("Bb"))) void tumble_transformed_destroy(shapes::Shape * shape) { adapters::transformed::destroy(shape); }
+WASM_EXPORT __attribute__((export_name("Cb"))) void tumble_scaled_default_settings(scaled::ScaledShapeSettings * out) { adapters::scaled::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Db"))) shapes::Shape * tumble_scaled_create(const scaled::ScaledShapeSettings * settings) { return adapters::scaled::create(*settings); }
+WASM_EXPORT __attribute__((export_name("Eb"))) void tumble_scaled_destroy(shapes::Shape * shape) { adapters::scaled::destroy(shape); }
+WASM_EXPORT __attribute__((export_name("Fb"))) void tumble_offset_center_of_mass_default_settings(offset_center_of_mass::OffsetCenterOfMassShapeSettings * out) { adapters::offset_center_of_mass::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Gb"))) shapes::Shape * tumble_offset_center_of_mass_create(const offset_center_of_mass::OffsetCenterOfMassShapeSettings * settings) { return adapters::offset_center_of_mass::create(*settings); }
+WASM_EXPORT __attribute__((export_name("Hb"))) void tumble_offset_center_of_mass_destroy(shapes::Shape * shape) { adapters::offset_center_of_mass::destroy(shape); }
+WASM_EXPORT __attribute__((export_name("Ib"))) uint32_t tumble_constraint_get_type(uint32_t constraint) { return adapters::constraint::get_type(constraint); }
+WASM_EXPORT __attribute__((export_name("Jb"))) bool tumble_constraint_exists(world::World * world, uint32_t constraint) { return adapters::constraint::exists(world, constraint); }
+WASM_EXPORT __attribute__((export_name("Kb"))) bool tumble_constraint_set_enabled(world::World * world, uint32_t constraint, bool enabled) { return adapters::constraint::set_enabled(world, constraint, enabled); }
+WASM_EXPORT __attribute__((export_name("Lb"))) bool tumble_constraint_is_enabled(world::World * world, uint32_t constraint) { return adapters::constraint::is_enabled(world, constraint); }
+WASM_EXPORT __attribute__((export_name("Mb"))) void tumble_point_constraint_default_settings(point_constraint::PointConstraintSettings * out) { adapters::point_constraint::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Nb"))) uint32_t tumble_point_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const point_constraint::PointConstraintSettings * settings) { return adapters::point_constraint::create(world, bodyA, bodyB, *settings); }
+WASM_EXPORT __attribute__((export_name("Ob"))) bool tumble_point_constraint_remove(world::World * world, uint32_t constraint) { return adapters::point_constraint::remove(world, constraint); }
+WASM_EXPORT __attribute__((export_name("Pb"))) bool tumble_point_constraint_get_total_lambda(Float3 * out, world::World * world, uint32_t constraint) { return adapters::point_constraint::get_total_lambda(*out, world, constraint); }
+WASM_EXPORT __attribute__((export_name("Qb"))) void tumble_distance_constraint_default_settings(distance_constraint::DistanceConstraintSettings * out) { adapters::distance_constraint::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Rb"))) uint32_t tumble_distance_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const distance_constraint::DistanceConstraintSettings * settings) { return adapters::distance_constraint::create(world, bodyA, bodyB, *settings); }
+WASM_EXPORT __attribute__((export_name("Sb"))) bool tumble_distance_constraint_remove(world::World * world, uint32_t constraint) { return adapters::distance_constraint::remove(world, constraint); }
+WASM_EXPORT __attribute__((export_name("Tb"))) float tumble_distance_constraint_get_total_lambda(world::World * world, uint32_t constraint) { return adapters::distance_constraint::get_total_lambda(world, constraint); }
+WASM_EXPORT __attribute__((export_name("Ub"))) bool tumble_distance_constraint_set_distance(world::World * world, uint32_t constraint, float minDistance, float maxDistance) { return adapters::distance_constraint::set_distance(world, constraint, minDistance, maxDistance); }
+WASM_EXPORT __attribute__((export_name("Vb"))) bool tumble_distance_constraint_set_limits_spring_settings(world::World * world, uint32_t constraint, const spring_settings::SpringSettings * settings) { return adapters::distance_constraint::set_limits_spring_settings(world, constraint, *settings); }
+WASM_EXPORT __attribute__((export_name("Wb"))) void tumble_hinge_constraint_default_settings(hinge_constraint::HingeConstraintSettings * out) { adapters::hinge_constraint::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Xb"))) uint32_t tumble_hinge_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const hinge_constraint::HingeConstraintSettings * settings) { return adapters::hinge_constraint::create(world, bodyA, bodyB, *settings); }
+WASM_EXPORT __attribute__((export_name("Yb"))) bool tumble_hinge_constraint_remove(world::World * world, uint32_t constraint) { return adapters::hinge_constraint::remove(world, constraint); }
+WASM_EXPORT __attribute__((export_name("Zb"))) bool tumble_hinge_constraint_set_limits(world::World * world, uint32_t constraint, float min, float max) { return adapters::hinge_constraint::set_limits(world, constraint, min, max); }
+WASM_EXPORT __attribute__((export_name("ac"))) bool tumble_hinge_constraint_set_limits_spring_settings(world::World * world, uint32_t constraint, const spring_settings::SpringSettings * settings) { return adapters::hinge_constraint::set_limits_spring_settings(world, constraint, *settings); }
+WASM_EXPORT __attribute__((export_name("bc"))) bool tumble_hinge_constraint_set_max_friction_torque(world::World * world, uint32_t constraint, float torque) { return adapters::hinge_constraint::set_max_friction_torque(world, constraint, torque); }
+WASM_EXPORT __attribute__((export_name("cc"))) bool tumble_hinge_constraint_set_motor_settings(world::World * world, uint32_t constraint, const motor_settings::MotorSettings * settings) { return adapters::hinge_constraint::set_motor_settings(world, constraint, *settings); }
+WASM_EXPORT __attribute__((export_name("dc"))) bool tumble_hinge_constraint_get_motor_settings(motor_settings::MotorSettings * out, world::World * world, uint32_t constraint) { return adapters::hinge_constraint::get_motor_settings(*out, world, constraint); }
+WASM_EXPORT __attribute__((export_name("ec"))) bool tumble_hinge_constraint_set_motor_state(world::World * world, uint32_t constraint, uint32_t state) { return adapters::hinge_constraint::set_motor_state(world, constraint, state); }
+WASM_EXPORT __attribute__((export_name("fc"))) bool tumble_hinge_constraint_set_target_angular_velocity(world::World * world, uint32_t constraint, float velocity) { return adapters::hinge_constraint::set_target_angular_velocity(world, constraint, velocity); }
+WASM_EXPORT __attribute__((export_name("gc"))) bool tumble_hinge_constraint_set_target_angle(world::World * world, uint32_t constraint, float angle) { return adapters::hinge_constraint::set_target_angle(world, constraint, angle); }
+WASM_EXPORT __attribute__((export_name("hc"))) float tumble_hinge_constraint_get_current_angle(world::World * world, uint32_t constraint) { return adapters::hinge_constraint::get_current_angle(world, constraint); }
+WASM_EXPORT __attribute__((export_name("ic"))) void tumble_slider_constraint_default_settings(slider_constraint::SliderConstraintSettings * out) { adapters::slider_constraint::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("jc"))) uint32_t tumble_slider_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const slider_constraint::SliderConstraintSettings * settings) { return adapters::slider_constraint::create(world, bodyA, bodyB, *settings); }
+WASM_EXPORT __attribute__((export_name("kc"))) bool tumble_slider_constraint_remove(world::World * world, uint32_t constraint) { return adapters::slider_constraint::remove(world, constraint); }
+WASM_EXPORT __attribute__((export_name("lc"))) float tumble_slider_constraint_get_current_position(world::World * world, uint32_t constraint) { return adapters::slider_constraint::get_current_position(world, constraint); }
+WASM_EXPORT __attribute__((export_name("mc"))) bool tumble_slider_constraint_set_limits(world::World * world, uint32_t constraint, float min, float max) { return adapters::slider_constraint::set_limits(world, constraint, min, max); }
+WASM_EXPORT __attribute__((export_name("nc"))) bool tumble_slider_constraint_set_limits_spring_settings(world::World * world, uint32_t constraint, const spring_settings::SpringSettings * settings) { return adapters::slider_constraint::set_limits_spring_settings(world, constraint, *settings); }
+WASM_EXPORT __attribute__((export_name("oc"))) bool tumble_slider_constraint_set_motor_settings(world::World * world, uint32_t constraint, const motor_settings::MotorSettings * settings) { return adapters::slider_constraint::set_motor_settings(world, constraint, *settings); }
+WASM_EXPORT __attribute__((export_name("pc"))) bool tumble_slider_constraint_get_motor_settings(motor_settings::MotorSettings * out, world::World * world, uint32_t constraint) { return adapters::slider_constraint::get_motor_settings(*out, world, constraint); }
+WASM_EXPORT __attribute__((export_name("qc"))) bool tumble_slider_constraint_set_motor_state(world::World * world, uint32_t constraint, uint32_t state) { return adapters::slider_constraint::set_motor_state(world, constraint, state); }
+WASM_EXPORT __attribute__((export_name("rc"))) bool tumble_slider_constraint_set_target_velocity(world::World * world, uint32_t constraint, float velocity) { return adapters::slider_constraint::set_target_velocity(world, constraint, velocity); }
+WASM_EXPORT __attribute__((export_name("sc"))) bool tumble_slider_constraint_set_target_position(world::World * world, uint32_t constraint, float position) { return adapters::slider_constraint::set_target_position(world, constraint, position); }
+WASM_EXPORT __attribute__((export_name("tc"))) bool tumble_slider_constraint_set_max_friction_force(world::World * world, uint32_t constraint, float force) { return adapters::slider_constraint::set_max_friction_force(world, constraint, force); }
+WASM_EXPORT __attribute__((export_name("uc"))) float tumble_slider_constraint_get_max_friction_force(world::World * world, uint32_t constraint) { return adapters::slider_constraint::get_max_friction_force(world, constraint); }
+WASM_EXPORT __attribute__((export_name("vc"))) bool tumble_slider_constraint_get_total_lambda_position(Vec2f * out, world::World * world, uint32_t constraint) { return adapters::slider_constraint::get_total_lambda_position(*out, world, constraint); }
+WASM_EXPORT __attribute__((export_name("wc"))) float tumble_slider_constraint_get_total_lambda_position_limits(world::World * world, uint32_t constraint) { return adapters::slider_constraint::get_total_lambda_position_limits(world, constraint); }
+WASM_EXPORT __attribute__((export_name("xc"))) bool tumble_slider_constraint_get_total_lambda_rotation(Float3 * out, world::World * world, uint32_t constraint) { return adapters::slider_constraint::get_total_lambda_rotation(*out, world, constraint); }
+WASM_EXPORT __attribute__((export_name("yc"))) float tumble_slider_constraint_get_total_lambda_motor(world::World * world, uint32_t constraint) { return adapters::slider_constraint::get_total_lambda_motor(world, constraint); }
+WASM_EXPORT __attribute__((export_name("zc"))) void tumble_fixed_constraint_default_settings(fixed_constraint::FixedConstraintSettings * out) { adapters::fixed_constraint::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Ac"))) uint32_t tumble_fixed_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const fixed_constraint::FixedConstraintSettings * settings) { return adapters::fixed_constraint::create(world, bodyA, bodyB, *settings); }
+WASM_EXPORT __attribute__((export_name("Bc"))) bool tumble_fixed_constraint_remove(world::World * world, uint32_t constraint) { return adapters::fixed_constraint::remove(world, constraint); }
+WASM_EXPORT __attribute__((export_name("Cc"))) bool tumble_fixed_constraint_get_total_lambda_position(Float3 * out, world::World * world, uint32_t constraint) { return adapters::fixed_constraint::get_total_lambda_position(*out, world, constraint); }
+WASM_EXPORT __attribute__((export_name("Dc"))) bool tumble_fixed_constraint_get_total_lambda_rotation(Float3 * out, world::World * world, uint32_t constraint) { return adapters::fixed_constraint::get_total_lambda_rotation(*out, world, constraint); }
+WASM_EXPORT __attribute__((export_name("Ec"))) void tumble_cone_constraint_default_settings(cone_constraint::ConeConstraintSettings * out) { adapters::cone_constraint::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Fc"))) uint32_t tumble_cone_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const cone_constraint::ConeConstraintSettings * settings) { return adapters::cone_constraint::create(world, bodyA, bodyB, *settings); }
+WASM_EXPORT __attribute__((export_name("Gc"))) bool tumble_cone_constraint_remove(world::World * world, uint32_t constraint) { return adapters::cone_constraint::remove(world, constraint); }
+WASM_EXPORT __attribute__((export_name("Hc"))) bool tumble_cone_constraint_set_half_cone_angle(world::World * world, uint32_t constraint, float halfConeAngle) { return adapters::cone_constraint::set_half_cone_angle(world, constraint, halfConeAngle); }
+WASM_EXPORT __attribute__((export_name("Ic"))) float tumble_cone_constraint_get_half_cone_angle(world::World * world, uint32_t constraint) { return adapters::cone_constraint::get_half_cone_angle(world, constraint); }
+WASM_EXPORT __attribute__((export_name("Jc"))) float tumble_cone_constraint_get_cos_half_cone_angle(world::World * world, uint32_t constraint) { return adapters::cone_constraint::get_cos_half_cone_angle(world, constraint); }
+WASM_EXPORT __attribute__((export_name("Kc"))) bool tumble_cone_constraint_get_total_lambda_position(Float3 * out, world::World * world, uint32_t constraint) { return adapters::cone_constraint::get_total_lambda_position(*out, world, constraint); }
+WASM_EXPORT __attribute__((export_name("Lc"))) float tumble_cone_constraint_get_total_lambda_rotation(world::World * world, uint32_t constraint) { return adapters::cone_constraint::get_total_lambda_rotation(world, constraint); }
+WASM_EXPORT __attribute__((export_name("Mc"))) void tumble_swing_twist_constraint_default_settings(swing_twist_constraint::SwingTwistConstraintSettings * out) { adapters::swing_twist_constraint::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Nc"))) uint32_t tumble_swing_twist_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const swing_twist_constraint::SwingTwistConstraintSettings * settings) { return adapters::swing_twist_constraint::create(world, bodyA, bodyB, *settings); }
+WASM_EXPORT __attribute__((export_name("Oc"))) bool tumble_swing_twist_constraint_remove(world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::remove(world, constraint); }
+WASM_EXPORT __attribute__((export_name("Pc"))) bool tumble_swing_twist_constraint_set_normal_half_cone_angle(world::World * world, uint32_t constraint, float angle) { return adapters::swing_twist_constraint::set_normal_half_cone_angle(world, constraint, angle); }
+WASM_EXPORT __attribute__((export_name("Qc"))) bool tumble_swing_twist_constraint_set_plane_half_cone_angle(world::World * world, uint32_t constraint, float angle) { return adapters::swing_twist_constraint::set_plane_half_cone_angle(world, constraint, angle); }
+WASM_EXPORT __attribute__((export_name("Rc"))) bool tumble_swing_twist_constraint_set_twist_min_angle(world::World * world, uint32_t constraint, float angle) { return adapters::swing_twist_constraint::set_twist_min_angle(world, constraint, angle); }
+WASM_EXPORT __attribute__((export_name("Sc"))) bool tumble_swing_twist_constraint_set_twist_max_angle(world::World * world, uint32_t constraint, float angle) { return adapters::swing_twist_constraint::set_twist_max_angle(world, constraint, angle); }
+WASM_EXPORT __attribute__((export_name("Tc"))) bool tumble_swing_twist_constraint_set_max_friction_torque(world::World * world, uint32_t constraint, float torque) { return adapters::swing_twist_constraint::set_max_friction_torque(world, constraint, torque); }
+WASM_EXPORT __attribute__((export_name("Uc"))) bool tumble_swing_twist_constraint_set_swing_motor_settings(world::World * world, uint32_t constraint, const motor_settings::MotorSettings * settings) { return adapters::swing_twist_constraint::set_swing_motor_settings(world, constraint, *settings); }
+WASM_EXPORT __attribute__((export_name("Vc"))) bool tumble_swing_twist_constraint_set_twist_motor_settings(world::World * world, uint32_t constraint, const motor_settings::MotorSettings * settings) { return adapters::swing_twist_constraint::set_twist_motor_settings(world, constraint, *settings); }
+WASM_EXPORT __attribute__((export_name("Wc"))) bool tumble_swing_twist_constraint_get_swing_motor_settings(motor_settings::MotorSettings * out, world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_swing_motor_settings(*out, world, constraint); }
+WASM_EXPORT __attribute__((export_name("Xc"))) bool tumble_swing_twist_constraint_get_twist_motor_settings(motor_settings::MotorSettings * out, world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_twist_motor_settings(*out, world, constraint); }
+WASM_EXPORT __attribute__((export_name("Yc"))) bool tumble_swing_twist_constraint_set_swing_motor_state(world::World * world, uint32_t constraint, uint32_t state) { return adapters::swing_twist_constraint::set_swing_motor_state(world, constraint, state); }
+WASM_EXPORT __attribute__((export_name("Zc"))) bool tumble_swing_twist_constraint_set_twist_motor_state(world::World * world, uint32_t constraint, uint32_t state) { return adapters::swing_twist_constraint::set_twist_motor_state(world, constraint, state); }
+WASM_EXPORT __attribute__((export_name("ad"))) bool tumble_swing_twist_constraint_set_target_angular_velocity_cs(world::World * world, uint32_t constraint, const Float3 * velocity) { return adapters::swing_twist_constraint::set_target_angular_velocity_cs(world, constraint, *velocity); }
+WASM_EXPORT __attribute__((export_name("bd"))) bool tumble_swing_twist_constraint_set_target_orientation_cs(world::World * world, uint32_t constraint, const Float4 * orientation) { return adapters::swing_twist_constraint::set_target_orientation_cs(world, constraint, *orientation); }
+WASM_EXPORT __attribute__((export_name("cd"))) bool tumble_swing_twist_constraint_set_target_orientation_bs(world::World * world, uint32_t constraint, const Float4 * orientation) { return adapters::swing_twist_constraint::set_target_orientation_bs(world, constraint, *orientation); }
+WASM_EXPORT __attribute__((export_name("dd"))) bool tumble_swing_twist_constraint_get_rotation_in_constraint_space(Float4 * out, world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_rotation_in_constraint_space(*out, world, constraint); }
+WASM_EXPORT __attribute__((export_name("ed"))) bool tumble_swing_twist_constraint_get_total_lambda_position(Float3 * out, world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_total_lambda_position(*out, world, constraint); }
+WASM_EXPORT __attribute__((export_name("fd"))) float tumble_swing_twist_constraint_get_total_lambda_twist(world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_total_lambda_twist(world, constraint); }
+WASM_EXPORT __attribute__((export_name("gd"))) float tumble_swing_twist_constraint_get_total_lambda_swing_y(world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_total_lambda_swing_y(world, constraint); }
+WASM_EXPORT __attribute__((export_name("hd"))) float tumble_swing_twist_constraint_get_total_lambda_swing_z(world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_total_lambda_swing_z(world, constraint); }
+WASM_EXPORT __attribute__((export_name("id"))) bool tumble_swing_twist_constraint_get_total_lambda_motor(Float3 * out, world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_total_lambda_motor(*out, world, constraint); }
+WASM_EXPORT __attribute__((export_name("jd"))) void tumble_six_dof_constraint_default_settings(six_dof_constraint::SixDOFConstraintSettings * out) { adapters::six_dof_constraint::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("kd"))) uint32_t tumble_six_dof_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const six_dof_constraint::SixDOFConstraintSettings * settings) { return adapters::six_dof_constraint::create(world, bodyA, bodyB, *settings); }
+WASM_EXPORT __attribute__((export_name("ld"))) bool tumble_six_dof_constraint_remove(world::World * world, uint32_t constraint) { return adapters::six_dof_constraint::remove(world, constraint); }
+WASM_EXPORT __attribute__((export_name("md"))) bool tumble_six_dof_constraint_set_translation_limits(world::World * world, uint32_t constraint, const Float3 * limitMin, const Float3 * limitMax) { return adapters::six_dof_constraint::set_translation_limits(world, constraint, *limitMin, *limitMax); }
+WASM_EXPORT __attribute__((export_name("nd"))) bool tumble_six_dof_constraint_set_rotation_limits(world::World * world, uint32_t constraint, const Float3 * limitMin, const Float3 * limitMax) { return adapters::six_dof_constraint::set_rotation_limits(world, constraint, *limitMin, *limitMax); }
+WASM_EXPORT __attribute__((export_name("od"))) bool tumble_six_dof_constraint_set_limits_spring_settings(world::World * world, uint32_t constraint, uint32_t axis, const spring_settings::SpringSettings * settings) { return adapters::six_dof_constraint::set_limits_spring_settings(world, constraint, axis, *settings); }
+WASM_EXPORT __attribute__((export_name("pd"))) bool tumble_six_dof_constraint_set_motor_settings(world::World * world, uint32_t constraint, uint32_t axis, const motor_settings::MotorSettings * settings) { return adapters::six_dof_constraint::set_motor_settings(world, constraint, axis, *settings); }
+WASM_EXPORT __attribute__((export_name("qd"))) bool tumble_six_dof_constraint_get_motor_settings(motor_settings::MotorSettings * out, world::World * world, uint32_t constraint, uint32_t axis) { return adapters::six_dof_constraint::get_motor_settings(*out, world, constraint, axis); }
+WASM_EXPORT __attribute__((export_name("rd"))) bool tumble_six_dof_constraint_set_motor_state(world::World * world, uint32_t constraint, uint32_t axis, uint32_t state) { return adapters::six_dof_constraint::set_motor_state(world, constraint, axis, state); }
+WASM_EXPORT __attribute__((export_name("sd"))) bool tumble_six_dof_constraint_set_target_velocity_cs(world::World * world, uint32_t constraint, const Float3 * velocity) { return adapters::six_dof_constraint::set_target_velocity_cs(world, constraint, *velocity); }
+WASM_EXPORT __attribute__((export_name("td"))) bool tumble_six_dof_constraint_set_target_angular_velocity_cs(world::World * world, uint32_t constraint, const Float3 * velocity) { return adapters::six_dof_constraint::set_target_angular_velocity_cs(world, constraint, *velocity); }
+WASM_EXPORT __attribute__((export_name("ud"))) bool tumble_six_dof_constraint_set_target_position_cs(world::World * world, uint32_t constraint, const Float3 * position) { return adapters::six_dof_constraint::set_target_position_cs(world, constraint, *position); }
+WASM_EXPORT __attribute__((export_name("vd"))) bool tumble_six_dof_constraint_set_target_orientation_cs(world::World * world, uint32_t constraint, const Float4 * orientation) { return adapters::six_dof_constraint::set_target_orientation_cs(world, constraint, *orientation); }
+WASM_EXPORT __attribute__((export_name("wd"))) bool tumble_six_dof_constraint_set_max_friction(world::World * world, uint32_t constraint, uint32_t axis, float friction) { return adapters::six_dof_constraint::set_max_friction(world, constraint, axis, friction); }
+WASM_EXPORT __attribute__((export_name("xd"))) bool tumble_six_dof_constraint_make_free_axis(world::World * world, uint32_t constraint, uint32_t axis) { return adapters::six_dof_constraint::make_free_axis(world, constraint, axis); }
+WASM_EXPORT __attribute__((export_name("yd"))) bool tumble_six_dof_constraint_make_fixed_axis(world::World * world, uint32_t constraint, uint32_t axis) { return adapters::six_dof_constraint::make_fixed_axis(world, constraint, axis); }
+WASM_EXPORT __attribute__((export_name("zd"))) bool tumble_six_dof_constraint_set_limited_axis(world::World * world, uint32_t constraint, uint32_t axis, float min, float max) { return adapters::six_dof_constraint::set_limited_axis(world, constraint, axis, min, max); }
+WASM_EXPORT __attribute__((export_name("Ad"))) filter::Filter * tumble_filter_create(world::World * world) { return adapters::filter::create(world); }
+WASM_EXPORT __attribute__((export_name("Bd"))) void tumble_filter_destroy(filter::Filter * filter) { adapters::filter::destroy(filter); }
+WASM_EXPORT __attribute__((export_name("Cd"))) void tumble_filter_enable_all_layers(filter::Filter * filter, world::World * world) { adapters::filter::enable_all_layers(filter, world); }
+WASM_EXPORT __attribute__((export_name("Dd"))) void tumble_filter_disable_all_layers(filter::Filter * filter, world::World * world) { adapters::filter::disable_all_layers(filter, world); }
+WASM_EXPORT __attribute__((export_name("Ed"))) bool tumble_filter_enable_object_layer(filter::Filter * filter, world::World * world, uint32_t objectLayer) { return adapters::filter::enable_object_layer(filter, world, objectLayer); }
+WASM_EXPORT __attribute__((export_name("Fd"))) bool tumble_filter_disable_object_layer(filter::Filter * filter, world::World * world, uint32_t objectLayer) { return adapters::filter::disable_object_layer(filter, world, objectLayer); }
+WASM_EXPORT __attribute__((export_name("Gd"))) bool tumble_filter_enable_broadphase_layer(filter::Filter * filter, world::World * world, uint32_t broadphaseLayer) { return adapters::filter::enable_broadphase_layer(filter, world, broadphaseLayer); }
+WASM_EXPORT __attribute__((export_name("Hd"))) bool tumble_filter_disable_broadphase_layer(filter::Filter * filter, world::World * world, uint32_t broadphaseLayer) { return adapters::filter::disable_broadphase_layer(filter, world, broadphaseLayer); }
+WASM_EXPORT __attribute__((export_name("Id"))) bool tumble_filter_is_object_layer_enabled(const filter::Filter * filter, uint32_t objectLayer) { return adapters::filter::is_object_layer_enabled(filter, objectLayer); }
+WASM_EXPORT __attribute__((export_name("Jd"))) bool tumble_filter_is_broadphase_layer_enabled(const filter::Filter * filter, uint32_t broadphaseLayer) { return adapters::filter::is_broadphase_layer_enabled(filter, broadphaseLayer); }
+WASM_EXPORT __attribute__((export_name("Kd"))) bool tumble_filter_set_from_body(filter::Filter * filter, world::World * world, uint32_t body) { return adapters::filter::set_from_body(filter, world, body); }
+WASM_EXPORT __attribute__((export_name("Ld"))) uint32_t tumble_filter_get_collision_groups(const filter::Filter * filter) { return adapters::filter::get_collision_groups(filter); }
+WASM_EXPORT __attribute__((export_name("Md"))) uint32_t tumble_filter_get_collision_mask(const filter::Filter * filter) { return adapters::filter::get_collision_mask(filter); }
+WASM_EXPORT __attribute__((export_name("Nd"))) bool tumble_filter_copy(filter::Filter * out, const filter::Filter * source) { return adapters::filter::copy(out, source); }
+WASM_EXPORT __attribute__((export_name("Od"))) void tumble_query_default_cast_ray_settings(cast_ray::CastRaySettings * out) { adapters::query::default_cast_ray_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Pd"))) uint32_t tumble_query_cast_ray(world::World * world, uint32_t kind, float earlyOutFraction, const cast_ray::CastRaySettings * settings, const Float3 * origin, const Float3 * direction, float length, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { return adapters::query::cast_ray(world, kind, earlyOutFraction, *settings, *origin, *direction, length, filter, collisionGroups, collisionMask); }
+WASM_EXPORT __attribute__((export_name("Qd"))) bool tumble_query_read_cast_ray_hit(cast_ray::CastRayHit * out, uint32_t index) { return adapters::query::read_cast_ray_hit(*out, index); }
+WASM_EXPORT __attribute__((export_name("Rd"))) void tumble_query_default_cast_shape_settings(adapters::CastShapeSettings * out) { adapters::query::default_cast_shape_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Sd"))) uint32_t tumble_query_cast_shape(world::World * world, uint32_t kind, float earlyOutFraction, const adapters::CastShapeSettings * settings, const shapes::Shape * shape, const Float3 * position, const Float4 * quaternion, const Float3 * scale, const Float3 * displacement, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { return adapters::query::cast_shape(world, kind, earlyOutFraction, *settings, shape, *position, *quaternion, *scale, *displacement, filter, collisionGroups, collisionMask); }
+WASM_EXPORT __attribute__((export_name("Td"))) bool tumble_query_read_cast_shape_hit(adapters::CastShapeHit * out, uint32_t index) { return adapters::query::read_cast_shape_hit(*out, index); }
+WASM_EXPORT __attribute__((export_name("Ud"))) void tumble_query_default_collide_shape_settings(adapters::CollideShapeSettings * out) { adapters::query::default_collide_shape_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Vd"))) uint32_t tumble_query_collide_shape(world::World * world, uint32_t kind, float earlyOutFraction, const adapters::CollideShapeSettings * settings, const shapes::Shape * shape, const Float3 * position, const Float4 * quaternion, const Float3 * scale, bool internalEdgeRemoval, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { return adapters::query::collide_shape(world, kind, earlyOutFraction, *settings, shape, *position, *quaternion, *scale, internalEdgeRemoval, filter, collisionGroups, collisionMask); }
+WASM_EXPORT __attribute__((export_name("Wd"))) bool tumble_query_read_collide_shape_hit(adapters::CollideShapeHit * out, uint32_t index) { return adapters::query::read_collide_shape_hit(*out, index); }
+WASM_EXPORT __attribute__((export_name("Xd"))) void tumble_query_default_collide_point_settings(collide_point::CollidePointSettings * out) { adapters::query::default_collide_point_settings(*out); }
+WASM_EXPORT __attribute__((export_name("Yd"))) uint32_t tumble_query_collide_point(world::World * world, uint32_t kind, const collide_point::CollidePointSettings * settings, const Float3 * point, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { return adapters::query::collide_point(world, kind, *settings, *point, filter, collisionGroups, collisionMask); }
+WASM_EXPORT __attribute__((export_name("Zd"))) bool tumble_query_read_collide_point_hit(collide_point::CollidePointHit * out, uint32_t index) { return adapters::query::read_collide_point_hit(*out, index); }
+WASM_EXPORT __attribute__((export_name("ae"))) void tumble_kcc_policy_default_body_policy(kcc_policy::BodyPolicy * out) { adapters::kcc_policy::default_body_policy(*out); }
+WASM_EXPORT __attribute__((export_name("be"))) kcc_policy::Policy * tumble_kcc_policy_create() { return adapters::kcc_policy::create(); }
+WASM_EXPORT __attribute__((export_name("ce"))) void tumble_kcc_policy_destroy(kcc_policy::Policy * policy) { adapters::kcc_policy::destroy(policy); }
+WASM_EXPORT __attribute__((export_name("de"))) void tumble_kcc_policy_get_defaults(kcc_policy::BodyPolicy * out, const kcc_policy::Policy * policy) { adapters::kcc_policy::get_defaults(*out, policy); }
+WASM_EXPORT __attribute__((export_name("ee"))) void tumble_kcc_policy_set_defaults(kcc_policy::Policy * policy, const kcc_policy::BodyPolicy * bodyPolicy) { adapters::kcc_policy::set_defaults(policy, *bodyPolicy); }
+WASM_EXPORT __attribute__((export_name("fe"))) bool tumble_kcc_policy_set(kcc_policy::Policy * policy, uint32_t body, const kcc_policy::BodyPolicy * bodyPolicy) { return adapters::kcc_policy::set(policy, body, *bodyPolicy); }
+WASM_EXPORT __attribute__((export_name("ge"))) bool tumble_kcc_policy_remove(kcc_policy::Policy * policy, uint32_t body) { return adapters::kcc_policy::remove(policy, body); }
+WASM_EXPORT __attribute__((export_name("he"))) void tumble_kcc_policy_get(kcc_policy::BodyPolicy * out, const kcc_policy::Policy * policy, uint32_t body) { adapters::kcc_policy::get(*out, policy, body); }
+WASM_EXPORT __attribute__((export_name("ie"))) void tumble_kcc_default_settings(adapters::KCCSettings * out) { adapters::kcc::default_settings(*out); }
+WASM_EXPORT __attribute__((export_name("je"))) void tumble_kcc_default_update_settings(kcc::UpdateSettings * out) { adapters::kcc::default_update_settings(*out); }
+WASM_EXPORT __attribute__((export_name("ke"))) kcc::KCC * tumble_kcc_create(const adapters::KCCSettings * settings, const Float3 * position, const Float4 * quaternion) { return adapters::kcc::create(*settings, *position, *quaternion); }
+WASM_EXPORT __attribute__((export_name("le"))) void tumble_kcc_destroy(kcc::KCC * character) { adapters::kcc::destroy(character); }
+WASM_EXPORT __attribute__((export_name("me"))) void tumble_kcc_add(world::World * world, kcc::KCC * character) { adapters::kcc::add(world, character); }
+WASM_EXPORT __attribute__((export_name("ne"))) void tumble_kcc_remove(world::World * world, kcc::KCC * character) { adapters::kcc::remove(world, character); }
+WASM_EXPORT __attribute__((export_name("oe"))) void tumble_kcc_read_state(adapters::KCCState * out, const kcc::KCC * character) { adapters::kcc::read_state(*out, character); }
+WASM_EXPORT __attribute__((export_name("pe"))) void tumble_kcc_set_linear_velocity(kcc::KCC * character, const Float3 * velocity) { adapters::kcc::set_linear_velocity(character, *velocity); }
+WASM_EXPORT __attribute__((export_name("qe"))) void tumble_kcc_get_tuning(adapters::KCCTuning * out, const kcc::KCC * character) { adapters::kcc::get_tuning(*out, character); }
+WASM_EXPORT __attribute__((export_name("re"))) void tumble_kcc_set_tuning(kcc::KCC * character, const adapters::KCCTuning * tuning) { adapters::kcc::set_tuning(character, *tuning); }
+WASM_EXPORT __attribute__((export_name("se"))) uint8_t * tumble_kcc_contacts(kcc::KCC * character) { return adapters::kcc::contacts(character); }
+WASM_EXPORT __attribute__((export_name("te"))) bool tumble_kcc_read_contact_event(adapters::KCCContactEvent * out, const kcc::KCC * character, uint32_t index) { return adapters::kcc::read_contact_event(*out, character, index); }
+WASM_EXPORT __attribute__((export_name("ue"))) void tumble_kcc_set_position(world::World * world, kcc::KCC * character, const Float3 * position) { adapters::kcc::set_position(world, character, *position); }
+WASM_EXPORT __attribute__((export_name("ve"))) void tumble_kcc_set_quaternion(world::World * world, kcc::KCC * character, const Float4 * quaternion) { adapters::kcc::set_quaternion(world, character, *quaternion); }
+WASM_EXPORT __attribute__((export_name("we"))) bool tumble_kcc_is_slope_too_steep(const kcc::KCC * character, const Float3 * normal) { return adapters::kcc::is_slope_too_steep(character, *normal); }
+WASM_EXPORT __attribute__((export_name("xe"))) void tumble_kcc_get_center_of_mass_transform(Float3 * outPosition, Float4 * outQuaternion, const kcc::KCC * character) { adapters::kcc::get_center_of_mass_transform(*outPosition, *outQuaternion, character); }
+WASM_EXPORT __attribute__((export_name("ye"))) bool tumble_kcc_has_collided_with(const kcc::KCC * character, uint32_t body) { return adapters::kcc::has_collided_with(character, body); }
+WASM_EXPORT __attribute__((export_name("ze"))) bool tumble_kcc_can_walk_stairs(const kcc::KCC * character, const Float3 * velocity) { return adapters::kcc::can_walk_stairs(character, *velocity); }
+WASM_EXPORT __attribute__((export_name("Ae"))) void tumble_kcc_cancel_velocity_towards_steep_slopes(Float3 * out, const kcc::KCC * character, const Float3 * velocity) { adapters::kcc::cancel_velocity_towards_steep_slopes(*out, character, *velocity); }
+WASM_EXPORT __attribute__((export_name("Be"))) void tumble_kcc_update_ground_velocity(world::World * world, kcc::KCC * character, const kcc_policy::Policy * policy) { adapters::kcc::update_ground_velocity(world, character, policy); }
+WASM_EXPORT __attribute__((export_name("Ce"))) void tumble_kcc_refresh_contacts(world::World * world, kcc::KCC * character, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy) { adapters::kcc::refresh_contacts(world, character, filter, collisionGroups, collisionMask, policy); }
+WASM_EXPORT __attribute__((export_name("De"))) bool tumble_kcc_set_shape(world::World * world, kcc::KCC * character, shapes::Shape * shape, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy, float maxPenetrationDepth) { return adapters::kcc::set_shape(world, character, shape, filter, collisionGroups, collisionMask, policy, maxPenetrationDepth); }
+WASM_EXPORT __attribute__((export_name("Ee"))) void tumble_kcc_move(world::World * world, kcc::KCC * character, float deltaTime, const Float3 * gravity, const kcc_policy::Policy * policy, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { adapters::kcc::move(world, character, deltaTime, *gravity, policy, filter, collisionGroups, collisionMask); }
+WASM_EXPORT __attribute__((export_name("Fe"))) bool tumble_kcc_stick_to_floor(world::World * world, kcc::KCC * character, const Float3 * stepDown, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy) { return adapters::kcc::stick_to_floor(world, character, *stepDown, filter, collisionGroups, collisionMask, policy); }
+WASM_EXPORT __attribute__((export_name("Ge"))) bool tumble_kcc_walk_stairs(world::World * world, kcc::KCC * character, float deltaTime, const Float3 * stepUp, const Float3 * stepForward, const Float3 * stepForwardTest, const Float3 * stepDownExtra, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy) { return adapters::kcc::walk_stairs(world, character, deltaTime, *stepUp, *stepForward, *stepForwardTest, *stepDownExtra, filter, collisionGroups, collisionMask, policy); }
+WASM_EXPORT __attribute__((export_name("He"))) void tumble_kcc_update(world::World * world, kcc::KCC * character, float deltaTime, const Float3 * gravity, const kcc::UpdateSettings * settings, const kcc_policy::Policy * policy, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { adapters::kcc::update(world, character, deltaTime, *gravity, *settings, policy, filter, collisionGroups, collisionMask); }
+WASM_EXPORT __attribute__((export_name("Ie"))) void tumble_kcc_collide(world::World * world, kcc::KCC * character, const Float3 * position, const Float3 * movementDirection, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy) { adapters::kcc::collide(world, character, *position, *movementDirection, filter, collisionGroups, collisionMask, policy); }
+WASM_EXPORT __attribute__((export_name("Je"))) void tumble_kcc_solve(adapters::KCCSolve * out, world::World * world, kcc::KCC * character, const Float3 * velocity, float deltaTime, float timeRemaining, const kcc_policy::Policy * policy) { adapters::kcc::solve(*out, world, character, *velocity, deltaTime, timeRemaining, policy); }
+WASM_EXPORT __attribute__((export_name("Ke"))) bool tumble_kcc_cast(adapters::KCCContact * out, world::World * world, kcc::KCC * character, const Float3 * position, const Float3 * displacement, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy) { return adapters::kcc::cast(*out, world, character, *position, *displacement, filter, collisionGroups, collisionMask, policy); }
+WASM_EXPORT __attribute__((export_name("Le"))) void tumble_kcc_update_ground(world::World * world, kcc::KCC * character, float deltaTime, bool skipContactVelocityCheck, const kcc_policy::Policy * policy) { adapters::kcc::update_ground(world, character, deltaTime, skipContactVelocityCheck, policy); }
+WASM_EXPORT __attribute__((export_name("Me"))) void tumble_kcc_apply_weight(world::World * world, kcc::KCC * character, const Float3 * gravity, float deltaTime) { adapters::kcc::apply_weight(world, character, *gravity, deltaTime); }
+WASM_EXPORT __attribute__((export_name("Ne"))) void tumble_kcc_begin_contact_tracking(kcc::KCC * character) { adapters::kcc::begin_contact_tracking(character); }
+WASM_EXPORT __attribute__((export_name("Oe"))) void tumble_kcc_end_contact_tracking(kcc::KCC * character) { adapters::kcc::end_contact_tracking(character); }
+WASM_EXPORT __attribute__((export_name("Pe"))) debug::DebugBuffers * tumble_debug_create() { return adapters::debug::create(); }
+WASM_EXPORT __attribute__((export_name("Qe"))) void tumble_debug_destroy(debug::DebugBuffers * buffers) { adapters::debug::destroy(buffers); }
+WASM_EXPORT __attribute__((export_name("Re"))) void tumble_debug_clear(debug::DebugBuffers * buffers) { adapters::debug::clear(buffers); }
+WASM_EXPORT __attribute__((export_name("Se"))) const float * tumble_debug_lines(const debug::DebugBuffers * buffers) { return adapters::debug::lines(buffers); }
+WASM_EXPORT __attribute__((export_name("Te"))) uint32_t tumble_debug_line_count(const debug::DebugBuffers * buffers) { return adapters::debug::line_count(buffers); }
+WASM_EXPORT __attribute__((export_name("Ue"))) const float * tumble_debug_triangles(const debug::DebugBuffers * buffers) { return adapters::debug::triangles(buffers); }
+WASM_EXPORT __attribute__((export_name("Ve"))) uint32_t tumble_debug_triangle_count(const debug::DebugBuffers * buffers) { return adapters::debug::triangle_count(buffers); }
+WASM_EXPORT __attribute__((export_name("We"))) void tumble_debug_default_bodies_options(debug::BodiesOptions * out) { adapters::debug::default_bodies_options(*out); }
+WASM_EXPORT __attribute__((export_name("Xe"))) void tumble_debug_default_body_options(debug::BodyOptions * out) { adapters::debug::default_body_options(*out); }
+WASM_EXPORT __attribute__((export_name("Ye"))) void tumble_debug_default_shape_options(debug::ShapeOptions * out) { adapters::debug::default_shape_options(*out); }
+WASM_EXPORT __attribute__((export_name("Ze"))) void tumble_debug_default_joints_options(debug::JointsOptions * out) { adapters::debug::default_joints_options(*out); }
+WASM_EXPORT __attribute__((export_name("af"))) void tumble_debug_bodies(debug::DebugBuffers * out, const world::World * world, const debug::BodiesOptions * options) { adapters::debug::bodies(out, world, *options); }
+WASM_EXPORT __attribute__((export_name("bf"))) bool tumble_debug_body(debug::DebugBuffers * out, world::World * world, uint32_t body, const debug::BodyOptions * options) { return adapters::debug::body(out, world, body, *options); }
+WASM_EXPORT __attribute__((export_name("cf"))) void tumble_debug_line(debug::DebugBuffers * out, const Float3 * a, const Float3 * b, const Float3 * color) { adapters::debug::line(out, *a, *b, *color); }
+WASM_EXPORT __attribute__((export_name("df"))) void tumble_debug_shape(debug::DebugBuffers * out, const shapes::Shape * shape, const Float3 * position, const Float4 * quaternion, const debug::ShapeOptions * options) { adapters::debug::shape(out, shape, *position, *quaternion, *options); }
+WASM_EXPORT __attribute__((export_name("ef"))) void tumble_debug_contacts(debug::DebugBuffers * out, const world::World * world) { adapters::debug::contacts(out, world); }
+WASM_EXPORT __attribute__((export_name("ff"))) void tumble_debug_character_contacts(debug::DebugBuffers * out, const kcc::KCC * character) { adapters::debug::character_contacts(out, character); }
+WASM_EXPORT __attribute__((export_name("gf"))) void tumble_debug_contact_constraints(debug::DebugBuffers * out, const world::World * world) { adapters::debug::contact_constraints(out, world); }
+WASM_EXPORT __attribute__((export_name("hf"))) void tumble_debug_joints(debug::DebugBuffers * out, const world::World * world, const debug::JointsOptions * options) { adapters::debug::joints(out, world, *options); }
+WASM_EXPORT __attribute__((export_name("if"))) void tumble_contact_pairs_begin(world::World * world) { adapters::contact_pairs::begin(world); }
+WASM_EXPORT __attribute__((export_name("jf"))) void tumble_contact_pairs_record_world_contacts(world::World * world, uint32_t firstAdded, uint32_t firstPersisted) { adapters::contact_pairs::record_world_contacts(world, firstAdded, firstPersisted); }
+WASM_EXPORT __attribute__((export_name("kf"))) void tumble_contact_pairs_record_character_contacts(world::World * world, const kcc::KCC * character) { adapters::contact_pairs::record_character_contacts(world, character); }
+WASM_EXPORT __attribute__((export_name("lf"))) void tumble_contact_pairs_end(world::World * world) { adapters::contact_pairs::end(world); }
+WASM_EXPORT __attribute__((export_name("mf"))) uint32_t tumble_contact_pairs_active_count(const world::World * world) { return adapters::contact_pairs::active_count(world); }
+WASM_EXPORT __attribute__((export_name("nf"))) bool tumble_contact_pairs_read_active(adapters::ContactPair * out, const world::World * world, uint32_t index) { return adapters::contact_pairs::read_active(*out, world, index); }
+WASM_EXPORT __attribute__((export_name("of"))) uint32_t tumble_contact_pairs_removed_count(const world::World * world) { return adapters::contact_pairs::removed_count(world); }
+WASM_EXPORT __attribute__((export_name("pf"))) bool tumble_contact_pairs_read_removed(adapters::ContactPair * out, const world::World * world, uint32_t index) { return adapters::contact_pairs::read_removed(*out, world, index); }
 
 #endif

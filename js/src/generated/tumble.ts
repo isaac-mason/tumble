@@ -5922,90 +5922,90 @@ export const WorldSettings = {
     },
 
     create(): WorldSettings {
-        const r = wasm.exports.tumble_world_settings_create();
+        const r = wasm.exports.j();
         wasm.grew();
         if (r === 0) wasm.check();
         return r as WorldSettings;
     },
 
     destroy(worldSettings: WorldSettings): void {
-        wasm.exports.tumble_world_settings_destroy(worldSettings);
+        wasm.exports.k(worldSettings);
     },
 
     addBroadphaseLayer(settings: WorldSettings): number {
-        const r = wasm.exports.tumble_world_settings_add_broadphase_layer(settings);
+        const r = wasm.exports.l(settings);
         wasm.grew();
         return r >>> 0;
     },
 
     addObjectLayer(settings: WorldSettings, broadphaseLayer: number): number {
-        const r = wasm.exports.tumble_world_settings_add_object_layer(settings, broadphaseLayer);
+        const r = wasm.exports.m(settings, broadphaseLayer);
         wasm.grew();
         return r >>> 0;
     },
 
     enableCollision(settings: WorldSettings, objectLayerA: number, objectLayerB: number): void {
-        wasm.exports.tumble_world_settings_enable_collision(settings, objectLayerA, objectLayerB);
+        wasm.exports.n(settings, objectLayerA, objectLayerB);
     },
 };
 
 export type World = Handle<'World'>;
 export const World = {
     create(settings: WorldSettings): World {
-        const r = wasm.exports.tumble_world_create(settings);
+        const r = wasm.exports.o(settings);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as World;
     },
 
     destroy(world: World): void {
-        wasm.exports.tumble_world_destroy(world);
+        wasm.exports.p(world);
     },
 
     step(world: World, deltaTime: number): void {
-        wasm.exports.tumble_world_step(world, deltaTime);
+        wasm.exports.q(world, deltaTime);
         wasm.grew();
     },
 
     stepBegin(world: World, deltaTime: number): void {
-        wasm.exports.tumble_world_step_begin(world, deltaTime);
+        wasm.exports.r(world, deltaTime);
         wasm.grew();
     },
 
     findPairs(world: World): void {
-        wasm.exports.tumble_world_find_pairs(world);
+        wasm.exports.s(world);
         wasm.grew();
     },
 
     narrowphase(world: World): void {
-        wasm.exports.tumble_world_narrowphase(world);
+        wasm.exports.t(world);
         wasm.grew();
     },
 
     solve(world: World): void {
-        wasm.exports.tumble_world_solve(world);
+        wasm.exports.u(world);
         wasm.grew();
     },
 
     stepEnd(world: World): void {
-        wasm.exports.tumble_world_step_end(world);
+        wasm.exports.v(world);
         wasm.grew();
     },
 
     woken(world: World): number {
-        const r = wasm.exports.tumble_world_woken(world);
+        const r = wasm.exports.w(world);
         return r >>> 0;
     },
 
     setMaterials(world: World, frictionRestitution: Pointer<'f32'>, count: number): boolean {
-        const r = wasm.exports.tumble_world_set_materials(world, frictionRestitution, count);
+        const r = wasm.exports.x(world, frictionRestitution, count);
         wasm.grew();
         return r !== 0;
     },
 
     getGravity(out: Vec3, world: World): Vec3 {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_world_get_gravity(scratch + 0, world);
+        wasm.exports.y(scratch + 0, world);
         Vec3.read(out, scratch + 0);
         return out;
     },
@@ -6013,39 +6013,39 @@ export const World = {
     setGravity(world: World, gravity: Vec3): void {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, gravity);
-        wasm.exports.tumble_world_set_gravity(world, scratch + 0);
+        wasm.exports.z(world, scratch + 0);
     },
 };
 
 export type Shape = Handle<'Shape'>;
 export const Shape = {
     getType(shape: Shape): number {
-        const r = wasm.exports.tumble_shape_get_type(shape);
+        const r = wasm.exports.Ma(shape);
         return r >>> 0;
     },
 
     getLocalBounds(out: Box3, shape: Shape): Box3 {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_shape_get_local_bounds(scratch + 0, shape);
+        wasm.exports.Na(scratch + 0, shape);
         Box3.read(out, scratch + 0);
         return out;
     },
 
     getCenterOfMass(out: Vec3, shape: Shape): Vec3 {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_shape_get_center_of_mass(scratch + 0, shape);
+        wasm.exports.Oa(scratch + 0, shape);
         Vec3.read(out, scratch + 0);
         return out;
     },
 
     getVolume(shape: Shape): number {
-        const r = wasm.exports.tumble_shape_get_volume(shape);
+        const r = wasm.exports.Pa(shape);
         return r;
     },
 
     getMassProperties(out: MassProperties, shape: Shape): MassProperties {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_shape_get_mass_properties(scratch + 0, shape);
+        wasm.exports.Qa(scratch + 0, shape);
         MassProperties.read(out, scratch + 0);
         return out;
     },
@@ -6054,55 +6054,55 @@ export const Shape = {
 export type Poses = Handle<'Poses'>;
 export const Poses = {
     create(world: World): Poses {
-        const r = wasm.exports.tumble_poses_create(world);
+        const r = wasm.exports.K(world);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as Poses;
     },
 
     destroy(poses: Poses): void {
-        wasm.exports.tumble_poses_destroy(poses);
+        wasm.exports.L(poses);
     },
 
     add(poses: Poses, body: number): number {
-        const r = wasm.exports.tumble_poses_add(poses, body);
+        const r = wasm.exports.M(poses, body);
         wasm.grew();
         return r >>> 0;
     },
 
     remove(poses: Poses, slot: number): boolean {
-        const r = wasm.exports.tumble_poses_remove(poses, slot);
+        const r = wasm.exports.N(poses, slot);
         wasm.grew();
         return r !== 0;
     },
 
     read(poses: Poses): number {
-        const r = wasm.exports.tumble_poses_read(poses);
+        const r = wasm.exports.O(poses);
         return r >>> 0;
     },
 
     slots(poses: Poses): number {
-        const r = wasm.exports.tumble_poses_slots(poses);
+        const r = wasm.exports.P(poses);
         return r >>> 0;
     },
 
     body(poses: Poses, slot: number): number {
-        const r = wasm.exports.tumble_poses_body(poses, slot);
+        const r = wasm.exports.Q(poses, slot);
         return r >>> 0;
     },
 
     positions(poses: Poses): Pointer<'f32'> {
-        const r = wasm.exports.tumble_poses_positions(poses);
+        const r = wasm.exports.R(poses);
         return r as Pointer<'f32'>;
     },
 
     quaternions(poses: Poses): Pointer<'f32'> {
-        const r = wasm.exports.tumble_poses_quaternions(poses);
+        const r = wasm.exports.S(poses);
         return r as Pointer<'f32'>;
     },
 
     changed(poses: Poses): Pointer<'u32'> {
-        const r = wasm.exports.tumble_poses_changed(poses);
+        const r = wasm.exports.T(poses);
         return r as Pointer<'u32'>;
     },
 };
@@ -6111,7 +6111,7 @@ export type ConvexHullData = Handle<'ConvexHullData'>;
 export const ConvexHullData = {
     defaultSettings(out: ConvexHullBuildSettings): ConvexHullBuildSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_convex_hull_data_default_settings(scratch + 0);
+        wasm.exports.ib(scratch + 0);
         ConvexHullBuildSettings.read(out, scratch + 0);
         return out;
     },
@@ -6119,14 +6119,14 @@ export const ConvexHullData = {
     build(out: ConvexHullBuild, settings: ConvexHullBuildSettings): boolean {
         const scratch = wasm.scratch;
         ConvexHullBuildSettings.write(scratch + 16, settings);
-        const r = wasm.exports.tumble_convex_hull_data_build(scratch + 0, scratch + 16);
+        const r = wasm.exports.jb(scratch + 0, scratch + 16);
         wasm.grew();
         ConvexHullBuild.read(out, scratch + 0);
         return r !== 0;
     },
 
     release(data: ConvexHullData): void {
-        wasm.exports.tumble_convex_hull_data_release(data);
+        wasm.exports.kb(data);
     },
 };
 
@@ -6134,7 +6134,7 @@ export type TriangleMeshData = Handle<'TriangleMeshData'>;
 export const TriangleMeshData = {
     defaultSettings(out: TriangleMeshBuildSettings): TriangleMeshBuildSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_triangle_mesh_data_default_settings(scratch + 0);
+        wasm.exports.ob(scratch + 0);
         TriangleMeshBuildSettings.read(out, scratch + 0);
         return out;
     },
@@ -6142,85 +6142,85 @@ export const TriangleMeshData = {
     build(settings: TriangleMeshBuildSettings): TriangleMeshData {
         const scratch = wasm.scratch;
         TriangleMeshBuildSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_triangle_mesh_data_build(scratch + 0);
+        const r = wasm.exports.pb(scratch + 0);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as TriangleMeshData;
     },
 
     release(data: TriangleMeshData): void {
-        wasm.exports.tumble_triangle_mesh_data_release(data);
+        wasm.exports.qb(data);
     },
 };
 
 export type Filter = Handle<'Filter'>;
 export const Filter = {
     create(world: World): Filter {
-        const r = wasm.exports.tumble_filter_create(world);
+        const r = wasm.exports.Ad(world);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as Filter;
     },
 
     destroy(filter: Filter): void {
-        wasm.exports.tumble_filter_destroy(filter);
+        wasm.exports.Bd(filter);
     },
 
     enableAllLayers(filter: Filter, world: World): void {
-        wasm.exports.tumble_filter_enable_all_layers(filter, world);
+        wasm.exports.Cd(filter, world);
     },
 
     disableAllLayers(filter: Filter, world: World): void {
-        wasm.exports.tumble_filter_disable_all_layers(filter, world);
+        wasm.exports.Dd(filter, world);
     },
 
     enableObjectLayer(filter: Filter, world: World, objectLayer: number): boolean {
-        const r = wasm.exports.tumble_filter_enable_object_layer(filter, world, objectLayer);
+        const r = wasm.exports.Ed(filter, world, objectLayer);
         return r !== 0;
     },
 
     disableObjectLayer(filter: Filter, world: World, objectLayer: number): boolean {
-        const r = wasm.exports.tumble_filter_disable_object_layer(filter, world, objectLayer);
+        const r = wasm.exports.Fd(filter, world, objectLayer);
         return r !== 0;
     },
 
     enableBroadphaseLayer(filter: Filter, world: World, broadphaseLayer: number): boolean {
-        const r = wasm.exports.tumble_filter_enable_broadphase_layer(filter, world, broadphaseLayer);
+        const r = wasm.exports.Gd(filter, world, broadphaseLayer);
         return r !== 0;
     },
 
     disableBroadphaseLayer(filter: Filter, world: World, broadphaseLayer: number): boolean {
-        const r = wasm.exports.tumble_filter_disable_broadphase_layer(filter, world, broadphaseLayer);
+        const r = wasm.exports.Hd(filter, world, broadphaseLayer);
         return r !== 0;
     },
 
     isObjectLayerEnabled(filter: Filter, objectLayer: number): boolean {
-        const r = wasm.exports.tumble_filter_is_object_layer_enabled(filter, objectLayer);
+        const r = wasm.exports.Id(filter, objectLayer);
         return r !== 0;
     },
 
     isBroadphaseLayerEnabled(filter: Filter, broadphaseLayer: number): boolean {
-        const r = wasm.exports.tumble_filter_is_broadphase_layer_enabled(filter, broadphaseLayer);
+        const r = wasm.exports.Jd(filter, broadphaseLayer);
         return r !== 0;
     },
 
     setFromBody(filter: Filter, world: World, body: number): boolean {
-        const r = wasm.exports.tumble_filter_set_from_body(filter, world, body);
+        const r = wasm.exports.Kd(filter, world, body);
         return r !== 0;
     },
 
     getCollisionGroups(filter: Filter): number {
-        const r = wasm.exports.tumble_filter_get_collision_groups(filter);
+        const r = wasm.exports.Ld(filter);
         return r >>> 0;
     },
 
     getCollisionMask(filter: Filter): number {
-        const r = wasm.exports.tumble_filter_get_collision_mask(filter);
+        const r = wasm.exports.Md(filter);
         return r >>> 0;
     },
 
     copy(out: Filter, source: Filter): boolean {
-        const r = wasm.exports.tumble_filter_copy(out, source);
+        const r = wasm.exports.Nd(out, source);
         wasm.grew();
         return r !== 0;
     },
@@ -6285,79 +6285,79 @@ export function allocatedBytes(): number {
 
 export const Events = {
     pairs(world: World): number {
-        const r = wasm.exports.tumble_events_pairs(world);
+        const r = wasm.exports.A(world);
         return r >>> 0;
     },
 
     readPair(out: PairEvent, world: World, index: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_events_read_pair(scratch + 0, world, index);
+        const r = wasm.exports.B(scratch + 0, world, index);
         PairEvent.read(out, scratch + 0);
         return r !== 0;
     },
 
     contactsAdded(world: World): number {
-        const r = wasm.exports.tumble_events_contacts_added(world);
+        const r = wasm.exports.C(world);
         return r >>> 0;
     },
 
     readContactAdded(out: ContactEvent, world: World, index: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_events_read_contact_added(scratch + 0, world, index);
+        const r = wasm.exports.D(scratch + 0, world, index);
         ContactEvent.read(out, scratch + 0);
         return r !== 0;
     },
 
     contactsPersisted(world: World): number {
-        const r = wasm.exports.tumble_events_contacts_persisted(world);
+        const r = wasm.exports.E(world);
         return r >>> 0;
     },
 
     readContactPersisted(out: ContactEvent, world: World, index: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_events_read_contact_persisted(scratch + 0, world, index);
+        const r = wasm.exports.F(scratch + 0, world, index);
         ContactEvent.read(out, scratch + 0);
         return r !== 0;
     },
 
     contactsRemoved(world: World): number {
-        const r = wasm.exports.tumble_events_contacts_removed(world);
+        const r = wasm.exports.G(world);
         return r >>> 0;
     },
 
     readContactRemoved(out: ContactRemovedEvent, world: World, index: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_events_read_contact_removed(scratch + 0, world, index);
+        const r = wasm.exports.H(scratch + 0, world, index);
         ContactRemovedEvent.read(out, scratch + 0);
         return r !== 0;
     },
 
     moved(world: World): number {
-        const r = wasm.exports.tumble_events_moved(world);
+        const r = wasm.exports.I(world);
         return r >>> 0;
     },
 
     movedBody(world: World, index: number): number {
-        const r = wasm.exports.tumble_events_moved_body(world, index);
+        const r = wasm.exports.J(world, index);
         return r >>> 0;
     },
 };
 
 export const Answers = {
     rejectPair(world: World, index: number): boolean {
-        const r = wasm.exports.tumble_answers_reject_pair(world, index);
+        const r = wasm.exports.U(world, index);
         return r !== 0;
     },
 
     overrideContact(world: World, index: number, settings: ContactSettings): boolean {
         const scratch = wasm.scratch;
         ContactSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_answers_override_contact(world, index, scratch + 0);
+        const r = wasm.exports.V(world, index, scratch + 0);
         return r !== 0;
     },
 
     rejectContact(world: World, index: number): boolean {
-        const r = wasm.exports.tumble_answers_reject_contact(world, index);
+        const r = wasm.exports.W(world, index);
         return r !== 0;
     },
 };
@@ -6365,7 +6365,7 @@ export const Answers = {
 export const RigidBody = {
     defaultSettings(out: BodySettings): BodySettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_rigid_body_default_settings(scratch + 0);
+        wasm.exports.X(scratch + 0);
         BodySettings.read(out, scratch + 0);
         return out;
     },
@@ -6373,38 +6373,38 @@ export const RigidBody = {
     create(world: World, settings: BodySettings): number {
         const scratch = wasm.scratch;
         BodySettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_rigid_body_create(world, scratch + 0);
+        const r = wasm.exports.Y(world, scratch + 0);
         wasm.grew();
         return r >>> 0;
     },
 
     remove(world: World, body: number): boolean {
-        const r = wasm.exports.tumble_rigid_body_remove(world, body);
+        const r = wasm.exports.Z(world, body);
         return r !== 0;
     },
 
     exists(world: World, body: number): boolean {
-        const r = wasm.exports.tumble_rigid_body_exists(world, body);
+        const r = wasm.exports.aa(world, body);
         return r !== 0;
     },
 
     getPosition(out: Vec3, world: World, body: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_rigid_body_get_position(scratch + 0, world, body);
+        const r = wasm.exports.ba(scratch + 0, world, body);
         Vec3.read(out, scratch + 0);
         return r !== 0;
     },
 
     getQuaternion(out: Quat, world: World, body: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_rigid_body_get_quaternion(scratch + 0, world, body);
+        const r = wasm.exports.ca(scratch + 0, world, body);
         Quat.read(out, scratch + 0);
         return r !== 0;
     },
 
     getTransform(outPosition: Vec3, outQuaternion: Quat, world: World, body: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_rigid_body_get_transform(scratch + 0, scratch + 16, world, body);
+        const r = wasm.exports.da(scratch + 0, scratch + 16, world, body);
         Vec3.read(outPosition, scratch + 0);
         Quat.read(outQuaternion, scratch + 16);
         return r !== 0;
@@ -6412,21 +6412,21 @@ export const RigidBody = {
 
     getCenterOfMassPosition(out: Vec3, world: World, body: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_rigid_body_get_center_of_mass_position(scratch + 0, world, body);
+        const r = wasm.exports.ea(scratch + 0, world, body);
         Vec3.read(out, scratch + 0);
         return r !== 0;
     },
 
     getLinearVelocity(out: Vec3, world: World, body: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_rigid_body_get_linear_velocity(scratch + 0, world, body);
+        const r = wasm.exports.fa(scratch + 0, world, body);
         Vec3.read(out, scratch + 0);
         return r !== 0;
     },
 
     getAngularVelocity(out: Vec3, world: World, body: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_rigid_body_get_angular_velocity(scratch + 0, world, body);
+        const r = wasm.exports.ga(scratch + 0, world, body);
         Vec3.read(out, scratch + 0);
         return r !== 0;
     },
@@ -6434,57 +6434,57 @@ export const RigidBody = {
     getVelocityAtPoint(out: Vec3, world: World, body: number, point: Vec3): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 16, point);
-        const r = wasm.exports.tumble_rigid_body_get_velocity_at_point(scratch + 0, world, body, scratch + 16);
+        const r = wasm.exports.ha(scratch + 0, world, body, scratch + 16);
         Vec3.read(out, scratch + 0);
         return r !== 0;
     },
 
     getAabb(out: Box3, world: World, body: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_rigid_body_get_aabb(scratch + 0, world, body);
+        const r = wasm.exports.ia(scratch + 0, world, body);
         Box3.read(out, scratch + 0);
         return r !== 0;
     },
 
     getMass(world: World, body: number): number {
-        const r = wasm.exports.tumble_rigid_body_get_mass(world, body);
+        const r = wasm.exports.ja(world, body);
         return r;
     },
 
     getMotionType(world: World, body: number): number {
-        const r = wasm.exports.tumble_rigid_body_get_motion_type(world, body);
+        const r = wasm.exports.ka(world, body);
         return r >>> 0;
     },
 
     getObjectLayer(world: World, body: number): number {
-        const r = wasm.exports.tumble_rigid_body_get_object_layer(world, body);
+        const r = wasm.exports.la(world, body);
         return r >>> 0;
     },
 
     getUserDataLow(world: World, body: number): number {
-        const r = wasm.exports.tumble_rigid_body_get_user_data_low(world, body);
+        const r = wasm.exports.ma(world, body);
         return r >>> 0;
     },
 
     getUserDataHigh(world: World, body: number): number {
-        const r = wasm.exports.tumble_rigid_body_get_user_data_high(world, body);
+        const r = wasm.exports.na(world, body);
         return r >>> 0;
     },
 
     getShape(world: World, body: number): Shape | null {
-        const r = wasm.exports.tumble_rigid_body_get_shape(world, body);
+        const r = wasm.exports.oa(world, body);
         return r === 0 ? null : (r as Shape);
     },
 
     isSleeping(world: World, body: number): boolean {
-        const r = wasm.exports.tumble_rigid_body_is_sleeping(world, body);
+        const r = wasm.exports.pa(world, body);
         return r !== 0;
     },
 
     setPosition(world: World, body: number, position: Vec3, wake: boolean): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, position);
-        const r = wasm.exports.tumble_rigid_body_set_position(world, body, scratch + 0, wake ? 1 : 0);
+        const r = wasm.exports.qa(world, body, scratch + 0, wake ? 1 : 0);
         wasm.grew();
         return r !== 0;
     },
@@ -6492,7 +6492,7 @@ export const RigidBody = {
     setQuaternion(world: World, body: number, quaternion: Quat, wake: boolean): boolean {
         const scratch = wasm.scratch;
         Quat.write(scratch + 0, quaternion);
-        const r = wasm.exports.tumble_rigid_body_set_quaternion(world, body, scratch + 0, wake ? 1 : 0);
+        const r = wasm.exports.ra(world, body, scratch + 0, wake ? 1 : 0);
         wasm.grew();
         return r !== 0;
     },
@@ -6501,7 +6501,7 @@ export const RigidBody = {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, position);
         Quat.write(scratch + 16, quaternion);
-        const r = wasm.exports.tumble_rigid_body_set_transform(world, body, scratch + 0, scratch + 16, wake ? 1 : 0);
+        const r = wasm.exports.sa(world, body, scratch + 0, scratch + 16, wake ? 1 : 0);
         wasm.grew();
         return r !== 0;
     },
@@ -6509,7 +6509,7 @@ export const RigidBody = {
     setLinearVelocity(world: World, body: number, velocity: Vec3): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, velocity);
-        const r = wasm.exports.tumble_rigid_body_set_linear_velocity(world, body, scratch + 0);
+        const r = wasm.exports.ta(world, body, scratch + 0);
         wasm.grew();
         return r !== 0;
     },
@@ -6517,7 +6517,7 @@ export const RigidBody = {
     setAngularVelocity(world: World, body: number, velocity: Vec3): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, velocity);
-        const r = wasm.exports.tumble_rigid_body_set_angular_velocity(world, body, scratch + 0);
+        const r = wasm.exports.ua(world, body, scratch + 0);
         wasm.grew();
         return r !== 0;
     },
@@ -6525,7 +6525,7 @@ export const RigidBody = {
     addLinearVelocity(world: World, body: number, velocity: Vec3): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, velocity);
-        const r = wasm.exports.tumble_rigid_body_add_linear_velocity(world, body, scratch + 0);
+        const r = wasm.exports.va(world, body, scratch + 0);
         wasm.grew();
         return r !== 0;
     },
@@ -6533,7 +6533,7 @@ export const RigidBody = {
     addAngularVelocity(world: World, body: number, velocity: Vec3): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, velocity);
-        const r = wasm.exports.tumble_rigid_body_add_angular_velocity(world, body, scratch + 0);
+        const r = wasm.exports.wa(world, body, scratch + 0);
         wasm.grew();
         return r !== 0;
     },
@@ -6541,7 +6541,7 @@ export const RigidBody = {
     addForce(world: World, body: number, force: Vec3, wake: boolean): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, force);
-        const r = wasm.exports.tumble_rigid_body_add_force(world, body, scratch + 0, wake ? 1 : 0);
+        const r = wasm.exports.xa(world, body, scratch + 0, wake ? 1 : 0);
         wasm.grew();
         return r !== 0;
     },
@@ -6549,7 +6549,7 @@ export const RigidBody = {
     addTorque(world: World, body: number, torque: Vec3, wake: boolean): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, torque);
-        const r = wasm.exports.tumble_rigid_body_add_torque(world, body, scratch + 0, wake ? 1 : 0);
+        const r = wasm.exports.ya(world, body, scratch + 0, wake ? 1 : 0);
         wasm.grew();
         return r !== 0;
     },
@@ -6558,7 +6558,7 @@ export const RigidBody = {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, force);
         Vec3.write(scratch + 16, position);
-        const r = wasm.exports.tumble_rigid_body_add_force_at_position(world, body, scratch + 0, scratch + 16, wake ? 1 : 0);
+        const r = wasm.exports.za(world, body, scratch + 0, scratch + 16, wake ? 1 : 0);
         wasm.grew();
         return r !== 0;
     },
@@ -6566,7 +6566,7 @@ export const RigidBody = {
     addImpulse(world: World, body: number, impulse: Vec3): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, impulse);
-        const r = wasm.exports.tumble_rigid_body_add_impulse(world, body, scratch + 0);
+        const r = wasm.exports.Aa(world, body, scratch + 0);
         wasm.grew();
         return r !== 0;
     },
@@ -6575,7 +6575,7 @@ export const RigidBody = {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, impulse);
         Vec3.write(scratch + 16, position);
-        const r = wasm.exports.tumble_rigid_body_add_impulse_at_position(world, body, scratch + 0, scratch + 16);
+        const r = wasm.exports.Ba(world, body, scratch + 0, scratch + 16);
         wasm.grew();
         return r !== 0;
     },
@@ -6583,25 +6583,25 @@ export const RigidBody = {
     addAngularImpulse(world: World, body: number, impulse: Vec3): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, impulse);
-        const r = wasm.exports.tumble_rigid_body_add_angular_impulse(world, body, scratch + 0);
+        const r = wasm.exports.Ca(world, body, scratch + 0);
         wasm.grew();
         return r !== 0;
     },
 
     setMotionType(world: World, body: number, motionType: number, wake: boolean): boolean {
-        const r = wasm.exports.tumble_rigid_body_set_motion_type(world, body, motionType, wake ? 1 : 0);
+        const r = wasm.exports.Da(world, body, motionType, wake ? 1 : 0);
         wasm.grew();
         return r !== 0;
     },
 
     setObjectLayer(world: World, body: number, objectLayer: number): boolean {
-        const r = wasm.exports.tumble_rigid_body_set_object_layer(world, body, objectLayer);
+        const r = wasm.exports.Ea(world, body, objectLayer);
         wasm.grew();
         return r !== 0;
     },
 
     setShape(world: World, body: number, shape: Shape): boolean {
-        const r = wasm.exports.tumble_rigid_body_set_shape(world, body, shape);
+        const r = wasm.exports.Fa(world, body, shape);
         wasm.grew();
         return r !== 0;
     },
@@ -6610,34 +6610,34 @@ export const RigidBody = {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, position);
         Quat.write(scratch + 16, quaternion);
-        const r = wasm.exports.tumble_rigid_body_move_kinematic(world, body, scratch + 0, scratch + 16, deltaTime);
+        const r = wasm.exports.Ga(world, body, scratch + 0, scratch + 16, deltaTime);
         wasm.grew();
         return r !== 0;
     },
 
     sleep(world: World, body: number): boolean {
-        const r = wasm.exports.tumble_rigid_body_sleep(world, body);
+        const r = wasm.exports.Ha(world, body);
         return r !== 0;
     },
 
     wake(world: World, body: number): boolean {
-        const r = wasm.exports.tumble_rigid_body_wake(world, body);
+        const r = wasm.exports.Ia(world, body);
         wasm.grew();
         return r !== 0;
     },
 
     setUserData(world: World, body: number, low: number, high: number): boolean {
-        const r = wasm.exports.tumble_rigid_body_set_user_data(world, body, low, high);
+        const r = wasm.exports.Ja(world, body, low, high);
         return r !== 0;
     },
 
     setFriction(world: World, body: number, friction: number): boolean {
-        const r = wasm.exports.tumble_rigid_body_set_friction(world, body, friction);
+        const r = wasm.exports.Ka(world, body, friction);
         return r !== 0;
     },
 
     setRestitution(world: World, body: number, restitution: number): boolean {
-        const r = wasm.exports.tumble_rigid_body_set_restitution(world, body, restitution);
+        const r = wasm.exports.La(world, body, restitution);
         return r !== 0;
     },
 };
@@ -6645,7 +6645,7 @@ export const RigidBody = {
 export const Box = {
     defaultSettings(out: BoxSettings): BoxSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_box_default_settings(scratch + 0);
+        wasm.exports.Ra(scratch + 0);
         BoxSettings.read(out, scratch + 0);
         return out;
     },
@@ -6653,21 +6653,21 @@ export const Box = {
     create(settings: BoxSettings): Shape {
         const scratch = wasm.scratch;
         BoxSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_box_create(scratch + 0);
+        const r = wasm.exports.Sa(scratch + 0);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as Shape;
     },
 
     destroy(shape: Shape): void {
-        wasm.exports.tumble_box_destroy(shape);
+        wasm.exports.Ta(shape);
     },
 };
 
 export const Sphere = {
     defaultSettings(out: SphereSettings): SphereSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_sphere_default_settings(scratch + 0);
+        wasm.exports.Ua(scratch + 0);
         SphereSettings.read(out, scratch + 0);
         return out;
     },
@@ -6675,21 +6675,21 @@ export const Sphere = {
     create(settings: SphereSettings): Shape {
         const scratch = wasm.scratch;
         SphereSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_sphere_create(scratch + 0);
+        const r = wasm.exports.Va(scratch + 0);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as Shape;
     },
 
     destroy(shape: Shape): void {
-        wasm.exports.tumble_sphere_destroy(shape);
+        wasm.exports.Wa(shape);
     },
 };
 
 export const Capsule = {
     defaultSettings(out: CapsuleSettings): CapsuleSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_capsule_default_settings(scratch + 0);
+        wasm.exports.Xa(scratch + 0);
         CapsuleSettings.read(out, scratch + 0);
         return out;
     },
@@ -6697,21 +6697,21 @@ export const Capsule = {
     create(settings: CapsuleSettings): Shape {
         const scratch = wasm.scratch;
         CapsuleSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_capsule_create(scratch + 0);
+        const r = wasm.exports.Ya(scratch + 0);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as Shape;
     },
 
     destroy(shape: Shape): void {
-        wasm.exports.tumble_capsule_destroy(shape);
+        wasm.exports.Za(shape);
     },
 };
 
 export const Cylinder = {
     defaultSettings(out: CylinderSettings): CylinderSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_cylinder_default_settings(scratch + 0);
+        wasm.exports.ab(scratch + 0);
         CylinderSettings.read(out, scratch + 0);
         return out;
     },
@@ -6719,21 +6719,21 @@ export const Cylinder = {
     create(settings: CylinderSettings): Shape {
         const scratch = wasm.scratch;
         CylinderSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_cylinder_create(scratch + 0);
+        const r = wasm.exports.bb(scratch + 0);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as Shape;
     },
 
     destroy(shape: Shape): void {
-        wasm.exports.tumble_cylinder_destroy(shape);
+        wasm.exports.cb(shape);
     },
 };
 
 export const Plane = {
     defaultSettings(out: PlaneSettings): PlaneSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_plane_default_settings(scratch + 0);
+        wasm.exports.db(scratch + 0);
         PlaneSettings.read(out, scratch + 0);
         return out;
     },
@@ -6741,34 +6741,34 @@ export const Plane = {
     create(settings: PlaneSettings): Shape {
         const scratch = wasm.scratch;
         PlaneSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_plane_create(scratch + 0);
+        const r = wasm.exports.eb(scratch + 0);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as Shape;
     },
 
     destroy(shape: Shape): void {
-        wasm.exports.tumble_plane_destroy(shape);
+        wasm.exports.fb(shape);
     },
 };
 
 export const Empty = {
     create(): Shape {
-        const r = wasm.exports.tumble_empty_create();
+        const r = wasm.exports.gb();
         wasm.grew();
         if (r === 0) wasm.check();
         return r as Shape;
     },
 
     destroy(shape: Shape): void {
-        wasm.exports.tumble_empty_destroy(shape);
+        wasm.exports.hb(shape);
     },
 };
 
 export const ConvexHull = {
     defaultSettings(out: ConvexHullSettings): ConvexHullSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_convex_hull_default_settings(scratch + 0);
+        wasm.exports.lb(scratch + 0);
         ConvexHullSettings.read(out, scratch + 0);
         return out;
     },
@@ -6776,21 +6776,21 @@ export const ConvexHull = {
     create(settings: ConvexHullSettings): Shape {
         const scratch = wasm.scratch;
         ConvexHullSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_convex_hull_create(scratch + 0);
+        const r = wasm.exports.mb(scratch + 0);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as Shape;
     },
 
     destroy(shape: Shape): void {
-        wasm.exports.tumble_convex_hull_destroy(shape);
+        wasm.exports.nb(shape);
     },
 };
 
 export const TriangleMesh = {
     defaultSettings(out: TriangleMeshSettings): TriangleMeshSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_triangle_mesh_default_settings(scratch + 0);
+        wasm.exports.rb(scratch + 0);
         TriangleMeshSettings.read(out, scratch + 0);
         return out;
     },
@@ -6798,52 +6798,52 @@ export const TriangleMesh = {
     create(settings: TriangleMeshSettings): Shape {
         const scratch = wasm.scratch;
         TriangleMeshSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_triangle_mesh_create(scratch + 0);
+        const r = wasm.exports.sb(scratch + 0);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as Shape;
     },
 
     destroy(shape: Shape): void {
-        wasm.exports.tumble_triangle_mesh_destroy(shape);
+        wasm.exports.tb(shape);
     },
 };
 
 export const Compound = {
     create(children: Pointer<'u8'>, count: number): Shape {
-        const r = wasm.exports.tumble_compound_create(children, count);
+        const r = wasm.exports.ub(children, count);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as Shape;
     },
 
     destroy(shape: Shape): void {
-        wasm.exports.tumble_compound_destroy(shape);
+        wasm.exports.vb(shape);
     },
 };
 
 export const StaticCompound = {
     defaultBvhMaxLeafChildren(): number {
-        const r = wasm.exports.tumble_static_compound_default_bvh_max_leaf_children();
+        const r = wasm.exports.wb();
         return r >>> 0;
     },
 
     create(children: Pointer<'u8'>, count: number, bvhMaxLeafChildren: number): Shape {
-        const r = wasm.exports.tumble_static_compound_create(children, count, bvhMaxLeafChildren);
+        const r = wasm.exports.xb(children, count, bvhMaxLeafChildren);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as Shape;
     },
 
     destroy(shape: Shape): void {
-        wasm.exports.tumble_static_compound_destroy(shape);
+        wasm.exports.yb(shape);
     },
 };
 
 export const Transformed = {
     defaultSettings(out: TransformedSettings): TransformedSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_transformed_default_settings(scratch + 0);
+        wasm.exports.zb(scratch + 0);
         TransformedSettings.read(out, scratch + 0);
         return out;
     },
@@ -6851,21 +6851,21 @@ export const Transformed = {
     create(settings: TransformedSettings): Shape {
         const scratch = wasm.scratch;
         TransformedSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_transformed_create(scratch + 0);
+        const r = wasm.exports.Ab(scratch + 0);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as Shape;
     },
 
     destroy(shape: Shape): void {
-        wasm.exports.tumble_transformed_destroy(shape);
+        wasm.exports.Bb(shape);
     },
 };
 
 export const Scaled = {
     defaultSettings(out: ScaledSettings): ScaledSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_scaled_default_settings(scratch + 0);
+        wasm.exports.Cb(scratch + 0);
         ScaledSettings.read(out, scratch + 0);
         return out;
     },
@@ -6873,21 +6873,21 @@ export const Scaled = {
     create(settings: ScaledSettings): Shape {
         const scratch = wasm.scratch;
         ScaledSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_scaled_create(scratch + 0);
+        const r = wasm.exports.Db(scratch + 0);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as Shape;
     },
 
     destroy(shape: Shape): void {
-        wasm.exports.tumble_scaled_destroy(shape);
+        wasm.exports.Eb(shape);
     },
 };
 
 export const OffsetCenterOfMass = {
     defaultSettings(out: OffsetCenterOfMassSettings): OffsetCenterOfMassSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_offset_center_of_mass_default_settings(scratch + 0);
+        wasm.exports.Fb(scratch + 0);
         OffsetCenterOfMassSettings.read(out, scratch + 0);
         return out;
     },
@@ -6895,35 +6895,35 @@ export const OffsetCenterOfMass = {
     create(settings: OffsetCenterOfMassSettings): Shape {
         const scratch = wasm.scratch;
         OffsetCenterOfMassSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_offset_center_of_mass_create(scratch + 0);
+        const r = wasm.exports.Gb(scratch + 0);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as Shape;
     },
 
     destroy(shape: Shape): void {
-        wasm.exports.tumble_offset_center_of_mass_destroy(shape);
+        wasm.exports.Hb(shape);
     },
 };
 
 export const Constraint = {
     getType(constraint: number): number {
-        const r = wasm.exports.tumble_constraint_get_type(constraint);
+        const r = wasm.exports.Ib(constraint);
         return r >>> 0;
     },
 
     exists(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_constraint_exists(world, constraint);
+        const r = wasm.exports.Jb(world, constraint);
         return r !== 0;
     },
 
     setEnabled(world: World, constraint: number, enabled: boolean): boolean {
-        const r = wasm.exports.tumble_constraint_set_enabled(world, constraint, enabled ? 1 : 0);
+        const r = wasm.exports.Kb(world, constraint, enabled ? 1 : 0);
         return r !== 0;
     },
 
     isEnabled(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_constraint_is_enabled(world, constraint);
+        const r = wasm.exports.Lb(world, constraint);
         return r !== 0;
     },
 };
@@ -6931,7 +6931,7 @@ export const Constraint = {
 export const PointConstraint = {
     defaultSettings(out: PointConstraintSettings): PointConstraintSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_point_constraint_default_settings(scratch + 0);
+        wasm.exports.Mb(scratch + 0);
         PointConstraintSettings.read(out, scratch + 0);
         return out;
     },
@@ -6939,19 +6939,19 @@ export const PointConstraint = {
     create(world: World, bodyA: number, bodyB: number, settings: PointConstraintSettings): number {
         const scratch = wasm.scratch;
         PointConstraintSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_point_constraint_create(world, bodyA, bodyB, scratch + 0);
+        const r = wasm.exports.Nb(world, bodyA, bodyB, scratch + 0);
         wasm.grew();
         return r >>> 0;
     },
 
     remove(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_point_constraint_remove(world, constraint);
+        const r = wasm.exports.Ob(world, constraint);
         return r !== 0;
     },
 
     getTotalLambda(out: Vec3, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_point_constraint_get_total_lambda(scratch + 0, world, constraint);
+        const r = wasm.exports.Pb(scratch + 0, world, constraint);
         Vec3.read(out, scratch + 0);
         return r !== 0;
     },
@@ -6960,7 +6960,7 @@ export const PointConstraint = {
 export const DistanceConstraint = {
     defaultSettings(out: DistanceConstraintSettings): DistanceConstraintSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_distance_constraint_default_settings(scratch + 0);
+        wasm.exports.Qb(scratch + 0);
         DistanceConstraintSettings.read(out, scratch + 0);
         return out;
     },
@@ -6968,30 +6968,30 @@ export const DistanceConstraint = {
     create(world: World, bodyA: number, bodyB: number, settings: DistanceConstraintSettings): number {
         const scratch = wasm.scratch;
         DistanceConstraintSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_distance_constraint_create(world, bodyA, bodyB, scratch + 0);
+        const r = wasm.exports.Rb(world, bodyA, bodyB, scratch + 0);
         wasm.grew();
         return r >>> 0;
     },
 
     remove(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_distance_constraint_remove(world, constraint);
+        const r = wasm.exports.Sb(world, constraint);
         return r !== 0;
     },
 
     getTotalLambda(world: World, constraint: number): number {
-        const r = wasm.exports.tumble_distance_constraint_get_total_lambda(world, constraint);
+        const r = wasm.exports.Tb(world, constraint);
         return r;
     },
 
     setDistance(world: World, constraint: number, minDistance: number, maxDistance: number): boolean {
-        const r = wasm.exports.tumble_distance_constraint_set_distance(world, constraint, minDistance, maxDistance);
+        const r = wasm.exports.Ub(world, constraint, minDistance, maxDistance);
         return r !== 0;
     },
 
     setLimitsSpringSettings(world: World, constraint: number, settings: SpringSettings): boolean {
         const scratch = wasm.scratch;
         SpringSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_distance_constraint_set_limits_spring_settings(world, constraint, scratch + 0);
+        const r = wasm.exports.Vb(world, constraint, scratch + 0);
         return r !== 0;
     },
 };
@@ -6999,7 +6999,7 @@ export const DistanceConstraint = {
 export const HingeConstraint = {
     defaultSettings(out: HingeConstraintSettings): HingeConstraintSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_hinge_constraint_default_settings(scratch + 0);
+        wasm.exports.Wb(scratch + 0);
         HingeConstraintSettings.read(out, scratch + 0);
         return out;
     },
@@ -7007,64 +7007,64 @@ export const HingeConstraint = {
     create(world: World, bodyA: number, bodyB: number, settings: HingeConstraintSettings): number {
         const scratch = wasm.scratch;
         HingeConstraintSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_hinge_constraint_create(world, bodyA, bodyB, scratch + 0);
+        const r = wasm.exports.Xb(world, bodyA, bodyB, scratch + 0);
         wasm.grew();
         return r >>> 0;
     },
 
     remove(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_hinge_constraint_remove(world, constraint);
+        const r = wasm.exports.Yb(world, constraint);
         return r !== 0;
     },
 
     setLimits(world: World, constraint: number, min: number, max: number): boolean {
-        const r = wasm.exports.tumble_hinge_constraint_set_limits(world, constraint, min, max);
+        const r = wasm.exports.Zb(world, constraint, min, max);
         return r !== 0;
     },
 
     setLimitsSpringSettings(world: World, constraint: number, settings: SpringSettings): boolean {
         const scratch = wasm.scratch;
         SpringSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_hinge_constraint_set_limits_spring_settings(world, constraint, scratch + 0);
+        const r = wasm.exports.ac(world, constraint, scratch + 0);
         return r !== 0;
     },
 
     setMaxFrictionTorque(world: World, constraint: number, torque: number): boolean {
-        const r = wasm.exports.tumble_hinge_constraint_set_max_friction_torque(world, constraint, torque);
+        const r = wasm.exports.bc(world, constraint, torque);
         return r !== 0;
     },
 
     setMotorSettings(world: World, constraint: number, settings: MotorSettings): boolean {
         const scratch = wasm.scratch;
         MotorSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_hinge_constraint_set_motor_settings(world, constraint, scratch + 0);
+        const r = wasm.exports.cc(world, constraint, scratch + 0);
         return r !== 0;
     },
 
     getMotorSettings(out: MotorSettings, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_hinge_constraint_get_motor_settings(scratch + 0, world, constraint);
+        const r = wasm.exports.dc(scratch + 0, world, constraint);
         MotorSettings.read(out, scratch + 0);
         return r !== 0;
     },
 
     setMotorState(world: World, constraint: number, state: number): boolean {
-        const r = wasm.exports.tumble_hinge_constraint_set_motor_state(world, constraint, state);
+        const r = wasm.exports.ec(world, constraint, state);
         return r !== 0;
     },
 
     setTargetAngularVelocity(world: World, constraint: number, velocity: number): boolean {
-        const r = wasm.exports.tumble_hinge_constraint_set_target_angular_velocity(world, constraint, velocity);
+        const r = wasm.exports.fc(world, constraint, velocity);
         return r !== 0;
     },
 
     setTargetAngle(world: World, constraint: number, angle: number): boolean {
-        const r = wasm.exports.tumble_hinge_constraint_set_target_angle(world, constraint, angle);
+        const r = wasm.exports.gc(world, constraint, angle);
         return r !== 0;
     },
 
     getCurrentAngle(world: World, constraint: number): number {
-        const r = wasm.exports.tumble_hinge_constraint_get_current_angle(world, constraint);
+        const r = wasm.exports.hc(world, constraint);
         return r;
     },
 };
@@ -7072,7 +7072,7 @@ export const HingeConstraint = {
 export const SliderConstraint = {
     defaultSettings(out: SliderConstraintSettings): SliderConstraintSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_slider_constraint_default_settings(scratch + 0);
+        wasm.exports.ic(scratch + 0);
         SliderConstraintSettings.read(out, scratch + 0);
         return out;
     },
@@ -7080,93 +7080,93 @@ export const SliderConstraint = {
     create(world: World, bodyA: number, bodyB: number, settings: SliderConstraintSettings): number {
         const scratch = wasm.scratch;
         SliderConstraintSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_slider_constraint_create(world, bodyA, bodyB, scratch + 0);
+        const r = wasm.exports.jc(world, bodyA, bodyB, scratch + 0);
         wasm.grew();
         return r >>> 0;
     },
 
     remove(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_slider_constraint_remove(world, constraint);
+        const r = wasm.exports.kc(world, constraint);
         return r !== 0;
     },
 
     getCurrentPosition(world: World, constraint: number): number {
-        const r = wasm.exports.tumble_slider_constraint_get_current_position(world, constraint);
+        const r = wasm.exports.lc(world, constraint);
         return r;
     },
 
     setLimits(world: World, constraint: number, min: number, max: number): boolean {
-        const r = wasm.exports.tumble_slider_constraint_set_limits(world, constraint, min, max);
+        const r = wasm.exports.mc(world, constraint, min, max);
         return r !== 0;
     },
 
     setLimitsSpringSettings(world: World, constraint: number, settings: SpringSettings): boolean {
         const scratch = wasm.scratch;
         SpringSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_slider_constraint_set_limits_spring_settings(world, constraint, scratch + 0);
+        const r = wasm.exports.nc(world, constraint, scratch + 0);
         return r !== 0;
     },
 
     setMotorSettings(world: World, constraint: number, settings: MotorSettings): boolean {
         const scratch = wasm.scratch;
         MotorSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_slider_constraint_set_motor_settings(world, constraint, scratch + 0);
+        const r = wasm.exports.oc(world, constraint, scratch + 0);
         return r !== 0;
     },
 
     getMotorSettings(out: MotorSettings, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_slider_constraint_get_motor_settings(scratch + 0, world, constraint);
+        const r = wasm.exports.pc(scratch + 0, world, constraint);
         MotorSettings.read(out, scratch + 0);
         return r !== 0;
     },
 
     setMotorState(world: World, constraint: number, state: number): boolean {
-        const r = wasm.exports.tumble_slider_constraint_set_motor_state(world, constraint, state);
+        const r = wasm.exports.qc(world, constraint, state);
         return r !== 0;
     },
 
     setTargetVelocity(world: World, constraint: number, velocity: number): boolean {
-        const r = wasm.exports.tumble_slider_constraint_set_target_velocity(world, constraint, velocity);
+        const r = wasm.exports.rc(world, constraint, velocity);
         return r !== 0;
     },
 
     setTargetPosition(world: World, constraint: number, position: number): boolean {
-        const r = wasm.exports.tumble_slider_constraint_set_target_position(world, constraint, position);
+        const r = wasm.exports.sc(world, constraint, position);
         return r !== 0;
     },
 
     setMaxFrictionForce(world: World, constraint: number, force: number): boolean {
-        const r = wasm.exports.tumble_slider_constraint_set_max_friction_force(world, constraint, force);
+        const r = wasm.exports.tc(world, constraint, force);
         return r !== 0;
     },
 
     getMaxFrictionForce(world: World, constraint: number): number {
-        const r = wasm.exports.tumble_slider_constraint_get_max_friction_force(world, constraint);
+        const r = wasm.exports.uc(world, constraint);
         return r;
     },
 
     getTotalLambdaPosition(out: Vec2, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_slider_constraint_get_total_lambda_position(scratch + 0, world, constraint);
+        const r = wasm.exports.vc(scratch + 0, world, constraint);
         Vec2.read(out, scratch + 0);
         return r !== 0;
     },
 
     getTotalLambdaPositionLimits(world: World, constraint: number): number {
-        const r = wasm.exports.tumble_slider_constraint_get_total_lambda_position_limits(world, constraint);
+        const r = wasm.exports.wc(world, constraint);
         return r;
     },
 
     getTotalLambdaRotation(out: Vec3, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_slider_constraint_get_total_lambda_rotation(scratch + 0, world, constraint);
+        const r = wasm.exports.xc(scratch + 0, world, constraint);
         Vec3.read(out, scratch + 0);
         return r !== 0;
     },
 
     getTotalLambdaMotor(world: World, constraint: number): number {
-        const r = wasm.exports.tumble_slider_constraint_get_total_lambda_motor(world, constraint);
+        const r = wasm.exports.yc(world, constraint);
         return r;
     },
 };
@@ -7174,7 +7174,7 @@ export const SliderConstraint = {
 export const FixedConstraint = {
     defaultSettings(out: FixedConstraintSettings): FixedConstraintSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_fixed_constraint_default_settings(scratch + 0);
+        wasm.exports.zc(scratch + 0);
         FixedConstraintSettings.read(out, scratch + 0);
         return out;
     },
@@ -7182,26 +7182,26 @@ export const FixedConstraint = {
     create(world: World, bodyA: number, bodyB: number, settings: FixedConstraintSettings): number {
         const scratch = wasm.scratch;
         FixedConstraintSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_fixed_constraint_create(world, bodyA, bodyB, scratch + 0);
+        const r = wasm.exports.Ac(world, bodyA, bodyB, scratch + 0);
         wasm.grew();
         return r >>> 0;
     },
 
     remove(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_fixed_constraint_remove(world, constraint);
+        const r = wasm.exports.Bc(world, constraint);
         return r !== 0;
     },
 
     getTotalLambdaPosition(out: Vec3, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_fixed_constraint_get_total_lambda_position(scratch + 0, world, constraint);
+        const r = wasm.exports.Cc(scratch + 0, world, constraint);
         Vec3.read(out, scratch + 0);
         return r !== 0;
     },
 
     getTotalLambdaRotation(out: Vec3, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_fixed_constraint_get_total_lambda_rotation(scratch + 0, world, constraint);
+        const r = wasm.exports.Dc(scratch + 0, world, constraint);
         Vec3.read(out, scratch + 0);
         return r !== 0;
     },
@@ -7210,7 +7210,7 @@ export const FixedConstraint = {
 export const ConeConstraint = {
     defaultSettings(out: ConeConstraintSettings): ConeConstraintSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_cone_constraint_default_settings(scratch + 0);
+        wasm.exports.Ec(scratch + 0);
         ConeConstraintSettings.read(out, scratch + 0);
         return out;
     },
@@ -7218,40 +7218,40 @@ export const ConeConstraint = {
     create(world: World, bodyA: number, bodyB: number, settings: ConeConstraintSettings): number {
         const scratch = wasm.scratch;
         ConeConstraintSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_cone_constraint_create(world, bodyA, bodyB, scratch + 0);
+        const r = wasm.exports.Fc(world, bodyA, bodyB, scratch + 0);
         wasm.grew();
         return r >>> 0;
     },
 
     remove(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_cone_constraint_remove(world, constraint);
+        const r = wasm.exports.Gc(world, constraint);
         return r !== 0;
     },
 
     setHalfConeAngle(world: World, constraint: number, halfConeAngle: number): boolean {
-        const r = wasm.exports.tumble_cone_constraint_set_half_cone_angle(world, constraint, halfConeAngle);
+        const r = wasm.exports.Hc(world, constraint, halfConeAngle);
         return r !== 0;
     },
 
     getHalfConeAngle(world: World, constraint: number): number {
-        const r = wasm.exports.tumble_cone_constraint_get_half_cone_angle(world, constraint);
+        const r = wasm.exports.Ic(world, constraint);
         return r;
     },
 
     getCosHalfConeAngle(world: World, constraint: number): number {
-        const r = wasm.exports.tumble_cone_constraint_get_cos_half_cone_angle(world, constraint);
+        const r = wasm.exports.Jc(world, constraint);
         return r;
     },
 
     getTotalLambdaPosition(out: Vec3, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_cone_constraint_get_total_lambda_position(scratch + 0, world, constraint);
+        const r = wasm.exports.Kc(scratch + 0, world, constraint);
         Vec3.read(out, scratch + 0);
         return r !== 0;
     },
 
     getTotalLambdaRotation(world: World, constraint: number): number {
-        const r = wasm.exports.tumble_cone_constraint_get_total_lambda_rotation(world, constraint);
+        const r = wasm.exports.Lc(world, constraint);
         return r;
     },
 };
@@ -7259,7 +7259,7 @@ export const ConeConstraint = {
 export const SwingTwistConstraint = {
     defaultSettings(out: SwingTwistConstraintSettings): SwingTwistConstraintSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_swing_twist_constraint_default_settings(scratch + 0);
+        wasm.exports.Mc(scratch + 0);
         SwingTwistConstraintSettings.read(out, scratch + 0);
         return out;
     },
@@ -7267,132 +7267,132 @@ export const SwingTwistConstraint = {
     create(world: World, bodyA: number, bodyB: number, settings: SwingTwistConstraintSettings): number {
         const scratch = wasm.scratch;
         SwingTwistConstraintSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_swing_twist_constraint_create(world, bodyA, bodyB, scratch + 0);
+        const r = wasm.exports.Nc(world, bodyA, bodyB, scratch + 0);
         wasm.grew();
         return r >>> 0;
     },
 
     remove(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_swing_twist_constraint_remove(world, constraint);
+        const r = wasm.exports.Oc(world, constraint);
         return r !== 0;
     },
 
     setNormalHalfConeAngle(world: World, constraint: number, angle: number): boolean {
-        const r = wasm.exports.tumble_swing_twist_constraint_set_normal_half_cone_angle(world, constraint, angle);
+        const r = wasm.exports.Pc(world, constraint, angle);
         return r !== 0;
     },
 
     setPlaneHalfConeAngle(world: World, constraint: number, angle: number): boolean {
-        const r = wasm.exports.tumble_swing_twist_constraint_set_plane_half_cone_angle(world, constraint, angle);
+        const r = wasm.exports.Qc(world, constraint, angle);
         return r !== 0;
     },
 
     setTwistMinAngle(world: World, constraint: number, angle: number): boolean {
-        const r = wasm.exports.tumble_swing_twist_constraint_set_twist_min_angle(world, constraint, angle);
+        const r = wasm.exports.Rc(world, constraint, angle);
         return r !== 0;
     },
 
     setTwistMaxAngle(world: World, constraint: number, angle: number): boolean {
-        const r = wasm.exports.tumble_swing_twist_constraint_set_twist_max_angle(world, constraint, angle);
+        const r = wasm.exports.Sc(world, constraint, angle);
         return r !== 0;
     },
 
     setMaxFrictionTorque(world: World, constraint: number, torque: number): boolean {
-        const r = wasm.exports.tumble_swing_twist_constraint_set_max_friction_torque(world, constraint, torque);
+        const r = wasm.exports.Tc(world, constraint, torque);
         return r !== 0;
     },
 
     setSwingMotorSettings(world: World, constraint: number, settings: MotorSettings): boolean {
         const scratch = wasm.scratch;
         MotorSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_swing_twist_constraint_set_swing_motor_settings(world, constraint, scratch + 0);
+        const r = wasm.exports.Uc(world, constraint, scratch + 0);
         return r !== 0;
     },
 
     setTwistMotorSettings(world: World, constraint: number, settings: MotorSettings): boolean {
         const scratch = wasm.scratch;
         MotorSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_swing_twist_constraint_set_twist_motor_settings(world, constraint, scratch + 0);
+        const r = wasm.exports.Vc(world, constraint, scratch + 0);
         return r !== 0;
     },
 
     getSwingMotorSettings(out: MotorSettings, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_swing_twist_constraint_get_swing_motor_settings(scratch + 0, world, constraint);
+        const r = wasm.exports.Wc(scratch + 0, world, constraint);
         MotorSettings.read(out, scratch + 0);
         return r !== 0;
     },
 
     getTwistMotorSettings(out: MotorSettings, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_swing_twist_constraint_get_twist_motor_settings(scratch + 0, world, constraint);
+        const r = wasm.exports.Xc(scratch + 0, world, constraint);
         MotorSettings.read(out, scratch + 0);
         return r !== 0;
     },
 
     setSwingMotorState(world: World, constraint: number, state: number): boolean {
-        const r = wasm.exports.tumble_swing_twist_constraint_set_swing_motor_state(world, constraint, state);
+        const r = wasm.exports.Yc(world, constraint, state);
         return r !== 0;
     },
 
     setTwistMotorState(world: World, constraint: number, state: number): boolean {
-        const r = wasm.exports.tumble_swing_twist_constraint_set_twist_motor_state(world, constraint, state);
+        const r = wasm.exports.Zc(world, constraint, state);
         return r !== 0;
     },
 
     setTargetAngularVelocityCs(world: World, constraint: number, velocity: Vec3): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, velocity);
-        const r = wasm.exports.tumble_swing_twist_constraint_set_target_angular_velocity_cs(world, constraint, scratch + 0);
+        const r = wasm.exports.ad(world, constraint, scratch + 0);
         return r !== 0;
     },
 
     setTargetOrientationCs(world: World, constraint: number, orientation: Quat): boolean {
         const scratch = wasm.scratch;
         Quat.write(scratch + 0, orientation);
-        const r = wasm.exports.tumble_swing_twist_constraint_set_target_orientation_cs(world, constraint, scratch + 0);
+        const r = wasm.exports.bd(world, constraint, scratch + 0);
         return r !== 0;
     },
 
     setTargetOrientationBs(world: World, constraint: number, orientation: Quat): boolean {
         const scratch = wasm.scratch;
         Quat.write(scratch + 0, orientation);
-        const r = wasm.exports.tumble_swing_twist_constraint_set_target_orientation_bs(world, constraint, scratch + 0);
+        const r = wasm.exports.cd(world, constraint, scratch + 0);
         return r !== 0;
     },
 
     getRotationInConstraintSpace(out: Quat, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_swing_twist_constraint_get_rotation_in_constraint_space(scratch + 0, world, constraint);
+        const r = wasm.exports.dd(scratch + 0, world, constraint);
         Quat.read(out, scratch + 0);
         return r !== 0;
     },
 
     getTotalLambdaPosition(out: Vec3, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_swing_twist_constraint_get_total_lambda_position(scratch + 0, world, constraint);
+        const r = wasm.exports.ed(scratch + 0, world, constraint);
         Vec3.read(out, scratch + 0);
         return r !== 0;
     },
 
     getTotalLambdaTwist(world: World, constraint: number): number {
-        const r = wasm.exports.tumble_swing_twist_constraint_get_total_lambda_twist(world, constraint);
+        const r = wasm.exports.fd(world, constraint);
         return r;
     },
 
     getTotalLambdaSwingY(world: World, constraint: number): number {
-        const r = wasm.exports.tumble_swing_twist_constraint_get_total_lambda_swing_y(world, constraint);
+        const r = wasm.exports.gd(world, constraint);
         return r;
     },
 
     getTotalLambdaSwingZ(world: World, constraint: number): number {
-        const r = wasm.exports.tumble_swing_twist_constraint_get_total_lambda_swing_z(world, constraint);
+        const r = wasm.exports.hd(world, constraint);
         return r;
     },
 
     getTotalLambdaMotor(out: Vec3, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_swing_twist_constraint_get_total_lambda_motor(scratch + 0, world, constraint);
+        const r = wasm.exports.id(scratch + 0, world, constraint);
         Vec3.read(out, scratch + 0);
         return r !== 0;
     },
@@ -7401,7 +7401,7 @@ export const SwingTwistConstraint = {
 export const SixDofConstraint = {
     defaultSettings(out: SixDOFConstraintSettings): SixDOFConstraintSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_six_dof_constraint_default_settings(scratch + 0);
+        wasm.exports.jd(scratch + 0);
         SixDOFConstraintSettings.read(out, scratch + 0);
         return out;
     },
@@ -7409,13 +7409,13 @@ export const SixDofConstraint = {
     create(world: World, bodyA: number, bodyB: number, settings: SixDOFConstraintSettings): number {
         const scratch = wasm.scratch;
         SixDOFConstraintSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_six_dof_constraint_create(world, bodyA, bodyB, scratch + 0);
+        const r = wasm.exports.kd(world, bodyA, bodyB, scratch + 0);
         wasm.grew();
         return r >>> 0;
     },
 
     remove(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_six_dof_constraint_remove(world, constraint);
+        const r = wasm.exports.ld(world, constraint);
         return r !== 0;
     },
 
@@ -7423,7 +7423,7 @@ export const SixDofConstraint = {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, limitMin);
         Vec3.write(scratch + 16, limitMax);
-        const r = wasm.exports.tumble_six_dof_constraint_set_translation_limits(world, constraint, scratch + 0, scratch + 16);
+        const r = wasm.exports.md(world, constraint, scratch + 0, scratch + 16);
         return r !== 0;
     },
 
@@ -7431,81 +7431,81 @@ export const SixDofConstraint = {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, limitMin);
         Vec3.write(scratch + 16, limitMax);
-        const r = wasm.exports.tumble_six_dof_constraint_set_rotation_limits(world, constraint, scratch + 0, scratch + 16);
+        const r = wasm.exports.nd(world, constraint, scratch + 0, scratch + 16);
         return r !== 0;
     },
 
     setLimitsSpringSettings(world: World, constraint: number, axis: number, settings: SpringSettings): boolean {
         const scratch = wasm.scratch;
         SpringSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_six_dof_constraint_set_limits_spring_settings(world, constraint, axis, scratch + 0);
+        const r = wasm.exports.od(world, constraint, axis, scratch + 0);
         return r !== 0;
     },
 
     setMotorSettings(world: World, constraint: number, axis: number, settings: MotorSettings): boolean {
         const scratch = wasm.scratch;
         MotorSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_six_dof_constraint_set_motor_settings(world, constraint, axis, scratch + 0);
+        const r = wasm.exports.pd(world, constraint, axis, scratch + 0);
         return r !== 0;
     },
 
     getMotorSettings(out: MotorSettings, world: World, constraint: number, axis: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_six_dof_constraint_get_motor_settings(scratch + 0, world, constraint, axis);
+        const r = wasm.exports.qd(scratch + 0, world, constraint, axis);
         MotorSettings.read(out, scratch + 0);
         return r !== 0;
     },
 
     setMotorState(world: World, constraint: number, axis: number, state: number): boolean {
-        const r = wasm.exports.tumble_six_dof_constraint_set_motor_state(world, constraint, axis, state);
+        const r = wasm.exports.rd(world, constraint, axis, state);
         return r !== 0;
     },
 
     setTargetVelocityCs(world: World, constraint: number, velocity: Vec3): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, velocity);
-        const r = wasm.exports.tumble_six_dof_constraint_set_target_velocity_cs(world, constraint, scratch + 0);
+        const r = wasm.exports.sd(world, constraint, scratch + 0);
         return r !== 0;
     },
 
     setTargetAngularVelocityCs(world: World, constraint: number, velocity: Vec3): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, velocity);
-        const r = wasm.exports.tumble_six_dof_constraint_set_target_angular_velocity_cs(world, constraint, scratch + 0);
+        const r = wasm.exports.td(world, constraint, scratch + 0);
         return r !== 0;
     },
 
     setTargetPositionCs(world: World, constraint: number, position: Vec3): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, position);
-        const r = wasm.exports.tumble_six_dof_constraint_set_target_position_cs(world, constraint, scratch + 0);
+        const r = wasm.exports.ud(world, constraint, scratch + 0);
         return r !== 0;
     },
 
     setTargetOrientationCs(world: World, constraint: number, orientation: Quat): boolean {
         const scratch = wasm.scratch;
         Quat.write(scratch + 0, orientation);
-        const r = wasm.exports.tumble_six_dof_constraint_set_target_orientation_cs(world, constraint, scratch + 0);
+        const r = wasm.exports.vd(world, constraint, scratch + 0);
         return r !== 0;
     },
 
     setMaxFriction(world: World, constraint: number, axis: number, friction: number): boolean {
-        const r = wasm.exports.tumble_six_dof_constraint_set_max_friction(world, constraint, axis, friction);
+        const r = wasm.exports.wd(world, constraint, axis, friction);
         return r !== 0;
     },
 
     makeFreeAxis(world: World, constraint: number, axis: number): boolean {
-        const r = wasm.exports.tumble_six_dof_constraint_make_free_axis(world, constraint, axis);
+        const r = wasm.exports.xd(world, constraint, axis);
         return r !== 0;
     },
 
     makeFixedAxis(world: World, constraint: number, axis: number): boolean {
-        const r = wasm.exports.tumble_six_dof_constraint_make_fixed_axis(world, constraint, axis);
+        const r = wasm.exports.yd(world, constraint, axis);
         return r !== 0;
     },
 
     setLimitedAxis(world: World, constraint: number, axis: number, min: number, max: number): boolean {
-        const r = wasm.exports.tumble_six_dof_constraint_set_limited_axis(world, constraint, axis, min, max);
+        const r = wasm.exports.zd(world, constraint, axis, min, max);
         return r !== 0;
     },
 };
@@ -7513,7 +7513,7 @@ export const SixDofConstraint = {
 export const Query = {
     defaultCastRaySettings(out: CastRaySettings): CastRaySettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_query_default_cast_ray_settings(scratch + 0);
+        wasm.exports.Od(scratch + 0);
         CastRaySettings.read(out, scratch + 0);
         return out;
     },
@@ -7534,7 +7534,7 @@ export const Query = {
         CastRaySettings.write(scratch + 0, settings);
         Vec3.write(scratch + 16, origin);
         Vec3.write(scratch + 32, direction);
-        const r = wasm.exports.tumble_query_cast_ray(
+        const r = wasm.exports.Pd(
             world,
             kind,
             earlyOutFraction,
@@ -7552,14 +7552,14 @@ export const Query = {
 
     readCastRayHit(out: CastRayHit, index: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_query_read_cast_ray_hit(scratch + 0, index);
+        const r = wasm.exports.Qd(scratch + 0, index);
         CastRayHit.read(out, scratch + 0);
         return r !== 0;
     },
 
     defaultCastShapeSettings(out: CastShapeSettings): CastShapeSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_query_default_cast_shape_settings(scratch + 0);
+        wasm.exports.Rd(scratch + 0);
         CastShapeSettings.read(out, scratch + 0);
         return out;
     },
@@ -7584,7 +7584,7 @@ export const Query = {
         Quat.write(scratch + 48, quaternion);
         Vec3.write(scratch + 64, scale);
         Vec3.write(scratch + 80, displacement);
-        const r = wasm.exports.tumble_query_cast_shape(
+        const r = wasm.exports.Sd(
             world,
             kind,
             earlyOutFraction,
@@ -7604,14 +7604,14 @@ export const Query = {
 
     readCastShapeHit(out: CastShapeHit, index: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_query_read_cast_shape_hit(scratch + 0, index);
+        const r = wasm.exports.Td(scratch + 0, index);
         CastShapeHit.read(out, scratch + 0);
         return r !== 0;
     },
 
     defaultCollideShapeSettings(out: CollideShapeSettings): CollideShapeSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_query_default_collide_shape_settings(scratch + 0);
+        wasm.exports.Ud(scratch + 0);
         CollideShapeSettings.read(out, scratch + 0);
         return out;
     },
@@ -7635,7 +7635,7 @@ export const Query = {
         Vec3.write(scratch + 32, position);
         Quat.write(scratch + 48, quaternion);
         Vec3.write(scratch + 64, scale);
-        const r = wasm.exports.tumble_query_collide_shape(
+        const r = wasm.exports.Vd(
             world,
             kind,
             earlyOutFraction,
@@ -7655,14 +7655,14 @@ export const Query = {
 
     readCollideShapeHit(out: CollideShapeHit, index: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_query_read_collide_shape_hit(scratch + 0, index);
+        const r = wasm.exports.Wd(scratch + 0, index);
         CollideShapeHit.read(out, scratch + 0);
         return r !== 0;
     },
 
     defaultCollidePointSettings(out: CollidePointSettings): CollidePointSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_query_default_collide_point_settings(scratch + 0);
+        wasm.exports.Xd(scratch + 0);
         CollidePointSettings.read(out, scratch + 0);
         return out;
     },
@@ -7679,22 +7679,14 @@ export const Query = {
         const scratch = wasm.scratch;
         CollidePointSettings.write(scratch + 0, settings);
         Vec3.write(scratch + 16, point);
-        const r = wasm.exports.tumble_query_collide_point(
-            world,
-            kind,
-            scratch + 0,
-            scratch + 16,
-            filter,
-            collisionGroups,
-            collisionMask,
-        );
+        const r = wasm.exports.Yd(world, kind, scratch + 0, scratch + 16, filter, collisionGroups, collisionMask);
         wasm.grew();
         return r >>> 0;
     },
 
     readCollidePointHit(out: CollidePointHit, index: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_query_read_collide_point_hit(scratch + 0, index);
+        const r = wasm.exports.Zd(scratch + 0, index);
         CollidePointHit.read(out, scratch + 0);
         return r !== 0;
     },
@@ -7703,25 +7695,25 @@ export const Query = {
 export const KccPolicy = {
     defaultBodyPolicy(out: KCCBodyPolicy): KCCBodyPolicy {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_kcc_policy_default_body_policy(scratch + 0);
+        wasm.exports.ae(scratch + 0);
         KCCBodyPolicy.read(out, scratch + 0);
         return out;
     },
 
     create(): Policy {
-        const r = wasm.exports.tumble_kcc_policy_create();
+        const r = wasm.exports.be();
         wasm.grew();
         if (r === 0) wasm.check();
         return r as Policy;
     },
 
     destroy(policy: Policy): void {
-        wasm.exports.tumble_kcc_policy_destroy(policy);
+        wasm.exports.ce(policy);
     },
 
     getDefaults(out: KCCBodyPolicy, policy: Policy): KCCBodyPolicy {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_kcc_policy_get_defaults(scratch + 0, policy);
+        wasm.exports.de(scratch + 0, policy);
         KCCBodyPolicy.read(out, scratch + 0);
         return out;
     },
@@ -7729,25 +7721,25 @@ export const KccPolicy = {
     setDefaults(policy: Policy, bodyPolicy: KCCBodyPolicy): void {
         const scratch = wasm.scratch;
         KCCBodyPolicy.write(scratch + 0, bodyPolicy);
-        wasm.exports.tumble_kcc_policy_set_defaults(policy, scratch + 0);
+        wasm.exports.ee(policy, scratch + 0);
     },
 
     set(policy: Policy, body: number, bodyPolicy: KCCBodyPolicy): boolean {
         const scratch = wasm.scratch;
         KCCBodyPolicy.write(scratch + 0, bodyPolicy);
-        const r = wasm.exports.tumble_kcc_policy_set(policy, body, scratch + 0);
+        const r = wasm.exports.fe(policy, body, scratch + 0);
         wasm.grew();
         return r !== 0;
     },
 
     remove(policy: Policy, body: number): boolean {
-        const r = wasm.exports.tumble_kcc_policy_remove(policy, body);
+        const r = wasm.exports.ge(policy, body);
         return r !== 0;
     },
 
     get(out: KCCBodyPolicy, policy: Policy, body: number): KCCBodyPolicy {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_kcc_policy_get(scratch + 0, policy, body);
+        wasm.exports.he(scratch + 0, policy, body);
         KCCBodyPolicy.read(out, scratch + 0);
         return out;
     },
@@ -7756,14 +7748,14 @@ export const KccPolicy = {
 export const Kcc = {
     defaultSettings(out: KCCSettings): KCCSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_kcc_default_settings(scratch + 0);
+        wasm.exports.ie(scratch + 0);
         KCCSettings.read(out, scratch + 0);
         return out;
     },
 
     defaultUpdateSettings(out: KCCUpdateSettings): KCCUpdateSettings {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_kcc_default_update_settings(scratch + 0);
+        wasm.exports.je(scratch + 0);
         KCCUpdateSettings.read(out, scratch + 0);
         return out;
     },
@@ -7773,28 +7765,28 @@ export const Kcc = {
         KCCSettings.write(scratch + 0, settings);
         Vec3.write(scratch + 128, position);
         Quat.write(scratch + 144, quaternion);
-        const r = wasm.exports.tumble_kcc_create(scratch + 0, scratch + 128, scratch + 144);
+        const r = wasm.exports.ke(scratch + 0, scratch + 128, scratch + 144);
         wasm.grew();
         if (r === 0) wasm.check();
         return r as KCC;
     },
 
     destroy(character: KCC): void {
-        wasm.exports.tumble_kcc_destroy(character);
+        wasm.exports.le(character);
     },
 
     add(world: World, character: KCC): void {
-        wasm.exports.tumble_kcc_add(world, character);
+        wasm.exports.me(world, character);
         wasm.grew();
     },
 
     remove(world: World, character: KCC): void {
-        wasm.exports.tumble_kcc_remove(world, character);
+        wasm.exports.ne(world, character);
     },
 
     readState(out: KCCState, character: KCC): KCCState {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_kcc_read_state(scratch + 0, character);
+        wasm.exports.oe(scratch + 0, character);
         KCCState.read(out, scratch + 0);
         return out;
     },
@@ -7802,12 +7794,12 @@ export const Kcc = {
     setLinearVelocity(character: KCC, velocity: Vec3): void {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, velocity);
-        wasm.exports.tumble_kcc_set_linear_velocity(character, scratch + 0);
+        wasm.exports.pe(character, scratch + 0);
     },
 
     getTuning(out: KCCTuning, character: KCC): KCCTuning {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_kcc_get_tuning(scratch + 0, character);
+        wasm.exports.qe(scratch + 0, character);
         KCCTuning.read(out, scratch + 0);
         return out;
     },
@@ -7815,17 +7807,17 @@ export const Kcc = {
     setTuning(character: KCC, tuning: KCCTuning): void {
         const scratch = wasm.scratch;
         KCCTuning.write(scratch + 0, tuning);
-        wasm.exports.tumble_kcc_set_tuning(character, scratch + 0);
+        wasm.exports.re(character, scratch + 0);
     },
 
     contacts(character: KCC): Pointer<'u8'> {
-        const r = wasm.exports.tumble_kcc_contacts(character);
+        const r = wasm.exports.se(character);
         return r as Pointer<'u8'>;
     },
 
     readContactEvent(out: KCCContactEvent, character: KCC, index: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_kcc_read_contact_event(scratch + 0, character, index);
+        const r = wasm.exports.te(scratch + 0, character, index);
         KCCContactEvent.read(out, scratch + 0);
         return r !== 0;
     },
@@ -7833,53 +7825,53 @@ export const Kcc = {
     setPosition(world: World, character: KCC, position: Vec3): void {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, position);
-        wasm.exports.tumble_kcc_set_position(world, character, scratch + 0);
+        wasm.exports.ue(world, character, scratch + 0);
         wasm.grew();
     },
 
     setQuaternion(world: World, character: KCC, quaternion: Quat): void {
         const scratch = wasm.scratch;
         Quat.write(scratch + 0, quaternion);
-        wasm.exports.tumble_kcc_set_quaternion(world, character, scratch + 0);
+        wasm.exports.ve(world, character, scratch + 0);
         wasm.grew();
     },
 
     isSlopeTooSteep(character: KCC, normal: Vec3): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, normal);
-        const r = wasm.exports.tumble_kcc_is_slope_too_steep(character, scratch + 0);
+        const r = wasm.exports.we(character, scratch + 0);
         return r !== 0;
     },
 
     getCenterOfMassTransform(outPosition: Vec3, outQuaternion: Quat, character: KCC): void {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_kcc_get_center_of_mass_transform(scratch + 0, scratch + 16, character);
+        wasm.exports.xe(scratch + 0, scratch + 16, character);
         Vec3.read(outPosition, scratch + 0);
         Quat.read(outQuaternion, scratch + 16);
     },
 
     hasCollidedWith(character: KCC, body: number): boolean {
-        const r = wasm.exports.tumble_kcc_has_collided_with(character, body);
+        const r = wasm.exports.ye(character, body);
         return r !== 0;
     },
 
     canWalkStairs(character: KCC, velocity: Vec3): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, velocity);
-        const r = wasm.exports.tumble_kcc_can_walk_stairs(character, scratch + 0);
+        const r = wasm.exports.ze(character, scratch + 0);
         return r !== 0;
     },
 
     cancelVelocityTowardsSteepSlopes(out: Vec3, character: KCC, velocity: Vec3): Vec3 {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 16, velocity);
-        wasm.exports.tumble_kcc_cancel_velocity_towards_steep_slopes(scratch + 0, character, scratch + 16);
+        wasm.exports.Ae(scratch + 0, character, scratch + 16);
         Vec3.read(out, scratch + 0);
         return out;
     },
 
     updateGroundVelocity(world: World, character: KCC, policy: Policy): void {
-        wasm.exports.tumble_kcc_update_ground_velocity(world, character, policy);
+        wasm.exports.Be(world, character, policy);
     },
 
     refreshContacts(
@@ -7890,7 +7882,7 @@ export const Kcc = {
         collisionMask: number,
         policy: Policy,
     ): void {
-        wasm.exports.tumble_kcc_refresh_contacts(world, character, filter, collisionGroups, collisionMask, policy);
+        wasm.exports.Ce(world, character, filter, collisionGroups, collisionMask, policy);
         wasm.grew();
     },
 
@@ -7904,16 +7896,7 @@ export const Kcc = {
         policy: Policy,
         maxPenetrationDepth: number,
     ): boolean {
-        const r = wasm.exports.tumble_kcc_set_shape(
-            world,
-            character,
-            shape,
-            filter,
-            collisionGroups,
-            collisionMask,
-            policy,
-            maxPenetrationDepth,
-        );
+        const r = wasm.exports.De(world, character, shape, filter, collisionGroups, collisionMask, policy, maxPenetrationDepth);
         wasm.grew();
         return r !== 0;
     },
@@ -7930,7 +7913,7 @@ export const Kcc = {
     ): void {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, gravity);
-        wasm.exports.tumble_kcc_move(world, character, deltaTime, scratch + 0, policy, filter, collisionGroups, collisionMask);
+        wasm.exports.Ee(world, character, deltaTime, scratch + 0, policy, filter, collisionGroups, collisionMask);
         wasm.grew();
     },
 
@@ -7945,15 +7928,7 @@ export const Kcc = {
     ): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, stepDown);
-        const r = wasm.exports.tumble_kcc_stick_to_floor(
-            world,
-            character,
-            scratch + 0,
-            filter,
-            collisionGroups,
-            collisionMask,
-            policy,
-        );
+        const r = wasm.exports.Fe(world, character, scratch + 0, filter, collisionGroups, collisionMask, policy);
         wasm.grew();
         return r !== 0;
     },
@@ -7976,7 +7951,7 @@ export const Kcc = {
         Vec3.write(scratch + 16, stepForward);
         Vec3.write(scratch + 32, stepForwardTest);
         Vec3.write(scratch + 48, stepDownExtra);
-        const r = wasm.exports.tumble_kcc_walk_stairs(
+        const r = wasm.exports.Ge(
             world,
             character,
             deltaTime,
@@ -8007,17 +7982,7 @@ export const Kcc = {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, gravity);
         KCCUpdateSettings.write(scratch + 16, settings);
-        wasm.exports.tumble_kcc_update(
-            world,
-            character,
-            deltaTime,
-            scratch + 0,
-            scratch + 16,
-            policy,
-            filter,
-            collisionGroups,
-            collisionMask,
-        );
+        wasm.exports.He(world, character, deltaTime, scratch + 0, scratch + 16, policy, filter, collisionGroups, collisionMask);
         wasm.grew();
     },
 
@@ -8034,16 +7999,7 @@ export const Kcc = {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, position);
         Vec3.write(scratch + 16, movementDirection);
-        wasm.exports.tumble_kcc_collide(
-            world,
-            character,
-            scratch + 0,
-            scratch + 16,
-            filter,
-            collisionGroups,
-            collisionMask,
-            policy,
-        );
+        wasm.exports.Ie(world, character, scratch + 0, scratch + 16, filter, collisionGroups, collisionMask, policy);
         wasm.grew();
     },
 
@@ -8058,7 +8014,7 @@ export const Kcc = {
     ): KCCSolve {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 32, velocity);
-        wasm.exports.tumble_kcc_solve(scratch + 0, world, character, scratch + 32, deltaTime, timeRemaining, policy);
+        wasm.exports.Je(scratch + 0, world, character, scratch + 32, deltaTime, timeRemaining, policy);
         wasm.grew();
         KCCSolve.read(out, scratch + 0);
         return out;
@@ -8078,7 +8034,7 @@ export const Kcc = {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 80, position);
         Vec3.write(scratch + 96, displacement);
-        const r = wasm.exports.tumble_kcc_cast(
+        const r = wasm.exports.Ke(
             scratch + 0,
             world,
             character,
@@ -8095,88 +8051,88 @@ export const Kcc = {
     },
 
     updateGround(world: World, character: KCC, deltaTime: number, skipContactVelocityCheck: boolean, policy: Policy): void {
-        wasm.exports.tumble_kcc_update_ground(world, character, deltaTime, skipContactVelocityCheck ? 1 : 0, policy);
+        wasm.exports.Le(world, character, deltaTime, skipContactVelocityCheck ? 1 : 0, policy);
         wasm.grew();
     },
 
     applyWeight(world: World, character: KCC, gravity: Vec3, deltaTime: number): void {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, gravity);
-        wasm.exports.tumble_kcc_apply_weight(world, character, scratch + 0, deltaTime);
+        wasm.exports.Me(world, character, scratch + 0, deltaTime);
         wasm.grew();
     },
 
     beginContactTracking(character: KCC): void {
-        wasm.exports.tumble_kcc_begin_contact_tracking(character);
+        wasm.exports.Ne(character);
         wasm.grew();
     },
 
     endContactTracking(character: KCC): void {
-        wasm.exports.tumble_kcc_end_contact_tracking(character);
+        wasm.exports.Oe(character);
         wasm.grew();
     },
 };
 
 export const Debug = {
     create(): DebugBuffers {
-        const r = wasm.exports.tumble_debug_create();
+        const r = wasm.exports.Pe();
         wasm.grew();
         if (r === 0) wasm.check();
         return r as DebugBuffers;
     },
 
     destroy(buffers: DebugBuffers): void {
-        wasm.exports.tumble_debug_destroy(buffers);
+        wasm.exports.Qe(buffers);
     },
 
     clear(buffers: DebugBuffers): void {
-        wasm.exports.tumble_debug_clear(buffers);
+        wasm.exports.Re(buffers);
     },
 
     lines(buffers: DebugBuffers): Pointer<'f32'> {
-        const r = wasm.exports.tumble_debug_lines(buffers);
+        const r = wasm.exports.Se(buffers);
         return r as Pointer<'f32'>;
     },
 
     lineCount(buffers: DebugBuffers): number {
-        const r = wasm.exports.tumble_debug_line_count(buffers);
+        const r = wasm.exports.Te(buffers);
         return r >>> 0;
     },
 
     triangles(buffers: DebugBuffers): Pointer<'f32'> {
-        const r = wasm.exports.tumble_debug_triangles(buffers);
+        const r = wasm.exports.Ue(buffers);
         return r as Pointer<'f32'>;
     },
 
     triangleCount(buffers: DebugBuffers): number {
-        const r = wasm.exports.tumble_debug_triangle_count(buffers);
+        const r = wasm.exports.Ve(buffers);
         return r >>> 0;
     },
 
     defaultBodiesOptions(out: DebugBodiesOptions): DebugBodiesOptions {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_debug_default_bodies_options(scratch + 0);
+        wasm.exports.We(scratch + 0);
         DebugBodiesOptions.read(out, scratch + 0);
         return out;
     },
 
     defaultBodyOptions(out: DebugBodyOptions): DebugBodyOptions {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_debug_default_body_options(scratch + 0);
+        wasm.exports.Xe(scratch + 0);
         DebugBodyOptions.read(out, scratch + 0);
         return out;
     },
 
     defaultShapeOptions(out: DebugShapeOptions): DebugShapeOptions {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_debug_default_shape_options(scratch + 0);
+        wasm.exports.Ye(scratch + 0);
         DebugShapeOptions.read(out, scratch + 0);
         return out;
     },
 
     defaultJointsOptions(out: DebugJointsOptions): DebugJointsOptions {
         const scratch = wasm.scratch;
-        wasm.exports.tumble_debug_default_joints_options(scratch + 0);
+        wasm.exports.Ze(scratch + 0);
         DebugJointsOptions.read(out, scratch + 0);
         return out;
     },
@@ -8184,14 +8140,14 @@ export const Debug = {
     bodies(out: DebugBuffers, world: World, options: DebugBodiesOptions): void {
         const scratch = wasm.scratch;
         DebugBodiesOptions.write(scratch + 0, options);
-        wasm.exports.tumble_debug_bodies(out, world, scratch + 0);
+        wasm.exports.af(out, world, scratch + 0);
         wasm.grew();
     },
 
     body(out: DebugBuffers, world: World, body: number, options: DebugBodyOptions): boolean {
         const scratch = wasm.scratch;
         DebugBodyOptions.write(scratch + 0, options);
-        const r = wasm.exports.tumble_debug_body(out, world, body, scratch + 0);
+        const r = wasm.exports.bf(out, world, body, scratch + 0);
         wasm.grew();
         return r !== 0;
     },
@@ -8201,7 +8157,7 @@ export const Debug = {
         Vec3.write(scratch + 0, a);
         Vec3.write(scratch + 16, b);
         Vec3.write(scratch + 32, color);
-        wasm.exports.tumble_debug_line(out, scratch + 0, scratch + 16, scratch + 32);
+        wasm.exports.cf(out, scratch + 0, scratch + 16, scratch + 32);
         wasm.grew();
     },
 
@@ -8210,74 +8166,74 @@ export const Debug = {
         Vec3.write(scratch + 0, position);
         Quat.write(scratch + 16, quaternion);
         DebugShapeOptions.write(scratch + 32, options);
-        wasm.exports.tumble_debug_shape(out, shape, scratch + 0, scratch + 16, scratch + 32);
+        wasm.exports.df(out, shape, scratch + 0, scratch + 16, scratch + 32);
         wasm.grew();
     },
 
     contacts(out: DebugBuffers, world: World): void {
-        wasm.exports.tumble_debug_contacts(out, world);
+        wasm.exports.ef(out, world);
         wasm.grew();
     },
 
     characterContacts(out: DebugBuffers, character: KCC): void {
-        wasm.exports.tumble_debug_character_contacts(out, character);
+        wasm.exports.ff(out, character);
         wasm.grew();
     },
 
     contactConstraints(out: DebugBuffers, world: World): void {
-        wasm.exports.tumble_debug_contact_constraints(out, world);
+        wasm.exports.gf(out, world);
         wasm.grew();
     },
 
     joints(out: DebugBuffers, world: World, options: DebugJointsOptions): void {
         const scratch = wasm.scratch;
         DebugJointsOptions.write(scratch + 0, options);
-        wasm.exports.tumble_debug_joints(out, world, scratch + 0);
+        wasm.exports.hf(out, world, scratch + 0);
         wasm.grew();
     },
 };
 
 export const ContactPairs = {
     begin(world: World): void {
-        wasm.exports.tumble_contact_pairs_begin(world);
+        wasm.exports.if(world);
         wasm.grew();
     },
 
     recordWorldContacts(world: World, firstAdded: number, firstPersisted: number): void {
-        wasm.exports.tumble_contact_pairs_record_world_contacts(world, firstAdded, firstPersisted);
+        wasm.exports.jf(world, firstAdded, firstPersisted);
         wasm.grew();
     },
 
     recordCharacterContacts(world: World, character: KCC): void {
-        wasm.exports.tumble_contact_pairs_record_character_contacts(world, character);
+        wasm.exports.kf(world, character);
         wasm.grew();
     },
 
     end(world: World): void {
-        wasm.exports.tumble_contact_pairs_end(world);
+        wasm.exports.lf(world);
         wasm.grew();
     },
 
     activeCount(world: World): number {
-        const r = wasm.exports.tumble_contact_pairs_active_count(world);
+        const r = wasm.exports.mf(world);
         return r >>> 0;
     },
 
     readActive(out: ContactPair, world: World, index: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_contact_pairs_read_active(scratch + 0, world, index);
+        const r = wasm.exports.nf(scratch + 0, world, index);
         ContactPair.read(out, scratch + 0);
         return r !== 0;
     },
 
     removedCount(world: World): number {
-        const r = wasm.exports.tumble_contact_pairs_removed_count(world);
+        const r = wasm.exports.of(world);
         return r >>> 0;
     },
 
     readRemoved(out: ContactPair, world: World, index: number): boolean {
         const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_contact_pairs_read_removed(scratch + 0, world, index);
+        const r = wasm.exports.pf(scratch + 0, world, index);
         ContactPair.read(out, scratch + 0);
         return r !== 0;
     },
@@ -8296,263 +8252,488 @@ export type WasmExports = {
     tumble_wasm_alloc_bytes(bytes: number): number;
     tumble_wasm_free_bytes(block: number, bytes: number): void;
     tumble_wasm_allocated_bytes(): number;
-    tumble_world_settings_create(): number;
-    tumble_world_settings_destroy(worldSettings: number): void;
-    tumble_world_settings_add_broadphase_layer(settings: number): number;
-    tumble_world_settings_add_object_layer(settings: number, broadphaseLayer: number): number;
-    tumble_world_settings_enable_collision(settings: number, objectLayerA: number, objectLayerB: number): void;
-    tumble_world_create(settings: number): number;
-    tumble_world_destroy(world: number): void;
-    tumble_world_step(world: number, deltaTime: number): void;
-    tumble_world_step_begin(world: number, deltaTime: number): void;
-    tumble_world_find_pairs(world: number): void;
-    tumble_world_narrowphase(world: number): void;
-    tumble_world_solve(world: number): void;
-    tumble_world_step_end(world: number): void;
-    tumble_world_woken(world: number): number;
-    tumble_world_set_materials(world: number, frictionRestitution: number, count: number): number;
-    tumble_world_get_gravity(out: number, world: number): void;
-    tumble_world_set_gravity(world: number, gravity: number): void;
-    tumble_events_pairs(world: number): number;
-    tumble_events_read_pair(out: number, world: number, index: number): number;
-    tumble_events_contacts_added(world: number): number;
-    tumble_events_read_contact_added(out: number, world: number, index: number): number;
-    tumble_events_contacts_persisted(world: number): number;
-    tumble_events_read_contact_persisted(out: number, world: number, index: number): number;
-    tumble_events_contacts_removed(world: number): number;
-    tumble_events_read_contact_removed(out: number, world: number, index: number): number;
-    tumble_events_moved(world: number): number;
-    tumble_events_moved_body(world: number, index: number): number;
-    tumble_poses_create(world: number): number;
-    tumble_poses_destroy(poses: number): void;
-    tumble_poses_add(poses: number, body: number): number;
-    tumble_poses_remove(poses: number, slot: number): number;
-    tumble_poses_read(poses: number): number;
-    tumble_poses_slots(poses: number): number;
-    tumble_poses_body(poses: number, slot: number): number;
-    tumble_poses_positions(poses: number): number;
-    tumble_poses_quaternions(poses: number): number;
-    tumble_poses_changed(poses: number): number;
-    tumble_answers_reject_pair(world: number, index: number): number;
-    tumble_answers_override_contact(world: number, index: number, settings: number): number;
-    tumble_answers_reject_contact(world: number, index: number): number;
-    tumble_rigid_body_default_settings(out: number): void;
-    tumble_rigid_body_create(world: number, settings: number): number;
-    tumble_rigid_body_remove(world: number, body: number): number;
-    tumble_rigid_body_exists(world: number, body: number): number;
-    tumble_rigid_body_get_position(out: number, world: number, body: number): number;
-    tumble_rigid_body_get_quaternion(out: number, world: number, body: number): number;
-    tumble_rigid_body_get_transform(outPosition: number, outQuaternion: number, world: number, body: number): number;
-    tumble_rigid_body_get_center_of_mass_position(out: number, world: number, body: number): number;
-    tumble_rigid_body_get_linear_velocity(out: number, world: number, body: number): number;
-    tumble_rigid_body_get_angular_velocity(out: number, world: number, body: number): number;
-    tumble_rigid_body_get_velocity_at_point(out: number, world: number, body: number, point: number): number;
-    tumble_rigid_body_get_aabb(out: number, world: number, body: number): number;
-    tumble_rigid_body_get_mass(world: number, body: number): number;
-    tumble_rigid_body_get_motion_type(world: number, body: number): number;
-    tumble_rigid_body_get_object_layer(world: number, body: number): number;
-    tumble_rigid_body_get_user_data_low(world: number, body: number): number;
-    tumble_rigid_body_get_user_data_high(world: number, body: number): number;
-    tumble_rigid_body_get_shape(world: number, body: number): number;
-    tumble_rigid_body_is_sleeping(world: number, body: number): number;
-    tumble_rigid_body_set_position(world: number, body: number, position: number, wake: number): number;
-    tumble_rigid_body_set_quaternion(world: number, body: number, quaternion: number, wake: number): number;
-    tumble_rigid_body_set_transform(world: number, body: number, position: number, quaternion: number, wake: number): number;
-    tumble_rigid_body_set_linear_velocity(world: number, body: number, velocity: number): number;
-    tumble_rigid_body_set_angular_velocity(world: number, body: number, velocity: number): number;
-    tumble_rigid_body_add_linear_velocity(world: number, body: number, velocity: number): number;
-    tumble_rigid_body_add_angular_velocity(world: number, body: number, velocity: number): number;
-    tumble_rigid_body_add_force(world: number, body: number, force: number, wake: number): number;
-    tumble_rigid_body_add_torque(world: number, body: number, torque: number, wake: number): number;
-    tumble_rigid_body_add_force_at_position(world: number, body: number, force: number, position: number, wake: number): number;
-    tumble_rigid_body_add_impulse(world: number, body: number, impulse: number): number;
-    tumble_rigid_body_add_impulse_at_position(world: number, body: number, impulse: number, position: number): number;
-    tumble_rigid_body_add_angular_impulse(world: number, body: number, impulse: number): number;
-    tumble_rigid_body_set_motion_type(world: number, body: number, motionType: number, wake: number): number;
-    tumble_rigid_body_set_object_layer(world: number, body: number, objectLayer: number): number;
-    tumble_rigid_body_set_shape(world: number, body: number, shape: number): number;
-    tumble_rigid_body_move_kinematic(
-        world: number,
-        body: number,
-        position: number,
-        quaternion: number,
-        deltaTime: number,
-    ): number;
-    tumble_rigid_body_sleep(world: number, body: number): number;
-    tumble_rigid_body_wake(world: number, body: number): number;
-    tumble_rigid_body_set_user_data(world: number, body: number, low: number, high: number): number;
-    tumble_rigid_body_set_friction(world: number, body: number, friction: number): number;
-    tumble_rigid_body_set_restitution(world: number, body: number, restitution: number): number;
-    tumble_shape_get_type(shape: number): number;
-    tumble_shape_get_local_bounds(out: number, shape: number): void;
-    tumble_shape_get_center_of_mass(out: number, shape: number): void;
-    tumble_shape_get_volume(shape: number): number;
-    tumble_shape_get_mass_properties(out: number, shape: number): void;
-    tumble_box_default_settings(out: number): void;
-    tumble_box_create(settings: number): number;
-    tumble_box_destroy(shape: number): void;
-    tumble_sphere_default_settings(out: number): void;
-    tumble_sphere_create(settings: number): number;
-    tumble_sphere_destroy(shape: number): void;
-    tumble_capsule_default_settings(out: number): void;
-    tumble_capsule_create(settings: number): number;
-    tumble_capsule_destroy(shape: number): void;
-    tumble_cylinder_default_settings(out: number): void;
-    tumble_cylinder_create(settings: number): number;
-    tumble_cylinder_destroy(shape: number): void;
-    tumble_plane_default_settings(out: number): void;
-    tumble_plane_create(settings: number): number;
-    tumble_plane_destroy(shape: number): void;
-    tumble_empty_create(): number;
-    tumble_empty_destroy(shape: number): void;
-    tumble_convex_hull_data_default_settings(out: number): void;
-    tumble_convex_hull_data_build(out: number, settings: number): number;
-    tumble_convex_hull_data_release(data: number): void;
-    tumble_convex_hull_default_settings(out: number): void;
-    tumble_convex_hull_create(settings: number): number;
-    tumble_convex_hull_destroy(shape: number): void;
-    tumble_triangle_mesh_data_default_settings(out: number): void;
-    tumble_triangle_mesh_data_build(settings: number): number;
-    tumble_triangle_mesh_data_release(data: number): void;
-    tumble_triangle_mesh_default_settings(out: number): void;
-    tumble_triangle_mesh_create(settings: number): number;
-    tumble_triangle_mesh_destroy(shape: number): void;
-    tumble_compound_create(children: number, count: number): number;
-    tumble_compound_destroy(shape: number): void;
-    tumble_static_compound_default_bvh_max_leaf_children(): number;
-    tumble_static_compound_create(children: number, count: number, bvhMaxLeafChildren: number): number;
-    tumble_static_compound_destroy(shape: number): void;
-    tumble_transformed_default_settings(out: number): void;
-    tumble_transformed_create(settings: number): number;
-    tumble_transformed_destroy(shape: number): void;
-    tumble_scaled_default_settings(out: number): void;
-    tumble_scaled_create(settings: number): number;
-    tumble_scaled_destroy(shape: number): void;
-    tumble_offset_center_of_mass_default_settings(out: number): void;
-    tumble_offset_center_of_mass_create(settings: number): number;
-    tumble_offset_center_of_mass_destroy(shape: number): void;
-    tumble_constraint_get_type(constraint: number): number;
-    tumble_constraint_exists(world: number, constraint: number): number;
-    tumble_constraint_set_enabled(world: number, constraint: number, enabled: number): number;
-    tumble_constraint_is_enabled(world: number, constraint: number): number;
-    tumble_point_constraint_default_settings(out: number): void;
-    tumble_point_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
-    tumble_point_constraint_remove(world: number, constraint: number): number;
-    tumble_point_constraint_get_total_lambda(out: number, world: number, constraint: number): number;
-    tumble_distance_constraint_default_settings(out: number): void;
-    tumble_distance_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
-    tumble_distance_constraint_remove(world: number, constraint: number): number;
-    tumble_distance_constraint_get_total_lambda(world: number, constraint: number): number;
-    tumble_distance_constraint_set_distance(world: number, constraint: number, minDistance: number, maxDistance: number): number;
-    tumble_distance_constraint_set_limits_spring_settings(world: number, constraint: number, settings: number): number;
-    tumble_hinge_constraint_default_settings(out: number): void;
-    tumble_hinge_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
-    tumble_hinge_constraint_remove(world: number, constraint: number): number;
-    tumble_hinge_constraint_set_limits(world: number, constraint: number, min: number, max: number): number;
-    tumble_hinge_constraint_set_limits_spring_settings(world: number, constraint: number, settings: number): number;
-    tumble_hinge_constraint_set_max_friction_torque(world: number, constraint: number, torque: number): number;
-    tumble_hinge_constraint_set_motor_settings(world: number, constraint: number, settings: number): number;
-    tumble_hinge_constraint_get_motor_settings(out: number, world: number, constraint: number): number;
-    tumble_hinge_constraint_set_motor_state(world: number, constraint: number, state: number): number;
-    tumble_hinge_constraint_set_target_angular_velocity(world: number, constraint: number, velocity: number): number;
-    tumble_hinge_constraint_set_target_angle(world: number, constraint: number, angle: number): number;
-    tumble_hinge_constraint_get_current_angle(world: number, constraint: number): number;
-    tumble_slider_constraint_default_settings(out: number): void;
-    tumble_slider_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
-    tumble_slider_constraint_remove(world: number, constraint: number): number;
-    tumble_slider_constraint_get_current_position(world: number, constraint: number): number;
-    tumble_slider_constraint_set_limits(world: number, constraint: number, min: number, max: number): number;
-    tumble_slider_constraint_set_limits_spring_settings(world: number, constraint: number, settings: number): number;
-    tumble_slider_constraint_set_motor_settings(world: number, constraint: number, settings: number): number;
-    tumble_slider_constraint_get_motor_settings(out: number, world: number, constraint: number): number;
-    tumble_slider_constraint_set_motor_state(world: number, constraint: number, state: number): number;
-    tumble_slider_constraint_set_target_velocity(world: number, constraint: number, velocity: number): number;
-    tumble_slider_constraint_set_target_position(world: number, constraint: number, position: number): number;
-    tumble_slider_constraint_set_max_friction_force(world: number, constraint: number, force: number): number;
-    tumble_slider_constraint_get_max_friction_force(world: number, constraint: number): number;
-    tumble_slider_constraint_get_total_lambda_position(out: number, world: number, constraint: number): number;
-    tumble_slider_constraint_get_total_lambda_position_limits(world: number, constraint: number): number;
-    tumble_slider_constraint_get_total_lambda_rotation(out: number, world: number, constraint: number): number;
-    tumble_slider_constraint_get_total_lambda_motor(world: number, constraint: number): number;
-    tumble_fixed_constraint_default_settings(out: number): void;
-    tumble_fixed_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
-    tumble_fixed_constraint_remove(world: number, constraint: number): number;
-    tumble_fixed_constraint_get_total_lambda_position(out: number, world: number, constraint: number): number;
-    tumble_fixed_constraint_get_total_lambda_rotation(out: number, world: number, constraint: number): number;
-    tumble_cone_constraint_default_settings(out: number): void;
-    tumble_cone_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
-    tumble_cone_constraint_remove(world: number, constraint: number): number;
-    tumble_cone_constraint_set_half_cone_angle(world: number, constraint: number, halfConeAngle: number): number;
-    tumble_cone_constraint_get_half_cone_angle(world: number, constraint: number): number;
-    tumble_cone_constraint_get_cos_half_cone_angle(world: number, constraint: number): number;
-    tumble_cone_constraint_get_total_lambda_position(out: number, world: number, constraint: number): number;
-    tumble_cone_constraint_get_total_lambda_rotation(world: number, constraint: number): number;
-    tumble_swing_twist_constraint_default_settings(out: number): void;
-    tumble_swing_twist_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
-    tumble_swing_twist_constraint_remove(world: number, constraint: number): number;
-    tumble_swing_twist_constraint_set_normal_half_cone_angle(world: number, constraint: number, angle: number): number;
-    tumble_swing_twist_constraint_set_plane_half_cone_angle(world: number, constraint: number, angle: number): number;
-    tumble_swing_twist_constraint_set_twist_min_angle(world: number, constraint: number, angle: number): number;
-    tumble_swing_twist_constraint_set_twist_max_angle(world: number, constraint: number, angle: number): number;
-    tumble_swing_twist_constraint_set_max_friction_torque(world: number, constraint: number, torque: number): number;
-    tumble_swing_twist_constraint_set_swing_motor_settings(world: number, constraint: number, settings: number): number;
-    tumble_swing_twist_constraint_set_twist_motor_settings(world: number, constraint: number, settings: number): number;
-    tumble_swing_twist_constraint_get_swing_motor_settings(out: number, world: number, constraint: number): number;
-    tumble_swing_twist_constraint_get_twist_motor_settings(out: number, world: number, constraint: number): number;
-    tumble_swing_twist_constraint_set_swing_motor_state(world: number, constraint: number, state: number): number;
-    tumble_swing_twist_constraint_set_twist_motor_state(world: number, constraint: number, state: number): number;
-    tumble_swing_twist_constraint_set_target_angular_velocity_cs(world: number, constraint: number, velocity: number): number;
-    tumble_swing_twist_constraint_set_target_orientation_cs(world: number, constraint: number, orientation: number): number;
-    tumble_swing_twist_constraint_set_target_orientation_bs(world: number, constraint: number, orientation: number): number;
-    tumble_swing_twist_constraint_get_rotation_in_constraint_space(out: number, world: number, constraint: number): number;
-    tumble_swing_twist_constraint_get_total_lambda_position(out: number, world: number, constraint: number): number;
-    tumble_swing_twist_constraint_get_total_lambda_twist(world: number, constraint: number): number;
-    tumble_swing_twist_constraint_get_total_lambda_swing_y(world: number, constraint: number): number;
-    tumble_swing_twist_constraint_get_total_lambda_swing_z(world: number, constraint: number): number;
-    tumble_swing_twist_constraint_get_total_lambda_motor(out: number, world: number, constraint: number): number;
-    tumble_six_dof_constraint_default_settings(out: number): void;
-    tumble_six_dof_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
-    tumble_six_dof_constraint_remove(world: number, constraint: number): number;
-    tumble_six_dof_constraint_set_translation_limits(
-        world: number,
-        constraint: number,
-        limitMin: number,
-        limitMax: number,
-    ): number;
-    tumble_six_dof_constraint_set_rotation_limits(world: number, constraint: number, limitMin: number, limitMax: number): number;
-    tumble_six_dof_constraint_set_limits_spring_settings(
-        world: number,
-        constraint: number,
-        axis: number,
-        settings: number,
-    ): number;
-    tumble_six_dof_constraint_set_motor_settings(world: number, constraint: number, axis: number, settings: number): number;
-    tumble_six_dof_constraint_get_motor_settings(out: number, world: number, constraint: number, axis: number): number;
-    tumble_six_dof_constraint_set_motor_state(world: number, constraint: number, axis: number, state: number): number;
-    tumble_six_dof_constraint_set_target_velocity_cs(world: number, constraint: number, velocity: number): number;
-    tumble_six_dof_constraint_set_target_angular_velocity_cs(world: number, constraint: number, velocity: number): number;
-    tumble_six_dof_constraint_set_target_position_cs(world: number, constraint: number, position: number): number;
-    tumble_six_dof_constraint_set_target_orientation_cs(world: number, constraint: number, orientation: number): number;
-    tumble_six_dof_constraint_set_max_friction(world: number, constraint: number, axis: number, friction: number): number;
-    tumble_six_dof_constraint_make_free_axis(world: number, constraint: number, axis: number): number;
-    tumble_six_dof_constraint_make_fixed_axis(world: number, constraint: number, axis: number): number;
-    tumble_six_dof_constraint_set_limited_axis(world: number, constraint: number, axis: number, min: number, max: number): number;
-    tumble_filter_create(world: number): number;
-    tumble_filter_destroy(filter: number): void;
-    tumble_filter_enable_all_layers(filter: number, world: number): void;
-    tumble_filter_disable_all_layers(filter: number, world: number): void;
-    tumble_filter_enable_object_layer(filter: number, world: number, objectLayer: number): number;
-    tumble_filter_disable_object_layer(filter: number, world: number, objectLayer: number): number;
-    tumble_filter_enable_broadphase_layer(filter: number, world: number, broadphaseLayer: number): number;
-    tumble_filter_disable_broadphase_layer(filter: number, world: number, broadphaseLayer: number): number;
-    tumble_filter_is_object_layer_enabled(filter: number, objectLayer: number): number;
-    tumble_filter_is_broadphase_layer_enabled(filter: number, broadphaseLayer: number): number;
-    tumble_filter_set_from_body(filter: number, world: number, body: number): number;
-    tumble_filter_get_collision_groups(filter: number): number;
-    tumble_filter_get_collision_mask(filter: number): number;
-    tumble_filter_copy(out: number, source: number): number;
-    tumble_query_default_cast_ray_settings(out: number): void;
-    tumble_query_cast_ray(
+    /** tumble_world_settings_create */
+    j(): number;
+    /** tumble_world_settings_destroy */
+    k(worldSettings: number): void;
+    /** tumble_world_settings_add_broadphase_layer */
+    l(settings: number): number;
+    /** tumble_world_settings_add_object_layer */
+    m(settings: number, broadphaseLayer: number): number;
+    /** tumble_world_settings_enable_collision */
+    n(settings: number, objectLayerA: number, objectLayerB: number): void;
+    /** tumble_world_create */
+    o(settings: number): number;
+    /** tumble_world_destroy */
+    p(world: number): void;
+    /** tumble_world_step */
+    q(world: number, deltaTime: number): void;
+    /** tumble_world_step_begin */
+    r(world: number, deltaTime: number): void;
+    /** tumble_world_find_pairs */
+    s(world: number): void;
+    /** tumble_world_narrowphase */
+    t(world: number): void;
+    /** tumble_world_solve */
+    u(world: number): void;
+    /** tumble_world_step_end */
+    v(world: number): void;
+    /** tumble_world_woken */
+    w(world: number): number;
+    /** tumble_world_set_materials */
+    x(world: number, frictionRestitution: number, count: number): number;
+    /** tumble_world_get_gravity */
+    y(out: number, world: number): void;
+    /** tumble_world_set_gravity */
+    z(world: number, gravity: number): void;
+    /** tumble_events_pairs */
+    A(world: number): number;
+    /** tumble_events_read_pair */
+    B(out: number, world: number, index: number): number;
+    /** tumble_events_contacts_added */
+    C(world: number): number;
+    /** tumble_events_read_contact_added */
+    D(out: number, world: number, index: number): number;
+    /** tumble_events_contacts_persisted */
+    E(world: number): number;
+    /** tumble_events_read_contact_persisted */
+    F(out: number, world: number, index: number): number;
+    /** tumble_events_contacts_removed */
+    G(world: number): number;
+    /** tumble_events_read_contact_removed */
+    H(out: number, world: number, index: number): number;
+    /** tumble_events_moved */
+    I(world: number): number;
+    /** tumble_events_moved_body */
+    J(world: number, index: number): number;
+    /** tumble_poses_create */
+    K(world: number): number;
+    /** tumble_poses_destroy */
+    L(poses: number): void;
+    /** tumble_poses_add */
+    M(poses: number, body: number): number;
+    /** tumble_poses_remove */
+    N(poses: number, slot: number): number;
+    /** tumble_poses_read */
+    O(poses: number): number;
+    /** tumble_poses_slots */
+    P(poses: number): number;
+    /** tumble_poses_body */
+    Q(poses: number, slot: number): number;
+    /** tumble_poses_positions */
+    R(poses: number): number;
+    /** tumble_poses_quaternions */
+    S(poses: number): number;
+    /** tumble_poses_changed */
+    T(poses: number): number;
+    /** tumble_answers_reject_pair */
+    U(world: number, index: number): number;
+    /** tumble_answers_override_contact */
+    V(world: number, index: number, settings: number): number;
+    /** tumble_answers_reject_contact */
+    W(world: number, index: number): number;
+    /** tumble_rigid_body_default_settings */
+    X(out: number): void;
+    /** tumble_rigid_body_create */
+    Y(world: number, settings: number): number;
+    /** tumble_rigid_body_remove */
+    Z(world: number, body: number): number;
+    /** tumble_rigid_body_exists */
+    aa(world: number, body: number): number;
+    /** tumble_rigid_body_get_position */
+    ba(out: number, world: number, body: number): number;
+    /** tumble_rigid_body_get_quaternion */
+    ca(out: number, world: number, body: number): number;
+    /** tumble_rigid_body_get_transform */
+    da(outPosition: number, outQuaternion: number, world: number, body: number): number;
+    /** tumble_rigid_body_get_center_of_mass_position */
+    ea(out: number, world: number, body: number): number;
+    /** tumble_rigid_body_get_linear_velocity */
+    fa(out: number, world: number, body: number): number;
+    /** tumble_rigid_body_get_angular_velocity */
+    ga(out: number, world: number, body: number): number;
+    /** tumble_rigid_body_get_velocity_at_point */
+    ha(out: number, world: number, body: number, point: number): number;
+    /** tumble_rigid_body_get_aabb */
+    ia(out: number, world: number, body: number): number;
+    /** tumble_rigid_body_get_mass */
+    ja(world: number, body: number): number;
+    /** tumble_rigid_body_get_motion_type */
+    ka(world: number, body: number): number;
+    /** tumble_rigid_body_get_object_layer */
+    la(world: number, body: number): number;
+    /** tumble_rigid_body_get_user_data_low */
+    ma(world: number, body: number): number;
+    /** tumble_rigid_body_get_user_data_high */
+    na(world: number, body: number): number;
+    /** tumble_rigid_body_get_shape */
+    oa(world: number, body: number): number;
+    /** tumble_rigid_body_is_sleeping */
+    pa(world: number, body: number): number;
+    /** tumble_rigid_body_set_position */
+    qa(world: number, body: number, position: number, wake: number): number;
+    /** tumble_rigid_body_set_quaternion */
+    ra(world: number, body: number, quaternion: number, wake: number): number;
+    /** tumble_rigid_body_set_transform */
+    sa(world: number, body: number, position: number, quaternion: number, wake: number): number;
+    /** tumble_rigid_body_set_linear_velocity */
+    ta(world: number, body: number, velocity: number): number;
+    /** tumble_rigid_body_set_angular_velocity */
+    ua(world: number, body: number, velocity: number): number;
+    /** tumble_rigid_body_add_linear_velocity */
+    va(world: number, body: number, velocity: number): number;
+    /** tumble_rigid_body_add_angular_velocity */
+    wa(world: number, body: number, velocity: number): number;
+    /** tumble_rigid_body_add_force */
+    xa(world: number, body: number, force: number, wake: number): number;
+    /** tumble_rigid_body_add_torque */
+    ya(world: number, body: number, torque: number, wake: number): number;
+    /** tumble_rigid_body_add_force_at_position */
+    za(world: number, body: number, force: number, position: number, wake: number): number;
+    /** tumble_rigid_body_add_impulse */
+    Aa(world: number, body: number, impulse: number): number;
+    /** tumble_rigid_body_add_impulse_at_position */
+    Ba(world: number, body: number, impulse: number, position: number): number;
+    /** tumble_rigid_body_add_angular_impulse */
+    Ca(world: number, body: number, impulse: number): number;
+    /** tumble_rigid_body_set_motion_type */
+    Da(world: number, body: number, motionType: number, wake: number): number;
+    /** tumble_rigid_body_set_object_layer */
+    Ea(world: number, body: number, objectLayer: number): number;
+    /** tumble_rigid_body_set_shape */
+    Fa(world: number, body: number, shape: number): number;
+    /** tumble_rigid_body_move_kinematic */
+    Ga(world: number, body: number, position: number, quaternion: number, deltaTime: number): number;
+    /** tumble_rigid_body_sleep */
+    Ha(world: number, body: number): number;
+    /** tumble_rigid_body_wake */
+    Ia(world: number, body: number): number;
+    /** tumble_rigid_body_set_user_data */
+    Ja(world: number, body: number, low: number, high: number): number;
+    /** tumble_rigid_body_set_friction */
+    Ka(world: number, body: number, friction: number): number;
+    /** tumble_rigid_body_set_restitution */
+    La(world: number, body: number, restitution: number): number;
+    /** tumble_shape_get_type */
+    Ma(shape: number): number;
+    /** tumble_shape_get_local_bounds */
+    Na(out: number, shape: number): void;
+    /** tumble_shape_get_center_of_mass */
+    Oa(out: number, shape: number): void;
+    /** tumble_shape_get_volume */
+    Pa(shape: number): number;
+    /** tumble_shape_get_mass_properties */
+    Qa(out: number, shape: number): void;
+    /** tumble_box_default_settings */
+    Ra(out: number): void;
+    /** tumble_box_create */
+    Sa(settings: number): number;
+    /** tumble_box_destroy */
+    Ta(shape: number): void;
+    /** tumble_sphere_default_settings */
+    Ua(out: number): void;
+    /** tumble_sphere_create */
+    Va(settings: number): number;
+    /** tumble_sphere_destroy */
+    Wa(shape: number): void;
+    /** tumble_capsule_default_settings */
+    Xa(out: number): void;
+    /** tumble_capsule_create */
+    Ya(settings: number): number;
+    /** tumble_capsule_destroy */
+    Za(shape: number): void;
+    /** tumble_cylinder_default_settings */
+    ab(out: number): void;
+    /** tumble_cylinder_create */
+    bb(settings: number): number;
+    /** tumble_cylinder_destroy */
+    cb(shape: number): void;
+    /** tumble_plane_default_settings */
+    db(out: number): void;
+    /** tumble_plane_create */
+    eb(settings: number): number;
+    /** tumble_plane_destroy */
+    fb(shape: number): void;
+    /** tumble_empty_create */
+    gb(): number;
+    /** tumble_empty_destroy */
+    hb(shape: number): void;
+    /** tumble_convex_hull_data_default_settings */
+    ib(out: number): void;
+    /** tumble_convex_hull_data_build */
+    jb(out: number, settings: number): number;
+    /** tumble_convex_hull_data_release */
+    kb(data: number): void;
+    /** tumble_convex_hull_default_settings */
+    lb(out: number): void;
+    /** tumble_convex_hull_create */
+    mb(settings: number): number;
+    /** tumble_convex_hull_destroy */
+    nb(shape: number): void;
+    /** tumble_triangle_mesh_data_default_settings */
+    ob(out: number): void;
+    /** tumble_triangle_mesh_data_build */
+    pb(settings: number): number;
+    /** tumble_triangle_mesh_data_release */
+    qb(data: number): void;
+    /** tumble_triangle_mesh_default_settings */
+    rb(out: number): void;
+    /** tumble_triangle_mesh_create */
+    sb(settings: number): number;
+    /** tumble_triangle_mesh_destroy */
+    tb(shape: number): void;
+    /** tumble_compound_create */
+    ub(children: number, count: number): number;
+    /** tumble_compound_destroy */
+    vb(shape: number): void;
+    /** tumble_static_compound_default_bvh_max_leaf_children */
+    wb(): number;
+    /** tumble_static_compound_create */
+    xb(children: number, count: number, bvhMaxLeafChildren: number): number;
+    /** tumble_static_compound_destroy */
+    yb(shape: number): void;
+    /** tumble_transformed_default_settings */
+    zb(out: number): void;
+    /** tumble_transformed_create */
+    Ab(settings: number): number;
+    /** tumble_transformed_destroy */
+    Bb(shape: number): void;
+    /** tumble_scaled_default_settings */
+    Cb(out: number): void;
+    /** tumble_scaled_create */
+    Db(settings: number): number;
+    /** tumble_scaled_destroy */
+    Eb(shape: number): void;
+    /** tumble_offset_center_of_mass_default_settings */
+    Fb(out: number): void;
+    /** tumble_offset_center_of_mass_create */
+    Gb(settings: number): number;
+    /** tumble_offset_center_of_mass_destroy */
+    Hb(shape: number): void;
+    /** tumble_constraint_get_type */
+    Ib(constraint: number): number;
+    /** tumble_constraint_exists */
+    Jb(world: number, constraint: number): number;
+    /** tumble_constraint_set_enabled */
+    Kb(world: number, constraint: number, enabled: number): number;
+    /** tumble_constraint_is_enabled */
+    Lb(world: number, constraint: number): number;
+    /** tumble_point_constraint_default_settings */
+    Mb(out: number): void;
+    /** tumble_point_constraint_create */
+    Nb(world: number, bodyA: number, bodyB: number, settings: number): number;
+    /** tumble_point_constraint_remove */
+    Ob(world: number, constraint: number): number;
+    /** tumble_point_constraint_get_total_lambda */
+    Pb(out: number, world: number, constraint: number): number;
+    /** tumble_distance_constraint_default_settings */
+    Qb(out: number): void;
+    /** tumble_distance_constraint_create */
+    Rb(world: number, bodyA: number, bodyB: number, settings: number): number;
+    /** tumble_distance_constraint_remove */
+    Sb(world: number, constraint: number): number;
+    /** tumble_distance_constraint_get_total_lambda */
+    Tb(world: number, constraint: number): number;
+    /** tumble_distance_constraint_set_distance */
+    Ub(world: number, constraint: number, minDistance: number, maxDistance: number): number;
+    /** tumble_distance_constraint_set_limits_spring_settings */
+    Vb(world: number, constraint: number, settings: number): number;
+    /** tumble_hinge_constraint_default_settings */
+    Wb(out: number): void;
+    /** tumble_hinge_constraint_create */
+    Xb(world: number, bodyA: number, bodyB: number, settings: number): number;
+    /** tumble_hinge_constraint_remove */
+    Yb(world: number, constraint: number): number;
+    /** tumble_hinge_constraint_set_limits */
+    Zb(world: number, constraint: number, min: number, max: number): number;
+    /** tumble_hinge_constraint_set_limits_spring_settings */
+    ac(world: number, constraint: number, settings: number): number;
+    /** tumble_hinge_constraint_set_max_friction_torque */
+    bc(world: number, constraint: number, torque: number): number;
+    /** tumble_hinge_constraint_set_motor_settings */
+    cc(world: number, constraint: number, settings: number): number;
+    /** tumble_hinge_constraint_get_motor_settings */
+    dc(out: number, world: number, constraint: number): number;
+    /** tumble_hinge_constraint_set_motor_state */
+    ec(world: number, constraint: number, state: number): number;
+    /** tumble_hinge_constraint_set_target_angular_velocity */
+    fc(world: number, constraint: number, velocity: number): number;
+    /** tumble_hinge_constraint_set_target_angle */
+    gc(world: number, constraint: number, angle: number): number;
+    /** tumble_hinge_constraint_get_current_angle */
+    hc(world: number, constraint: number): number;
+    /** tumble_slider_constraint_default_settings */
+    ic(out: number): void;
+    /** tumble_slider_constraint_create */
+    jc(world: number, bodyA: number, bodyB: number, settings: number): number;
+    /** tumble_slider_constraint_remove */
+    kc(world: number, constraint: number): number;
+    /** tumble_slider_constraint_get_current_position */
+    lc(world: number, constraint: number): number;
+    /** tumble_slider_constraint_set_limits */
+    mc(world: number, constraint: number, min: number, max: number): number;
+    /** tumble_slider_constraint_set_limits_spring_settings */
+    nc(world: number, constraint: number, settings: number): number;
+    /** tumble_slider_constraint_set_motor_settings */
+    oc(world: number, constraint: number, settings: number): number;
+    /** tumble_slider_constraint_get_motor_settings */
+    pc(out: number, world: number, constraint: number): number;
+    /** tumble_slider_constraint_set_motor_state */
+    qc(world: number, constraint: number, state: number): number;
+    /** tumble_slider_constraint_set_target_velocity */
+    rc(world: number, constraint: number, velocity: number): number;
+    /** tumble_slider_constraint_set_target_position */
+    sc(world: number, constraint: number, position: number): number;
+    /** tumble_slider_constraint_set_max_friction_force */
+    tc(world: number, constraint: number, force: number): number;
+    /** tumble_slider_constraint_get_max_friction_force */
+    uc(world: number, constraint: number): number;
+    /** tumble_slider_constraint_get_total_lambda_position */
+    vc(out: number, world: number, constraint: number): number;
+    /** tumble_slider_constraint_get_total_lambda_position_limits */
+    wc(world: number, constraint: number): number;
+    /** tumble_slider_constraint_get_total_lambda_rotation */
+    xc(out: number, world: number, constraint: number): number;
+    /** tumble_slider_constraint_get_total_lambda_motor */
+    yc(world: number, constraint: number): number;
+    /** tumble_fixed_constraint_default_settings */
+    zc(out: number): void;
+    /** tumble_fixed_constraint_create */
+    Ac(world: number, bodyA: number, bodyB: number, settings: number): number;
+    /** tumble_fixed_constraint_remove */
+    Bc(world: number, constraint: number): number;
+    /** tumble_fixed_constraint_get_total_lambda_position */
+    Cc(out: number, world: number, constraint: number): number;
+    /** tumble_fixed_constraint_get_total_lambda_rotation */
+    Dc(out: number, world: number, constraint: number): number;
+    /** tumble_cone_constraint_default_settings */
+    Ec(out: number): void;
+    /** tumble_cone_constraint_create */
+    Fc(world: number, bodyA: number, bodyB: number, settings: number): number;
+    /** tumble_cone_constraint_remove */
+    Gc(world: number, constraint: number): number;
+    /** tumble_cone_constraint_set_half_cone_angle */
+    Hc(world: number, constraint: number, halfConeAngle: number): number;
+    /** tumble_cone_constraint_get_half_cone_angle */
+    Ic(world: number, constraint: number): number;
+    /** tumble_cone_constraint_get_cos_half_cone_angle */
+    Jc(world: number, constraint: number): number;
+    /** tumble_cone_constraint_get_total_lambda_position */
+    Kc(out: number, world: number, constraint: number): number;
+    /** tumble_cone_constraint_get_total_lambda_rotation */
+    Lc(world: number, constraint: number): number;
+    /** tumble_swing_twist_constraint_default_settings */
+    Mc(out: number): void;
+    /** tumble_swing_twist_constraint_create */
+    Nc(world: number, bodyA: number, bodyB: number, settings: number): number;
+    /** tumble_swing_twist_constraint_remove */
+    Oc(world: number, constraint: number): number;
+    /** tumble_swing_twist_constraint_set_normal_half_cone_angle */
+    Pc(world: number, constraint: number, angle: number): number;
+    /** tumble_swing_twist_constraint_set_plane_half_cone_angle */
+    Qc(world: number, constraint: number, angle: number): number;
+    /** tumble_swing_twist_constraint_set_twist_min_angle */
+    Rc(world: number, constraint: number, angle: number): number;
+    /** tumble_swing_twist_constraint_set_twist_max_angle */
+    Sc(world: number, constraint: number, angle: number): number;
+    /** tumble_swing_twist_constraint_set_max_friction_torque */
+    Tc(world: number, constraint: number, torque: number): number;
+    /** tumble_swing_twist_constraint_set_swing_motor_settings */
+    Uc(world: number, constraint: number, settings: number): number;
+    /** tumble_swing_twist_constraint_set_twist_motor_settings */
+    Vc(world: number, constraint: number, settings: number): number;
+    /** tumble_swing_twist_constraint_get_swing_motor_settings */
+    Wc(out: number, world: number, constraint: number): number;
+    /** tumble_swing_twist_constraint_get_twist_motor_settings */
+    Xc(out: number, world: number, constraint: number): number;
+    /** tumble_swing_twist_constraint_set_swing_motor_state */
+    Yc(world: number, constraint: number, state: number): number;
+    /** tumble_swing_twist_constraint_set_twist_motor_state */
+    Zc(world: number, constraint: number, state: number): number;
+    /** tumble_swing_twist_constraint_set_target_angular_velocity_cs */
+    ad(world: number, constraint: number, velocity: number): number;
+    /** tumble_swing_twist_constraint_set_target_orientation_cs */
+    bd(world: number, constraint: number, orientation: number): number;
+    /** tumble_swing_twist_constraint_set_target_orientation_bs */
+    cd(world: number, constraint: number, orientation: number): number;
+    /** tumble_swing_twist_constraint_get_rotation_in_constraint_space */
+    dd(out: number, world: number, constraint: number): number;
+    /** tumble_swing_twist_constraint_get_total_lambda_position */
+    ed(out: number, world: number, constraint: number): number;
+    /** tumble_swing_twist_constraint_get_total_lambda_twist */
+    fd(world: number, constraint: number): number;
+    /** tumble_swing_twist_constraint_get_total_lambda_swing_y */
+    gd(world: number, constraint: number): number;
+    /** tumble_swing_twist_constraint_get_total_lambda_swing_z */
+    hd(world: number, constraint: number): number;
+    /** tumble_swing_twist_constraint_get_total_lambda_motor */
+    id(out: number, world: number, constraint: number): number;
+    /** tumble_six_dof_constraint_default_settings */
+    jd(out: number): void;
+    /** tumble_six_dof_constraint_create */
+    kd(world: number, bodyA: number, bodyB: number, settings: number): number;
+    /** tumble_six_dof_constraint_remove */
+    ld(world: number, constraint: number): number;
+    /** tumble_six_dof_constraint_set_translation_limits */
+    md(world: number, constraint: number, limitMin: number, limitMax: number): number;
+    /** tumble_six_dof_constraint_set_rotation_limits */
+    nd(world: number, constraint: number, limitMin: number, limitMax: number): number;
+    /** tumble_six_dof_constraint_set_limits_spring_settings */
+    od(world: number, constraint: number, axis: number, settings: number): number;
+    /** tumble_six_dof_constraint_set_motor_settings */
+    pd(world: number, constraint: number, axis: number, settings: number): number;
+    /** tumble_six_dof_constraint_get_motor_settings */
+    qd(out: number, world: number, constraint: number, axis: number): number;
+    /** tumble_six_dof_constraint_set_motor_state */
+    rd(world: number, constraint: number, axis: number, state: number): number;
+    /** tumble_six_dof_constraint_set_target_velocity_cs */
+    sd(world: number, constraint: number, velocity: number): number;
+    /** tumble_six_dof_constraint_set_target_angular_velocity_cs */
+    td(world: number, constraint: number, velocity: number): number;
+    /** tumble_six_dof_constraint_set_target_position_cs */
+    ud(world: number, constraint: number, position: number): number;
+    /** tumble_six_dof_constraint_set_target_orientation_cs */
+    vd(world: number, constraint: number, orientation: number): number;
+    /** tumble_six_dof_constraint_set_max_friction */
+    wd(world: number, constraint: number, axis: number, friction: number): number;
+    /** tumble_six_dof_constraint_make_free_axis */
+    xd(world: number, constraint: number, axis: number): number;
+    /** tumble_six_dof_constraint_make_fixed_axis */
+    yd(world: number, constraint: number, axis: number): number;
+    /** tumble_six_dof_constraint_set_limited_axis */
+    zd(world: number, constraint: number, axis: number, min: number, max: number): number;
+    /** tumble_filter_create */
+    Ad(world: number): number;
+    /** tumble_filter_destroy */
+    Bd(filter: number): void;
+    /** tumble_filter_enable_all_layers */
+    Cd(filter: number, world: number): void;
+    /** tumble_filter_disable_all_layers */
+    Dd(filter: number, world: number): void;
+    /** tumble_filter_enable_object_layer */
+    Ed(filter: number, world: number, objectLayer: number): number;
+    /** tumble_filter_disable_object_layer */
+    Fd(filter: number, world: number, objectLayer: number): number;
+    /** tumble_filter_enable_broadphase_layer */
+    Gd(filter: number, world: number, broadphaseLayer: number): number;
+    /** tumble_filter_disable_broadphase_layer */
+    Hd(filter: number, world: number, broadphaseLayer: number): number;
+    /** tumble_filter_is_object_layer_enabled */
+    Id(filter: number, objectLayer: number): number;
+    /** tumble_filter_is_broadphase_layer_enabled */
+    Jd(filter: number, broadphaseLayer: number): number;
+    /** tumble_filter_set_from_body */
+    Kd(filter: number, world: number, body: number): number;
+    /** tumble_filter_get_collision_groups */
+    Ld(filter: number): number;
+    /** tumble_filter_get_collision_mask */
+    Md(filter: number): number;
+    /** tumble_filter_copy */
+    Nd(out: number, source: number): number;
+    /** tumble_query_default_cast_ray_settings */
+    Od(out: number): void;
+    /** tumble_query_cast_ray */
+    Pd(
         world: number,
         kind: number,
         earlyOutFraction: number,
@@ -8564,9 +8745,12 @@ export type WasmExports = {
         collisionGroups: number,
         collisionMask: number,
     ): number;
-    tumble_query_read_cast_ray_hit(out: number, index: number): number;
-    tumble_query_default_cast_shape_settings(out: number): void;
-    tumble_query_cast_shape(
+    /** tumble_query_read_cast_ray_hit */
+    Qd(out: number, index: number): number;
+    /** tumble_query_default_cast_shape_settings */
+    Rd(out: number): void;
+    /** tumble_query_cast_shape */
+    Sd(
         world: number,
         kind: number,
         earlyOutFraction: number,
@@ -8580,9 +8764,12 @@ export type WasmExports = {
         collisionGroups: number,
         collisionMask: number,
     ): number;
-    tumble_query_read_cast_shape_hit(out: number, index: number): number;
-    tumble_query_default_collide_shape_settings(out: number): void;
-    tumble_query_collide_shape(
+    /** tumble_query_read_cast_shape_hit */
+    Td(out: number, index: number): number;
+    /** tumble_query_default_collide_shape_settings */
+    Ud(out: number): void;
+    /** tumble_query_collide_shape */
+    Vd(
         world: number,
         kind: number,
         earlyOutFraction: number,
@@ -8596,9 +8783,12 @@ export type WasmExports = {
         collisionGroups: number,
         collisionMask: number,
     ): number;
-    tumble_query_read_collide_shape_hit(out: number, index: number): number;
-    tumble_query_default_collide_point_settings(out: number): void;
-    tumble_query_collide_point(
+    /** tumble_query_read_collide_shape_hit */
+    Wd(out: number, index: number): number;
+    /** tumble_query_default_collide_point_settings */
+    Xd(out: number): void;
+    /** tumble_query_collide_point */
+    Yd(
         world: number,
         kind: number,
         settings: number,
@@ -8607,44 +8797,68 @@ export type WasmExports = {
         collisionGroups: number,
         collisionMask: number,
     ): number;
-    tumble_query_read_collide_point_hit(out: number, index: number): number;
-    tumble_kcc_policy_default_body_policy(out: number): void;
-    tumble_kcc_policy_create(): number;
-    tumble_kcc_policy_destroy(policy: number): void;
-    tumble_kcc_policy_get_defaults(out: number, policy: number): void;
-    tumble_kcc_policy_set_defaults(policy: number, bodyPolicy: number): void;
-    tumble_kcc_policy_set(policy: number, body: number, bodyPolicy: number): number;
-    tumble_kcc_policy_remove(policy: number, body: number): number;
-    tumble_kcc_policy_get(out: number, policy: number, body: number): void;
-    tumble_kcc_default_settings(out: number): void;
-    tumble_kcc_default_update_settings(out: number): void;
-    tumble_kcc_create(settings: number, position: number, quaternion: number): number;
-    tumble_kcc_destroy(character: number): void;
-    tumble_kcc_add(world: number, character: number): void;
-    tumble_kcc_remove(world: number, character: number): void;
-    tumble_kcc_read_state(out: number, character: number): void;
-    tumble_kcc_set_linear_velocity(character: number, velocity: number): void;
-    tumble_kcc_get_tuning(out: number, character: number): void;
-    tumble_kcc_set_tuning(character: number, tuning: number): void;
-    tumble_kcc_contacts(character: number): number;
-    tumble_kcc_read_contact_event(out: number, character: number, index: number): number;
-    tumble_kcc_set_position(world: number, character: number, position: number): void;
-    tumble_kcc_set_quaternion(world: number, character: number, quaternion: number): void;
-    tumble_kcc_is_slope_too_steep(character: number, normal: number): number;
-    tumble_kcc_get_center_of_mass_transform(outPosition: number, outQuaternion: number, character: number): void;
-    tumble_kcc_has_collided_with(character: number, body: number): number;
-    tumble_kcc_can_walk_stairs(character: number, velocity: number): number;
-    tumble_kcc_cancel_velocity_towards_steep_slopes(out: number, character: number, velocity: number): void;
-    tumble_kcc_update_ground_velocity(world: number, character: number, policy: number): void;
-    tumble_kcc_refresh_contacts(
-        world: number,
-        character: number,
-        filter: number,
-        collisionGroups: number,
-        collisionMask: number,
-        policy: number,
-    ): void;
-    tumble_kcc_set_shape(
+    /** tumble_query_read_collide_point_hit */
+    Zd(out: number, index: number): number;
+    /** tumble_kcc_policy_default_body_policy */
+    ae(out: number): void;
+    /** tumble_kcc_policy_create */
+    be(): number;
+    /** tumble_kcc_policy_destroy */
+    ce(policy: number): void;
+    /** tumble_kcc_policy_get_defaults */
+    de(out: number, policy: number): void;
+    /** tumble_kcc_policy_set_defaults */
+    ee(policy: number, bodyPolicy: number): void;
+    /** tumble_kcc_policy_set */
+    fe(policy: number, body: number, bodyPolicy: number): number;
+    /** tumble_kcc_policy_remove */
+    ge(policy: number, body: number): number;
+    /** tumble_kcc_policy_get */
+    he(out: number, policy: number, body: number): void;
+    /** tumble_kcc_default_settings */
+    ie(out: number): void;
+    /** tumble_kcc_default_update_settings */
+    je(out: number): void;
+    /** tumble_kcc_create */
+    ke(settings: number, position: number, quaternion: number): number;
+    /** tumble_kcc_destroy */
+    le(character: number): void;
+    /** tumble_kcc_add */
+    me(world: number, character: number): void;
+    /** tumble_kcc_remove */
+    ne(world: number, character: number): void;
+    /** tumble_kcc_read_state */
+    oe(out: number, character: number): void;
+    /** tumble_kcc_set_linear_velocity */
+    pe(character: number, velocity: number): void;
+    /** tumble_kcc_get_tuning */
+    qe(out: number, character: number): void;
+    /** tumble_kcc_set_tuning */
+    re(character: number, tuning: number): void;
+    /** tumble_kcc_contacts */
+    se(character: number): number;
+    /** tumble_kcc_read_contact_event */
+    te(out: number, character: number, index: number): number;
+    /** tumble_kcc_set_position */
+    ue(world: number, character: number, position: number): void;
+    /** tumble_kcc_set_quaternion */
+    ve(world: number, character: number, quaternion: number): void;
+    /** tumble_kcc_is_slope_too_steep */
+    we(character: number, normal: number): number;
+    /** tumble_kcc_get_center_of_mass_transform */
+    xe(outPosition: number, outQuaternion: number, character: number): void;
+    /** tumble_kcc_has_collided_with */
+    ye(character: number, body: number): number;
+    /** tumble_kcc_can_walk_stairs */
+    ze(character: number, velocity: number): number;
+    /** tumble_kcc_cancel_velocity_towards_steep_slopes */
+    Ae(out: number, character: number, velocity: number): void;
+    /** tumble_kcc_update_ground_velocity */
+    Be(world: number, character: number, policy: number): void;
+    /** tumble_kcc_refresh_contacts */
+    Ce(world: number, character: number, filter: number, collisionGroups: number, collisionMask: number, policy: number): void;
+    /** tumble_kcc_set_shape */
+    De(
         world: number,
         character: number,
         shape: number,
@@ -8654,7 +8868,8 @@ export type WasmExports = {
         policy: number,
         maxPenetrationDepth: number,
     ): number;
-    tumble_kcc_move(
+    /** tumble_kcc_move */
+    Ee(
         world: number,
         character: number,
         deltaTime: number,
@@ -8664,7 +8879,8 @@ export type WasmExports = {
         collisionGroups: number,
         collisionMask: number,
     ): void;
-    tumble_kcc_stick_to_floor(
+    /** tumble_kcc_stick_to_floor */
+    Fe(
         world: number,
         character: number,
         stepDown: number,
@@ -8673,7 +8889,8 @@ export type WasmExports = {
         collisionMask: number,
         policy: number,
     ): number;
-    tumble_kcc_walk_stairs(
+    /** tumble_kcc_walk_stairs */
+    Ge(
         world: number,
         character: number,
         deltaTime: number,
@@ -8686,7 +8903,8 @@ export type WasmExports = {
         collisionMask: number,
         policy: number,
     ): number;
-    tumble_kcc_update(
+    /** tumble_kcc_update */
+    He(
         world: number,
         character: number,
         deltaTime: number,
@@ -8697,7 +8915,8 @@ export type WasmExports = {
         collisionGroups: number,
         collisionMask: number,
     ): void;
-    tumble_kcc_collide(
+    /** tumble_kcc_collide */
+    Ie(
         world: number,
         character: number,
         position: number,
@@ -8707,7 +8926,8 @@ export type WasmExports = {
         collisionMask: number,
         policy: number,
     ): void;
-    tumble_kcc_solve(
+    /** tumble_kcc_solve */
+    Je(
         out: number,
         world: number,
         character: number,
@@ -8716,7 +8936,8 @@ export type WasmExports = {
         timeRemaining: number,
         policy: number,
     ): void;
-    tumble_kcc_cast(
+    /** tumble_kcc_cast */
+    Ke(
         out: number,
         world: number,
         character: number,
@@ -8727,41 +8948,66 @@ export type WasmExports = {
         collisionMask: number,
         policy: number,
     ): number;
-    tumble_kcc_update_ground(
-        world: number,
-        character: number,
-        deltaTime: number,
-        skipContactVelocityCheck: number,
-        policy: number,
-    ): void;
-    tumble_kcc_apply_weight(world: number, character: number, gravity: number, deltaTime: number): void;
-    tumble_kcc_begin_contact_tracking(character: number): void;
-    tumble_kcc_end_contact_tracking(character: number): void;
-    tumble_debug_create(): number;
-    tumble_debug_destroy(buffers: number): void;
-    tumble_debug_clear(buffers: number): void;
-    tumble_debug_lines(buffers: number): number;
-    tumble_debug_line_count(buffers: number): number;
-    tumble_debug_triangles(buffers: number): number;
-    tumble_debug_triangle_count(buffers: number): number;
-    tumble_debug_default_bodies_options(out: number): void;
-    tumble_debug_default_body_options(out: number): void;
-    tumble_debug_default_shape_options(out: number): void;
-    tumble_debug_default_joints_options(out: number): void;
-    tumble_debug_bodies(out: number, world: number, options: number): void;
-    tumble_debug_body(out: number, world: number, body: number, options: number): number;
-    tumble_debug_line(out: number, a: number, b: number, color: number): void;
-    tumble_debug_shape(out: number, shape: number, position: number, quaternion: number, options: number): void;
-    tumble_debug_contacts(out: number, world: number): void;
-    tumble_debug_character_contacts(out: number, character: number): void;
-    tumble_debug_contact_constraints(out: number, world: number): void;
-    tumble_debug_joints(out: number, world: number, options: number): void;
-    tumble_contact_pairs_begin(world: number): void;
-    tumble_contact_pairs_record_world_contacts(world: number, firstAdded: number, firstPersisted: number): void;
-    tumble_contact_pairs_record_character_contacts(world: number, character: number): void;
-    tumble_contact_pairs_end(world: number): void;
-    tumble_contact_pairs_active_count(world: number): number;
-    tumble_contact_pairs_read_active(out: number, world: number, index: number): number;
-    tumble_contact_pairs_removed_count(world: number): number;
-    tumble_contact_pairs_read_removed(out: number, world: number, index: number): number;
+    /** tumble_kcc_update_ground */
+    Le(world: number, character: number, deltaTime: number, skipContactVelocityCheck: number, policy: number): void;
+    /** tumble_kcc_apply_weight */
+    Me(world: number, character: number, gravity: number, deltaTime: number): void;
+    /** tumble_kcc_begin_contact_tracking */
+    Ne(character: number): void;
+    /** tumble_kcc_end_contact_tracking */
+    Oe(character: number): void;
+    /** tumble_debug_create */
+    Pe(): number;
+    /** tumble_debug_destroy */
+    Qe(buffers: number): void;
+    /** tumble_debug_clear */
+    Re(buffers: number): void;
+    /** tumble_debug_lines */
+    Se(buffers: number): number;
+    /** tumble_debug_line_count */
+    Te(buffers: number): number;
+    /** tumble_debug_triangles */
+    Ue(buffers: number): number;
+    /** tumble_debug_triangle_count */
+    Ve(buffers: number): number;
+    /** tumble_debug_default_bodies_options */
+    We(out: number): void;
+    /** tumble_debug_default_body_options */
+    Xe(out: number): void;
+    /** tumble_debug_default_shape_options */
+    Ye(out: number): void;
+    /** tumble_debug_default_joints_options */
+    Ze(out: number): void;
+    /** tumble_debug_bodies */
+    af(out: number, world: number, options: number): void;
+    /** tumble_debug_body */
+    bf(out: number, world: number, body: number, options: number): number;
+    /** tumble_debug_line */
+    cf(out: number, a: number, b: number, color: number): void;
+    /** tumble_debug_shape */
+    df(out: number, shape: number, position: number, quaternion: number, options: number): void;
+    /** tumble_debug_contacts */
+    ef(out: number, world: number): void;
+    /** tumble_debug_character_contacts */
+    ff(out: number, character: number): void;
+    /** tumble_debug_contact_constraints */
+    gf(out: number, world: number): void;
+    /** tumble_debug_joints */
+    hf(out: number, world: number, options: number): void;
+    /** tumble_contact_pairs_begin */
+    if(world: number): void;
+    /** tumble_contact_pairs_record_world_contacts */
+    jf(world: number, firstAdded: number, firstPersisted: number): void;
+    /** tumble_contact_pairs_record_character_contacts */
+    kf(world: number, character: number): void;
+    /** tumble_contact_pairs_end */
+    lf(world: number): void;
+    /** tumble_contact_pairs_active_count */
+    mf(world: number): number;
+    /** tumble_contact_pairs_read_active */
+    nf(out: number, world: number, index: number): number;
+    /** tumble_contact_pairs_removed_count */
+    of(world: number): number;
+    /** tumble_contact_pairs_read_removed */
+    pf(out: number, world: number, index: number): number;
 };
