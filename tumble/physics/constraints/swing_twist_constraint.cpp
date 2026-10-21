@@ -142,6 +142,7 @@ ConstraintId create(world::World &world, RigidBody *body_a, RigidBody *body_b,
     const ConstraintId id = constraint.base.id;
     bool linked = body_a->constraint_ids.push(id);
     if (linked && body_a != body_b) linked = body_b->constraint_ids.push(id);
+    if (linked) linked = constraints::add_to_list(constraints, constraint.base);
     if (!linked) {
         constraints::remove_constraint_by_id(constraints, bodies, id);
         return constraint_id::INVALID_CONSTRAINT_ID;
@@ -168,6 +169,7 @@ bool remove(world::World &world, ConstraintId id) {
 
     constraint.base.pooled = true;
     constraint.base.id = constraint_id::INVALID_CONSTRAINT_ID;
+    constraints::remove_from_list(constraints, constraint.base);
     pool.free_indices.push(constraint.base.index);
     return true;
 }
@@ -484,7 +486,7 @@ void get_iteration_overrides(constraints::ConstraintIterationOverrides &out, con
 
 void get_sort_fields(constraints::ConstraintSortFields &out, const SwingTwistConstraint &constraint) {
     out.priority = constraint.base.constraint_priority;
-    out.index = constraint.base.index;
+    out.index = constraint.base.list_index;
 }
 
 Vec3f get_total_lambda_position(const SwingTwistConstraint &constraint) { return constraint.point_constraint_part.total_lambda; }

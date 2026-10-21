@@ -55,6 +55,26 @@ void release(Constraints &constraints) {
         pool.stride = 0;
         pool.count = 0;
     }
+    constraints.list.release();
+}
+
+bool add_to_list(Constraints &constraints, ConstraintBase &constraint) {
+    if (!constraints.list.push(constraint.id)) return false;
+    constraint.list_index = constraints.list.length - 1;
+    return true;
+}
+
+void remove_from_list(Constraints &constraints, ConstraintBase &constraint) {
+    const uint32_t list_index = constraint.list_index;
+    if (list_index == ~0u) return;
+    const uint32_t last_index = constraints.list.length - 1;
+    if (list_index != last_index) {
+        const ConstraintId last_id = constraints.list[last_index];
+        constraints.list[list_index] = last_id;
+        get(constraints, last_id)->list_index = list_index;
+    }
+    constraints.list.length = last_index;
+    constraint.list_index = ~0u;
 }
 
 ConstraintPool &ensure_pool(Constraints &constraints, ConstraintType type) {
@@ -120,6 +140,8 @@ void remove_constraint_by_id(Constraints &constraints, bodies::Bodies &bodies, C
         const uint32_t b = constraint->body_index_b;
         if (is_body_live(bodies, a)) remove_constraint_id_from_body(*bodies.pool[a], id);
         if (a != b && is_body_live(bodies, b)) remove_constraint_id_from_body(*bodies.pool[b], id);
+
+        remove_from_list(constraints, *constraint);
 
         // return to pool
         pool.free_indices.push(index);

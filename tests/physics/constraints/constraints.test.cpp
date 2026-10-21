@@ -5,6 +5,7 @@
 #include "tumble/physics/constraints/constraints.h"
 #include "tumble/physics/constraints/distance_constraint.h"
 #include "tumble/physics/constraints/fixed_constraint.h"
+#include "tumble/physics/constraints/hinge_constraint.h"
 #include "tumble/physics/constraints/point_constraint.h"
 #include "test.h"
 
@@ -186,12 +187,13 @@ void test_constraints_overrides_and_sort(TestCtx &ctx) {
     constraints::get_constraint_iteration_overrides(overrides, scene.world->constraints, constraint_id::ser(0, constraint_id::USER_1, 0));
     CHECK(ctx, overrides.velocity == 0 && overrides.position == 0);
 
+    // the index is the place in the list of every constraint, across types, as jolt's constraint index
     constraints::ConstraintSortFields fields;
     constraints::get_constraint_sort_fields(fields, scene.world->constraints, p2);
-    CHECK(ctx, fields.priority == 0 && fields.index == 2);
+    CHECK(ctx, fields.priority == 0 && fields.index == 5);
 
-    // lower priority first (the highest is solved last, so most likely satisfied), then by index;
-    // p0 and f0 tie on priority 2 and index 0 and keep their order
+    // lower priority first (the highest is solved last, so most likely satisfied), then by index, whatever the types:
+    // p0 was made before f0, so it goes first
     collections::Vec<ConstraintId> ids = {};
     ids.push(f0);
     ids.push(p0);
@@ -200,8 +202,33 @@ void test_constraints_overrides_and_sort(TestCtx &ctx) {
     ids.push(c0);
     ids.push(p1);
     constraints::sort_constraint_ids(scene.world->constraints, ids);
-    CHECK(ctx, ids[0] == c0 && ids[1] == p1 && ids[2] == p2 && ids[3] == d0 && ids[4] == f0 && ids[5] == p0);
+    CHECK(ctx, ids[0] == c0 && ids[1] == p1 && ids[2] == p2 && ids[3] == d0 && ids[4] == p0 && ids[5] == f0);
     ids.release();
+
+    // a removal moves the last constraint into the gap, as jolt's
+    point_constraint::remove(*scene.world, p1);
+    constraints::get_constraint_sort_fields(fields, scene.world->constraints, p2);
+    CHECK(ctx, fields.index == 1 && scene.world->constraints.list.length == 5 && scene.world->constraints.list[1] == p2);
+    // and a body's removal takes its constraints out too
+    rigid_body::remove(*scene.world, a);
+    CHECK(ctx, scene.world->constraints.list.length == 0);
+    release_constraint_scene(scene);
+}
+
+// an island solves its constraints in creation order at equal priority, whatever their types, as jolt's
+void test_constraints_island_solves_in_creation_order_across_types(TestCtx &ctx) {
+    ConstraintScene scene = make_constraint_scene();
+    RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f});
+    RigidBody *b = add_body(scene, motion_type::MOTION_DYNAMIC, {1.0f, 0.0f, 0.0f});
+    RigidBody *c = add_body(scene, motion_type::MOTION_DYNAMIC, {2.0f, 0.0f, 0.0f});
+    const ConstraintId hinge = hinge_constraint::create(*scene.world, a, b, {.point_a = {0.5f, 0.0f, 0.0f}, .point_b = {0.5f, 0.0f, 0.0f}});
+    const ConstraintId point = point_constraint::create(*scene.world, b, c, {.point_a = {1.5f, 0.0f, 0.0f}, .point_b = {1.5f, 0.0f, 0.0f}});
+    const ConstraintId distance = distance_constraint::create(*scene.world, a, c, {});
+    world::step(*scene.world, 1.0f / 60.0f);
+
+    CHECK(ctx, scene.world->islands.islands.length == 1);
+    const collections::Vec<ConstraintId> &ids = scene.world->islands.islands[0].constraint_ids;
+    CHECK(ctx, ids.length == 3 && ids[0] == hinge && ids[1] == point && ids[2] == distance);
     release_constraint_scene(scene);
 }
 

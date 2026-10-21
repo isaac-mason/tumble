@@ -37,6 +37,8 @@ struct ConstraintBase {
     ConstraintId id;
     uint32_t index;
     uint32_t sequence;
+    /** the place in Constraints::list, which orders the solve at equal priority, as jolt's constraint index; ~0u when not in it */
+    uint32_t list_index;
     /** solved in ascending order, so the highest priority is solved last and is most likely to hold */
     int32_t constraint_priority;
     /** 0 takes the world's iteration counts */
@@ -54,6 +56,7 @@ inline ConstraintBase make_constraint_base() {
     base.id = constraint_id::INVALID_CONSTRAINT_ID;
     base.index = ~0u;
     base.sequence = ~0u;
+    base.list_index = ~0u;
     base.body_index_a = ~0u;
     base.body_index_b = ~0u;
     return base;
@@ -85,6 +88,8 @@ inline uint32_t next_sequence(const ConstraintPool &pool, uint32_t index) {
 struct Constraints {
     /** indexed by ConstraintType; a pool with stride 0 has never been used */
     ConstraintPool pools[constraint_id::CONSTRAINT_TYPE_COUNT];
+    /** every live constraint, in creation order but for removal moving the last into the gap, as jolt's constraint manager */
+    collections::Vec<ConstraintId> list;
 };
 
 struct ConstraintIterationOverrides {
@@ -104,6 +109,10 @@ void release(Constraints &constraints);
 ConstraintPool &ensure_pool(Constraints &constraints, ConstraintType type);
 /** a free record index of the pool, reusing a freed one or appending one whose sequence is 0; ~0u (error set) when the storage cannot grow or the pool holds MAX_CONSTRAINT_INDEX + 1 records */
 uint32_t allocate_index(ConstraintPool &pool);
+/** appends the constraint to the list; false when the list cannot grow */
+bool add_to_list(Constraints &constraints, ConstraintBase &constraint);
+/** takes the constraint out of the list, the last one moving into its place */
+void remove_from_list(Constraints &constraints, ConstraintBase &constraint);
 /** the record of the id, or null when its sequence no longer matches */
 ConstraintBase *get(Constraints &constraints, ConstraintId id);
 
