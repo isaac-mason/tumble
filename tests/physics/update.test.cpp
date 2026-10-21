@@ -100,11 +100,32 @@ void test_update_forces_consumed_by_step_and_zero_step(TestCtx &ctx) {
     CHECK_NEAR(ctx, body->motion_properties.linear_velocity.x, 3.0f / 1000.0f * WORLD_TEST_DELTA_TIME * (1.0f - 0.05f * WORLD_TEST_DELTA_TIME),
                1e-9f);
 
+    // a step of no time moves nothing and leaves the force for the next step, as jolt's
     rigid_body::add_force(*scene.world, body, vec3f::make(3.0f, 0.0f, 0.0f), true);
     const Float3 position = body->position;
+    const float velocity = body->motion_properties.linear_velocity.x;
     step_world(*scene.world, 0.0f);
-    CHECK(ctx, body->motion_properties.force.x == 0.0f);
+    CHECK(ctx, body->motion_properties.force.x == 3.0f);
     CHECK(ctx, body->position.x == position.x && body->position.y == position.y);
+    step_world(*scene.world);
+    CHECK(ctx, body->motion_properties.force.x == 0.0f);
+    CHECK(ctx, body->motion_properties.linear_velocity.x > velocity);
+    release_world_scene(scene);
+}
+
+void test_update_step_of_no_time_reports_no_contacts_and_keeps_them(TestCtx &ctx) {
+    WorldScene scene = make_world_scene(ctx, [](world_settings::WorldSettings &settings) { settings.sleeping.allow_sleeping = false; });
+    add_floor(scene);
+    add_unit_box(scene, {0.0f, 0.5f, 0.0f});
+    for (uint32_t i = 0; i < 10; i++) step_world(*scene.world);
+    CHECK(ctx, scene.world->events.contacts_persisted.length == 1);
+
+    // no collision runs, so nothing is reported, and the contact is still there for the next step
+    step_world(*scene.world, 0.0f);
+    CHECK(ctx, scene.world->events.contacts_added.length == 0 && scene.world->events.contacts_persisted.length == 0);
+    CHECK(ctx, scene.world->events.contacts_removed.length == 0);
+    step_world(*scene.world);
+    CHECK(ctx, scene.world->events.contacts_added.length == 0 && scene.world->events.contacts_persisted.length == 1);
     release_world_scene(scene);
 }
 
@@ -131,6 +152,40 @@ void test_update_islands_group_contacts_and_exclude_static(TestCtx &ctx) {
         CHECK(ctx, scene.world->bodies.active_body_indices[i] != static_body->index);
     }
     release_world_scene(scene);
+}
+
+// three touching boxes of every motion type: two dynamic ones share an island, a kinematic one, or a dynamic one touching
+// only kinematic or static ones, has an island of its own, a static one none, as jolt's TestContactsVsSimulationIslands
+void test_update_islands_join_dynamic_bodies_only(TestCtx &ctx) {
+    const motion_type::MotionType types[3] = {motion_type::MOTION_STATIC, motion_type::MOTION_KINEMATIC, motion_type::MOTION_DYNAMIC};
+    for (motion_type::MotionType m1 : types) {
+        for (motion_type::MotionType m2 : types) {
+            for (motion_type::MotionType m3 : types) {
+                WorldScene scene = make_world_scene(ctx, [](world_settings::WorldSettings &settings) { settings.gravity = {0.0f, 0.0f, 0.0f}; });
+                RigidBody *b1 = add_body(scene, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}), m1, {0.0f, 0.0f, 0.0f});
+                RigidBody *b2 = add_body(scene, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}), m2, {1.99f, 0.0f, 0.0f});
+                RigidBody *b3 = add_body(scene, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}), m3, {3.98f, 0.0f, 0.0f});
+                step_world(*scene.world);
+
+                const bool dynamic1 = m1 == motion_type::MOTION_DYNAMIC, dynamic2 = m2 == motion_type::MOTION_DYNAMIC, dynamic3 = m3 == motion_type::MOTION_DYNAMIC;
+                if (dynamic1 && dynamic2) {
+                    CHECK(ctx, b1->island_index >= 0 && b1->island_index == b2->island_index);
+                } else if (m1 != motion_type::MOTION_STATIC) {
+                    CHECK(ctx, b1->island_index >= 0 && b1->island_index != b2->island_index && b1->island_index != b3->island_index);
+                } else {
+                    CHECK(ctx, b1->island_index == -1);
+                }
+                if (dynamic3 && dynamic2) {
+                    CHECK(ctx, b3->island_index >= 0 && b3->island_index == b2->island_index);
+                } else if (m3 != motion_type::MOTION_STATIC) {
+                    CHECK(ctx, b3->island_index >= 0 && b3->island_index != b2->island_index && b3->island_index != b1->island_index);
+                } else {
+                    CHECK(ctx, b3->island_index == -1);
+                }
+                release_world_scene(scene);
+            }
+        }
+    }
 }
 
 void test_update_island_iterations_from_overrides(TestCtx &ctx) {

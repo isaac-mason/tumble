@@ -30,14 +30,6 @@ static constexpr uint32_t MAX_REDUCTION_MANIFOLDS = 32;
 /** the body's pose as the narrowphase takes it: the shape origin, unscaled */
 static Transformf body_transform(const RigidBody &body) { return {body.position, body.quaternion, {1.0f, 1.0f, 1.0f}}; }
 
-static void reset_forces(World &world) {
-    for (uint32_t i = 0; i < world.bodies.active_body_count; i++) {
-        RigidBody *body = world.bodies.pool[world.bodies.active_body_indices[i]];
-        if (body->sleeping) continue;
-        rigid_body::clear_forces(body);
-    }
-}
-
 /** integrates forces into velocities (a = F/m + g, v += a dt), applies damping and the velocity clamps and the dof masks */
 static void acceleration_integration_update(World &world, float delta_time) {
     const float gravity_enabled = world.settings.gravity_enabled ? 1.0f : 0.0f;
@@ -79,10 +71,6 @@ static void acceleration_integration_update(World &world, float delta_time) {
 void step_begin(World &world, float delta_time) {
     world.delta_time = delta_time;
 
-    for (uint32_t i = 0; i < shapes::SHAPE_TYPE_COUNT; i++) {
-        if (shapes::shape_defs[i].step_begin != nullptr) shapes::shape_defs[i].step_begin(world);
-    }
-
     // every event buffer and answer starts the step empty
     world.events.pairs.length = 0;
     world.events.contacts_added.length = 0;
@@ -92,6 +80,17 @@ void step_begin(World &world, float delta_time) {
     world.events.woken = 0;
     world.answers.pair_reject.length = 0;
     world.answers.contact_override.length = 0;
+
+    // a step of no time only brings the broadphase up to date, as jolt's: no collision, no events, the contacts and the
+    // queued removals kept for the next step and the forces added for it left to it
+    if (delta_time <= 0.0f) {
+        broadphase::optimize(world.broadphase, world.bodies);
+        return;
+    }
+
+    for (uint32_t i = 0; i < shapes::SHAPE_TYPE_COUNT; i++) {
+        if (shapes::shape_defs[i].step_begin != nullptr) shapes::shape_defs[i].step_begin(world);
+    }
 
     // the contact removals queued by body removal since the last step
     contacts::flush_pending_contact_removed(world.contacts, world.events);
@@ -118,6 +117,7 @@ void step_begin(World &world, float delta_time) {
 }
 
 void find_pairs(World &world) {
+    if (world.delta_time <= 0.0f) return;
     const float speculative_contact_distance = world.settings.narrowphase.speculative_contact_distance;
     const uint32_t first_pair = world.events.pairs.length;
     if (!world.pairs.swept) {
@@ -380,6 +380,7 @@ static bool get_contacts_from_cache(World &world, float delta_time, Vec3f curren
 
 void narrowphase(World &world) {
     const float delta_time = world.delta_time;
+    if (delta_time <= 0.0f) return;
     const bool use_body_pair_cache = world.settings.narrowphase.use_body_pair_contact_cache;
     const collections::Vec<pairs::CollidingPair> &colliding_pairs = world.pairs.colliding_pairs;
     const uint32_t colliding_pair_count = colliding_pairs.length;
@@ -955,12 +956,11 @@ static void resolve_ccd_contacts(World &world) {
 
 void solve(World &world) {
     const float delta_time = world.delta_time;
+    if (delta_time <= 0.0f) return;
 
     // the caller's answers to this step's contacts: a reject drops the constraint, anything else rebuilds it from the settings
     contact_constraints::apply_contact_overrides(world.contact_constraints, world.contacts, world.bodies, world.events, world.answers,
                                                  world.settings, delta_time);
-
-    if (delta_time <= 0.0f) return;
 
     wake_bodies_in_user_constraints(world);
 
@@ -1051,8 +1051,7 @@ void solve(World &world) {
 }
 
 void step_end(World &world) {
-    // nothing moved, but the forces applied for this step are still consumed (a step that solved cleared them per island)
-    if (world.delta_time <= 0.0f) reset_forces(world);
+    if (world.delta_time <= 0.0f) return;
 
     // this step's cache writes become the next step's reads
     contacts::flip_manifold_cache(world.contacts);

@@ -45,6 +45,33 @@ static float relative_angle(const RigidBody *a, const RigidBody *b) {
     return rotation_angle(quatf::multiply(quatf::load(b->quaternion), quatf::conjugate(quatf::load(a->quaternion))));
 }
 
+// every axis fixed, on a body free to turn only about y: the rotation sum has zero columns for the locked axes, which
+// jolt makes identity, so the constraint still holds y rather than switching off
+void test_six_dof_constraint_holds_the_free_axis_of_a_body_with_locked_rotation(TestCtx &ctx) {
+    ConstraintScene scene = make_constraint_scene();
+    RigidBody *base = add_body(scene, motion_type::MOTION_STATIC, ZERO);
+    rigid_body::RigidBodySettings ball_settings;
+    ball_settings.shape = sphere::create({.radius = 0.5f});
+    ball_settings.object_layer = scene.layer;
+    ball_settings.motion_type = motion_type::MOTION_DYNAMIC;
+    ball_settings.allowed_degrees_of_freedom = dof::dof(true, true, true, false, true, false);
+    ball_settings.linear_damping = 0.0f;
+    ball_settings.angular_damping = 0.0f;
+    RigidBody *ball = rigid_body::create(*scene.world, ball_settings);
+
+    SixDOFConstraintSettings settings;
+    for (uint32_t i = 0; i < 6; i++) {
+        settings.limit_min[i] = __FLT_MAX__;
+        settings.limit_max[i] = -__FLT_MAX__;
+    }
+    scene.ids.push(six_dof_constraint::create(*scene.world, base, ball, settings));
+    ball->motion_properties.angular_velocity = {0.0f, 5.0f, 0.0f};
+    for (uint32_t i = 0; i < 30; i++) step_constraint_scene(scene, DT, vec3f::load(GRAVITY));
+    CHECK_NEAR(ctx, ball->motion_properties.angular_velocity.y, 0.0f, 1e-3f);
+    CHECK(ctx, relative_angle(base, ball) < 0.01f);
+    release_constraint_scene(scene);
+}
+
 void test_six_dof_constraint_create(TestCtx &ctx) {
     ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, motion_type::MOTION_DYNAMIC, {0.0f, 0.0f, 0.0f}, stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), scalar::PI / 2.0f));

@@ -86,11 +86,15 @@ void test_rotation_euler_constraint_part_effective_mass(TestCtx &ctx) {
     Float4x4 inv_i2;
     mat4f::store(inv_i2, part.inv_i2);
     for (int i = 0; i < 16; i++) CHECK(ctx, inv_i2.m[i] == 0.0f);
+    // nothing dynamic: every column of the sum is zero, so each is made identity, as jolt's, and the part stays active,
+    // but every impulse goes through a zero inverse inertia, so neither body turns
     a.motion_type = motion_type::MOTION_KINEMATIC;
-    part.total_lambda = vec3f::make(1.0f, 1.0f, 1.0f);
+    a.motion_properties.angular_velocity = {0.0f, 1.0f, 0.0f};
     calculate(part, a, b);
-    CHECK(ctx, !rotation_euler_constraint_part::is_active(part));
-    CHECK(ctx, vec3f::exact_equals(part.total_lambda, vec3f::zero()));
+    CHECK(ctx, rotation_euler_constraint_part::is_active(part));
+    rotation_euler_constraint_part::solve_velocity_constraint(part, a, b);
+    CHECK(ctx, a.motion_properties.angular_velocity.x == 0.0f && a.motion_properties.angular_velocity.y == 1.0f &&
+                   a.motion_properties.angular_velocity.z == 0.0f);
 }
 
 void test_rotation_euler_constraint_part_velocity_locks_rotation(TestCtx &ctx) {

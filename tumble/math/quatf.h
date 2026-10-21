@@ -37,6 +37,20 @@ inline Quatf set_axis_angle(Vec3f axis, float rad) {
     return make(s * vec3f::x(axis), s * vec3f::y(axis), s * vec3f::z(axis), scalar::cos(rad));
 }
 
+/**
+ * the angular velocity that turns identity into the unit rotation q over delta_time, its angle in [0, pi]. for a small
+ * angle sin(x) = x, at most sin(0.02) - 0.02 = 7e-5 out: the angle from w is inaccurate when w is near 1, so the cut
+ * between them is not made smaller
+ */
+inline Vec3f get_angular_velocity(Quatf q, float delta_time) {
+    const Quatf w_positive = w(q) < 0.0f ? scale(q, -1.0f) : q;
+    const Vec3f imaginary = xyz(w_positive);
+    const float imaginary_length_sq = vec3f::squared_length(imaginary);
+    if (imaginary_length_sq < 4.0e-4f) return vec3f::scale(imaginary, 2.0f / delta_time);
+    const float angle = 2.0f * scalar::acos(w(w_positive));
+    return vec3f::scale(vec3f::divide(imaginary, vec3f::splat(scalar::sqrt(imaginary_length_sq) * delta_time)), angle);
+}
+
 /** the hamilton product */
 inline Quatf multiply(Quatf a, Quatf b) {
     const V128 flip_w = v4f::make(1.0f, 1.0f, 1.0f, -1.0f);

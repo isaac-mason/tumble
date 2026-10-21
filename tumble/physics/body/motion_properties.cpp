@@ -428,24 +428,6 @@ void scale_to_mass(MotionProperties &motion_properties, float new_mass) {
     motion_properties.inv_mass = new_inv_mass;
 }
 
-/** the axis and angle (in [0, pi]) of a unit quaternion, x when it is near identity */
-static float get_axis_angle_from_quat(Vec3f &out_axis, Quatf q) {
-    const float qx = quatf::x(q), qy = quatf::y(q), qz = quatf::z(q), qw = quatf::w(q);
-    // q and -q are the same rotation; the w >= 0 twin takes the short way round
-    const float sign = qw < 0.0f ? -1.0f : 1.0f;
-    const float angle = 2.0f * scalar::acos(scalar::min(1.0f, sign * qw));
-    // for a unit quaternion q = [x, y, z, w], the axis is [x, y, z] / sin(angle / 2)
-    const float sin_half_angle_sq = qx * qx + qy * qy + qz * qz;
-    if (sin_half_angle_sq > 1e-10f) {
-        const float sin_half_angle = sign * scalar::sqrt(sin_half_angle_sq);
-        out_axis = vec3f::make(qx / sin_half_angle, qy / sin_half_angle, qz / sin_half_angle);
-    } else {
-        // quaternion is near identity, axis is arbitrary
-        out_axis = vec3f::axis_x();
-    }
-    return angle;
-}
-
 void move_kinematic(MotionProperties &motion_properties, Vec3f delta_position, Quatf delta_rotation, float delta_time) {
     // delta time must be positive, otherwise no-op
     if (delta_time <= 0.0f) return;
@@ -456,9 +438,8 @@ void move_kinematic(MotionProperties &motion_properties, Vec3f delta_position, Q
                  apply_translation_dof_constraint(vec3f::scale(delta_position, 1.0f / delta_time), allowed_dofs));
 
     // calculate required angular velocity
-    Vec3f axis;
-    const float angle = get_axis_angle_from_quat(axis, delta_rotation);
-    vec3f::store(motion_properties.angular_velocity, apply_rotation_dof_constraint(vec3f::scale(axis, angle / delta_time), allowed_dofs));
+    vec3f::store(motion_properties.angular_velocity,
+                 apply_rotation_dof_constraint(quatf::get_angular_velocity(delta_rotation, delta_time), allowed_dofs));
 }
 
 /** v with the lanes of the axes not in `axes` (bit 0 x, 1 y, 2 z) set to +0 */

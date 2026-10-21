@@ -40,8 +40,22 @@ void calculate_constraint_properties(RotationEulerConstraintPart &part, rigid_bo
                       : mat4f::zero();
 
     // K = I1^-1 + I2^-1 (3x3 only); singular when both bodies are static/kinematic
+    Mat4f inertia_sum = mat4f::add(part.inv_i1, part.inv_i2);
     Mat4f effective_mass;
-    if (mat4f::invert3x3(effective_mass, mat4f::add(part.inv_i1, part.inv_i2))) {
+    if (mat4f::invert3x3(effective_mass, inertia_sum)) {
+        part.effective_mass = effective_mass;
+        return;
+    }
+
+    // a zero column is an axis locked on both bodies: identity there, which changes nothing, as every impulse goes through
+    // inv_i1 or inv_i2 and so comes to zero on that axis
+    for (int axis = 0; axis < 3; axis++) {
+        const V128 column = inertia_sum.c[axis];
+        if (v4f::lane<0>(column) == 0.0f && v4f::lane<1>(column) == 0.0f && v4f::lane<2>(column) == 0.0f && v4f::lane<3>(column) == 0.0f) {
+            inertia_sum.c[axis] = v4f::make(axis == 0 ? 1.0f : 0.0f, axis == 1 ? 1.0f : 0.0f, axis == 2 ? 1.0f : 0.0f, 0.0f);
+        }
+    }
+    if (mat4f::invert3x3(effective_mass, inertia_sum)) {
         part.effective_mass = effective_mass;
     } else {
         deactivate(part);

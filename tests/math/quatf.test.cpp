@@ -76,3 +76,18 @@ void test_quatf(TestCtx &ctx) {
     const Float4 long_w = {0.0f, 0.0f, 0.0f, 2.0f};
     CHECK(ctx, near4(quatf::normalize(out, long_w), 0.0f, 0.0f, 0.0f, 1.0f));
 }
+
+void test_quatf_get_angular_velocity(TestCtx &ctx) {
+    // a turn of 1e-4 rad: its w rounds to 1, so an angle from w would be 0; the small angle path still finds it
+    const Vec3f small = quatf::get_angular_velocity(quatf::set_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 1e-4f), 0.5f);
+    CHECK_NEAR(ctx, vec3f::y(small), 2e-4f, 1e-8f);
+    CHECK(ctx, vec3f::x(small) == 0.0f && vec3f::z(small) == 0.0f);
+
+    // a big turn, and the same turn with w negative: the short way round either way
+    const Vec3f axis = vec3f::normalize(vec3f::make(1.0f, 2.0f, -2.0f));
+    const Quatf turn = quatf::set_axis_angle(axis, 2.0f);
+    const Vec3f big = quatf::get_angular_velocity(turn, 0.25f);
+    CHECK(ctx, near3(big, vec3f::x(axis) * 8.0f, vec3f::y(axis) * 8.0f, vec3f::z(axis) * 8.0f, 1e-4f));
+    const Vec3f flipped = quatf::get_angular_velocity(quatf::scale(turn, -1.0f), 0.25f);
+    CHECK(ctx, near3(flipped, vec3f::x(big), vec3f::y(big), vec3f::z(big), 1e-6f));
+}

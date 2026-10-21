@@ -93,21 +93,26 @@ void link_bodies(Islands &islands, const bodies::Bodies &bodies, uint32_t active
     if (islands.body_links[active_index_b] > lowest_link_to) islands.body_links[active_index_b] = lowest_link_to;
 }
 
+/** the body a constraint or contact goes into the island of: the first dynamic one, as only a dynamic body's velocity it changes */
+static const RigidBody &first_dynamic(const RigidBody &body_a, const RigidBody &body_b) {
+    return body_a.motion_type == motion_type::MOTION_DYNAMIC ? body_a : body_b;
+}
+
 void link_contact(Islands &islands, uint32_t contact_index, const RigidBody &body_a, const RigidBody &body_b) {
-    // the minimum active index: the smaller when both are active, the active one when one is (INACTIVE_BODY_INDEX is
-    // the max value), INACTIVE_BODY_INDEX when neither is. no union here: that is link_bodies'
-    islands.contact_links[contact_index] = body_a.active_index < body_b.active_index ? body_a.active_index : body_b.active_index;
+    // no union here: that is link_bodies'
+    islands.contact_links[contact_index] = first_dynamic(body_a, body_b).active_index;
 }
 
 void link_constraint(Islands &islands, const bodies::Bodies &bodies, ConstraintId id, const RigidBody &body_a, const RigidBody &body_b) {
-    // link the bodies together (if both active)
-    if (body_a.active_index != INACTIVE_BODY_INDEX && body_b.active_index != INACTIVE_BODY_INDEX) {
+    // the bodies go into one island only when both are dynamic: a constraint cannot change a kinematic body's velocity, so
+    // one needs no island with what it is jointed to
+    if (body_a.motion_type == motion_type::MOTION_DYNAMIC && body_b.motion_type == motion_type::MOTION_DYNAMIC) {
         link_bodies(islands, bodies, body_a.active_index, body_b.active_index);
     }
 
-    // the id and the minimum active body index, the two arrays grow together
+    // the id and its dynamic body's active index, the two arrays grow together
     islands.constraint_ids.push(id);
-    islands.constraint_links.push(body_a.active_index < body_b.active_index ? body_a.active_index : body_b.active_index);
+    islands.constraint_links.push(first_dynamic(body_a, body_b).active_index);
 }
 
 void link_contact_constraints(Islands &islands, const contact_constraints::ContactConstraints &contact_constraints,
@@ -118,8 +123,9 @@ void link_contact_constraints(Islands &islands, const contact_constraints::Conta
         const RigidBody &body_a = *bodies.pool[contact.body_index_a];
         const RigidBody &body_b = *bodies.pool[contact.body_index_b];
 
-        // link the bodies if both are active (dynamic or kinematic)
-        if (body_a.active_index != INACTIVE_BODY_INDEX && body_b.active_index != INACTIVE_BODY_INDEX) {
+        // the bodies go into one island only when both are dynamic: a contact cannot change a kinematic body's velocity,
+        // so one needs no island with what it touches
+        if (body_a.motion_type == motion_type::MOTION_DYNAMIC && body_b.motion_type == motion_type::MOTION_DYNAMIC) {
             link_bodies(islands, bodies, body_a.active_index, body_b.active_index);
         }
 
@@ -136,10 +142,10 @@ void link_user_constraints(Islands &islands, const constraints::Constraints &con
             const RigidBody &body_a = *bodies.pool[constraint->body_index_a];
             const RigidBody &body_b = *bodies.pool[constraint->body_index_b];
 
-            // only link if at least one body is active
-            if (body_a.active_index != INACTIVE_BODY_INDEX || body_b.active_index != INACTIVE_BODY_INDEX) {
-                link_constraint(islands, bodies, constraint->id, body_a, body_b);
-            }
+            // only a constraint with a body active and a body dynamic, as jolt's IsActive; its dynamic bodies were woken
+            const bool has_active_body = body_a.active_index != INACTIVE_BODY_INDEX || body_b.active_index != INACTIVE_BODY_INDEX;
+            const bool has_dynamic_body = body_a.motion_type == motion_type::MOTION_DYNAMIC || body_b.motion_type == motion_type::MOTION_DYNAMIC;
+            if (has_active_body && has_dynamic_body) link_constraint(islands, bodies, constraint->id, body_a, body_b);
         }
     }
 }
