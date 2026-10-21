@@ -47,7 +47,8 @@ Shape *create(const TriangleMeshShapeSettings &settings) {
     if (shape == nullptr) return nullptr;
     shape->triangle_mesh.data = data;
     shape->triangle_mesh.owns_data = settings.owns_data;
-    shape->material_id = settings.material_id;
+    // a mesh's materials are its triangles'
+    shape->material_id = -1;
     update(shape);
     return shape;
 }

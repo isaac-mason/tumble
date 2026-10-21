@@ -23,7 +23,7 @@ static const sub_shape::SubShapeIdBuilder NO_SUB_SHAPE = {sub_shape::EMPTY_SUB_S
 
 /** builds the mesh with the builder's defaults and a shape over it */
 static Shape *mesh(const float *positions, uint32_t num_floats, const uint32_t *indices, uint32_t num_indices,
-                   const int32_t *material_ids = nullptr, int32_t material_id = -1) {
+                   const int32_t *material_ids = nullptr) {
     triangle_mesh_builder::TriangleMeshBuilderSettings settings;
     settings.positions = positions;
     settings.num_positions = num_floats / 3;
@@ -32,7 +32,7 @@ static Shape *mesh(const float *positions, uint32_t num_floats, const uint32_t *
     settings.material_ids = material_ids;
     TriangleMeshData *data = triangle_mesh_builder::build(settings);
     if (data == nullptr) return nullptr;
-    return triangle_mesh::create({.data = data, .material_id = material_id});
+    return triangle_mesh::create({.data = data});
 }
 
 template <uint32_t NUM_FLOATS, uint32_t NUM_INDICES>
@@ -146,11 +146,11 @@ void test_triangle_mesh_create_and_mass(TestCtx &ctx) {
     dispatch::init();
     const size_t bytes_before = util::allocated_bytes();
 
-    Shape *s = mesh(TRIANGLE_POSITIONS, 9, TRIANGLE_INDICES, 3, nullptr, 4);
+    Shape *s = mesh(TRIANGLE_POSITIONS, 9, TRIANGLE_INDICES, 3);
     CHECK(ctx, s != nullptr);
     CHECK(ctx, s->type == shapes::SHAPE_TRIANGLE_MESH);
     CHECK(ctx, s->triangle_mesh.data->triangle_count == 1);
-    CHECK(ctx, s->material_id == 4);
+    CHECK(ctx, s->material_id == -1);
     // vertices (0,0,0), (1,0,0), (0,1,0): the bounds are exactly [0,0,0] to [1,1,0]
     CHECK(ctx, s->aabb.min.x == 0.0f && s->aabb.min.y == 0.0f && s->aabb.min.z == 0.0f);
     CHECK(ctx, s->aabb.max.x == 1.0f && s->aabb.max.y == 1.0f && s->aabb.max.z == 0.0f);
@@ -185,7 +185,7 @@ void test_triangle_mesh_shared_data(TestCtx &ctx) {
     dispatch::init();
     TriangleMeshData *data = triangle_mesh_builder::build({.positions = QUAD_POSITIONS, .num_positions = 4, .indices = QUAD_INDICES, .num_indices = 6});
     Shape *first = triangle_mesh::create({.data = data});
-    Shape *second = triangle_mesh::create({.data = data, .material_id = 2});
+    Shape *second = triangle_mesh::create({.data = data});
     CHECK(ctx, first->triangle_mesh.data == second->triangle_mesh.data);
 
     // the first shape going leaves the mesh to the second
@@ -483,7 +483,7 @@ void test_triangle_mesh_collide_point(TestCtx &ctx) {
     CHECK(ctx, !point_inside(flat, pose({0, 0, 0}), {0.25f, 1, 0.75f}));
     drop(flat);
 
-    // the hit reports the crossing's triangle material and the shape's sub shape id
+    // the hit's sub shape id names the crossing's triangle, so its material
     const int32_t materials[12] = {1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6};
     Shape *painted = mesh(CUBE_POSITIONS, CUBE_INDICES, materials);
     collide_point::CollidePointCollector collector = collide_point::create_collector(collector::COLLECT_ALL);
@@ -1370,9 +1370,8 @@ void test_triangle_mesh_sphere_cast_zero_closest_point_falls_back_to_normal(Test
 
 void test_triangle_mesh_material(TestCtx &ctx) {
     dispatch::init();
-    // the shape's own material is not what a triangle reports
     const int32_t materials[12] = {1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6};
-    Shape *painted = mesh(CUBE_POSITIONS, 24, CUBE_INDICES, 36, materials, 9);
+    Shape *painted = mesh(CUBE_POSITIONS, 24, CUBE_INDICES, 36, materials);
     const TriangleMeshData &data = *painted->triangle_mesh.data;
     CHECK(ctx, data.triangle_count == 12);
 
@@ -1386,10 +1385,9 @@ void test_triangle_mesh_material(TestCtx &ctx) {
     }
     CHECK(ctx, matched == 12);
 
-    // the id a ray hit carries looks up the material the hit reported: the top face (y = 1) is 4
+    // the id a ray hit carries names its triangle, so its material: the top face (y = 1) is 4
     cast_ray::CastRayCollector collector = cast_ray::create_collector(collector::COLLECT_CLOSEST);
     ray_cast(collector, RAY_FRONT, painted, pose({0, 0, 0}), {0.3f, 3, 0.1f}, {0, -1, 0}, 4);
-    CHECK(ctx, collector.has_hit && shapes::get_shape_material(painted, collector.hits[0].sub_shape_id) == 4);
     CHECK(ctx, collector.has_hit && shapes::get_shape_material(painted, collector.hits[0].sub_shape_id) == 4);
     cast_ray::release(collector);
     drop(painted);

@@ -7,7 +7,7 @@
 import type { Instance } from '../module.js';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x5ce46deb;
+export const SCHEMA_HASH = 0x845b905b;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 368;
 
@@ -2134,38 +2134,34 @@ export const TriangleMeshBuildSettings = {
     },
 };
 
-export type TriangleMeshSettings = { data: TriangleMeshData | null; materialId: number; ownsData: boolean };
+export type TriangleMeshSettings = { data: TriangleMeshData | null; ownsData: boolean };
 export const TriangleMeshSettings = {
-    size: 12,
+    size: 8,
     create(): TriangleMeshSettings {
-        return { data: null, materialId: 0, ownsData: false };
+        return { data: null, ownsData: false };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: TriangleMeshSettings, address: number): TriangleMeshSettings {
         const mem = wasm.mem;
         out.data = (mem.u32[(address + 0) >> 2]! || null) as TriangleMeshData | null;
-        out.materialId = mem.i32[(address + 4) >> 2]!;
-        out.ownsData = mem.u8[address + 8]! !== 0;
+        out.ownsData = mem.u8[address + 4]! !== 0;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
     write(address: number, value: TriangleMeshSettings): void {
         const mem = wasm.mem;
         mem.u32[(address + 0) >> 2] = value.data ?? 0;
-        mem.i32[(address + 4) >> 2] = value.materialId;
-        mem.u8[address + 8] = value.ownsData ? 1 : 0;
+        mem.u8[address + 4] = value.ownsData ? 1 : 0;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: TriangleMeshSettings): void {
         view.setUint32(offset + 0, value.data ?? 0, true);
-        view.setInt32(offset + 4, value.materialId, true);
-        view.setUint8(offset + 8, value.ownsData ? 1 : 0);
+        view.setUint8(offset + 4, value.ownsData ? 1 : 0);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: TriangleMeshSettings, view: DataView, offset: number): TriangleMeshSettings {
         out.data = (view.getUint32(offset + 0, true) || null) as TriangleMeshData | null;
-        out.materialId = view.getInt32(offset + 4, true);
-        out.ownsData = view.getUint8(offset + 8) !== 0;
+        out.ownsData = view.getUint8(offset + 4) !== 0;
         return out;
     },
 };

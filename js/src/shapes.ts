@@ -338,10 +338,7 @@ export const TriangleMeshData = {
  * built mesh data the shape borrows, or the triangles to build a mesh the shape owns. for static bodies, or kinematic
  * ones: a mesh has no volume, so a dynamic body over one needs massPropertiesOverride
  */
-export type TriangleMeshSettings = ({ data: TriangleMeshData } | TriangleMeshBuildSettings) & {
-    /** unread: a mesh's materials are its triangles', which RigidBody.getMaterial gives by sub shape id */
-    materialId?: number;
-};
+export type TriangleMeshSettings = { data: TriangleMeshData } | TriangleMeshBuildSettings;
 
 const meshDefaults = defaultsOf(Low.TriangleMesh.defaultSettings, Low.TriangleMeshSettings.create);
 
@@ -355,7 +352,7 @@ export const TriangleMesh = {
         const data = TriangleMeshData.build(settings);
         try {
             Low.errorClear();
-            return Low.TriangleMesh.create(over(meshDefaults(), { data, materialId: settings.materialId, ownsData: true }));
+            return Low.TriangleMesh.create(over(meshDefaults(), { data, ownsData: true }));
         } catch (error) {
             Low.TriangleMeshData.release(data);
             throw error;

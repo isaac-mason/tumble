@@ -291,7 +291,7 @@ test('Shape.destroy frees any shape, and the data of those that own it', async (
         Plane.create(),
         Empty.create(),
         ConvexHull.create({ positions: CUBE }),
-        TriangleMesh.create({ positions: [0, 0, 0, 1, 0, 0, 0, 0, 1], indices: [0, 2, 1], materialId: 3 }),
+        TriangleMesh.create({ positions: [0, 0, 0, 1, 0, 0, 0, 0, 1], indices: [0, 2, 1] }),
         Compound.create({ children: [{ shape: cube }] }),
         StaticCompound.create({ children: [{ shape: cube }, { shape: cube, position: [3, 0, 0] }] }),
         Transformed.create({ shape: cube }),

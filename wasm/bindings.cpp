@@ -393,7 +393,6 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::triangle_mesh_data::release), names("data"));
     VALUE_AS(triangle_mesh::TriangleMeshShapeSettings, "TriangleMeshSettings")
         .field(FIELD(triangle_mesh::TriangleMeshShapeSettings, data))
-        .field(FIELD(triangle_mesh::TriangleMeshShapeSettings, material_id))
         .field(FIELD(triangle_mesh::TriangleMeshShapeSettings, owns_data));
     bind::fn(b, BIND(adapters::triangle_mesh::default_settings), names("out"));
     bind::fn(b, BIND(adapters::triangle_mesh::create), names("settings"), GROWS);

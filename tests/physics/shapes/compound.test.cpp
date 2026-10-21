@@ -791,11 +791,10 @@ void test_compound_material(TestCtx &ctx) {
     sub_shape::push_index(nested, id, 0, 2);
     CHECK(ctx, shapes::get_shape_material(c, nested.value) == 5);
 
-    // a ray hit's id looks up the material the hit reported
+    // a ray hit's id names the child it hit, so that child's material
     cast_ray::CastRayCollector rays = cast_ray::create_collector(collector::COLLECT_CLOSEST);
     const cast_ray::Rayf ray = {vec3f::make(4, 10, 0), vec3f::make(0, -1, 0), 20.0f};
     shapes::def_of(c).cast_ray(rays, cast_ray::default_settings(), ray, c, NO_SUB_SHAPE, pose({0, 0, 0}));
-    CHECK(ctx, rays.has_hit && shapes::get_shape_material(c, rays.hits[0].sub_shape_id) == 9);
     CHECK(ctx, rays.has_hit && shapes::get_shape_material(c, rays.hits[0].sub_shape_id) == 9);
     cast_ray::release(rays);
 

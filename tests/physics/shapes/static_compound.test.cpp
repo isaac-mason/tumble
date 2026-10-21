@@ -784,10 +784,9 @@ void test_static_compound_material(TestCtx &ctx) {
     }
     CHECK(ctx, matched == 3);
 
-    // a ray hit's id looks up the material the hit reported
+    // a ray hit's id names the child it hit, so that child's material
     cast_ray::CastRayCollector rays = cast_ray::create_collector(collector::COLLECT_CLOSEST);
     cast_ray_at(rays, c, pose({0, 0, 0}), {0, 10, 0}, {0, -1, 0}, 20.0f);
-    CHECK(ctx, rays.has_hit && shapes::get_shape_material(c, rays.hits[0].sub_shape_id) == 5);
     CHECK(ctx, rays.has_hit && shapes::get_shape_material(c, rays.hits[0].sub_shape_id) == 5);
     cast_ray::release(rays);
 

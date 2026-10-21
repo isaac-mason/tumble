@@ -17,8 +17,6 @@ using shapes::Shape;
 struct TriangleMeshShapeSettings {
     /** a built mesh (triangle_mesh_builder::build) the shape borrows, outliving the shape */
     triangle_mesh_data::TriangleMeshData *data = nullptr;
-    /** unread: a mesh's materials are its triangles', which get_material gives by sub shape id */
-    int32_t material_id = -1;
     /** the shape takes the mesh instead, and its destroy frees it; for a mesh no other shape uses */
     bool owns_data = false;
 };
