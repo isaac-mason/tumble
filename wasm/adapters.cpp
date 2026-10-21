@@ -1832,4 +1832,56 @@ void joints(tumble::debug::DebugBuffers *out, const tumble::world::World *world,
 
 }  // namespace debug
 
+namespace contact_pairs {
+
+void begin(tumble::world::World *world) { tumble::contact_pairs::begin(*world); }
+
+void record_world_contacts(tumble::world::World *world, uint32_t first_added, uint32_t first_persisted) {
+    tumble::contact_pairs::record_world_contacts(*world, first_added, first_persisted);
+}
+
+void record_character_contacts(tumble::world::World *world, const tumble::kcc::KCC *character) {
+    tumble::contact_pairs::record_character_contacts(*world, *character);
+}
+
+void end(tumble::world::World *world) { tumble::contact_pairs::end(*world); }
+
+static void read_pair(ContactPair &out, const tumble::world::World *world, uint32_t handle) {
+    const tumble::contact_pairs::ContactPair &pair = world->contact_pairs.pairs[handle];
+    out = {handle,
+           pair.a.body_id,
+           pair.a.sub_shape_id,
+           (uint32_t)pair.a.user_data,
+           (uint32_t)(pair.a.user_data >> 32),
+           pair.a.is_sensor,
+           pair.b.body_id,
+           pair.b.sub_shape_id,
+           (uint32_t)pair.b.user_data,
+           (uint32_t)(pair.b.user_data >> 32),
+           pair.b.is_sensor,
+           pair.point,
+           pair.normal,
+           pair.penetration_depth,
+           pair.relative_velocity,
+           pair.added};
+}
+
+uint32_t active_count(const tumble::world::World *world) { return world->contact_pairs.active.length; }
+
+bool read_active(ContactPair &out, const tumble::world::World *world, uint32_t index) {
+    if (index >= world->contact_pairs.active.length) return false;
+    read_pair(out, world, world->contact_pairs.active[index]);
+    return true;
+}
+
+uint32_t removed_count(const tumble::world::World *world) { return world->contact_pairs.removed.length; }
+
+bool read_removed(ContactPair &out, const tumble::world::World *world, uint32_t index) {
+    if (index >= world->contact_pairs.removed.length) return false;
+    read_pair(out, world, world->contact_pairs.removed[index]);
+    return true;
+}
+
+}  // namespace contact_pairs
+
 }  // namespace adapters

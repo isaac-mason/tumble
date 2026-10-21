@@ -9,6 +9,7 @@
 #include "tumble/physics/character/kcc.h"
 #include "tumble/physics/character/kcc_policy.h"
 #include "tumble/physics/constraints/cone_constraint.h"
+#include "tumble/physics/contact_pairs.h"
 #include "tumble/physics/constraints/contact_settings.h"
 #include "tumble/physics/constraints/distance_constraint.h"
 #include "tumble/physics/constraints/fixed_constraint.h"
@@ -887,5 +888,43 @@ void contact_constraints(tumble::debug::DebugBuffers *out, const tumble::world::
 void joints(tumble::debug::DebugBuffers *out, const tumble::world::World *world, const tumble::debug::JointsOptions &options);
 
 }  // namespace debug
+
+/** a contact_pairs::ContactPair as js reads it: user data in halves */
+struct ContactPair {
+    /** stable while the pair lasts; reused the frame after it is removed */
+    uint32_t handle;
+    tumble::body_id::BodyId body_a;
+    uint32_t sub_shape_a;
+    uint32_t user_data_a_low;
+    uint32_t user_data_a_high;
+    bool sensor_a;
+    tumble::body_id::BodyId body_b;
+    uint32_t sub_shape_b;
+    uint32_t user_data_b_low;
+    uint32_t user_data_b_high;
+    bool sensor_b;
+    tumble::Float3 point;
+    tumble::Float3 normal;
+    float penetration_depth;
+    tumble::Float3 relative_velocity;
+    bool added;
+};
+
+// the pairs of body sub shapes in contact that a body observing contacts is a side of, kept between frames
+namespace contact_pairs {
+
+void begin(tumble::world::World *world);
+/** the last step's contact events from these indices of its added and persisted contacts on */
+void record_world_contacts(tumble::world::World *world, uint32_t first_added, uint32_t first_persisted);
+void record_character_contacts(tumble::world::World *world, const tumble::kcc::KCC *character);
+void end(tumble::world::World *world);
+/** this frame's pairs, in the order first recorded */
+uint32_t active_count(const tumble::world::World *world);
+bool read_active(ContactPair &out, const tumble::world::World *world, uint32_t index);
+/** live last frame and not recorded in this one */
+uint32_t removed_count(const tumble::world::World *world);
+bool read_removed(ContactPair &out, const tumble::world::World *world, uint32_t index);
+
+}  // namespace contact_pairs
 
 }  // namespace adapters

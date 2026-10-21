@@ -7,7 +7,7 @@
 import type { Instance } from '../module';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x189605fa;
+export const SCHEMA_HASH = 0x9d91dbd9;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 368;
 
@@ -5434,6 +5434,152 @@ export const DebugJointsOptions = {
     },
 };
 
+export type ContactPair = {
+    handle: number;
+    bodyA: number;
+    subShapeA: number;
+    userDataALow: number;
+    userDataAHigh: number;
+    sensorA: boolean;
+    bodyB: number;
+    subShapeB: number;
+    userDataBLow: number;
+    userDataBHigh: number;
+    sensorB: boolean;
+    point: Vec3;
+    normal: Vec3;
+    penetrationDepth: number;
+    relativeVelocity: Vec3;
+    added: boolean;
+};
+export const ContactPair = {
+    size: 88,
+    create(): ContactPair {
+        return {
+            handle: 0,
+            bodyA: 0,
+            subShapeA: 0,
+            userDataALow: 0,
+            userDataAHigh: 0,
+            sensorA: false,
+            bodyB: 0,
+            subShapeB: 0,
+            userDataBLow: 0,
+            userDataBHigh: 0,
+            sensorB: false,
+            point: Vec3.create(),
+            normal: Vec3.create(),
+            penetrationDepth: 0,
+            relativeVelocity: Vec3.create(),
+            added: false,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: ContactPair, address: number): ContactPair {
+        const mem = wasm.mem;
+        out.handle = mem.u32[(address + 0) >> 2]!;
+        out.bodyA = mem.u32[(address + 4) >> 2]!;
+        out.subShapeA = mem.u32[(address + 8) >> 2]!;
+        out.userDataALow = mem.u32[(address + 12) >> 2]!;
+        out.userDataAHigh = mem.u32[(address + 16) >> 2]!;
+        out.sensorA = mem.u8[address + 20]! !== 0;
+        out.bodyB = mem.u32[(address + 24) >> 2]!;
+        out.subShapeB = mem.u32[(address + 28) >> 2]!;
+        out.userDataBLow = mem.u32[(address + 32) >> 2]!;
+        out.userDataBHigh = mem.u32[(address + 36) >> 2]!;
+        out.sensorB = mem.u8[address + 40]! !== 0;
+        out.point[0] = mem.f32[(address + 44) >> 2]!;
+        out.point[1] = mem.f32[(address + 48) >> 2]!;
+        out.point[2] = mem.f32[(address + 52) >> 2]!;
+        out.normal[0] = mem.f32[(address + 56) >> 2]!;
+        out.normal[1] = mem.f32[(address + 60) >> 2]!;
+        out.normal[2] = mem.f32[(address + 64) >> 2]!;
+        out.penetrationDepth = mem.f32[(address + 68) >> 2]!;
+        out.relativeVelocity[0] = mem.f32[(address + 72) >> 2]!;
+        out.relativeVelocity[1] = mem.f32[(address + 76) >> 2]!;
+        out.relativeVelocity[2] = mem.f32[(address + 80) >> 2]!;
+        out.added = mem.u8[address + 84]! !== 0;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: ContactPair): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.handle;
+        mem.u32[(address + 4) >> 2] = value.bodyA;
+        mem.u32[(address + 8) >> 2] = value.subShapeA;
+        mem.u32[(address + 12) >> 2] = value.userDataALow;
+        mem.u32[(address + 16) >> 2] = value.userDataAHigh;
+        mem.u8[address + 20] = value.sensorA ? 1 : 0;
+        mem.u32[(address + 24) >> 2] = value.bodyB;
+        mem.u32[(address + 28) >> 2] = value.subShapeB;
+        mem.u32[(address + 32) >> 2] = value.userDataBLow;
+        mem.u32[(address + 36) >> 2] = value.userDataBHigh;
+        mem.u8[address + 40] = value.sensorB ? 1 : 0;
+        mem.f32[(address + 44) >> 2] = value.point[0];
+        mem.f32[(address + 48) >> 2] = value.point[1];
+        mem.f32[(address + 52) >> 2] = value.point[2];
+        mem.f32[(address + 56) >> 2] = value.normal[0];
+        mem.f32[(address + 60) >> 2] = value.normal[1];
+        mem.f32[(address + 64) >> 2] = value.normal[2];
+        mem.f32[(address + 68) >> 2] = value.penetrationDepth;
+        mem.f32[(address + 72) >> 2] = value.relativeVelocity[0];
+        mem.f32[(address + 76) >> 2] = value.relativeVelocity[1];
+        mem.f32[(address + 80) >> 2] = value.relativeVelocity[2];
+        mem.u8[address + 84] = value.added ? 1 : 0;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: ContactPair): void {
+        view.setUint32(offset + 0, value.handle, true);
+        view.setUint32(offset + 4, value.bodyA, true);
+        view.setUint32(offset + 8, value.subShapeA, true);
+        view.setUint32(offset + 12, value.userDataALow, true);
+        view.setUint32(offset + 16, value.userDataAHigh, true);
+        view.setUint8(offset + 20, value.sensorA ? 1 : 0);
+        view.setUint32(offset + 24, value.bodyB, true);
+        view.setUint32(offset + 28, value.subShapeB, true);
+        view.setUint32(offset + 32, value.userDataBLow, true);
+        view.setUint32(offset + 36, value.userDataBHigh, true);
+        view.setUint8(offset + 40, value.sensorB ? 1 : 0);
+        view.setFloat32(offset + 44, value.point[0], true);
+        view.setFloat32(offset + 48, value.point[1], true);
+        view.setFloat32(offset + 52, value.point[2], true);
+        view.setFloat32(offset + 56, value.normal[0], true);
+        view.setFloat32(offset + 60, value.normal[1], true);
+        view.setFloat32(offset + 64, value.normal[2], true);
+        view.setFloat32(offset + 68, value.penetrationDepth, true);
+        view.setFloat32(offset + 72, value.relativeVelocity[0], true);
+        view.setFloat32(offset + 76, value.relativeVelocity[1], true);
+        view.setFloat32(offset + 80, value.relativeVelocity[2], true);
+        view.setUint8(offset + 84, value.added ? 1 : 0);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: ContactPair, view: DataView, offset: number): ContactPair {
+        out.handle = view.getUint32(offset + 0, true);
+        out.bodyA = view.getUint32(offset + 4, true);
+        out.subShapeA = view.getUint32(offset + 8, true);
+        out.userDataALow = view.getUint32(offset + 12, true);
+        out.userDataAHigh = view.getUint32(offset + 16, true);
+        out.sensorA = view.getUint8(offset + 20) !== 0;
+        out.bodyB = view.getUint32(offset + 24, true);
+        out.subShapeB = view.getUint32(offset + 28, true);
+        out.userDataBLow = view.getUint32(offset + 32, true);
+        out.userDataBHigh = view.getUint32(offset + 36, true);
+        out.sensorB = view.getUint8(offset + 40) !== 0;
+        out.point[0] = view.getFloat32(offset + 44, true);
+        out.point[1] = view.getFloat32(offset + 48, true);
+        out.point[2] = view.getFloat32(offset + 52, true);
+        out.normal[0] = view.getFloat32(offset + 56, true);
+        out.normal[1] = view.getFloat32(offset + 60, true);
+        out.normal[2] = view.getFloat32(offset + 64, true);
+        out.penetrationDepth = view.getFloat32(offset + 68, true);
+        out.relativeVelocity[0] = view.getFloat32(offset + 72, true);
+        out.relativeVelocity[1] = view.getFloat32(offset + 76, true);
+        out.relativeVelocity[2] = view.getFloat32(offset + 80, true);
+        out.added = view.getUint8(offset + 84) !== 0;
+        return out;
+    },
+};
+
 export type WorldSettings = Handle<'WorldSettings'>;
 /** WorldSettings's fields as a plain object, for WorldSettings.writeTo / readFrom over another realm's buffer. */
 export type WorldSettingsValue = {
@@ -7857,6 +8003,52 @@ export const Debug = {
     },
 };
 
+export const ContactPairs = {
+    begin(world: World): void {
+        wasm.exports.tumble_contact_pairs_begin(world);
+        wasm.grew();
+    },
+
+    recordWorldContacts(world: World, firstAdded: number, firstPersisted: number): void {
+        wasm.exports.tumble_contact_pairs_record_world_contacts(world, firstAdded, firstPersisted);
+        wasm.grew();
+    },
+
+    recordCharacterContacts(world: World, character: KCC): void {
+        wasm.exports.tumble_contact_pairs_record_character_contacts(world, character);
+        wasm.grew();
+    },
+
+    end(world: World): void {
+        wasm.exports.tumble_contact_pairs_end(world);
+        wasm.grew();
+    },
+
+    activeCount(world: World): number {
+        const r = wasm.exports.tumble_contact_pairs_active_count(world);
+        return r >>> 0;
+    },
+
+    readActive(out: ContactPair, world: World, index: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_contact_pairs_read_active(scratch + 0, world, index);
+        ContactPair.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    removedCount(world: World): number {
+        const r = wasm.exports.tumble_contact_pairs_removed_count(world);
+        return r >>> 0;
+    },
+
+    readRemoved(out: ContactPair, world: World, index: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_contact_pairs_read_removed(scratch + 0, world, index);
+        ContactPair.read(out, scratch + 0);
+        return r !== 0;
+    },
+};
+
 /** the extern "C" surface, every function taking and returning numbers; the namespaces above call these. */
 export type WasmExports = {
     __heap_base: WebAssembly.Global;
@@ -8323,4 +8515,12 @@ export type WasmExports = {
     tumble_debug_character_contacts(out: number, character: number): void;
     tumble_debug_contact_constraints(out: number, world: number): void;
     tumble_debug_joints(out: number, world: number, options: number): void;
+    tumble_contact_pairs_begin(world: number): void;
+    tumble_contact_pairs_record_world_contacts(world: number, firstAdded: number, firstPersisted: number): void;
+    tumble_contact_pairs_record_character_contacts(world: number, character: number): void;
+    tumble_contact_pairs_end(world: number): void;
+    tumble_contact_pairs_active_count(world: number): number;
+    tumble_contact_pairs_read_active(out: number, world: number, index: number): number;
+    tumble_contact_pairs_removed_count(world: number): number;
+    tumble_contact_pairs_read_removed(out: number, world: number, index: number): number;
 };

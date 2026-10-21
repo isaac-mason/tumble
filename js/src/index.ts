@@ -28,6 +28,7 @@ export {
     type SwingTwistConstraintSettings,
     SwingType,
 } from './constraints';
+export { type ContactPair, ContactPairs } from './contact-pairs';
 export {
     type BodiesOptions,
     BodyColorMode,

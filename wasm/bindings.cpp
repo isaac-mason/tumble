@@ -989,4 +989,30 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::debug::character_contacts), names("out", "character"), GROWS);
     bind::fn(b, BIND(adapters::debug::contact_constraints), names("out", "world"), GROWS);
     bind::fn(b, BIND(adapters::debug::joints), names("out", "world", "options"), GROWS);
+
+    VALUE_AS(adapters::ContactPair, "ContactPair")
+        .field(FIELD(adapters::ContactPair, handle))
+        .field(FIELD(adapters::ContactPair, body_a))
+        .field(FIELD(adapters::ContactPair, sub_shape_a))
+        .field(FIELD(adapters::ContactPair, user_data_a_low))
+        .field(FIELD(adapters::ContactPair, user_data_a_high))
+        .field(FIELD(adapters::ContactPair, sensor_a))
+        .field(FIELD(adapters::ContactPair, body_b))
+        .field(FIELD(adapters::ContactPair, sub_shape_b))
+        .field(FIELD(adapters::ContactPair, user_data_b_low))
+        .field(FIELD(adapters::ContactPair, user_data_b_high))
+        .field(FIELD(adapters::ContactPair, sensor_b))
+        .field(FIELD(adapters::ContactPair, point))
+        .field(FIELD(adapters::ContactPair, normal))
+        .field(FIELD(adapters::ContactPair, penetration_depth))
+        .field(FIELD(adapters::ContactPair, relative_velocity))
+        .field(FIELD(adapters::ContactPair, added));
+    bind::fn(b, BIND(adapters::contact_pairs::begin), names("world"), GROWS);
+    bind::fn(b, BIND(adapters::contact_pairs::record_world_contacts), names("world", "firstAdded", "firstPersisted"), GROWS);
+    bind::fn(b, BIND(adapters::contact_pairs::record_character_contacts), names("world", "character"), GROWS);
+    bind::fn(b, BIND(adapters::contact_pairs::end), names("world"), GROWS);
+    bind::fn(b, BIND(adapters::contact_pairs::active_count), names("world"));
+    bind::fn(b, BIND(adapters::contact_pairs::read_active), names("out", "world", "index"));
+    bind::fn(b, BIND(adapters::contact_pairs::removed_count), names("world"));
+    bind::fn(b, BIND(adapters::contact_pairs::read_removed), names("out", "world", "index"));
 }

@@ -323,5 +323,13 @@ WASM_EXPORT void tumble_debug_contacts(debug::DebugBuffers * out, const world::W
 WASM_EXPORT void tumble_debug_character_contacts(debug::DebugBuffers * out, const kcc::KCC * character) { adapters::debug::character_contacts(out, character); }
 WASM_EXPORT void tumble_debug_contact_constraints(debug::DebugBuffers * out, const world::World * world) { adapters::debug::contact_constraints(out, world); }
 WASM_EXPORT void tumble_debug_joints(debug::DebugBuffers * out, const world::World * world, const debug::JointsOptions * options) { adapters::debug::joints(out, world, *options); }
+WASM_EXPORT void tumble_contact_pairs_begin(world::World * world) { adapters::contact_pairs::begin(world); }
+WASM_EXPORT void tumble_contact_pairs_record_world_contacts(world::World * world, uint32_t firstAdded, uint32_t firstPersisted) { adapters::contact_pairs::record_world_contacts(world, firstAdded, firstPersisted); }
+WASM_EXPORT void tumble_contact_pairs_record_character_contacts(world::World * world, const kcc::KCC * character) { adapters::contact_pairs::record_character_contacts(world, character); }
+WASM_EXPORT void tumble_contact_pairs_end(world::World * world) { adapters::contact_pairs::end(world); }
+WASM_EXPORT uint32_t tumble_contact_pairs_active_count(const world::World * world) { return adapters::contact_pairs::active_count(world); }
+WASM_EXPORT bool tumble_contact_pairs_read_active(adapters::ContactPair * out, const world::World * world, uint32_t index) { return adapters::contact_pairs::read_active(*out, world, index); }
+WASM_EXPORT uint32_t tumble_contact_pairs_removed_count(const world::World * world) { return adapters::contact_pairs::removed_count(world); }
+WASM_EXPORT bool tumble_contact_pairs_read_removed(adapters::ContactPair * out, const world::World * world, uint32_t index) { return adapters::contact_pairs::read_removed(*out, world, index); }
 
 #endif
