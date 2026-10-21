@@ -6,6 +6,8 @@
 #include "tumble/physics/body/body_id.h"
 #include "tumble/physics/body/dof.h"
 #include "tumble/physics/body/mass_properties.h"
+#include "tumble/physics/character/kcc.h"
+#include "tumble/physics/character/kcc_policy.h"
 #include "tumble/physics/constraints/cone_constraint.h"
 #include "tumble/physics/constraints/contact_settings.h"
 #include "tumble/physics/constraints/distance_constraint.h"
@@ -701,5 +703,156 @@ uint32_t collide_point(tumble::world::World *world, uint32_t kind, const tumble:
 bool read_collide_point_hit(tumble::collide_point::CollidePointHit &out, uint32_t index);
 
 }  // namespace query
+
+namespace kcc_policy {
+
+/** null when the allocator fails */
+void default_body_policy(tumble::kcc_policy::BodyPolicy &out);
+tumble::kcc_policy::Policy *create();
+void destroy(tumble::kcc_policy::Policy *policy);
+void get_defaults(tumble::kcc_policy::BodyPolicy &out, const tumble::kcc_policy::Policy *policy);
+void set_defaults(tumble::kcc_policy::Policy *policy, const tumble::kcc_policy::BodyPolicy &body_policy);
+/** false (error set) when the allocator fails */
+bool set(tumble::kcc_policy::Policy *policy, tumble::body_id::BodyId body, const tumble::kcc_policy::BodyPolicy &body_policy);
+bool remove(tumble::kcc_policy::Policy *policy, tumble::body_id::BodyId body);
+/** the body's, or the defaults */
+void get(tumble::kcc_policy::BodyPolicy &out, const tumble::kcc_policy::Policy *policy, tumble::body_id::BodyId body);
+
+}  // namespace kcc_policy
+
+/** kcc::KCCSettings as js gives it: the user data in halves */
+struct KCCSettings {
+    tumble::shapes::Shape *shape;
+    tumble::Float3 shape_offset;
+    float mass;
+    float max_strength;
+    tumble::Float3 up;
+    float max_slope_angle;
+    float predictive_contact_distance;
+    float character_padding;
+    uint32_t max_collision_iterations;
+    uint32_t max_constraint_iterations;
+    float collision_tolerance;
+    float penetration_recovery_speed;
+    float min_time_remaining;
+    uint32_t max_num_hits;
+    float hit_reduction_cos_max_angle;
+    uint32_t back_face_mode;
+    bool enhanced_internal_edge_removal;
+    bool has_supporting_volume_plane;
+    tumble::Plane3f supporting_volume_plane;
+    uint32_t user_data_low;
+    uint32_t user_data_high;
+    bool observes_contacts;
+    tumble::shapes::Shape *inner_rigid_body_shape;
+    uint32_t inner_rigid_body_object_layer;
+};
+
+/** what js mirrors of a character after a call that moves it */
+struct KCCState {
+    tumble::Float3 position;
+    tumble::Float4 quaternion;
+    tumble::Float3 linear_velocity;
+    tumble::Float3 up;
+    uint32_t ground_state;
+    tumble::Float3 ground_normal;
+    tumble::Float3 ground_velocity;
+    tumble::body_id::BodyId ground_body_id;
+    uint32_t ground_sub_shape_id;
+    tumble::Float3 ground_position;
+    tumble::shapes::Shape *shape;
+    tumble::body_id::BodyId inner_rigid_body_id;
+    uint32_t contact_count;
+    uint32_t contact_event_count;
+};
+
+/** kcc::ContactEvent as js reads it */
+struct KCCContactEvent {
+    uint32_t kind;
+    tumble::body_id::BodyId body_id;
+    uint32_t sub_shape_id;
+    tumble::Float3 position;
+    tumble::Float3 normal;
+};
+
+/** a kcc::CharacterContact as js reads one that is not a row: a sweep's */
+struct KCCContact {
+    tumble::Float3 position;
+    tumble::Float3 linear_velocity;
+    tumble::Float3 contact_normal;
+    tumble::Float3 surface_normal;
+    float distance;
+    float fraction;
+    tumble::body_id::BodyId body_id;
+    uint32_t sub_shape_id;
+    int32_t material_id;
+    uint32_t motion_type;
+    bool is_sensor;
+};
+
+/** a solve's results */
+struct KCCSolve {
+    tumble::Float3 velocity;
+    tumble::Float3 displacement;
+    float time_simulated;
+};
+
+// characters by handle, bodies by id, filters with the query's group and mask written into them; the character's
+// contacts are rows in its memory at contacts(), contact_count of them, CharacterContact's layout under the KCC_CONTACT
+// constants, until the next call that moves it
+namespace kcc {
+
+void default_settings(KCCSettings &out);
+void default_update_settings(tumble::kcc::UpdateSettings &out);
+/** null when the allocator fails */
+tumble::kcc::KCC *create(const KCCSettings &settings, const tumble::Float3 &position, const tumble::Float4 &quaternion);
+void destroy(tumble::kcc::KCC *character);
+void add(tumble::world::World *world, tumble::kcc::KCC *character);
+void remove(tumble::world::World *world, tumble::kcc::KCC *character);
+
+void read_state(KCCState &out, const tumble::kcc::KCC *character);
+void set_linear_velocity(tumble::kcc::KCC *character, const tumble::Float3 &velocity);
+uint8_t *contacts(tumble::kcc::KCC *character);
+bool read_contact_event(KCCContactEvent &out, const tumble::kcc::KCC *character, uint32_t index);
+
+void set_position(tumble::world::World *world, tumble::kcc::KCC *character, const tumble::Float3 &position);
+void set_quaternion(tumble::world::World *world, tumble::kcc::KCC *character, const tumble::Float4 &quaternion);
+bool is_slope_too_steep(const tumble::kcc::KCC *character, const tumble::Float3 &normal);
+void get_center_of_mass_transform(tumble::Float3 &out_position, tumble::Float4 &out_quaternion, const tumble::kcc::KCC *character);
+bool has_collided_with(const tumble::kcc::KCC *character, tumble::body_id::BodyId body);
+bool can_walk_stairs(const tumble::kcc::KCC *character, const tumble::Float3 &velocity);
+void cancel_velocity_towards_steep_slopes(tumble::Float3 &out, const tumble::kcc::KCC *character, const tumble::Float3 &velocity);
+
+void update_ground_velocity(tumble::world::World *world, tumble::kcc::KCC *character, const tumble::kcc_policy::Policy *policy);
+void refresh_contacts(tumble::world::World *world, tumble::kcc::KCC *character, tumble::filter::Filter *filter, uint32_t collision_groups,
+                      uint32_t collision_mask, const tumble::kcc_policy::Policy *policy);
+bool set_shape(tumble::world::World *world, tumble::kcc::KCC *character, tumble::shapes::Shape *shape, tumble::filter::Filter *filter,
+               uint32_t collision_groups, uint32_t collision_mask, const tumble::kcc_policy::Policy *policy, float max_penetration_depth);
+void move(tumble::world::World *world, tumble::kcc::KCC *character, float delta_time, const tumble::Float3 &gravity,
+          const tumble::kcc_policy::Policy *policy, tumble::filter::Filter *filter, uint32_t collision_groups, uint32_t collision_mask);
+bool stick_to_floor(tumble::world::World *world, tumble::kcc::KCC *character, const tumble::Float3 &step_down, tumble::filter::Filter *filter,
+                    uint32_t collision_groups, uint32_t collision_mask, const tumble::kcc_policy::Policy *policy);
+bool walk_stairs(tumble::world::World *world, tumble::kcc::KCC *character, float delta_time, const tumble::Float3 &step_up,
+                 const tumble::Float3 &step_forward, const tumble::Float3 &step_forward_test, const tumble::Float3 &step_down_extra,
+                 tumble::filter::Filter *filter, uint32_t collision_groups, uint32_t collision_mask, const tumble::kcc_policy::Policy *policy);
+void update(tumble::world::World *world, tumble::kcc::KCC *character, float delta_time, const tumble::Float3 &gravity,
+            const tumble::kcc::UpdateSettings &settings, const tumble::kcc_policy::Policy *policy, tumble::filter::Filter *filter,
+            uint32_t collision_groups, uint32_t collision_mask);
+
+// the toolkit
+void collide(tumble::world::World *world, tumble::kcc::KCC *character, const tumble::Float3 &position, const tumble::Float3 &movement_direction,
+             tumble::filter::Filter *filter, uint32_t collision_groups, uint32_t collision_mask, const tumble::kcc_policy::Policy *policy);
+void solve(KCCSolve &out, tumble::world::World *world, tumble::kcc::KCC *character, const tumble::Float3 &velocity, float delta_time,
+           float time_remaining, const tumble::kcc_policy::Policy *policy);
+bool cast(KCCContact &out, tumble::world::World *world, tumble::kcc::KCC *character, const tumble::Float3 &position,
+          const tumble::Float3 &displacement, tumble::filter::Filter *filter, uint32_t collision_groups, uint32_t collision_mask,
+          const tumble::kcc_policy::Policy *policy);
+void update_ground(tumble::world::World *world, tumble::kcc::KCC *character, float delta_time, bool skip_contact_velocity_check,
+                   const tumble::kcc_policy::Policy *policy);
+void apply_weight(tumble::world::World *world, tumble::kcc::KCC *character, const tumble::Float3 &gravity, float delta_time);
+void begin_contact_tracking(tumble::kcc::KCC *character);
+void end_contact_tracking(tumble::kcc::KCC *character);
+
+}  // namespace kcc
 
 }  // namespace adapters

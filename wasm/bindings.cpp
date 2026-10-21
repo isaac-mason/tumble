@@ -787,4 +787,164 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::query::collide_point), names("world", "kind", "settings", "point", "filter", "collisionGroups", "collisionMask"),
              GROWS);
     bind::fn(b, BIND(adapters::query::read_collide_point_hit), names("out", "index"));
+
+    RECORD(kcc_policy::Policy);
+    VALUE_AS(kcc_policy::BodyPolicy, "KCCBodyPolicy")
+        .field(FIELD(kcc_policy::BodyPolicy, ignore))
+        .field(FIELD(kcc_policy::BodyPolicy, can_push_character))
+        .field(FIELD(kcc_policy::BodyPolicy, can_receive_impulses))
+        .field(FIELD(kcc_policy::BodyPolicy, slide_on_walkable))
+        .field(FIELD(kcc_policy::BodyPolicy, surface_linear_velocity))
+        .field(FIELD(kcc_policy::BodyPolicy, surface_angular_velocity));
+    bind::fn(b, BIND(adapters::kcc_policy::default_body_policy), names("out"));
+    bind::fn(b, BIND(adapters::kcc_policy::create), names(), GROWS);
+    bind::fn(b, BIND(adapters::kcc_policy::destroy), names("policy"));
+    bind::fn(b, BIND(adapters::kcc_policy::get_defaults), names("out", "policy"));
+    bind::fn(b, BIND(adapters::kcc_policy::set_defaults), names("policy", "bodyPolicy"));
+    bind::fn(b, BIND(adapters::kcc_policy::set), names("policy", "body", "bodyPolicy"), GROWS);
+    bind::fn(b, BIND(adapters::kcc_policy::remove), names("policy", "body"));
+    bind::fn(b, BIND(adapters::kcc_policy::get), names("out", "policy", "body"));
+
+    RECORD(kcc::KCC);
+    bind::enumeration<uint32_t>(b, "GroundState")
+        .value("ON_GROUND", kcc::ON_GROUND, "walkable.")
+        .value("ON_STEEP_GROUND", kcc::ON_STEEP_GROUND, "too steep to climb.")
+        .value("NOT_SUPPORTED", kcc::NOT_SUPPORTED, "touching something, but not supported by it.")
+        .value("IN_AIR", kcc::IN_AIR);
+    bind::enumeration<uint32_t>(b, "BackFaceMode")
+        .doc("triangle mesh back faces.")
+        .value("IGNORE", kcc::BACK_FACE_IGNORE)
+        .value("COLLIDE", kcc::BACK_FACE_COLLIDE);
+    bind::enumeration<uint32_t>(b, "KCCContactEventKind")
+        .value("ADDED", kcc::CONTACT_ADDED, "first met this frame, not touching last frame.")
+        .value("PERSISTED", kcc::CONTACT_PERSISTED, "first met this frame, touching last frame too.")
+        .value("REMOVED", kcc::CONTACT_REMOVED, "touching last frame, not at the end of this one; the body may have been removed.");
+    VALUE_AS(adapters::KCCSettings, "KCCSettings")
+        .field(FIELD(adapters::KCCSettings, shape))
+        .field(FIELD(adapters::KCCSettings, shape_offset))
+        .field(FIELD(adapters::KCCSettings, mass))
+        .field(FIELD(adapters::KCCSettings, max_strength))
+        .field(FIELD(adapters::KCCSettings, up))
+        .field(FIELD(adapters::KCCSettings, max_slope_angle))
+        .field(FIELD(adapters::KCCSettings, predictive_contact_distance))
+        .field(FIELD(adapters::KCCSettings, character_padding))
+        .field(FIELD(adapters::KCCSettings, max_collision_iterations))
+        .field(FIELD(adapters::KCCSettings, max_constraint_iterations))
+        .field(FIELD(adapters::KCCSettings, collision_tolerance))
+        .field(FIELD(adapters::KCCSettings, penetration_recovery_speed))
+        .field(FIELD(adapters::KCCSettings, min_time_remaining))
+        .field(FIELD(adapters::KCCSettings, max_num_hits))
+        .field(FIELD(adapters::KCCSettings, hit_reduction_cos_max_angle))
+        .field(FIELD(adapters::KCCSettings, back_face_mode))
+        .field(FIELD(adapters::KCCSettings, enhanced_internal_edge_removal))
+        .field(FIELD(adapters::KCCSettings, has_supporting_volume_plane))
+        .field(FIELD(adapters::KCCSettings, supporting_volume_plane))
+        .field(FIELD(adapters::KCCSettings, user_data_low))
+        .field(FIELD(adapters::KCCSettings, user_data_high))
+        .field(FIELD(adapters::KCCSettings, observes_contacts))
+        .field(FIELD(adapters::KCCSettings, inner_rigid_body_shape))
+        .field(FIELD(adapters::KCCSettings, inner_rigid_body_object_layer));
+    VALUE_AS(kcc::UpdateSettings, "KCCUpdateSettings")
+        .field(FIELD(kcc::UpdateSettings, stick_to_floor_step_down))
+        .field(FIELD(kcc::UpdateSettings, walk_stairs_step_up))
+        .field(FIELD(kcc::UpdateSettings, walk_stairs_min_step_forward))
+        .field(FIELD(kcc::UpdateSettings, walk_stairs_step_forward_test))
+        .field(FIELD(kcc::UpdateSettings, walk_stairs_cos_angle_forward_contact))
+        .field(FIELD(kcc::UpdateSettings, walk_stairs_step_down_extra));
+    VALUE_AS(adapters::KCCState, "KCCState")
+        .field(FIELD(adapters::KCCState, position))
+        .field(FIELD(adapters::KCCState, quaternion))
+        .field(FIELD(adapters::KCCState, linear_velocity))
+        .field(FIELD(adapters::KCCState, up))
+        .field(FIELD(adapters::KCCState, ground_state))
+        .field(FIELD(adapters::KCCState, ground_normal))
+        .field(FIELD(adapters::KCCState, ground_velocity))
+        .field(FIELD(adapters::KCCState, ground_body_id))
+        .field(FIELD(adapters::KCCState, ground_sub_shape_id))
+        .field(FIELD(adapters::KCCState, ground_position))
+        .field(FIELD(adapters::KCCState, shape))
+        .field(FIELD(adapters::KCCState, inner_rigid_body_id))
+        .field(FIELD(adapters::KCCState, contact_count))
+        .field(FIELD(adapters::KCCState, contact_event_count));
+    VALUE_AS(adapters::KCCContactEvent, "KCCContactEvent")
+        .field(FIELD(adapters::KCCContactEvent, kind))
+        .field(FIELD(adapters::KCCContactEvent, body_id))
+        .field(FIELD(adapters::KCCContactEvent, sub_shape_id))
+        .field(FIELD(adapters::KCCContactEvent, position))
+        .field(FIELD(adapters::KCCContactEvent, normal));
+    VALUE_AS(adapters::KCCContact, "KCCContact")
+        .field(FIELD(adapters::KCCContact, position))
+        .field(FIELD(adapters::KCCContact, linear_velocity))
+        .field(FIELD(adapters::KCCContact, contact_normal))
+        .field(FIELD(adapters::KCCContact, surface_normal))
+        .field(FIELD(adapters::KCCContact, distance))
+        .field(FIELD(adapters::KCCContact, fraction))
+        .field(FIELD(adapters::KCCContact, body_id))
+        .field(FIELD(adapters::KCCContact, sub_shape_id))
+        .field(FIELD(adapters::KCCContact, material_id))
+        .field(FIELD(adapters::KCCContact, motion_type))
+        .field(FIELD(adapters::KCCContact, is_sensor));
+    VALUE_AS(adapters::KCCSolve, "KCCSolve")
+        .field(FIELD(adapters::KCCSolve, velocity))
+        .field(FIELD(adapters::KCCSolve, displacement))
+        .field(FIELD(adapters::KCCSolve, time_simulated));
+
+    // a character's contact rows, for js to read and edit in place
+    bind::constant(b, "KCC_CONTACT_STRIDE", sizeof(kcc::CharacterContact));
+    bind::constant(b, "KCC_CONTACT_POSITION", offsetof(kcc::CharacterContact, position));
+    bind::constant(b, "KCC_CONTACT_LINEAR_VELOCITY", offsetof(kcc::CharacterContact, linear_velocity));
+    bind::constant(b, "KCC_CONTACT_CONTACT_NORMAL", offsetof(kcc::CharacterContact, contact_normal));
+    bind::constant(b, "KCC_CONTACT_SURFACE_NORMAL", offsetof(kcc::CharacterContact, surface_normal));
+    bind::constant(b, "KCC_CONTACT_DISTANCE", offsetof(kcc::CharacterContact, distance));
+    bind::constant(b, "KCC_CONTACT_FRACTION", offsetof(kcc::CharacterContact, fraction));
+    bind::constant(b, "KCC_CONTACT_BODY_ID", offsetof(kcc::CharacterContact, body_id));
+    bind::constant(b, "KCC_CONTACT_SUB_SHAPE_ID", offsetof(kcc::CharacterContact, sub_shape_id));
+    bind::constant(b, "KCC_CONTACT_MATERIAL_ID", offsetof(kcc::CharacterContact, material_id));
+    bind::constant(b, "KCC_CONTACT_MOTION_TYPE", offsetof(kcc::CharacterContact, motion_type));
+    bind::constant(b, "KCC_CONTACT_IS_SENSOR", offsetof(kcc::CharacterContact, is_sensor));
+    bind::constant(b, "KCC_CONTACT_HAD_COLLISION", offsetof(kcc::CharacterContact, had_collision));
+    bind::constant(b, "KCC_CONTACT_WAS_DISCARDED", offsetof(kcc::CharacterContact, was_discarded));
+    bind::constant(b, "KCC_CONTACT_CAN_PUSH_CHARACTER", offsetof(kcc::CharacterContact, can_push_character));
+    bind::constant(b, "KCC_CONTACT_CAN_RECEIVE_IMPULSES", offsetof(kcc::CharacterContact, can_receive_impulses));
+
+    bind::fn(b, BIND(adapters::kcc::default_settings), names("out"));
+    bind::fn(b, BIND(adapters::kcc::default_update_settings), names("out"));
+    bind::fn(b, BIND(adapters::kcc::create), names("settings", "position", "quaternion"), GROWS);
+    bind::fn(b, BIND(adapters::kcc::destroy), names("character"));
+    bind::fn(b, BIND(adapters::kcc::add), names("world", "character"), GROWS);
+    bind::fn(b, BIND(adapters::kcc::remove), names("world", "character"));
+    bind::fn(b, BIND(adapters::kcc::read_state), names("out", "character"));
+    bind::fn(b, BIND(adapters::kcc::set_linear_velocity), names("character", "velocity"));
+    bind::fn(b, BIND(adapters::kcc::contacts), names("character"));
+    bind::fn(b, BIND(adapters::kcc::read_contact_event), names("out", "character", "index"));
+    bind::fn(b, BIND(adapters::kcc::set_position), names("world", "character", "position"), GROWS);
+    bind::fn(b, BIND(adapters::kcc::set_quaternion), names("world", "character", "quaternion"), GROWS);
+    bind::fn(b, BIND(adapters::kcc::is_slope_too_steep), names("character", "normal"));
+    bind::fn(b, BIND(adapters::kcc::get_center_of_mass_transform), names("outPosition", "outQuaternion", "character"));
+    bind::fn(b, BIND(adapters::kcc::has_collided_with), names("character", "body"));
+    bind::fn(b, BIND(adapters::kcc::can_walk_stairs), names("character", "velocity"));
+    bind::fn(b, BIND(adapters::kcc::cancel_velocity_towards_steep_slopes), names("out", "character", "velocity"));
+    bind::fn(b, BIND(adapters::kcc::update_ground_velocity), names("world", "character", "policy"));
+    bind::fn(b, BIND(adapters::kcc::refresh_contacts), names("world", "character", "filter", "collisionGroups", "collisionMask", "policy"), GROWS);
+    bind::fn(b, BIND(adapters::kcc::set_shape),
+             names("world", "character", "shape", "filter", "collisionGroups", "collisionMask", "policy", "maxPenetrationDepth"), GROWS);
+    bind::fn(b, BIND(adapters::kcc::move),
+             names("world", "character", "deltaTime", "gravity", "policy", "filter", "collisionGroups", "collisionMask"), GROWS);
+    bind::fn(b, BIND(adapters::kcc::stick_to_floor),
+             names("world", "character", "stepDown", "filter", "collisionGroups", "collisionMask", "policy"), GROWS);
+    bind::fn(b, BIND(adapters::kcc::walk_stairs),
+             names("world", "character", "deltaTime", "stepUp", "stepForward", "stepForwardTest", "stepDownExtra", "filter", "collisionGroups",
+                   "collisionMask", "policy"),
+             GROWS);
+    bind::fn(b, BIND(adapters::kcc::update),
+             names("world", "character", "deltaTime", "gravity", "settings", "policy", "filter", "collisionGroups", "collisionMask"), GROWS);
+    bind::fn(b, BIND(adapters::kcc::collide),
+             names("world", "character", "position", "movementDirection", "filter", "collisionGroups", "collisionMask", "policy"), GROWS);
+    bind::fn(b, BIND(adapters::kcc::solve), names("out", "world", "character", "velocity", "deltaTime", "timeRemaining", "policy"), GROWS);
+    bind::fn(b, BIND(adapters::kcc::cast),
+             names("out", "world", "character", "position", "displacement", "filter", "collisionGroups", "collisionMask", "policy"), GROWS);
+    bind::fn(b, BIND(adapters::kcc::update_ground), names("world", "character", "deltaTime", "skipContactVelocityCheck", "policy"), GROWS);
+    bind::fn(b, BIND(adapters::kcc::apply_weight), names("world", "character", "gravity", "deltaTime"), GROWS);
+    bind::fn(b, BIND(adapters::kcc::begin_contact_tracking), names("character"), GROWS);
+    bind::fn(b, BIND(adapters::kcc::end_contact_tracking), names("character"), GROWS);
 }

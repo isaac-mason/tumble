@@ -164,7 +164,7 @@ constexpr uint32_t MAX_FIELDS = 48;
 constexpr uint32_t MAX_STRUCTS = 128;
 constexpr uint32_t MAX_ENUMS = 64;
 constexpr uint32_t MAX_VALUES = 64;
-constexpr uint32_t MAX_FUNCTIONS = 256;
+constexpr uint32_t MAX_FUNCTIONS = 512;
 constexpr uint32_t MAX_INCLUDES = 32;
 constexpr uint32_t MAX_CONSTANTS = 64;
 

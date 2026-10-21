@@ -7,7 +7,7 @@
 import type { Instance } from '../module';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x26d8b215;
+export const SCHEMA_HASH = 0x7d24402a;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 368;
 
@@ -34,6 +34,38 @@ export function getWasm(): Instance {
 export function hasWasm(): boolean {
     return wasm !== undefined;
 }
+
+export const KCC_CONTACT_STRIDE = 96;
+
+export const KCC_CONTACT_POSITION = 0;
+
+export const KCC_CONTACT_LINEAR_VELOCITY = 16;
+
+export const KCC_CONTACT_CONTACT_NORMAL = 32;
+
+export const KCC_CONTACT_SURFACE_NORMAL = 48;
+
+export const KCC_CONTACT_DISTANCE = 64;
+
+export const KCC_CONTACT_FRACTION = 68;
+
+export const KCC_CONTACT_BODY_ID = 72;
+
+export const KCC_CONTACT_SUB_SHAPE_ID = 76;
+
+export const KCC_CONTACT_MATERIAL_ID = 80;
+
+export const KCC_CONTACT_MOTION_TYPE = 84;
+
+export const KCC_CONTACT_IS_SENSOR = 88;
+
+export const KCC_CONTACT_HAD_COLLISION = 89;
+
+export const KCC_CONTACT_WAS_DISCARDED = 90;
+
+export const KCC_CONTACT_CAN_PUSH_CHARACTER = 91;
+
+export const KCC_CONTACT_CAN_RECEIVE_IMPULSES = 92;
 
 /** what error() reports: the first failure since the last clear. */
 export const WasmError = {
@@ -226,6 +258,34 @@ export const CastShapeStatus = {
     COLLIDING: 1,
 } as const;
 export type CastShapeStatus = (typeof CastShapeStatus)[keyof typeof CastShapeStatus];
+
+export const GroundState = {
+    /** walkable. */
+    ON_GROUND: 0,
+    /** too steep to climb. */
+    ON_STEEP_GROUND: 1,
+    /** touching something, but not supported by it. */
+    NOT_SUPPORTED: 2,
+    IN_AIR: 3,
+} as const;
+export type GroundState = (typeof GroundState)[keyof typeof GroundState];
+
+/** triangle mesh back faces. */
+export const BackFaceMode = {
+    IGNORE: 0,
+    COLLIDE: 1,
+} as const;
+export type BackFaceMode = (typeof BackFaceMode)[keyof typeof BackFaceMode];
+
+export const KCCContactEventKind = {
+    /** first met this frame, not touching last frame. */
+    ADDED: 0,
+    /** first met this frame, touching last frame too. */
+    PERSISTED: 1,
+    /** touching last frame, not at the end of this one; the body may have been removed. */
+    REMOVED: 2,
+} as const;
+export type KCCContactEventKind = (typeof KCCContactEventKind)[keyof typeof KCCContactEventKind];
 
 export type Vec3 = [x: number, y: number, z: number];
 export const Vec3 = {
@@ -4423,6 +4483,774 @@ export const CollidePointHit = {
     },
 };
 
+export type KCCBodyPolicy = {
+    ignore: boolean;
+    canPushCharacter: boolean;
+    canReceiveImpulses: boolean;
+    slideOnWalkable: boolean;
+    surfaceLinearVelocity: Vec3;
+    surfaceAngularVelocity: Vec3;
+};
+export const KCCBodyPolicy = {
+    size: 28,
+    create(): KCCBodyPolicy {
+        return {
+            ignore: false,
+            canPushCharacter: false,
+            canReceiveImpulses: false,
+            slideOnWalkable: false,
+            surfaceLinearVelocity: Vec3.create(),
+            surfaceAngularVelocity: Vec3.create(),
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: KCCBodyPolicy, address: number): KCCBodyPolicy {
+        const mem = wasm.mem;
+        out.ignore = mem.u8[address + 0]! !== 0;
+        out.canPushCharacter = mem.u8[address + 1]! !== 0;
+        out.canReceiveImpulses = mem.u8[address + 2]! !== 0;
+        out.slideOnWalkable = mem.u8[address + 3]! !== 0;
+        out.surfaceLinearVelocity[0] = mem.f32[(address + 4) >> 2]!;
+        out.surfaceLinearVelocity[1] = mem.f32[(address + 8) >> 2]!;
+        out.surfaceLinearVelocity[2] = mem.f32[(address + 12) >> 2]!;
+        out.surfaceAngularVelocity[0] = mem.f32[(address + 16) >> 2]!;
+        out.surfaceAngularVelocity[1] = mem.f32[(address + 20) >> 2]!;
+        out.surfaceAngularVelocity[2] = mem.f32[(address + 24) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: KCCBodyPolicy): void {
+        const mem = wasm.mem;
+        mem.u8[address + 0] = value.ignore ? 1 : 0;
+        mem.u8[address + 1] = value.canPushCharacter ? 1 : 0;
+        mem.u8[address + 2] = value.canReceiveImpulses ? 1 : 0;
+        mem.u8[address + 3] = value.slideOnWalkable ? 1 : 0;
+        mem.f32[(address + 4) >> 2] = value.surfaceLinearVelocity[0];
+        mem.f32[(address + 8) >> 2] = value.surfaceLinearVelocity[1];
+        mem.f32[(address + 12) >> 2] = value.surfaceLinearVelocity[2];
+        mem.f32[(address + 16) >> 2] = value.surfaceAngularVelocity[0];
+        mem.f32[(address + 20) >> 2] = value.surfaceAngularVelocity[1];
+        mem.f32[(address + 24) >> 2] = value.surfaceAngularVelocity[2];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: KCCBodyPolicy): void {
+        view.setUint8(offset + 0, value.ignore ? 1 : 0);
+        view.setUint8(offset + 1, value.canPushCharacter ? 1 : 0);
+        view.setUint8(offset + 2, value.canReceiveImpulses ? 1 : 0);
+        view.setUint8(offset + 3, value.slideOnWalkable ? 1 : 0);
+        view.setFloat32(offset + 4, value.surfaceLinearVelocity[0], true);
+        view.setFloat32(offset + 8, value.surfaceLinearVelocity[1], true);
+        view.setFloat32(offset + 12, value.surfaceLinearVelocity[2], true);
+        view.setFloat32(offset + 16, value.surfaceAngularVelocity[0], true);
+        view.setFloat32(offset + 20, value.surfaceAngularVelocity[1], true);
+        view.setFloat32(offset + 24, value.surfaceAngularVelocity[2], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: KCCBodyPolicy, view: DataView, offset: number): KCCBodyPolicy {
+        out.ignore = view.getUint8(offset + 0) !== 0;
+        out.canPushCharacter = view.getUint8(offset + 1) !== 0;
+        out.canReceiveImpulses = view.getUint8(offset + 2) !== 0;
+        out.slideOnWalkable = view.getUint8(offset + 3) !== 0;
+        out.surfaceLinearVelocity[0] = view.getFloat32(offset + 4, true);
+        out.surfaceLinearVelocity[1] = view.getFloat32(offset + 8, true);
+        out.surfaceLinearVelocity[2] = view.getFloat32(offset + 12, true);
+        out.surfaceAngularVelocity[0] = view.getFloat32(offset + 16, true);
+        out.surfaceAngularVelocity[1] = view.getFloat32(offset + 20, true);
+        out.surfaceAngularVelocity[2] = view.getFloat32(offset + 24, true);
+        return out;
+    },
+};
+
+export type KCCSettings = {
+    shape: Shape | null;
+    shapeOffset: Vec3;
+    mass: number;
+    maxStrength: number;
+    up: Vec3;
+    maxSlopeAngle: number;
+    predictiveContactDistance: number;
+    characterPadding: number;
+    maxCollisionIterations: number;
+    maxConstraintIterations: number;
+    collisionTolerance: number;
+    penetrationRecoverySpeed: number;
+    minTimeRemaining: number;
+    maxNumHits: number;
+    hitReductionCosMaxAngle: number;
+    backFaceMode: number;
+    enhancedInternalEdgeRemoval: boolean;
+    hasSupportingVolumePlane: boolean;
+    supportingVolumePlane: Plane3;
+    userDataLow: number;
+    userDataHigh: number;
+    observesContacts: boolean;
+    innerRigidBodyShape: Shape | null;
+    innerRigidBodyObjectLayer: number;
+};
+export const KCCSettings = {
+    size: 120,
+    create(): KCCSettings {
+        return {
+            shape: null,
+            shapeOffset: Vec3.create(),
+            mass: 0,
+            maxStrength: 0,
+            up: Vec3.create(),
+            maxSlopeAngle: 0,
+            predictiveContactDistance: 0,
+            characterPadding: 0,
+            maxCollisionIterations: 0,
+            maxConstraintIterations: 0,
+            collisionTolerance: 0,
+            penetrationRecoverySpeed: 0,
+            minTimeRemaining: 0,
+            maxNumHits: 0,
+            hitReductionCosMaxAngle: 0,
+            backFaceMode: 0,
+            enhancedInternalEdgeRemoval: false,
+            hasSupportingVolumePlane: false,
+            supportingVolumePlane: Plane3.create(),
+            userDataLow: 0,
+            userDataHigh: 0,
+            observesContacts: false,
+            innerRigidBodyShape: null,
+            innerRigidBodyObjectLayer: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: KCCSettings, address: number): KCCSettings {
+        const mem = wasm.mem;
+        out.shape = (mem.u32[(address + 0) >> 2]! || null) as Shape | null;
+        out.shapeOffset[0] = mem.f32[(address + 4) >> 2]!;
+        out.shapeOffset[1] = mem.f32[(address + 8) >> 2]!;
+        out.shapeOffset[2] = mem.f32[(address + 12) >> 2]!;
+        out.mass = mem.f32[(address + 16) >> 2]!;
+        out.maxStrength = mem.f32[(address + 20) >> 2]!;
+        out.up[0] = mem.f32[(address + 24) >> 2]!;
+        out.up[1] = mem.f32[(address + 28) >> 2]!;
+        out.up[2] = mem.f32[(address + 32) >> 2]!;
+        out.maxSlopeAngle = mem.f32[(address + 36) >> 2]!;
+        out.predictiveContactDistance = mem.f32[(address + 40) >> 2]!;
+        out.characterPadding = mem.f32[(address + 44) >> 2]!;
+        out.maxCollisionIterations = mem.u32[(address + 48) >> 2]!;
+        out.maxConstraintIterations = mem.u32[(address + 52) >> 2]!;
+        out.collisionTolerance = mem.f32[(address + 56) >> 2]!;
+        out.penetrationRecoverySpeed = mem.f32[(address + 60) >> 2]!;
+        out.minTimeRemaining = mem.f32[(address + 64) >> 2]!;
+        out.maxNumHits = mem.u32[(address + 68) >> 2]!;
+        out.hitReductionCosMaxAngle = mem.f32[(address + 72) >> 2]!;
+        out.backFaceMode = mem.u32[(address + 76) >> 2]!;
+        out.enhancedInternalEdgeRemoval = mem.u8[address + 80]! !== 0;
+        out.hasSupportingVolumePlane = mem.u8[address + 81]! !== 0;
+        out.supportingVolumePlane.normal[0] = mem.f32[(address + 84) >> 2]!;
+        out.supportingVolumePlane.normal[1] = mem.f32[(address + 88) >> 2]!;
+        out.supportingVolumePlane.normal[2] = mem.f32[(address + 92) >> 2]!;
+        out.supportingVolumePlane.constant = mem.f32[(address + 96) >> 2]!;
+        out.userDataLow = mem.u32[(address + 100) >> 2]!;
+        out.userDataHigh = mem.u32[(address + 104) >> 2]!;
+        out.observesContacts = mem.u8[address + 108]! !== 0;
+        out.innerRigidBodyShape = (mem.u32[(address + 112) >> 2]! || null) as Shape | null;
+        out.innerRigidBodyObjectLayer = mem.u32[(address + 116) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: KCCSettings): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.shape ?? 0;
+        mem.f32[(address + 4) >> 2] = value.shapeOffset[0];
+        mem.f32[(address + 8) >> 2] = value.shapeOffset[1];
+        mem.f32[(address + 12) >> 2] = value.shapeOffset[2];
+        mem.f32[(address + 16) >> 2] = value.mass;
+        mem.f32[(address + 20) >> 2] = value.maxStrength;
+        mem.f32[(address + 24) >> 2] = value.up[0];
+        mem.f32[(address + 28) >> 2] = value.up[1];
+        mem.f32[(address + 32) >> 2] = value.up[2];
+        mem.f32[(address + 36) >> 2] = value.maxSlopeAngle;
+        mem.f32[(address + 40) >> 2] = value.predictiveContactDistance;
+        mem.f32[(address + 44) >> 2] = value.characterPadding;
+        mem.u32[(address + 48) >> 2] = value.maxCollisionIterations;
+        mem.u32[(address + 52) >> 2] = value.maxConstraintIterations;
+        mem.f32[(address + 56) >> 2] = value.collisionTolerance;
+        mem.f32[(address + 60) >> 2] = value.penetrationRecoverySpeed;
+        mem.f32[(address + 64) >> 2] = value.minTimeRemaining;
+        mem.u32[(address + 68) >> 2] = value.maxNumHits;
+        mem.f32[(address + 72) >> 2] = value.hitReductionCosMaxAngle;
+        mem.u32[(address + 76) >> 2] = value.backFaceMode;
+        mem.u8[address + 80] = value.enhancedInternalEdgeRemoval ? 1 : 0;
+        mem.u8[address + 81] = value.hasSupportingVolumePlane ? 1 : 0;
+        mem.f32[(address + 84) >> 2] = value.supportingVolumePlane.normal[0];
+        mem.f32[(address + 88) >> 2] = value.supportingVolumePlane.normal[1];
+        mem.f32[(address + 92) >> 2] = value.supportingVolumePlane.normal[2];
+        mem.f32[(address + 96) >> 2] = value.supportingVolumePlane.constant;
+        mem.u32[(address + 100) >> 2] = value.userDataLow;
+        mem.u32[(address + 104) >> 2] = value.userDataHigh;
+        mem.u8[address + 108] = value.observesContacts ? 1 : 0;
+        mem.u32[(address + 112) >> 2] = value.innerRigidBodyShape ?? 0;
+        mem.u32[(address + 116) >> 2] = value.innerRigidBodyObjectLayer;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: KCCSettings): void {
+        view.setUint32(offset + 0, value.shape ?? 0, true);
+        view.setFloat32(offset + 4, value.shapeOffset[0], true);
+        view.setFloat32(offset + 8, value.shapeOffset[1], true);
+        view.setFloat32(offset + 12, value.shapeOffset[2], true);
+        view.setFloat32(offset + 16, value.mass, true);
+        view.setFloat32(offset + 20, value.maxStrength, true);
+        view.setFloat32(offset + 24, value.up[0], true);
+        view.setFloat32(offset + 28, value.up[1], true);
+        view.setFloat32(offset + 32, value.up[2], true);
+        view.setFloat32(offset + 36, value.maxSlopeAngle, true);
+        view.setFloat32(offset + 40, value.predictiveContactDistance, true);
+        view.setFloat32(offset + 44, value.characterPadding, true);
+        view.setUint32(offset + 48, value.maxCollisionIterations, true);
+        view.setUint32(offset + 52, value.maxConstraintIterations, true);
+        view.setFloat32(offset + 56, value.collisionTolerance, true);
+        view.setFloat32(offset + 60, value.penetrationRecoverySpeed, true);
+        view.setFloat32(offset + 64, value.minTimeRemaining, true);
+        view.setUint32(offset + 68, value.maxNumHits, true);
+        view.setFloat32(offset + 72, value.hitReductionCosMaxAngle, true);
+        view.setUint32(offset + 76, value.backFaceMode, true);
+        view.setUint8(offset + 80, value.enhancedInternalEdgeRemoval ? 1 : 0);
+        view.setUint8(offset + 81, value.hasSupportingVolumePlane ? 1 : 0);
+        view.setFloat32(offset + 84, value.supportingVolumePlane.normal[0], true);
+        view.setFloat32(offset + 88, value.supportingVolumePlane.normal[1], true);
+        view.setFloat32(offset + 92, value.supportingVolumePlane.normal[2], true);
+        view.setFloat32(offset + 96, value.supportingVolumePlane.constant, true);
+        view.setUint32(offset + 100, value.userDataLow, true);
+        view.setUint32(offset + 104, value.userDataHigh, true);
+        view.setUint8(offset + 108, value.observesContacts ? 1 : 0);
+        view.setUint32(offset + 112, value.innerRigidBodyShape ?? 0, true);
+        view.setUint32(offset + 116, value.innerRigidBodyObjectLayer, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: KCCSettings, view: DataView, offset: number): KCCSettings {
+        out.shape = (view.getUint32(offset + 0, true) || null) as Shape | null;
+        out.shapeOffset[0] = view.getFloat32(offset + 4, true);
+        out.shapeOffset[1] = view.getFloat32(offset + 8, true);
+        out.shapeOffset[2] = view.getFloat32(offset + 12, true);
+        out.mass = view.getFloat32(offset + 16, true);
+        out.maxStrength = view.getFloat32(offset + 20, true);
+        out.up[0] = view.getFloat32(offset + 24, true);
+        out.up[1] = view.getFloat32(offset + 28, true);
+        out.up[2] = view.getFloat32(offset + 32, true);
+        out.maxSlopeAngle = view.getFloat32(offset + 36, true);
+        out.predictiveContactDistance = view.getFloat32(offset + 40, true);
+        out.characterPadding = view.getFloat32(offset + 44, true);
+        out.maxCollisionIterations = view.getUint32(offset + 48, true);
+        out.maxConstraintIterations = view.getUint32(offset + 52, true);
+        out.collisionTolerance = view.getFloat32(offset + 56, true);
+        out.penetrationRecoverySpeed = view.getFloat32(offset + 60, true);
+        out.minTimeRemaining = view.getFloat32(offset + 64, true);
+        out.maxNumHits = view.getUint32(offset + 68, true);
+        out.hitReductionCosMaxAngle = view.getFloat32(offset + 72, true);
+        out.backFaceMode = view.getUint32(offset + 76, true);
+        out.enhancedInternalEdgeRemoval = view.getUint8(offset + 80) !== 0;
+        out.hasSupportingVolumePlane = view.getUint8(offset + 81) !== 0;
+        out.supportingVolumePlane.normal[0] = view.getFloat32(offset + 84, true);
+        out.supportingVolumePlane.normal[1] = view.getFloat32(offset + 88, true);
+        out.supportingVolumePlane.normal[2] = view.getFloat32(offset + 92, true);
+        out.supportingVolumePlane.constant = view.getFloat32(offset + 96, true);
+        out.userDataLow = view.getUint32(offset + 100, true);
+        out.userDataHigh = view.getUint32(offset + 104, true);
+        out.observesContacts = view.getUint8(offset + 108) !== 0;
+        out.innerRigidBodyShape = (view.getUint32(offset + 112, true) || null) as Shape | null;
+        out.innerRigidBodyObjectLayer = view.getUint32(offset + 116, true);
+        return out;
+    },
+};
+
+export type KCCUpdateSettings = {
+    stickToFloorStepDown: Vec3;
+    walkStairsStepUp: Vec3;
+    walkStairsMinStepForward: number;
+    walkStairsStepForwardTest: number;
+    walkStairsCosAngleForwardContact: number;
+    walkStairsStepDownExtra: Vec3;
+};
+export const KCCUpdateSettings = {
+    size: 48,
+    create(): KCCUpdateSettings {
+        return {
+            stickToFloorStepDown: Vec3.create(),
+            walkStairsStepUp: Vec3.create(),
+            walkStairsMinStepForward: 0,
+            walkStairsStepForwardTest: 0,
+            walkStairsCosAngleForwardContact: 0,
+            walkStairsStepDownExtra: Vec3.create(),
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: KCCUpdateSettings, address: number): KCCUpdateSettings {
+        const mem = wasm.mem;
+        out.stickToFloorStepDown[0] = mem.f32[(address + 0) >> 2]!;
+        out.stickToFloorStepDown[1] = mem.f32[(address + 4) >> 2]!;
+        out.stickToFloorStepDown[2] = mem.f32[(address + 8) >> 2]!;
+        out.walkStairsStepUp[0] = mem.f32[(address + 12) >> 2]!;
+        out.walkStairsStepUp[1] = mem.f32[(address + 16) >> 2]!;
+        out.walkStairsStepUp[2] = mem.f32[(address + 20) >> 2]!;
+        out.walkStairsMinStepForward = mem.f32[(address + 24) >> 2]!;
+        out.walkStairsStepForwardTest = mem.f32[(address + 28) >> 2]!;
+        out.walkStairsCosAngleForwardContact = mem.f32[(address + 32) >> 2]!;
+        out.walkStairsStepDownExtra[0] = mem.f32[(address + 36) >> 2]!;
+        out.walkStairsStepDownExtra[1] = mem.f32[(address + 40) >> 2]!;
+        out.walkStairsStepDownExtra[2] = mem.f32[(address + 44) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: KCCUpdateSettings): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.stickToFloorStepDown[0];
+        mem.f32[(address + 4) >> 2] = value.stickToFloorStepDown[1];
+        mem.f32[(address + 8) >> 2] = value.stickToFloorStepDown[2];
+        mem.f32[(address + 12) >> 2] = value.walkStairsStepUp[0];
+        mem.f32[(address + 16) >> 2] = value.walkStairsStepUp[1];
+        mem.f32[(address + 20) >> 2] = value.walkStairsStepUp[2];
+        mem.f32[(address + 24) >> 2] = value.walkStairsMinStepForward;
+        mem.f32[(address + 28) >> 2] = value.walkStairsStepForwardTest;
+        mem.f32[(address + 32) >> 2] = value.walkStairsCosAngleForwardContact;
+        mem.f32[(address + 36) >> 2] = value.walkStairsStepDownExtra[0];
+        mem.f32[(address + 40) >> 2] = value.walkStairsStepDownExtra[1];
+        mem.f32[(address + 44) >> 2] = value.walkStairsStepDownExtra[2];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: KCCUpdateSettings): void {
+        view.setFloat32(offset + 0, value.stickToFloorStepDown[0], true);
+        view.setFloat32(offset + 4, value.stickToFloorStepDown[1], true);
+        view.setFloat32(offset + 8, value.stickToFloorStepDown[2], true);
+        view.setFloat32(offset + 12, value.walkStairsStepUp[0], true);
+        view.setFloat32(offset + 16, value.walkStairsStepUp[1], true);
+        view.setFloat32(offset + 20, value.walkStairsStepUp[2], true);
+        view.setFloat32(offset + 24, value.walkStairsMinStepForward, true);
+        view.setFloat32(offset + 28, value.walkStairsStepForwardTest, true);
+        view.setFloat32(offset + 32, value.walkStairsCosAngleForwardContact, true);
+        view.setFloat32(offset + 36, value.walkStairsStepDownExtra[0], true);
+        view.setFloat32(offset + 40, value.walkStairsStepDownExtra[1], true);
+        view.setFloat32(offset + 44, value.walkStairsStepDownExtra[2], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: KCCUpdateSettings, view: DataView, offset: number): KCCUpdateSettings {
+        out.stickToFloorStepDown[0] = view.getFloat32(offset + 0, true);
+        out.stickToFloorStepDown[1] = view.getFloat32(offset + 4, true);
+        out.stickToFloorStepDown[2] = view.getFloat32(offset + 8, true);
+        out.walkStairsStepUp[0] = view.getFloat32(offset + 12, true);
+        out.walkStairsStepUp[1] = view.getFloat32(offset + 16, true);
+        out.walkStairsStepUp[2] = view.getFloat32(offset + 20, true);
+        out.walkStairsMinStepForward = view.getFloat32(offset + 24, true);
+        out.walkStairsStepForwardTest = view.getFloat32(offset + 28, true);
+        out.walkStairsCosAngleForwardContact = view.getFloat32(offset + 32, true);
+        out.walkStairsStepDownExtra[0] = view.getFloat32(offset + 36, true);
+        out.walkStairsStepDownExtra[1] = view.getFloat32(offset + 40, true);
+        out.walkStairsStepDownExtra[2] = view.getFloat32(offset + 44, true);
+        return out;
+    },
+};
+
+export type KCCState = {
+    position: Vec3;
+    quaternion: Quat;
+    linearVelocity: Vec3;
+    up: Vec3;
+    groundState: number;
+    groundNormal: Vec3;
+    groundVelocity: Vec3;
+    groundBodyId: number;
+    groundSubShapeId: number;
+    groundPosition: Vec3;
+    shape: Shape | null;
+    innerRigidBodyId: number;
+    contactCount: number;
+    contactEventCount: number;
+};
+export const KCCState = {
+    size: 116,
+    create(): KCCState {
+        return {
+            position: Vec3.create(),
+            quaternion: Quat.create(),
+            linearVelocity: Vec3.create(),
+            up: Vec3.create(),
+            groundState: 0,
+            groundNormal: Vec3.create(),
+            groundVelocity: Vec3.create(),
+            groundBodyId: 0,
+            groundSubShapeId: 0,
+            groundPosition: Vec3.create(),
+            shape: null,
+            innerRigidBodyId: 0,
+            contactCount: 0,
+            contactEventCount: 0,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: KCCState, address: number): KCCState {
+        const mem = wasm.mem;
+        out.position[0] = mem.f32[(address + 0) >> 2]!;
+        out.position[1] = mem.f32[(address + 4) >> 2]!;
+        out.position[2] = mem.f32[(address + 8) >> 2]!;
+        out.quaternion[0] = mem.f32[(address + 12) >> 2]!;
+        out.quaternion[1] = mem.f32[(address + 16) >> 2]!;
+        out.quaternion[2] = mem.f32[(address + 20) >> 2]!;
+        out.quaternion[3] = mem.f32[(address + 24) >> 2]!;
+        out.linearVelocity[0] = mem.f32[(address + 28) >> 2]!;
+        out.linearVelocity[1] = mem.f32[(address + 32) >> 2]!;
+        out.linearVelocity[2] = mem.f32[(address + 36) >> 2]!;
+        out.up[0] = mem.f32[(address + 40) >> 2]!;
+        out.up[1] = mem.f32[(address + 44) >> 2]!;
+        out.up[2] = mem.f32[(address + 48) >> 2]!;
+        out.groundState = mem.u32[(address + 52) >> 2]!;
+        out.groundNormal[0] = mem.f32[(address + 56) >> 2]!;
+        out.groundNormal[1] = mem.f32[(address + 60) >> 2]!;
+        out.groundNormal[2] = mem.f32[(address + 64) >> 2]!;
+        out.groundVelocity[0] = mem.f32[(address + 68) >> 2]!;
+        out.groundVelocity[1] = mem.f32[(address + 72) >> 2]!;
+        out.groundVelocity[2] = mem.f32[(address + 76) >> 2]!;
+        out.groundBodyId = mem.u32[(address + 80) >> 2]!;
+        out.groundSubShapeId = mem.u32[(address + 84) >> 2]!;
+        out.groundPosition[0] = mem.f32[(address + 88) >> 2]!;
+        out.groundPosition[1] = mem.f32[(address + 92) >> 2]!;
+        out.groundPosition[2] = mem.f32[(address + 96) >> 2]!;
+        out.shape = (mem.u32[(address + 100) >> 2]! || null) as Shape | null;
+        out.innerRigidBodyId = mem.u32[(address + 104) >> 2]!;
+        out.contactCount = mem.u32[(address + 108) >> 2]!;
+        out.contactEventCount = mem.u32[(address + 112) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: KCCState): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.position[0];
+        mem.f32[(address + 4) >> 2] = value.position[1];
+        mem.f32[(address + 8) >> 2] = value.position[2];
+        mem.f32[(address + 12) >> 2] = value.quaternion[0];
+        mem.f32[(address + 16) >> 2] = value.quaternion[1];
+        mem.f32[(address + 20) >> 2] = value.quaternion[2];
+        mem.f32[(address + 24) >> 2] = value.quaternion[3];
+        mem.f32[(address + 28) >> 2] = value.linearVelocity[0];
+        mem.f32[(address + 32) >> 2] = value.linearVelocity[1];
+        mem.f32[(address + 36) >> 2] = value.linearVelocity[2];
+        mem.f32[(address + 40) >> 2] = value.up[0];
+        mem.f32[(address + 44) >> 2] = value.up[1];
+        mem.f32[(address + 48) >> 2] = value.up[2];
+        mem.u32[(address + 52) >> 2] = value.groundState;
+        mem.f32[(address + 56) >> 2] = value.groundNormal[0];
+        mem.f32[(address + 60) >> 2] = value.groundNormal[1];
+        mem.f32[(address + 64) >> 2] = value.groundNormal[2];
+        mem.f32[(address + 68) >> 2] = value.groundVelocity[0];
+        mem.f32[(address + 72) >> 2] = value.groundVelocity[1];
+        mem.f32[(address + 76) >> 2] = value.groundVelocity[2];
+        mem.u32[(address + 80) >> 2] = value.groundBodyId;
+        mem.u32[(address + 84) >> 2] = value.groundSubShapeId;
+        mem.f32[(address + 88) >> 2] = value.groundPosition[0];
+        mem.f32[(address + 92) >> 2] = value.groundPosition[1];
+        mem.f32[(address + 96) >> 2] = value.groundPosition[2];
+        mem.u32[(address + 100) >> 2] = value.shape ?? 0;
+        mem.u32[(address + 104) >> 2] = value.innerRigidBodyId;
+        mem.u32[(address + 108) >> 2] = value.contactCount;
+        mem.u32[(address + 112) >> 2] = value.contactEventCount;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: KCCState): void {
+        view.setFloat32(offset + 0, value.position[0], true);
+        view.setFloat32(offset + 4, value.position[1], true);
+        view.setFloat32(offset + 8, value.position[2], true);
+        view.setFloat32(offset + 12, value.quaternion[0], true);
+        view.setFloat32(offset + 16, value.quaternion[1], true);
+        view.setFloat32(offset + 20, value.quaternion[2], true);
+        view.setFloat32(offset + 24, value.quaternion[3], true);
+        view.setFloat32(offset + 28, value.linearVelocity[0], true);
+        view.setFloat32(offset + 32, value.linearVelocity[1], true);
+        view.setFloat32(offset + 36, value.linearVelocity[2], true);
+        view.setFloat32(offset + 40, value.up[0], true);
+        view.setFloat32(offset + 44, value.up[1], true);
+        view.setFloat32(offset + 48, value.up[2], true);
+        view.setUint32(offset + 52, value.groundState, true);
+        view.setFloat32(offset + 56, value.groundNormal[0], true);
+        view.setFloat32(offset + 60, value.groundNormal[1], true);
+        view.setFloat32(offset + 64, value.groundNormal[2], true);
+        view.setFloat32(offset + 68, value.groundVelocity[0], true);
+        view.setFloat32(offset + 72, value.groundVelocity[1], true);
+        view.setFloat32(offset + 76, value.groundVelocity[2], true);
+        view.setUint32(offset + 80, value.groundBodyId, true);
+        view.setUint32(offset + 84, value.groundSubShapeId, true);
+        view.setFloat32(offset + 88, value.groundPosition[0], true);
+        view.setFloat32(offset + 92, value.groundPosition[1], true);
+        view.setFloat32(offset + 96, value.groundPosition[2], true);
+        view.setUint32(offset + 100, value.shape ?? 0, true);
+        view.setUint32(offset + 104, value.innerRigidBodyId, true);
+        view.setUint32(offset + 108, value.contactCount, true);
+        view.setUint32(offset + 112, value.contactEventCount, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: KCCState, view: DataView, offset: number): KCCState {
+        out.position[0] = view.getFloat32(offset + 0, true);
+        out.position[1] = view.getFloat32(offset + 4, true);
+        out.position[2] = view.getFloat32(offset + 8, true);
+        out.quaternion[0] = view.getFloat32(offset + 12, true);
+        out.quaternion[1] = view.getFloat32(offset + 16, true);
+        out.quaternion[2] = view.getFloat32(offset + 20, true);
+        out.quaternion[3] = view.getFloat32(offset + 24, true);
+        out.linearVelocity[0] = view.getFloat32(offset + 28, true);
+        out.linearVelocity[1] = view.getFloat32(offset + 32, true);
+        out.linearVelocity[2] = view.getFloat32(offset + 36, true);
+        out.up[0] = view.getFloat32(offset + 40, true);
+        out.up[1] = view.getFloat32(offset + 44, true);
+        out.up[2] = view.getFloat32(offset + 48, true);
+        out.groundState = view.getUint32(offset + 52, true);
+        out.groundNormal[0] = view.getFloat32(offset + 56, true);
+        out.groundNormal[1] = view.getFloat32(offset + 60, true);
+        out.groundNormal[2] = view.getFloat32(offset + 64, true);
+        out.groundVelocity[0] = view.getFloat32(offset + 68, true);
+        out.groundVelocity[1] = view.getFloat32(offset + 72, true);
+        out.groundVelocity[2] = view.getFloat32(offset + 76, true);
+        out.groundBodyId = view.getUint32(offset + 80, true);
+        out.groundSubShapeId = view.getUint32(offset + 84, true);
+        out.groundPosition[0] = view.getFloat32(offset + 88, true);
+        out.groundPosition[1] = view.getFloat32(offset + 92, true);
+        out.groundPosition[2] = view.getFloat32(offset + 96, true);
+        out.shape = (view.getUint32(offset + 100, true) || null) as Shape | null;
+        out.innerRigidBodyId = view.getUint32(offset + 104, true);
+        out.contactCount = view.getUint32(offset + 108, true);
+        out.contactEventCount = view.getUint32(offset + 112, true);
+        return out;
+    },
+};
+
+export type KCCContactEvent = { kind: number; bodyId: number; subShapeId: number; position: Vec3; normal: Vec3 };
+export const KCCContactEvent = {
+    size: 36,
+    create(): KCCContactEvent {
+        return { kind: 0, bodyId: 0, subShapeId: 0, position: Vec3.create(), normal: Vec3.create() };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: KCCContactEvent, address: number): KCCContactEvent {
+        const mem = wasm.mem;
+        out.kind = mem.u32[(address + 0) >> 2]!;
+        out.bodyId = mem.u32[(address + 4) >> 2]!;
+        out.subShapeId = mem.u32[(address + 8) >> 2]!;
+        out.position[0] = mem.f32[(address + 12) >> 2]!;
+        out.position[1] = mem.f32[(address + 16) >> 2]!;
+        out.position[2] = mem.f32[(address + 20) >> 2]!;
+        out.normal[0] = mem.f32[(address + 24) >> 2]!;
+        out.normal[1] = mem.f32[(address + 28) >> 2]!;
+        out.normal[2] = mem.f32[(address + 32) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: KCCContactEvent): void {
+        const mem = wasm.mem;
+        mem.u32[(address + 0) >> 2] = value.kind;
+        mem.u32[(address + 4) >> 2] = value.bodyId;
+        mem.u32[(address + 8) >> 2] = value.subShapeId;
+        mem.f32[(address + 12) >> 2] = value.position[0];
+        mem.f32[(address + 16) >> 2] = value.position[1];
+        mem.f32[(address + 20) >> 2] = value.position[2];
+        mem.f32[(address + 24) >> 2] = value.normal[0];
+        mem.f32[(address + 28) >> 2] = value.normal[1];
+        mem.f32[(address + 32) >> 2] = value.normal[2];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: KCCContactEvent): void {
+        view.setUint32(offset + 0, value.kind, true);
+        view.setUint32(offset + 4, value.bodyId, true);
+        view.setUint32(offset + 8, value.subShapeId, true);
+        view.setFloat32(offset + 12, value.position[0], true);
+        view.setFloat32(offset + 16, value.position[1], true);
+        view.setFloat32(offset + 20, value.position[2], true);
+        view.setFloat32(offset + 24, value.normal[0], true);
+        view.setFloat32(offset + 28, value.normal[1], true);
+        view.setFloat32(offset + 32, value.normal[2], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: KCCContactEvent, view: DataView, offset: number): KCCContactEvent {
+        out.kind = view.getUint32(offset + 0, true);
+        out.bodyId = view.getUint32(offset + 4, true);
+        out.subShapeId = view.getUint32(offset + 8, true);
+        out.position[0] = view.getFloat32(offset + 12, true);
+        out.position[1] = view.getFloat32(offset + 16, true);
+        out.position[2] = view.getFloat32(offset + 20, true);
+        out.normal[0] = view.getFloat32(offset + 24, true);
+        out.normal[1] = view.getFloat32(offset + 28, true);
+        out.normal[2] = view.getFloat32(offset + 32, true);
+        return out;
+    },
+};
+
+export type KCCContact = {
+    position: Vec3;
+    linearVelocity: Vec3;
+    contactNormal: Vec3;
+    surfaceNormal: Vec3;
+    distance: number;
+    fraction: number;
+    bodyId: number;
+    subShapeId: number;
+    materialId: number;
+    motionType: number;
+    isSensor: boolean;
+};
+export const KCCContact = {
+    size: 76,
+    create(): KCCContact {
+        return {
+            position: Vec3.create(),
+            linearVelocity: Vec3.create(),
+            contactNormal: Vec3.create(),
+            surfaceNormal: Vec3.create(),
+            distance: 0,
+            fraction: 0,
+            bodyId: 0,
+            subShapeId: 0,
+            materialId: 0,
+            motionType: 0,
+            isSensor: false,
+        };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: KCCContact, address: number): KCCContact {
+        const mem = wasm.mem;
+        out.position[0] = mem.f32[(address + 0) >> 2]!;
+        out.position[1] = mem.f32[(address + 4) >> 2]!;
+        out.position[2] = mem.f32[(address + 8) >> 2]!;
+        out.linearVelocity[0] = mem.f32[(address + 12) >> 2]!;
+        out.linearVelocity[1] = mem.f32[(address + 16) >> 2]!;
+        out.linearVelocity[2] = mem.f32[(address + 20) >> 2]!;
+        out.contactNormal[0] = mem.f32[(address + 24) >> 2]!;
+        out.contactNormal[1] = mem.f32[(address + 28) >> 2]!;
+        out.contactNormal[2] = mem.f32[(address + 32) >> 2]!;
+        out.surfaceNormal[0] = mem.f32[(address + 36) >> 2]!;
+        out.surfaceNormal[1] = mem.f32[(address + 40) >> 2]!;
+        out.surfaceNormal[2] = mem.f32[(address + 44) >> 2]!;
+        out.distance = mem.f32[(address + 48) >> 2]!;
+        out.fraction = mem.f32[(address + 52) >> 2]!;
+        out.bodyId = mem.u32[(address + 56) >> 2]!;
+        out.subShapeId = mem.u32[(address + 60) >> 2]!;
+        out.materialId = mem.i32[(address + 64) >> 2]!;
+        out.motionType = mem.u32[(address + 68) >> 2]!;
+        out.isSensor = mem.u8[address + 72]! !== 0;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: KCCContact): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.position[0];
+        mem.f32[(address + 4) >> 2] = value.position[1];
+        mem.f32[(address + 8) >> 2] = value.position[2];
+        mem.f32[(address + 12) >> 2] = value.linearVelocity[0];
+        mem.f32[(address + 16) >> 2] = value.linearVelocity[1];
+        mem.f32[(address + 20) >> 2] = value.linearVelocity[2];
+        mem.f32[(address + 24) >> 2] = value.contactNormal[0];
+        mem.f32[(address + 28) >> 2] = value.contactNormal[1];
+        mem.f32[(address + 32) >> 2] = value.contactNormal[2];
+        mem.f32[(address + 36) >> 2] = value.surfaceNormal[0];
+        mem.f32[(address + 40) >> 2] = value.surfaceNormal[1];
+        mem.f32[(address + 44) >> 2] = value.surfaceNormal[2];
+        mem.f32[(address + 48) >> 2] = value.distance;
+        mem.f32[(address + 52) >> 2] = value.fraction;
+        mem.u32[(address + 56) >> 2] = value.bodyId;
+        mem.u32[(address + 60) >> 2] = value.subShapeId;
+        mem.i32[(address + 64) >> 2] = value.materialId;
+        mem.u32[(address + 68) >> 2] = value.motionType;
+        mem.u8[address + 72] = value.isSensor ? 1 : 0;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: KCCContact): void {
+        view.setFloat32(offset + 0, value.position[0], true);
+        view.setFloat32(offset + 4, value.position[1], true);
+        view.setFloat32(offset + 8, value.position[2], true);
+        view.setFloat32(offset + 12, value.linearVelocity[0], true);
+        view.setFloat32(offset + 16, value.linearVelocity[1], true);
+        view.setFloat32(offset + 20, value.linearVelocity[2], true);
+        view.setFloat32(offset + 24, value.contactNormal[0], true);
+        view.setFloat32(offset + 28, value.contactNormal[1], true);
+        view.setFloat32(offset + 32, value.contactNormal[2], true);
+        view.setFloat32(offset + 36, value.surfaceNormal[0], true);
+        view.setFloat32(offset + 40, value.surfaceNormal[1], true);
+        view.setFloat32(offset + 44, value.surfaceNormal[2], true);
+        view.setFloat32(offset + 48, value.distance, true);
+        view.setFloat32(offset + 52, value.fraction, true);
+        view.setUint32(offset + 56, value.bodyId, true);
+        view.setUint32(offset + 60, value.subShapeId, true);
+        view.setInt32(offset + 64, value.materialId, true);
+        view.setUint32(offset + 68, value.motionType, true);
+        view.setUint8(offset + 72, value.isSensor ? 1 : 0);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: KCCContact, view: DataView, offset: number): KCCContact {
+        out.position[0] = view.getFloat32(offset + 0, true);
+        out.position[1] = view.getFloat32(offset + 4, true);
+        out.position[2] = view.getFloat32(offset + 8, true);
+        out.linearVelocity[0] = view.getFloat32(offset + 12, true);
+        out.linearVelocity[1] = view.getFloat32(offset + 16, true);
+        out.linearVelocity[2] = view.getFloat32(offset + 20, true);
+        out.contactNormal[0] = view.getFloat32(offset + 24, true);
+        out.contactNormal[1] = view.getFloat32(offset + 28, true);
+        out.contactNormal[2] = view.getFloat32(offset + 32, true);
+        out.surfaceNormal[0] = view.getFloat32(offset + 36, true);
+        out.surfaceNormal[1] = view.getFloat32(offset + 40, true);
+        out.surfaceNormal[2] = view.getFloat32(offset + 44, true);
+        out.distance = view.getFloat32(offset + 48, true);
+        out.fraction = view.getFloat32(offset + 52, true);
+        out.bodyId = view.getUint32(offset + 56, true);
+        out.subShapeId = view.getUint32(offset + 60, true);
+        out.materialId = view.getInt32(offset + 64, true);
+        out.motionType = view.getUint32(offset + 68, true);
+        out.isSensor = view.getUint8(offset + 72) !== 0;
+        return out;
+    },
+};
+
+export type KCCSolve = { velocity: Vec3; displacement: Vec3; timeSimulated: number };
+export const KCCSolve = {
+    size: 28,
+    create(): KCCSolve {
+        return { velocity: Vec3.create(), displacement: Vec3.create(), timeSimulated: 0 };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: KCCSolve, address: number): KCCSolve {
+        const mem = wasm.mem;
+        out.velocity[0] = mem.f32[(address + 0) >> 2]!;
+        out.velocity[1] = mem.f32[(address + 4) >> 2]!;
+        out.velocity[2] = mem.f32[(address + 8) >> 2]!;
+        out.displacement[0] = mem.f32[(address + 12) >> 2]!;
+        out.displacement[1] = mem.f32[(address + 16) >> 2]!;
+        out.displacement[2] = mem.f32[(address + 20) >> 2]!;
+        out.timeSimulated = mem.f32[(address + 24) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: KCCSolve): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.velocity[0];
+        mem.f32[(address + 4) >> 2] = value.velocity[1];
+        mem.f32[(address + 8) >> 2] = value.velocity[2];
+        mem.f32[(address + 12) >> 2] = value.displacement[0];
+        mem.f32[(address + 16) >> 2] = value.displacement[1];
+        mem.f32[(address + 20) >> 2] = value.displacement[2];
+        mem.f32[(address + 24) >> 2] = value.timeSimulated;
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: KCCSolve): void {
+        view.setFloat32(offset + 0, value.velocity[0], true);
+        view.setFloat32(offset + 4, value.velocity[1], true);
+        view.setFloat32(offset + 8, value.velocity[2], true);
+        view.setFloat32(offset + 12, value.displacement[0], true);
+        view.setFloat32(offset + 16, value.displacement[1], true);
+        view.setFloat32(offset + 20, value.displacement[2], true);
+        view.setFloat32(offset + 24, value.timeSimulated, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: KCCSolve, view: DataView, offset: number): KCCSolve {
+        out.velocity[0] = view.getFloat32(offset + 0, true);
+        out.velocity[1] = view.getFloat32(offset + 4, true);
+        out.velocity[2] = view.getFloat32(offset + 8, true);
+        out.displacement[0] = view.getFloat32(offset + 12, true);
+        out.displacement[1] = view.getFloat32(offset + 16, true);
+        out.displacement[2] = view.getFloat32(offset + 20, true);
+        out.timeSimulated = view.getFloat32(offset + 24, true);
+        return out;
+    },
+};
+
 export type WorldSettings = Handle<'WorldSettings'>;
 /** WorldSettings's fields as a plain object, for WorldSettings.writeTo / readFrom over another realm's buffer. */
 export type WorldSettingsValue = {
@@ -4871,6 +5699,14 @@ export const Filter = {
         wasm.grew();
         return r !== 0;
     },
+};
+
+export type Policy = Handle<'Policy'>;
+export const Policy = {
+};
+
+export type KCC = Handle<'KCC'>;
+export const KCC = {
 };
 
 export function init(heapBegin: number): boolean {
@@ -6310,6 +7146,410 @@ export const Query = {
     },
 };
 
+export const KccPolicy = {
+    defaultBodyPolicy(out: KCCBodyPolicy): KCCBodyPolicy {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_kcc_policy_default_body_policy(scratch + 0);
+        KCCBodyPolicy.read(out, scratch + 0);
+        return out;
+    },
+
+    create(): Policy {
+        const r = wasm.exports.tumble_kcc_policy_create();
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as Policy;
+    },
+
+    destroy(policy: Policy): void {
+        wasm.exports.tumble_kcc_policy_destroy(policy);
+    },
+
+    getDefaults(out: KCCBodyPolicy, policy: Policy): KCCBodyPolicy {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_kcc_policy_get_defaults(scratch + 0, policy);
+        KCCBodyPolicy.read(out, scratch + 0);
+        return out;
+    },
+
+    setDefaults(policy: Policy, bodyPolicy: KCCBodyPolicy): void {
+        const scratch = wasm.scratch;
+        KCCBodyPolicy.write(scratch + 0, bodyPolicy);
+        wasm.exports.tumble_kcc_policy_set_defaults(policy, scratch + 0);
+    },
+
+    set(policy: Policy, body: number, bodyPolicy: KCCBodyPolicy): boolean {
+        const scratch = wasm.scratch;
+        KCCBodyPolicy.write(scratch + 0, bodyPolicy);
+        const r = wasm.exports.tumble_kcc_policy_set(policy, body, scratch + 0);
+        wasm.grew();
+        return r !== 0;
+    },
+
+    remove(policy: Policy, body: number): boolean {
+        const r = wasm.exports.tumble_kcc_policy_remove(policy, body);
+        return r !== 0;
+    },
+
+    get(out: KCCBodyPolicy, policy: Policy, body: number): KCCBodyPolicy {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_kcc_policy_get(scratch + 0, policy, body);
+        KCCBodyPolicy.read(out, scratch + 0);
+        return out;
+    },
+};
+
+export const Kcc = {
+    defaultSettings(out: KCCSettings): KCCSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_kcc_default_settings(scratch + 0);
+        KCCSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    defaultUpdateSettings(out: KCCUpdateSettings): KCCUpdateSettings {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_kcc_default_update_settings(scratch + 0);
+        KCCUpdateSettings.read(out, scratch + 0);
+        return out;
+    },
+
+    create(settings: KCCSettings, position: Vec3, quaternion: Quat): KCC {
+        const scratch = wasm.scratch;
+        KCCSettings.write(scratch + 0, settings);
+        Vec3.write(scratch + 128, position);
+        Quat.write(scratch + 144, quaternion);
+        const r = wasm.exports.tumble_kcc_create(scratch + 0, scratch + 128, scratch + 144);
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as KCC;
+    },
+
+    destroy(character: KCC): void {
+        wasm.exports.tumble_kcc_destroy(character);
+    },
+
+    add(world: World, character: KCC): void {
+        wasm.exports.tumble_kcc_add(world, character);
+        wasm.grew();
+    },
+
+    remove(world: World, character: KCC): void {
+        wasm.exports.tumble_kcc_remove(world, character);
+    },
+
+    readState(out: KCCState, character: KCC): KCCState {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_kcc_read_state(scratch + 0, character);
+        KCCState.read(out, scratch + 0);
+        return out;
+    },
+
+    setLinearVelocity(character: KCC, velocity: Vec3): void {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, velocity);
+        wasm.exports.tumble_kcc_set_linear_velocity(character, scratch + 0);
+    },
+
+    contacts(character: KCC): Pointer<'u8'> {
+        const r = wasm.exports.tumble_kcc_contacts(character);
+        return r as Pointer<'u8'>;
+    },
+
+    readContactEvent(out: KCCContactEvent, character: KCC, index: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_kcc_read_contact_event(scratch + 0, character, index);
+        KCCContactEvent.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    setPosition(world: World, character: KCC, position: Vec3): void {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, position);
+        wasm.exports.tumble_kcc_set_position(world, character, scratch + 0);
+        wasm.grew();
+    },
+
+    setQuaternion(world: World, character: KCC, quaternion: Quat): void {
+        const scratch = wasm.scratch;
+        Quat.write(scratch + 0, quaternion);
+        wasm.exports.tumble_kcc_set_quaternion(world, character, scratch + 0);
+        wasm.grew();
+    },
+
+    isSlopeTooSteep(character: KCC, normal: Vec3): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, normal);
+        const r = wasm.exports.tumble_kcc_is_slope_too_steep(character, scratch + 0);
+        return r !== 0;
+    },
+
+    getCenterOfMassTransform(outPosition: Vec3, outQuaternion: Quat, character: KCC): void {
+        const scratch = wasm.scratch;
+        wasm.exports.tumble_kcc_get_center_of_mass_transform(scratch + 0, scratch + 16, character);
+        Vec3.read(outPosition, scratch + 0);
+        Quat.read(outQuaternion, scratch + 16);
+    },
+
+    hasCollidedWith(character: KCC, body: number): boolean {
+        const r = wasm.exports.tumble_kcc_has_collided_with(character, body);
+        return r !== 0;
+    },
+
+    canWalkStairs(character: KCC, velocity: Vec3): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, velocity);
+        const r = wasm.exports.tumble_kcc_can_walk_stairs(character, scratch + 0);
+        return r !== 0;
+    },
+
+    cancelVelocityTowardsSteepSlopes(out: Vec3, character: KCC, velocity: Vec3): Vec3 {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 16, velocity);
+        wasm.exports.tumble_kcc_cancel_velocity_towards_steep_slopes(scratch + 0, character, scratch + 16);
+        Vec3.read(out, scratch + 0);
+        return out;
+    },
+
+    updateGroundVelocity(world: World, character: KCC, policy: Policy): void {
+        wasm.exports.tumble_kcc_update_ground_velocity(world, character, policy);
+    },
+
+    refreshContacts(
+        world: World,
+        character: KCC,
+        filter: Filter,
+        collisionGroups: number,
+        collisionMask: number,
+        policy: Policy,
+    ): void {
+        wasm.exports.tumble_kcc_refresh_contacts(world, character, filter, collisionGroups, collisionMask, policy);
+        wasm.grew();
+    },
+
+    setShape(
+        world: World,
+        character: KCC,
+        shape: Shape,
+        filter: Filter,
+        collisionGroups: number,
+        collisionMask: number,
+        policy: Policy,
+        maxPenetrationDepth: number,
+    ): boolean {
+        const r = wasm.exports.tumble_kcc_set_shape(
+            world,
+            character,
+            shape,
+            filter,
+            collisionGroups,
+            collisionMask,
+            policy,
+            maxPenetrationDepth,
+        );
+        wasm.grew();
+        return r !== 0;
+    },
+
+    move(
+        world: World,
+        character: KCC,
+        deltaTime: number,
+        gravity: Vec3,
+        policy: Policy,
+        filter: Filter,
+        collisionGroups: number,
+        collisionMask: number,
+    ): void {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, gravity);
+        wasm.exports.tumble_kcc_move(world, character, deltaTime, scratch + 0, policy, filter, collisionGroups, collisionMask);
+        wasm.grew();
+    },
+
+    stickToFloor(
+        world: World,
+        character: KCC,
+        stepDown: Vec3,
+        filter: Filter,
+        collisionGroups: number,
+        collisionMask: number,
+        policy: Policy,
+    ): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, stepDown);
+        const r = wasm.exports.tumble_kcc_stick_to_floor(
+            world,
+            character,
+            scratch + 0,
+            filter,
+            collisionGroups,
+            collisionMask,
+            policy,
+        );
+        wasm.grew();
+        return r !== 0;
+    },
+
+    walkStairs(
+        world: World,
+        character: KCC,
+        deltaTime: number,
+        stepUp: Vec3,
+        stepForward: Vec3,
+        stepForwardTest: Vec3,
+        stepDownExtra: Vec3,
+        filter: Filter,
+        collisionGroups: number,
+        collisionMask: number,
+        policy: Policy,
+    ): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, stepUp);
+        Vec3.write(scratch + 16, stepForward);
+        Vec3.write(scratch + 32, stepForwardTest);
+        Vec3.write(scratch + 48, stepDownExtra);
+        const r = wasm.exports.tumble_kcc_walk_stairs(
+            world,
+            character,
+            deltaTime,
+            scratch + 0,
+            scratch + 16,
+            scratch + 32,
+            scratch + 48,
+            filter,
+            collisionGroups,
+            collisionMask,
+            policy,
+        );
+        wasm.grew();
+        return r !== 0;
+    },
+
+    update(
+        world: World,
+        character: KCC,
+        deltaTime: number,
+        gravity: Vec3,
+        settings: KCCUpdateSettings,
+        policy: Policy,
+        filter: Filter,
+        collisionGroups: number,
+        collisionMask: number,
+    ): void {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, gravity);
+        KCCUpdateSettings.write(scratch + 16, settings);
+        wasm.exports.tumble_kcc_update(
+            world,
+            character,
+            deltaTime,
+            scratch + 0,
+            scratch + 16,
+            policy,
+            filter,
+            collisionGroups,
+            collisionMask,
+        );
+        wasm.grew();
+    },
+
+    collide(
+        world: World,
+        character: KCC,
+        position: Vec3,
+        movementDirection: Vec3,
+        filter: Filter,
+        collisionGroups: number,
+        collisionMask: number,
+        policy: Policy,
+    ): void {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, position);
+        Vec3.write(scratch + 16, movementDirection);
+        wasm.exports.tumble_kcc_collide(
+            world,
+            character,
+            scratch + 0,
+            scratch + 16,
+            filter,
+            collisionGroups,
+            collisionMask,
+            policy,
+        );
+        wasm.grew();
+    },
+
+    solve(
+        out: KCCSolve,
+        world: World,
+        character: KCC,
+        velocity: Vec3,
+        deltaTime: number,
+        timeRemaining: number,
+        policy: Policy,
+    ): KCCSolve {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 32, velocity);
+        wasm.exports.tumble_kcc_solve(scratch + 0, world, character, scratch + 32, deltaTime, timeRemaining, policy);
+        wasm.grew();
+        KCCSolve.read(out, scratch + 0);
+        return out;
+    },
+
+    cast(
+        out: KCCContact,
+        world: World,
+        character: KCC,
+        position: Vec3,
+        displacement: Vec3,
+        filter: Filter,
+        collisionGroups: number,
+        collisionMask: number,
+        policy: Policy,
+    ): boolean {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 80, position);
+        Vec3.write(scratch + 96, displacement);
+        const r = wasm.exports.tumble_kcc_cast(
+            scratch + 0,
+            world,
+            character,
+            scratch + 80,
+            scratch + 96,
+            filter,
+            collisionGroups,
+            collisionMask,
+            policy,
+        );
+        wasm.grew();
+        KCCContact.read(out, scratch + 0);
+        return r !== 0;
+    },
+
+    updateGround(world: World, character: KCC, deltaTime: number, skipContactVelocityCheck: boolean, policy: Policy): void {
+        wasm.exports.tumble_kcc_update_ground(world, character, deltaTime, skipContactVelocityCheck ? 1 : 0, policy);
+        wasm.grew();
+    },
+
+    applyWeight(world: World, character: KCC, gravity: Vec3, deltaTime: number): void {
+        const scratch = wasm.scratch;
+        Vec3.write(scratch + 0, gravity);
+        wasm.exports.tumble_kcc_apply_weight(world, character, scratch + 0, deltaTime);
+        wasm.grew();
+    },
+
+    beginContactTracking(character: KCC): void {
+        wasm.exports.tumble_kcc_begin_contact_tracking(character);
+        wasm.grew();
+    },
+
+    endContactTracking(character: KCC): void {
+        wasm.exports.tumble_kcc_end_contact_tracking(character);
+        wasm.grew();
+    },
+};
+
 /** the extern "C" surface, every function taking and returning numbers; the namespaces above call these. */
 export type WasmExports = {
     __heap_base: WebAssembly.Global;
@@ -6630,4 +7870,131 @@ export type WasmExports = {
         collisionMask: number,
     ): number;
     tumble_query_read_collide_point_hit(out: number, index: number): number;
+    tumble_kcc_policy_default_body_policy(out: number): void;
+    tumble_kcc_policy_create(): number;
+    tumble_kcc_policy_destroy(policy: number): void;
+    tumble_kcc_policy_get_defaults(out: number, policy: number): void;
+    tumble_kcc_policy_set_defaults(policy: number, bodyPolicy: number): void;
+    tumble_kcc_policy_set(policy: number, body: number, bodyPolicy: number): number;
+    tumble_kcc_policy_remove(policy: number, body: number): number;
+    tumble_kcc_policy_get(out: number, policy: number, body: number): void;
+    tumble_kcc_default_settings(out: number): void;
+    tumble_kcc_default_update_settings(out: number): void;
+    tumble_kcc_create(settings: number, position: number, quaternion: number): number;
+    tumble_kcc_destroy(character: number): void;
+    tumble_kcc_add(world: number, character: number): void;
+    tumble_kcc_remove(world: number, character: number): void;
+    tumble_kcc_read_state(out: number, character: number): void;
+    tumble_kcc_set_linear_velocity(character: number, velocity: number): void;
+    tumble_kcc_contacts(character: number): number;
+    tumble_kcc_read_contact_event(out: number, character: number, index: number): number;
+    tumble_kcc_set_position(world: number, character: number, position: number): void;
+    tumble_kcc_set_quaternion(world: number, character: number, quaternion: number): void;
+    tumble_kcc_is_slope_too_steep(character: number, normal: number): number;
+    tumble_kcc_get_center_of_mass_transform(outPosition: number, outQuaternion: number, character: number): void;
+    tumble_kcc_has_collided_with(character: number, body: number): number;
+    tumble_kcc_can_walk_stairs(character: number, velocity: number): number;
+    tumble_kcc_cancel_velocity_towards_steep_slopes(out: number, character: number, velocity: number): void;
+    tumble_kcc_update_ground_velocity(world: number, character: number, policy: number): void;
+    tumble_kcc_refresh_contacts(
+        world: number,
+        character: number,
+        filter: number,
+        collisionGroups: number,
+        collisionMask: number,
+        policy: number,
+    ): void;
+    tumble_kcc_set_shape(
+        world: number,
+        character: number,
+        shape: number,
+        filter: number,
+        collisionGroups: number,
+        collisionMask: number,
+        policy: number,
+        maxPenetrationDepth: number,
+    ): number;
+    tumble_kcc_move(
+        world: number,
+        character: number,
+        deltaTime: number,
+        gravity: number,
+        policy: number,
+        filter: number,
+        collisionGroups: number,
+        collisionMask: number,
+    ): void;
+    tumble_kcc_stick_to_floor(
+        world: number,
+        character: number,
+        stepDown: number,
+        filter: number,
+        collisionGroups: number,
+        collisionMask: number,
+        policy: number,
+    ): number;
+    tumble_kcc_walk_stairs(
+        world: number,
+        character: number,
+        deltaTime: number,
+        stepUp: number,
+        stepForward: number,
+        stepForwardTest: number,
+        stepDownExtra: number,
+        filter: number,
+        collisionGroups: number,
+        collisionMask: number,
+        policy: number,
+    ): number;
+    tumble_kcc_update(
+        world: number,
+        character: number,
+        deltaTime: number,
+        gravity: number,
+        settings: number,
+        policy: number,
+        filter: number,
+        collisionGroups: number,
+        collisionMask: number,
+    ): void;
+    tumble_kcc_collide(
+        world: number,
+        character: number,
+        position: number,
+        movementDirection: number,
+        filter: number,
+        collisionGroups: number,
+        collisionMask: number,
+        policy: number,
+    ): void;
+    tumble_kcc_solve(
+        out: number,
+        world: number,
+        character: number,
+        velocity: number,
+        deltaTime: number,
+        timeRemaining: number,
+        policy: number,
+    ): void;
+    tumble_kcc_cast(
+        out: number,
+        world: number,
+        character: number,
+        position: number,
+        displacement: number,
+        filter: number,
+        collisionGroups: number,
+        collisionMask: number,
+        policy: number,
+    ): number;
+    tumble_kcc_update_ground(
+        world: number,
+        character: number,
+        deltaTime: number,
+        skipContactVelocityCheck: number,
+        policy: number,
+    ): void;
+    tumble_kcc_apply_weight(world: number, character: number, gravity: number, deltaTime: number): void;
+    tumble_kcc_begin_contact_tracking(character: number): void;
+    tumble_kcc_end_contact_tracking(character: number): void;
 };

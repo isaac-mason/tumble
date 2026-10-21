@@ -265,5 +265,44 @@ WASM_EXPORT bool tumble_query_read_collide_shape_hit(adapters::CollideShapeHit *
 WASM_EXPORT void tumble_query_default_collide_point_settings(collide_point::CollidePointSettings * out) { adapters::query::default_collide_point_settings(*out); }
 WASM_EXPORT uint32_t tumble_query_collide_point(world::World * world, uint32_t kind, const collide_point::CollidePointSettings * settings, const Float3 * point, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { return adapters::query::collide_point(world, kind, *settings, *point, filter, collisionGroups, collisionMask); }
 WASM_EXPORT bool tumble_query_read_collide_point_hit(collide_point::CollidePointHit * out, uint32_t index) { return adapters::query::read_collide_point_hit(*out, index); }
+WASM_EXPORT void tumble_kcc_policy_default_body_policy(kcc_policy::BodyPolicy * out) { adapters::kcc_policy::default_body_policy(*out); }
+WASM_EXPORT kcc_policy::Policy * tumble_kcc_policy_create() { return adapters::kcc_policy::create(); }
+WASM_EXPORT void tumble_kcc_policy_destroy(kcc_policy::Policy * policy) { adapters::kcc_policy::destroy(policy); }
+WASM_EXPORT void tumble_kcc_policy_get_defaults(kcc_policy::BodyPolicy * out, const kcc_policy::Policy * policy) { adapters::kcc_policy::get_defaults(*out, policy); }
+WASM_EXPORT void tumble_kcc_policy_set_defaults(kcc_policy::Policy * policy, const kcc_policy::BodyPolicy * bodyPolicy) { adapters::kcc_policy::set_defaults(policy, *bodyPolicy); }
+WASM_EXPORT bool tumble_kcc_policy_set(kcc_policy::Policy * policy, uint32_t body, const kcc_policy::BodyPolicy * bodyPolicy) { return adapters::kcc_policy::set(policy, body, *bodyPolicy); }
+WASM_EXPORT bool tumble_kcc_policy_remove(kcc_policy::Policy * policy, uint32_t body) { return adapters::kcc_policy::remove(policy, body); }
+WASM_EXPORT void tumble_kcc_policy_get(kcc_policy::BodyPolicy * out, const kcc_policy::Policy * policy, uint32_t body) { adapters::kcc_policy::get(*out, policy, body); }
+WASM_EXPORT void tumble_kcc_default_settings(adapters::KCCSettings * out) { adapters::kcc::default_settings(*out); }
+WASM_EXPORT void tumble_kcc_default_update_settings(kcc::UpdateSettings * out) { adapters::kcc::default_update_settings(*out); }
+WASM_EXPORT kcc::KCC * tumble_kcc_create(const adapters::KCCSettings * settings, const Float3 * position, const Float4 * quaternion) { return adapters::kcc::create(*settings, *position, *quaternion); }
+WASM_EXPORT void tumble_kcc_destroy(kcc::KCC * character) { adapters::kcc::destroy(character); }
+WASM_EXPORT void tumble_kcc_add(world::World * world, kcc::KCC * character) { adapters::kcc::add(world, character); }
+WASM_EXPORT void tumble_kcc_remove(world::World * world, kcc::KCC * character) { adapters::kcc::remove(world, character); }
+WASM_EXPORT void tumble_kcc_read_state(adapters::KCCState * out, const kcc::KCC * character) { adapters::kcc::read_state(*out, character); }
+WASM_EXPORT void tumble_kcc_set_linear_velocity(kcc::KCC * character, const Float3 * velocity) { adapters::kcc::set_linear_velocity(character, *velocity); }
+WASM_EXPORT uint8_t * tumble_kcc_contacts(kcc::KCC * character) { return adapters::kcc::contacts(character); }
+WASM_EXPORT bool tumble_kcc_read_contact_event(adapters::KCCContactEvent * out, const kcc::KCC * character, uint32_t index) { return adapters::kcc::read_contact_event(*out, character, index); }
+WASM_EXPORT void tumble_kcc_set_position(world::World * world, kcc::KCC * character, const Float3 * position) { adapters::kcc::set_position(world, character, *position); }
+WASM_EXPORT void tumble_kcc_set_quaternion(world::World * world, kcc::KCC * character, const Float4 * quaternion) { adapters::kcc::set_quaternion(world, character, *quaternion); }
+WASM_EXPORT bool tumble_kcc_is_slope_too_steep(const kcc::KCC * character, const Float3 * normal) { return adapters::kcc::is_slope_too_steep(character, *normal); }
+WASM_EXPORT void tumble_kcc_get_center_of_mass_transform(Float3 * outPosition, Float4 * outQuaternion, const kcc::KCC * character) { adapters::kcc::get_center_of_mass_transform(*outPosition, *outQuaternion, character); }
+WASM_EXPORT bool tumble_kcc_has_collided_with(const kcc::KCC * character, uint32_t body) { return adapters::kcc::has_collided_with(character, body); }
+WASM_EXPORT bool tumble_kcc_can_walk_stairs(const kcc::KCC * character, const Float3 * velocity) { return adapters::kcc::can_walk_stairs(character, *velocity); }
+WASM_EXPORT void tumble_kcc_cancel_velocity_towards_steep_slopes(Float3 * out, const kcc::KCC * character, const Float3 * velocity) { adapters::kcc::cancel_velocity_towards_steep_slopes(*out, character, *velocity); }
+WASM_EXPORT void tumble_kcc_update_ground_velocity(world::World * world, kcc::KCC * character, const kcc_policy::Policy * policy) { adapters::kcc::update_ground_velocity(world, character, policy); }
+WASM_EXPORT void tumble_kcc_refresh_contacts(world::World * world, kcc::KCC * character, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy) { adapters::kcc::refresh_contacts(world, character, filter, collisionGroups, collisionMask, policy); }
+WASM_EXPORT bool tumble_kcc_set_shape(world::World * world, kcc::KCC * character, shapes::Shape * shape, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy, float maxPenetrationDepth) { return adapters::kcc::set_shape(world, character, shape, filter, collisionGroups, collisionMask, policy, maxPenetrationDepth); }
+WASM_EXPORT void tumble_kcc_move(world::World * world, kcc::KCC * character, float deltaTime, const Float3 * gravity, const kcc_policy::Policy * policy, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { adapters::kcc::move(world, character, deltaTime, *gravity, policy, filter, collisionGroups, collisionMask); }
+WASM_EXPORT bool tumble_kcc_stick_to_floor(world::World * world, kcc::KCC * character, const Float3 * stepDown, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy) { return adapters::kcc::stick_to_floor(world, character, *stepDown, filter, collisionGroups, collisionMask, policy); }
+WASM_EXPORT bool tumble_kcc_walk_stairs(world::World * world, kcc::KCC * character, float deltaTime, const Float3 * stepUp, const Float3 * stepForward, const Float3 * stepForwardTest, const Float3 * stepDownExtra, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy) { return adapters::kcc::walk_stairs(world, character, deltaTime, *stepUp, *stepForward, *stepForwardTest, *stepDownExtra, filter, collisionGroups, collisionMask, policy); }
+WASM_EXPORT void tumble_kcc_update(world::World * world, kcc::KCC * character, float deltaTime, const Float3 * gravity, const kcc::UpdateSettings * settings, const kcc_policy::Policy * policy, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask) { adapters::kcc::update(world, character, deltaTime, *gravity, *settings, policy, filter, collisionGroups, collisionMask); }
+WASM_EXPORT void tumble_kcc_collide(world::World * world, kcc::KCC * character, const Float3 * position, const Float3 * movementDirection, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy) { adapters::kcc::collide(world, character, *position, *movementDirection, filter, collisionGroups, collisionMask, policy); }
+WASM_EXPORT void tumble_kcc_solve(adapters::KCCSolve * out, world::World * world, kcc::KCC * character, const Float3 * velocity, float deltaTime, float timeRemaining, const kcc_policy::Policy * policy) { adapters::kcc::solve(*out, world, character, *velocity, deltaTime, timeRemaining, policy); }
+WASM_EXPORT bool tumble_kcc_cast(adapters::KCCContact * out, world::World * world, kcc::KCC * character, const Float3 * position, const Float3 * displacement, filter::Filter * filter, uint32_t collisionGroups, uint32_t collisionMask, const kcc_policy::Policy * policy) { return adapters::kcc::cast(*out, world, character, *position, *displacement, filter, collisionGroups, collisionMask, policy); }
+WASM_EXPORT void tumble_kcc_update_ground(world::World * world, kcc::KCC * character, float deltaTime, bool skipContactVelocityCheck, const kcc_policy::Policy * policy) { adapters::kcc::update_ground(world, character, deltaTime, skipContactVelocityCheck, policy); }
+WASM_EXPORT void tumble_kcc_apply_weight(world::World * world, kcc::KCC * character, const Float3 * gravity, float deltaTime) { adapters::kcc::apply_weight(world, character, *gravity, deltaTime); }
+WASM_EXPORT void tumble_kcc_begin_contact_tracking(kcc::KCC * character) { adapters::kcc::begin_contact_tracking(character); }
+WASM_EXPORT void tumble_kcc_end_contact_tracking(kcc::KCC * character) { adapters::kcc::end_contact_tracking(character); }
 
 #endif
