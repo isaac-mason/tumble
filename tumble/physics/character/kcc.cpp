@@ -18,6 +18,8 @@
 #include "tumble/physics/pairs.h"
 #include "tumble/physics/query.h"
 #include "tumble/physics/shapes/compound.h"
+#include "tumble/physics/shapes/scaled.h"
+#include "tumble/physics/shapes/transformed.h"
 #include "tumble/util/object.h"
 #include "tumble/util/sort.h"
 
@@ -575,18 +577,20 @@ static bool correct_fraction_for_character_padding(support::Support &character_s
                                                    Vec3f displacement, support::Support &polygon, float &io_fraction) {
     switch (shape->type) {
         case shapes::SHAPE_TRANSFORMED: {
+            const transformed::TransformedShape &transformed = shapes::as<transformed::TransformedShape>(shape);
             Transformf inner;
-            Vec3f translation = vec3f::multiply(vec3f::load(shape->transformed.position), vec3f::load(transform.scale));
+            Vec3f translation = vec3f::multiply(vec3f::load(transformed.position), vec3f::load(transform.scale));
             translation = vec3f::transform_quat(translation, quatf::load(transform.quaternion));
             vec3f::store(inner.position, vec3f::add(vec3f::load(transform.position), translation));
-            quatf::store(inner.quaternion, quatf::multiply(quatf::load(transform.quaternion), quatf::load(shape->transformed.quaternion)));
-            vec3f::store(inner.scale, shapes::transform_scale(quatf::load(shape->transformed.quaternion), vec3f::load(transform.scale)));
-            return correct_fraction_for_character_padding(character_support, shape->transformed.shape, inner, displacement, polygon, io_fraction);
+            quatf::store(inner.quaternion, quatf::multiply(quatf::load(transform.quaternion), quatf::load(transformed.quaternion)));
+            vec3f::store(inner.scale, shapes::transform_scale(quatf::load(transformed.quaternion), vec3f::load(transform.scale)));
+            return correct_fraction_for_character_padding(character_support, transformed.shape, inner, displacement, polygon, io_fraction);
         }
         case shapes::SHAPE_SCALED: {
+            const scaled::ScaledShape &scaled = shapes::as<scaled::ScaledShape>(shape);
             Transformf inner = transform;
-            vec3f::store(inner.scale, vec3f::multiply(vec3f::load(transform.scale), vec3f::load(shape->scaled.scale)));
-            return correct_fraction_for_character_padding(character_support, shape->scaled.shape, inner, displacement, polygon, io_fraction);
+            vec3f::store(inner.scale, vec3f::multiply(vec3f::load(transform.scale), vec3f::load(scaled.scale)));
+            return correct_fraction_for_character_padding(character_support, scaled.shape, inner, displacement, polygon, io_fraction);
         }
         case shapes::SHAPE_COMPOUND:
         case shapes::SHAPE_STATIC_COMPOUND: {

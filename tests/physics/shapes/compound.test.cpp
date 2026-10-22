@@ -65,9 +65,9 @@ void test_compound_create(TestCtx &ctx) {
     Shape *c = make_compound(children, 2);
 
     CHECK(ctx, c->type == shapes::SHAPE_COMPOUND);
-    CHECK(ctx, c->compound.data->children.length == 2);
-    CHECK(ctx, c->compound.data->children[0].shape == s);
-    CHECK(ctx, c->compound.data->children[1].shape == b);
+    CHECK(ctx, shapes::as<compound::CompoundShape>(c).data->children.length == 2);
+    CHECK(ctx, shapes::as<compound::CompoundShape>(c).data->children[0].shape == s);
+    CHECK(ctx, shapes::as<compound::CompoundShape>(c).data->children[1].shape == b);
     CHECK(ctx, c->material_id == -1);
     // the volume is the children's summed
     CHECK_NEAR(ctx, c->volume, 4.0f / 3.0f * scalar::PI + 8.0f, 1e-4f);
@@ -76,7 +76,7 @@ void test_compound_create(TestCtx &ctx) {
     CompoundShapeChild scratch[] = {{{0, 0, 0}, IDENTITY, s}};
     Shape *copy = make_compound(scratch, 1);
     scratch[0].shape = b;
-    CHECK(ctx, copy->compound.data->children[0].shape == s);
+    CHECK(ctx, shapes::as<compound::CompoundShape>(copy).data->children[0].shape == s);
 
     // destroying the compound leaves the children: freeing them afterwards gives back exactly their two blocks
     compound::destroy(c);

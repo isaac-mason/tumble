@@ -19,6 +19,9 @@
 using shapes::Shape;
 using triangle_mesh_data::TriangleMeshData;
 
+/** the data the mesh is over */
+static TriangleMeshData &mesh_data(const Shape *shape) { return *shapes::as<triangle_mesh::TriangleMeshShape>(shape).data; }
+
 static const sub_shape::SubShapeIdBuilder NO_SUB_SHAPE = {sub_shape::EMPTY_SUB_SHAPE_ID, 0};
 
 /** builds the mesh with the builder's defaults and a shape over it */
@@ -42,7 +45,7 @@ static Shape *mesh(const float (&positions)[NUM_FLOATS], const uint32_t (&indice
 
 /** destroys a shape made by `mesh` and the mesh data it was the only user of */
 static void drop(Shape *s) {
-    TriangleMeshData *data = s->triangle_mesh.data;
+    TriangleMeshData *data = &mesh_data(s);
     triangle_mesh::destroy(s);
     triangle_mesh_data::destroy(data);
 }
@@ -136,7 +139,7 @@ static float first_fraction(const cast_shape::CastShapeCollector &collector) {
 /** the triangle a hit's sub shape id names, popped from a top-level mesh */
 static uint32_t triangle_of(const Shape *s, sub_shape::SubShapeId id) {
     sub_shape::PopResult pop;
-    sub_shape::pop_index(pop, id, s->triangle_mesh.data->triangle_count);
+    sub_shape::pop_index(pop, id, mesh_data(s).triangle_count);
     return pop.value;
 }
 
@@ -149,7 +152,7 @@ void test_triangle_mesh_create_and_mass(TestCtx &ctx) {
     Shape *s = mesh(TRIANGLE_POSITIONS, 9, TRIANGLE_INDICES, 3);
     CHECK(ctx, s != nullptr);
     CHECK(ctx, s->type == shapes::SHAPE_TRIANGLE_MESH);
-    CHECK(ctx, s->triangle_mesh.data->triangle_count == 1);
+    CHECK(ctx, mesh_data(s).triangle_count == 1);
     CHECK(ctx, s->material_id == -1);
     // vertices (0,0,0), (1,0,0), (0,1,0): the bounds are exactly [0,0,0] to [1,1,0]
     CHECK(ctx, s->aabb.min.x == 0.0f && s->aabb.min.y == 0.0f && s->aabb.min.z == 0.0f);
@@ -173,7 +176,7 @@ void test_triangle_mesh_create_and_mass(TestCtx &ctx) {
     const float two_positions[12] = {0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1};
     const uint32_t two_indices[6] = {0, 1, 2, 1, 2, 3};
     Shape *two = mesh(two_positions, two_indices);
-    CHECK(ctx, two->triangle_mesh.data->triangle_count == 2);
+    CHECK(ctx, mesh_data(two).triangle_count == 2);
     CHECK(ctx, two->aabb.max.z == 1.0f);
     drop(two);
 
@@ -186,7 +189,7 @@ void test_triangle_mesh_shared_data(TestCtx &ctx) {
     TriangleMeshData *data = triangle_mesh_builder::build({.positions = QUAD_POSITIONS, .num_positions = 4, .indices = QUAD_INDICES, .num_indices = 6});
     Shape *first = triangle_mesh::create({.data = data});
     Shape *second = triangle_mesh::create({.data = data});
-    CHECK(ctx, first->triangle_mesh.data == second->triangle_mesh.data);
+    CHECK(ctx, &mesh_data(first) == &mesh_data(second));
 
     // the first shape going leaves the mesh to the second
     triangle_mesh::destroy(first);
@@ -206,7 +209,7 @@ void test_triangle_mesh_owned_data(TestCtx &ctx) {
     const size_t blocks = util::allocated_blocks();
     TriangleMeshData *data = triangle_mesh_builder::build({.positions = QUAD_POSITIONS, .num_positions = 4, .indices = QUAD_INDICES, .num_indices = 6});
     Shape *shape = triangle_mesh::create({.data = data, .owns_data = true});
-    CHECK(ctx, shape->triangle_mesh.owns_data);
+    CHECK(ctx, shapes::as<triangle_mesh::TriangleMeshShape>(shape).owns_data);
     triangle_mesh::destroy(shape);
     CHECK(ctx, util::allocated_bytes() == bytes && util::allocated_blocks() == blocks);
 }
@@ -225,7 +228,7 @@ void test_triangle_mesh_surface_normal(TestCtx &ctx) {
 
     // every triangle of the cube by its sub shape id: the outward normal of its face
     Shape *cube = mesh(CUBE_POSITIONS, CUBE_INDICES);
-    const TriangleMeshData &data = *cube->triangle_mesh.data;
+    const TriangleMeshData &data = mesh_data(cube);
     CHECK(ctx, data.triangle_count == 12);
     for (uint32_t t = 0; t < data.triangle_count; t++) {
         sub_shape::push_index(id, NO_SUB_SHAPE, t, data.triangle_count);
@@ -432,13 +435,13 @@ void test_triangle_mesh_ray_materials_and_sub_shapes(TestCtx &ctx) {
     ray_cast(collector, RAY_FRONT, quad, pose({0, 0, 0}), {0.8f, 3, 0.2f}, {0, -1, 0}, 4);
     CHECK(ctx, collector.has_hit && shapes::get_shape_material(quad, collector.hits[0].sub_shape_id) == 3);
     const uint32_t first = triangle_of(quad, collector.hits[0].sub_shape_id);
-    CHECK(ctx, triangle_mesh_data::get_material_id(*quad->triangle_mesh.data, first) == 3);
+    CHECK(ctx, triangle_mesh_data::get_material_id(mesh_data(quad), first) == 3);
 
     cast_ray::reset(collector);
     ray_cast(collector, RAY_FRONT, quad, pose({0, 0, 0}), {0.2f, 3, 0.8f}, {0, -1, 0}, 4);
     CHECK(ctx, collector.has_hit && shapes::get_shape_material(quad, collector.hits[0].sub_shape_id) == 7);
     const uint32_t second = triangle_of(quad, collector.hits[0].sub_shape_id);
-    CHECK(ctx, second != first && triangle_mesh_data::get_material_id(*quad->triangle_mesh.data, second) == 7);
+    CHECK(ctx, second != first && triangle_mesh_data::get_material_id(mesh_data(quad), second) == 7);
 
     // a parent's bits below the mesh's level survive: the mesh pushes its triangle above them
     const sub_shape::SubShapeIdBuilder parent = {0xfffffff5u, 4};
@@ -493,7 +496,7 @@ void test_triangle_mesh_collide_point(TestCtx &ctx) {
     // the only crossing going up is the top face (y = 1), material 4
     CHECK(ctx, shapes::get_shape_material(painted, collector.hits[0].sub_shape_id_b) == 4);
     const uint32_t top = triangle_of(painted, collector.hits[0].sub_shape_id_b);
-    CHECK(ctx, triangle_mesh_data::get_material_id(*painted->triangle_mesh.data, top) == 4);
+    CHECK(ctx, triangle_mesh_data::get_material_id(mesh_data(painted), top) == 4);
     collide_point::release(collector);
     drop(painted);
     drop(cube);
@@ -693,7 +696,7 @@ void test_triangle_mesh_convex_collide(TestCtx &ctx) {
     for (uint32_t i = 0; i < collector.hits.length; i++) {
         const uint32_t t = triangle_of(floor, collector.hits[i].sub_shape_id_b);
         Box3f bounds;
-        triangle_mesh_data::calculate_triangle_aabb(bounds, *floor->triangle_mesh.data, t);
+        triangle_mesh_data::calculate_triangle_aabb(bounds, mesh_data(floor), t);
         CHECK(ctx, bounds.max.x >= 5.0f - 1e-6f && bounds.min.x <= 5.6f && bounds.max.z >= 5.3f && bounds.min.z <= 5.9f);
     }
 
@@ -1372,7 +1375,7 @@ void test_triangle_mesh_material(TestCtx &ctx) {
     dispatch::init();
     const int32_t materials[12] = {1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6};
     Shape *painted = mesh(CUBE_POSITIONS, 24, CUBE_INDICES, 36, materials);
-    const TriangleMeshData &data = *painted->triangle_mesh.data;
+    const TriangleMeshData &data = mesh_data(painted);
     CHECK(ctx, data.triangle_count == 12);
 
     // every triangle's id names that triangle's material, whatever order the builder left them in

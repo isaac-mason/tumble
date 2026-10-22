@@ -18,9 +18,9 @@ void test_cylinder_create(TestCtx &ctx) {
     shapes::Shape *c = cylinder::create({.half_height = 1.0f, .radius = 0.5f});
     CHECK(ctx, c != nullptr);
     CHECK(ctx, c->type == shapes::SHAPE_CYLINDER);
-    CHECK(ctx, c->cylinder.half_height == 1.0f && c->cylinder.radius == 0.5f);
-    CHECK(ctx, c->cylinder.convex_radius == support::DEFAULT_CONVEX_RADIUS);
-    CHECK(ctx, c->cylinder.density == 1000.0f && c->material_id == -1);
+    CHECK(ctx, shapes::as<cylinder::CylinderShape>(c).half_height == 1.0f && shapes::as<cylinder::CylinderShape>(c).radius == 0.5f);
+    CHECK(ctx, shapes::as<cylinder::CylinderShape>(c).convex_radius == support::DEFAULT_CONVEX_RADIUS);
+    CHECK(ctx, shapes::as<cylinder::CylinderShape>(c).density == 1000.0f && c->material_id == -1);
     cylinder::destroy(c);
 
     // V = pi r^2 2h
@@ -35,7 +35,7 @@ void test_cylinder_create(TestCtx &ctx) {
     CHECK(ctx, vec3f::exact_equals(vec3f::load(c->center_of_mass), vec3f::make(0.0f, 0.0f, 0.0f)));
 
     // update after a change
-    c->cylinder.radius = 0.5f;
+    shapes::as<cylinder::CylinderShape>(c).radius = 0.5f;
     cylinder::update(c);
     CHECK(ctx, c->aabb.max.x == 0.5f);
     CHECK_NEAR(ctx, c->volume, scalar::PI * 0.25f * 4.0f, 1e-5f);
@@ -45,25 +45,25 @@ void test_cylinder_create(TestCtx &ctx) {
 void test_cylinder_convex_radius_clamp(TestCtx &ctx) {
 
     shapes::Shape *c = cylinder::create({.half_height = 1.0f, .radius = 0.5f, .convex_radius = 0.1f});
-    CHECK(ctx, c->cylinder.convex_radius == 0.1f);
+    CHECK(ctx, shapes::as<cylinder::CylinderShape>(c).convex_radius == 0.1f);
     cylinder::destroy(c);
     // clamped to the half height when it is smallest
     c = cylinder::create({.half_height = 0.03f, .radius = 0.5f, .convex_radius = 1.0f});
-    CHECK(ctx, c->cylinder.convex_radius == 0.03f);
+    CHECK(ctx, shapes::as<cylinder::CylinderShape>(c).convex_radius == 0.03f);
     cylinder::destroy(c);
     // to the radius when it is smallest
     c = cylinder::create({.half_height = 2.0f, .radius = 0.02f, .convex_radius = 1.0f});
-    CHECK(ctx, c->cylinder.convex_radius == 0.02f);
+    CHECK(ctx, shapes::as<cylinder::CylinderShape>(c).convex_radius == 0.02f);
     cylinder::destroy(c);
     // the default clamps too
     c = cylinder::create({.half_height = 0.01f, .radius = 0.01f});
-    CHECK(ctx, c->cylinder.convex_radius == 0.01f);
+    CHECK(ctx, shapes::as<cylinder::CylinderShape>(c).convex_radius == 0.01f);
     cylinder::destroy(c);
     c = cylinder::create({.half_height = 0.0f, .radius = 0.0f, .convex_radius = 1.0f});
-    CHECK(ctx, c->cylinder.convex_radius == 0.0f);
+    CHECK(ctx, shapes::as<cylinder::CylinderShape>(c).convex_radius == 0.0f);
     cylinder::destroy(c);
     c = cylinder::create({.half_height = 0.3f, .radius = 0.5f, .convex_radius = 0.3f});
-    CHECK(ctx, c->cylinder.convex_radius == 0.3f);
+    CHECK(ctx, shapes::as<cylinder::CylinderShape>(c).convex_radius == 0.3f);
     cylinder::destroy(c);
 }
 

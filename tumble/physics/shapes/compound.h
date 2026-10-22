@@ -28,6 +28,11 @@ struct CompoundData {
     collections::Vec<Box3f> child_bounds;
 };
 
+struct CompoundShape : Shape {
+    static constexpr shapes::ShapeType TYPE = shapes::SHAPE_COMPOUND;
+    CompoundData *data;
+};
+
 struct CompoundShapeSettings {
     /** read during create only; the shapes they point at are borrowed */
     const CompoundShapeChild *children = nullptr;

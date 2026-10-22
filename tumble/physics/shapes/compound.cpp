@@ -29,14 +29,14 @@ Shape *create(const CompoundShapeSettings &settings) {
     }
     for (uint32_t i = 0; i < settings.num_children; i++) data->children.push(settings.children[i]);
 
-    Shape *shape = shapes::allocate(shapes::SHAPE_COMPOUND);
+    CompoundShape *shape = shapes::allocate<CompoundShape>();
     if (shape == nullptr) {
         data->children.release();
         data->child_bounds.release();
         util::free(data);
         return nullptr;
     }
-    shape->compound.data = data;
+    shape->data = data;
     shape->material_id = -1;
 
     update(shape);
@@ -45,16 +45,17 @@ Shape *create(const CompoundShapeSettings &settings) {
 }
 
 void destroy(Shape *shape) {
-    CompoundData *data = shape->compound.data;
+    CompoundData *data = shapes::as<CompoundShape>(shape).data;
     data->children.release();
     data->child_bounds.release();
     util::free(data);
-    shapes::release(shape);
+    shapes::release<CompoundShape>(shape);
 }
 
 const collections::Vec<CompoundShapeChild> &children_of(const Shape *shape) {
     TUMBLE_ASSERT(shape->type == shapes::SHAPE_COMPOUND || shape->type == shapes::SHAPE_STATIC_COMPOUND);
-    return shape->type == shapes::SHAPE_COMPOUND ? shape->compound.data->children : shape->static_compound.data->children;
+    return shape->type == shapes::SHAPE_COMPOUND ? shapes::as<CompoundShape>(shape).data->children
+                                                 : shapes::as<static_compound::StaticCompoundShape>(shape).data->children;
 }
 
 void child_transform(Transformf &out, const Transformf &parent, const CompoundShapeChild &child) {
@@ -159,7 +160,7 @@ static AABox bounds_in_compound_space(const Shape *shape, const Transformf &tran
 
 void update(Shape *shape) {
     const collections::Vec<CompoundShapeChild> &children = children_of(shape);
-    if (shape->type == shapes::SHAPE_COMPOUND) compute_compound_child_bounds(shape->compound.data->child_bounds, children);
+    if (shape->type == shapes::SHAPE_COMPOUND) compute_compound_child_bounds(shapes::as<CompoundShape>(shape).data->child_bounds, children);
     compute_compound_local_bounds(shape->aabb, children);
     vec3f::store(shape->center_of_mass, compute_compound_center_of_mass(children));
     shape->volume = compute_compound_volume(children);
@@ -304,8 +305,8 @@ void get_sub_shape_transformed_shape(shapes::GetSubShapeTransformedShapeResult &
 
 void cast_ray_vs_compound(cast_ray::CastRayCollector &collector, const cast_ray::CastRaySettings &settings, const cast_ray::Rayf &ray,
                           const Shape *shape, const sub_shape::SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
-    const collections::Vec<CompoundShapeChild> &children = shape->compound.data->children;
-    const collections::Vec<Box3f> &child_bounds = shape->compound.data->child_bounds;
+    const collections::Vec<CompoundShapeChild> &children = shapes::as<CompoundShape>(shape).data->children;
+    const collections::Vec<Box3f> &child_bounds = shapes::as<CompoundShape>(shape).data->child_bounds;
 
     // the ray in the compound's unscaled space, where the child bounds are
     Quatf inv_quat = quatf::conjugate(quatf::load(transform.quaternion));
@@ -341,8 +342,8 @@ void cast_ray_vs_compound(cast_ray::CastRayCollector &collector, const cast_ray:
 void collide_point_vs_compound(collide_point::CollidePointCollector &collector, const collide_point::CollidePointSettings &settings,
                                Vec3f point, const Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b,
                                const Transformf &transform_b) {
-    const collections::Vec<CompoundShapeChild> &children = shape_b->compound.data->children;
-    const collections::Vec<Box3f> &child_bounds = shape_b->compound.data->child_bounds;
+    const collections::Vec<CompoundShapeChild> &children = shapes::as<CompoundShape>(shape_b).data->children;
+    const collections::Vec<Box3f> &child_bounds = shapes::as<CompoundShape>(shape_b).data->child_bounds;
 
     // the point in the compound's unscaled space, where the child bounds are
     Quatf inv_quat = quatf::conjugate(quatf::load(transform_b.quaternion));
@@ -373,8 +374,8 @@ void collide_point_vs_compound(collide_point::CollidePointCollector &collector, 
 void collide_compound_vs_shape(collide_shape::CollideShapeCollector &collector, const collide_shape::CollideShapeSettings &settings,
                                const Shape *shape_a, const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
                                const Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
-    const collections::Vec<CompoundShapeChild> &children = shape_a->compound.data->children;
-    const collections::Vec<Box3f> &child_bounds = shape_a->compound.data->child_bounds;
+    const collections::Vec<CompoundShapeChild> &children = shapes::as<CompoundShape>(shape_a).data->children;
+    const collections::Vec<Box3f> &child_bounds = shapes::as<CompoundShape>(shape_a).data->child_bounds;
 
     // b's bounds in a's unscaled space
     const AABox query_bounds = bounds_in_compound_space(shape_b, transform_b, transform_a, settings.max_separation_distance);
@@ -401,8 +402,8 @@ void collide_compound_vs_shape(collide_shape::CollideShapeCollector &collector, 
 void collide_shape_vs_compound(collide_shape::CollideShapeCollector &collector, const collide_shape::CollideShapeSettings &settings,
                                const Shape *shape_a, const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
                                const Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
-    const collections::Vec<CompoundShapeChild> &children = shape_b->compound.data->children;
-    const collections::Vec<Box3f> &child_bounds = shape_b->compound.data->child_bounds;
+    const collections::Vec<CompoundShapeChild> &children = shapes::as<CompoundShape>(shape_b).data->children;
+    const collections::Vec<Box3f> &child_bounds = shapes::as<CompoundShape>(shape_b).data->child_bounds;
 
     // a's bounds in b's unscaled space
     const AABox query_bounds = bounds_in_compound_space(shape_a, transform_a, transform_b, settings.max_separation_distance);
@@ -431,7 +432,7 @@ void collide_shape_vs_compound(collide_shape::CollideShapeCollector &collector, 
 void cast_compound_vs_shape(cast_shape::CastShapeCollector &collector, const cast_shape::CastShapeSettings &settings, const Shape *shape_a,
                             const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
                             const Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
-    const collections::Vec<CompoundShapeChild> &children = shape_a->compound.data->children;
+    const collections::Vec<CompoundShapeChild> &children = shapes::as<CompoundShape>(shape_a).data->children;
 
     for (uint32_t child_index = 0; child_index < children.length; child_index++) {
         if (collector.early_out_fraction <= -collector::UNBOUNDED) break;
@@ -455,8 +456,8 @@ void cast_compound_vs_shape(cast_shape::CastShapeCollector &collector, const cas
 void cast_shape_vs_compound(cast_shape::CastShapeCollector &collector, const cast_shape::CastShapeSettings &settings, const Shape *shape_a,
                             const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
                             const Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
-    const collections::Vec<CompoundShapeChild> &children = shape_b->compound.data->children;
-    const collections::Vec<Box3f> &child_bounds = shape_b->compound.data->child_bounds;
+    const collections::Vec<CompoundShapeChild> &children = shapes::as<CompoundShape>(shape_b).data->children;
+    const collections::Vec<Box3f> &child_bounds = shapes::as<CompoundShape>(shape_b).data->child_bounds;
 
     // a's bounds at the start of the cast and its displacement in b's unscaled space: the children are
     // culled by sweeping the centre of those bounds against child bounds grown by their extent

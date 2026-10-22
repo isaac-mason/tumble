@@ -62,9 +62,9 @@ void test_plane_create(TestCtx &ctx) {
     // the normal is normalised and the constant with it, so the plane stays at y = 0.5; the defaults
     Shape *p = plane::create({.plane = {{0, 2, 0}, -1}, .material_id = 3});
     CHECK(ctx, p->type == shapes::SHAPE_PLANE);
-    CHECK(ctx, near3(p->plane.plane.normal, 0, 1, 0, 0.0f));
-    CHECK(ctx, p->plane.plane.constant == -0.5f);
-    CHECK(ctx, p->plane.half_extent == plane::DEFAULT_PLANE_HALF_EXTENT);
+    CHECK(ctx, near3(shapes::as<plane::PlaneShape>(p).plane.normal, 0, 1, 0, 0.0f));
+    CHECK(ctx, shapes::as<plane::PlaneShape>(p).plane.constant == -0.5f);
+    CHECK(ctx, shapes::as<plane::PlaneShape>(p).half_extent == plane::DEFAULT_PLANE_HALF_EXTENT);
     CHECK(ctx, p->material_id == 3);
     CHECK(ctx, p->volume == 0 && near3(p->center_of_mass, 0, 0, 0, 0.0f));
 

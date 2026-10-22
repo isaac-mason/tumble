@@ -464,11 +464,11 @@ void release(ConvexHullData *data) { release_data(data); }
 Shape *create(const ConvexHullShapeSettings &settings) {
     ConvexHullData *data = settings.data;
     TUMBLE_ASSERT(data != nullptr);
-    Shape *shape = shapes::allocate(shapes::SHAPE_CONVEX_HULL);
+    ConvexHullShape *shape = shapes::allocate<ConvexHullShape>();
     if (shape == nullptr) return nullptr;
-    shape->convex_hull.data = data;
-    shape->convex_hull.density = settings.density;
-    shape->convex_hull.owns_data = settings.owns_data;
+    shape->data = data;
+    shape->density = settings.density;
+    shape->owns_data = settings.owns_data;
     shape->material_id = settings.material_id;
     shape->aabb = data->aabb;
     shape->center_of_mass = data->center_of_mass;
@@ -477,12 +477,13 @@ Shape *create(const ConvexHullShapeSettings &settings) {
 }
 
 void destroy(Shape *shape) {
-    if (shape->convex_hull.owns_data) release(shape->convex_hull.data);
-    shapes::release(shape);
+    const ConvexHullShape &hull = shapes::as<ConvexHullShape>(shape);
+    if (hull.owns_data) release(hull.data);
+    shapes::release<ConvexHullShape>(shape);
 }
 
 void update(Shape *shape) {
-    const ConvexHullData &data = *shape->convex_hull.data;
+    const ConvexHullData &data = *shapes::as<ConvexHullShape>(shape).data;
     TUMBLE_ASSERT(data.convex_radius >= 0.0f);
 
     AABox bounds = aabox::empty();
@@ -491,19 +492,19 @@ void update(Shape *shape) {
 }
 
 void compute_mass_properties(mass_properties::MassProperties &out, const Shape *shape) {
-    const ConvexHullData &data = *shape->convex_hull.data;
+    const ConvexHullData &data = *shapes::as<ConvexHullShape>(shape).data;
 
     // mass = volume * density
-    out.mass = shape->volume * shape->convex_hull.density;
+    out.mass = shape->volume * shapes::as<ConvexHullShape>(shape).density;
 
     // scale inertia tensor by density
-    mat4f::store(out.inertia, mat4f::multiply_scalar(mat4f::load(data.inertia), shape->convex_hull.density));
+    mat4f::store(out.inertia, mat4f::multiply_scalar(mat4f::load(data.inertia), shapes::as<ConvexHullShape>(shape).density));
 }
 
 void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
     TUMBLE_ASSERT(sub_shape::is_empty(sub_shape_id));
     (void)sub_shape_id;
-    const ConvexHullData &data = *shape->convex_hull.data;
+    const ConvexHullData &data = *shapes::as<ConvexHullShape>(shape).data;
 
     // find the plane with the smallest absolute signed distance to the surface point
     const Plane3f &first_plane = data.planes[0];
@@ -522,7 +523,7 @@ void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub
 }
 
 void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, const Shape *shape, sub_shape::SubShapeId) {
-    const ConvexHullData &data = *shape->convex_hull.data;
+    const ConvexHullData &data = *shapes::as<ConvexHullShape>(shape).data;
     face::Face &face = io.face;
     const Vec3f scale = io.scale;
 
@@ -600,7 +601,7 @@ void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, cons
 }
 
 float get_inner_radius(const Shape *shape) {
-    const ConvexHullData &data = *shape->convex_hull.data;
+    const ConvexHullData &data = *shapes::as<ConvexHullShape>(shape).data;
 
     // calculate the inner radius by getting the minimum distance from the center of mass to the planes of the hull
     // (the planes are in input space, not relative to the center of mass)
@@ -615,7 +616,7 @@ float get_inner_radius(const Shape *shape) {
 }
 
 void set_support(support::Support &out, const Shape *shape, support::SupportFunctionMode mode, Vec3f scale) {
-    const ConvexHullData &data = *shape->convex_hull.data;
+    const ConvexHullData &data = *shapes::as<ConvexHullShape>(shape).data;
     out.get_support = support::hull_support;
     out.has_transform = false;
     out.add_radius = 0.0f;

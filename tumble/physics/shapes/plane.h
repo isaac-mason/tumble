@@ -13,6 +13,13 @@ namespace plane {
 
 using shapes::Shape;
 
+struct PlaneShape : Shape {
+    static constexpr shapes::ShapeType TYPE = shapes::SHAPE_PLANE;
+    Plane3f plane;
+    /** the bounded extent the plane is treated as having */
+    float half_extent;
+};
+
 constexpr float DEFAULT_PLANE_HALF_EXTENT = 1000.0f;
 
 struct PlaneShapeSettings {

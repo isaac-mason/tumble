@@ -14,6 +14,14 @@ namespace triangle_mesh {
 
 using shapes::Shape;
 
+struct TriangleMeshShape : Shape {
+    static constexpr shapes::ShapeType TYPE = shapes::SHAPE_TRIANGLE_MESH;
+    /** the caller's, shared by any number of shapes, unless owns_data */
+    triangle_mesh_data::TriangleMeshData *data;
+    /** destroy releases the data */
+    bool owns_data;
+};
+
 struct TriangleMeshShapeSettings {
     /** a built mesh (triangle_mesh_builder::build) the shape borrows, outliving the shape */
     triangle_mesh_data::TriangleMeshData *data = nullptr;

@@ -12,6 +12,13 @@ namespace transformed {
 
 using shapes::Shape;
 
+struct TransformedShape : Shape {
+    static constexpr shapes::ShapeType TYPE = shapes::SHAPE_TRANSFORMED;
+    Shape *shape;
+    Float3 position;
+    Float4 quaternion;
+};
+
 struct TransformedShapeSettings {
     /** the caller's; outlives every transformed shape over it */
     Shape *shape = nullptr;

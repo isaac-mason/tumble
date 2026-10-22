@@ -12,8 +12,8 @@ void test_sphere_create(TestCtx &ctx) {
     shapes::Shape *s = sphere::create({.radius = 2.0f});
     CHECK(ctx, s != nullptr);
     CHECK(ctx, s->type == shapes::SHAPE_SPHERE);
-    CHECK(ctx, s->sphere.radius == 2.0f);
-    CHECK(ctx, s->sphere.density == 1000.0f);
+    CHECK(ctx, shapes::as<sphere::SphereShape>(s).radius == 2.0f);
+    CHECK(ctx, shapes::as<sphere::SphereShape>(s).density == 1000.0f);
     CHECK(ctx, s->material_id == -1);
 
     // bounds +-r
@@ -25,7 +25,7 @@ void test_sphere_create(TestCtx &ctx) {
     CHECK_NEAR(ctx, s->volume, 4.0f / 3.0f * scalar::PI * 8.0f, 1e-4f);
 
     // update follows a radius change
-    s->sphere.radius = 0.5f;
+    shapes::as<sphere::SphereShape>(s).radius = 0.5f;
     sphere::update(s);
     CHECK(ctx, s->aabb.max.y == 0.5f && s->aabb.min.x == -0.5f);
     CHECK_NEAR(ctx, s->volume, 4.0f / 3.0f * scalar::PI * 0.125f, 1e-6f);
@@ -34,7 +34,7 @@ void test_sphere_create(TestCtx &ctx) {
     custom.density = 500.0f;
     custom.material_id = 3;
     shapes::Shape *c = sphere::create(custom);
-    CHECK(ctx, c->sphere.density == 500.0f && c->material_id == 3);
+    CHECK(ctx, shapes::as<sphere::SphereShape>(c).density == 500.0f && c->material_id == 3);
 
     sphere::destroy(s);
     sphere::destroy(c);

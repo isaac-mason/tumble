@@ -11,8 +11,6 @@ TUMBLE_NAMESPACE_BEGIN
 
 namespace cylinder {
 
-using shapes::CylinderShape;
-
 // octagon template for cap faces
 // y component is always 1 (unit circle at y = 1), scaled to +-half height
 static const float CYLINDER_CAP_OCTAGON[8][3] = {
@@ -30,18 +28,18 @@ Shape *create(const CylinderShapeSettings &settings) {
     // auto-clamp convex radius to fit the smallest dimension
     const float convex_radius = scalar::min(settings.convex_radius, scalar::min(settings.half_height, settings.radius));
 
-    Shape *shape = shapes::allocate(shapes::SHAPE_CYLINDER);
+    CylinderShape *shape = shapes::allocate<CylinderShape>();
     if (shape == nullptr) return nullptr;
-    shape->cylinder.half_height = settings.half_height;
-    shape->cylinder.radius = settings.radius;
-    shape->cylinder.convex_radius = convex_radius;
-    shape->cylinder.density = settings.density;
+    shape->half_height = settings.half_height;
+    shape->radius = settings.radius;
+    shape->convex_radius = convex_radius;
+    shape->density = settings.density;
     shape->material_id = settings.material_id;
     update(shape);
     return shape;
 }
 
-void destroy(Shape *shape) { shapes::release(shape); }
+void destroy(Shape *shape) { shapes::release<CylinderShape>(shape); }
 
 /** V = pi * r^2 * (2h) */
 static float calculate_volume(float half_height, float radius) { return scalar::PI * radius * radius * 2.0f * half_height; }
@@ -51,7 +49,7 @@ static void calculate_aabb(Box3f &out, float half_height, float radius) {
 }
 
 void update(Shape *shape) {
-    const CylinderShape &cylinder = shape->cylinder;
+    const CylinderShape &cylinder = shapes::as<CylinderShape>(shape);
     // dimensions must be non-negative
     TUMBLE_ASSERT(cylinder.half_height >= 0.0f);
     TUMBLE_ASSERT(cylinder.radius >= 0.0f);
@@ -63,7 +61,7 @@ void update(Shape *shape) {
 }
 
 void compute_mass_properties(mass_properties::MassProperties &out, const Shape *shape) {
-    const CylinderShape &cylinder = shape->cylinder;
+    const CylinderShape &cylinder = shapes::as<CylinderShape>(shape);
 
     // mass = density * volume
     out.mass = shape->volume * cylinder.density;
@@ -83,7 +81,7 @@ void compute_mass_properties(mass_properties::MassProperties &out, const Shape *
 }
 
 void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub_shape::SubShapeId) {
-    const CylinderShape &cylinder = shape->cylinder;
+    const CylinderShape &cylinder = shapes::as<CylinderShape>(shape);
     const float x = vec3f::x(io.position);
     const float y = vec3f::y(io.position);
     const float z = vec3f::z(io.position);
@@ -111,8 +109,8 @@ void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, cons
     // the scaled cylinder: |scale| sizes it, so a mirrored scale changes nothing and the cap keeps
     // its winding; the transform then carries rotation and translation only
     face::Face &face = io.face;
-    const float half_height = scalar::abs(vec3f::y(io.scale)) * shape->cylinder.half_height;
-    const float radius = scalar::abs(vec3f::x(io.scale)) * shape->cylinder.radius;
+    const float half_height = scalar::abs(vec3f::y(io.scale)) * shapes::as<CylinderShape>(shape).half_height;
+    const float radius = scalar::abs(vec3f::x(io.scale)) * shapes::as<CylinderShape>(shape).radius;
 
     // calculate squared components to determine if hitting side or cap
     const float xz_sq = vec3f::x(direction) * vec3f::x(direction) + vec3f::z(direction) * vec3f::z(direction);
@@ -176,10 +174,10 @@ void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, cons
     face::transform_with_mat4_rotation_translation(face, io.transform);
 }
 
-float get_inner_radius(const Shape *shape) { return scalar::min(shape->cylinder.half_height, shape->cylinder.radius); }
+float get_inner_radius(const Shape *shape) { return scalar::min(shapes::as<CylinderShape>(shape).half_height, shapes::as<CylinderShape>(shape).radius); }
 
 void set_support(support::Support &out, const Shape *shape, support::SupportFunctionMode mode, Vec3f scale) {
-    const CylinderShape &cylinder = shape->cylinder;
+    const CylinderShape &cylinder = shapes::as<CylinderShape>(shape);
     // x and z scale the radius (they must match), y the half height
     const float scale_xz = scalar::abs(vec3f::x(scale));
     const float scale_y = scalar::abs(vec3f::y(scale));

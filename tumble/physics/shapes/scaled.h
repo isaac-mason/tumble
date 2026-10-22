@@ -15,6 +15,12 @@ namespace scaled {
 
 using shapes::Shape;
 
+struct ScaledShape : Shape {
+    static constexpr shapes::ShapeType TYPE = shapes::SHAPE_SCALED;
+    Shape *shape;
+    Float3 scale;
+};
+
 struct ScaledShapeSettings {
     /** the caller's; outlives every scaled shape over it */
     Shape *shape = nullptr;

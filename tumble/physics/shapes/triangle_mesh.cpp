@@ -14,6 +14,7 @@
 #include "tumble/physics/collision/sphere_triangle.h"
 #include "tumble/physics/collision/support.h"
 #include "tumble/physics/collision/triangle.h"
+#include "tumble/physics/shapes/sphere.h"
 #include "tumble/physics/shapes/utils/bvh.h"
 #include "tumble/physics/shapes/utils/triangle_mesh_bvh.h"
 #include "tumble/util/assert.h"
@@ -43,10 +44,10 @@ static inline void push_node(int32_t *stack_nodes, float *stack_dist, int32_t &s
 Shape *create(const TriangleMeshShapeSettings &settings) {
     TriangleMeshData *data = settings.data;
     TUMBLE_ASSERT(data != nullptr);
-    Shape *shape = shapes::allocate(shapes::SHAPE_TRIANGLE_MESH);
+    TriangleMeshShape *shape = shapes::allocate<TriangleMeshShape>();
     if (shape == nullptr) return nullptr;
-    shape->triangle_mesh.data = data;
-    shape->triangle_mesh.owns_data = settings.owns_data;
+    shape->data = data;
+    shape->owns_data = settings.owns_data;
     // a mesh's materials are its triangles'
     shape->material_id = -1;
     update(shape);
@@ -54,12 +55,13 @@ Shape *create(const TriangleMeshShapeSettings &settings) {
 }
 
 void destroy(Shape *shape) {
-    if (shape->triangle_mesh.owns_data) triangle_mesh_data::destroy(shape->triangle_mesh.data);
-    shapes::release(shape);
+    const TriangleMeshShape &mesh = shapes::as<TriangleMeshShape>(shape);
+    if (mesh.owns_data) triangle_mesh_data::destroy(mesh.data);
+    shapes::release<TriangleMeshShape>(shape);
 }
 
 void update(Shape *shape) {
-    const TriangleMeshData &data = *shape->triangle_mesh.data;
+    const TriangleMeshData &data = *shapes::as<TriangleMeshShape>(shape).data;
     if (data.node_count > 0) {
         bvh::node_get_bounds(shape->aabb, data.nodes, 0);
     } else {
@@ -77,7 +79,7 @@ void compute_mass_properties(mass_properties::MassProperties &out, const Shape *
 }
 
 void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
-    const TriangleMeshData &data = *shape->triangle_mesh.data;
+    const TriangleMeshData &data = *shapes::as<TriangleMeshShape>(shape).data;
     sub_shape::PopResult pop;
     sub_shape::pop_index(pop, sub_shape_id, data.triangle_count);
     const uint32_t triangle_index = pop.value;
@@ -87,7 +89,7 @@ void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub
 }
 
 int32_t get_material(const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
-    const TriangleMeshData &data = *shape->triangle_mesh.data;
+    const TriangleMeshData &data = *shapes::as<TriangleMeshShape>(shape).data;
     sub_shape::PopResult pop;
     sub_shape::pop_index(pop, sub_shape_id, data.triangle_count);
     TUMBLE_ASSERT(pop.value < data.triangle_count);
@@ -95,7 +97,7 @@ int32_t get_material(const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
 }
 
 void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f, const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
-    const TriangleMeshData &data = *shape->triangle_mesh.data;
+    const TriangleMeshData &data = *shapes::as<TriangleMeshShape>(shape).data;
     face::Face &face = io.face;
 
     // extract triangle index from sub shape id
@@ -123,7 +125,7 @@ void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f, const Shape *s
 
 void cast_ray_vs_triangle_mesh(cast_ray::CastRayCollector &collector, const cast_ray::CastRaySettings &settings, const cast_ray::Rayf &ray,
                                const Shape *shape, const sub_shape::SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
-    const TriangleMeshData &data = *shape->triangle_mesh.data;
+    const TriangleMeshData &data = *shapes::as<TriangleMeshShape>(shape).data;
     const bvh::Node *nodes = data.nodes;
 
     if (data.node_count == 0) {
@@ -334,7 +336,7 @@ void cast_convex_vs_triangle_mesh(cast_shape::CastShapeCollector &collector, con
                                   const Shape *shape_a, const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
                                   Vec3f displacement_a, const Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b,
                                   const Transformf &transform_b) {
-    const TriangleMeshData &data = *shape_b->triangle_mesh.data;
+    const TriangleMeshData &data = *shapes::as<TriangleMeshShape>(shape_b).data;
     const bvh::Node *nodes = data.nodes;
 
     // early out if there are no triangles
@@ -546,7 +548,7 @@ static penetration::PenetrationDepth collide_penetration_depth;
 void collide_convex_vs_triangle_mesh(collide_shape::CollideShapeCollector &collector, const collide_shape::CollideShapeSettings &settings,
                                      const Shape *shape_a, const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
                                      const Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
-    const TriangleMeshData &data = *shape_b->triangle_mesh.data;
+    const TriangleMeshData &data = *shapes::as<TriangleMeshShape>(shape_b).data;
     const bvh::Node *nodes = data.nodes;
 
     if (data.node_count == 0) return;
@@ -768,13 +770,13 @@ void collide_convex_vs_triangle_mesh(collide_shape::CollideShapeCollector &colle
 void collide_sphere_vs_triangle_mesh(collide_shape::CollideShapeCollector &collector, const collide_shape::CollideShapeSettings &settings,
                                      const Shape *shape_a, const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
                                      const Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
-    const TriangleMeshData &data = *shape_b->triangle_mesh.data;
+    const TriangleMeshData &data = *shapes::as<TriangleMeshShape>(shape_b).data;
     const bvh::Node *nodes = data.nodes;
 
     if (data.node_count == 0) return;
 
     // scaled sphere radius (assuming uniform scale)
-    const float sphere_radius = scalar::abs(transform_a.scale.x) * shape_a->sphere.radius;
+    const float sphere_radius = scalar::abs(transform_a.scale.x) * shapes::as<sphere::SphereShape>(shape_a).radius;
     const float expanded_radius = sphere_radius + settings.max_separation_distance;
     const float max_separation_sq = expanded_radius * expanded_radius;
 
@@ -998,13 +1000,13 @@ void cast_sphere_vs_triangle_mesh(cast_shape::CastShapeCollector &collector, con
                                   const Shape *shape_a, const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
                                   Vec3f displacement_a, const Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b,
                                   const Transformf &transform_b) {
-    const TriangleMeshData &data = *shape_b->triangle_mesh.data;
+    const TriangleMeshData &data = *shapes::as<TriangleMeshShape>(shape_b).data;
     const bvh::Node *nodes = data.nodes;
 
     if (data.node_count == 0) return;
 
     // scaled sphere radius (assuming uniform scale)
-    const float sphere_radius = scalar::abs(transform_a.scale.x) * shape_a->sphere.radius + settings.extra_convex_radius;
+    const float sphere_radius = scalar::abs(transform_a.scale.x) * shapes::as<sphere::SphereShape>(shape_a).radius + settings.extra_convex_radius;
 
     const Vec3f scale_b = vec3f::load(transform_b.scale);
 

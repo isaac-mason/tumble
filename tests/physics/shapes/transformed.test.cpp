@@ -58,8 +58,8 @@ void test_transformed_create_and_aabb(TestCtx &ctx) {
     Shape *t = transformed::create({.shape = s, .position = {5, 3, 2}, .quaternion = IDENTITY});
 
     CHECK(ctx, t->type == shapes::SHAPE_TRANSFORMED);
-    CHECK(ctx, t->transformed.shape == s);
-    CHECK(ctx, t->transformed.position.x == 5 && t->transformed.quaternion.w == 1);
+    CHECK(ctx, shapes::as<transformed::TransformedShape>(t).shape == s);
+    CHECK(ctx, shapes::as<transformed::TransformedShape>(t).position.x == 5 && shapes::as<transformed::TransformedShape>(t).quaternion.w == 1);
     CHECK(ctx, t->volume == s->volume);
 
     // the sphere's [-1, 1] moved by (5, 3, 2)

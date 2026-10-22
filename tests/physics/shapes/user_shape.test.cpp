@@ -12,7 +12,8 @@
 
 namespace {
 
-struct Ball {
+struct BallShape : shapes::Shape {
+    static constexpr shapes::ShapeType TYPE = shapes::SHAPE_USER_1;
     shapes::Shape *inner;
 };
 
@@ -23,7 +24,7 @@ struct Counters {
 
 Counters counters;
 
-const shapes::Shape *inner_of(const shapes::Shape *shape) { return static_cast<const Ball *>(shape->user.data)->inner; }
+const shapes::Shape *inner_of(const shapes::Shape *shape) { return shapes::as<BallShape>(shape).inner; }
 
 void ball_set_support(support::Support &out, const shapes::Shape *shape, support::SupportFunctionMode mode, Vec3f scale) {
     counters.supports++;
@@ -66,20 +67,19 @@ void init_with_ball(bool skips_pair_cache = false) {
     counters = {};
 }
 
-shapes::Shape *create_ball(Ball &ball, float radius) {
-    ball.inner = sphere::create({.radius = radius});
-    shapes::Shape *shape = shapes::allocate(shapes::SHAPE_USER_1);
-    shape->user.data = &ball;
-    shape->aabb = ball.inner->aabb;
-    shape->center_of_mass = ball.inner->center_of_mass;
-    shape->volume = ball.inner->volume;
+shapes::Shape *create_ball(float radius) {
+    BallShape *shape = shapes::allocate<BallShape>();
+    shape->inner = sphere::create({.radius = radius});
+    shape->aabb = shape->inner->aabb;
+    shape->center_of_mass = shape->inner->center_of_mass;
+    shape->volume = shape->inner->volume;
     shape->material_id = 7;
     return shape;
 }
 
-void destroy_ball(shapes::Shape *shape, Ball &ball) {
-    shapes::release(shape);
-    sphere::destroy(ball.inner);
+void destroy_ball(shapes::Shape *shape) {
+    sphere::destroy(shapes::as<BallShape>(shape).inner);
+    shapes::release<BallShape>(shape);
 }
 
 WorldScene make_floor_scene() {
@@ -101,8 +101,7 @@ rigid_body::RigidBody *add_awake_body(WorldScene &scene, shapes::Shape *shape, c
 
 void test_user_shape_rests_through_the_generic_rows(TestCtx &ctx) {
     init_with_ball();
-    Ball ball;
-    shapes::Shape *shape = create_ball(ball, 0.5f);
+    shapes::Shape *shape = create_ball(0.5f);
 
     // on its own it collides with the box as any convex shape does, and its contacts report its material
     WorldScene scene = make_floor_scene();
@@ -132,14 +131,13 @@ void test_user_shape_rests_through_the_generic_rows(TestCtx &ctx) {
 
     compound::destroy(compound_shape);
     scaled::destroy(scaled_shape);
-    destroy_ball(shape, ball);
+    destroy_ball(shape);
 }
 
 /** steps a ball resting on the floor and counts the steps whose narrowphase asked it for no support: the cached ones */
 uint32_t cached_steps_of_a_resting_ball(bool skips_pair_cache) {
     init_with_ball(skips_pair_cache);
-    Ball ball;
-    shapes::Shape *shape = create_ball(ball, 0.5f);
+    shapes::Shape *shape = create_ball(0.5f);
     WorldScene scene = make_floor_scene();
     add_awake_body(scene, shape, {0.0f, 0.5f, 0.0f});
     for (uint32_t i = 0; i < 60; i++) step_world(*scene.world);
@@ -150,7 +148,7 @@ uint32_t cached_steps_of_a_resting_ball(bool skips_pair_cache) {
         if (counters.supports == before) cached++;
     }
     release_world_scene(scene);
-    destroy_ball(shape, ball);
+    destroy_ball(shape);
     return cached;
 }
 
@@ -161,8 +159,7 @@ void test_user_shape_skipping_the_pair_cache_collides_every_step(TestCtx &ctx) {
 
 void test_user_shape_skipping_the_cache_reaches_through_compounds_and_wrappers(TestCtx &ctx) {
     init_with_ball(true);
-    Ball ball;
-    shapes::Shape *shape = create_ball(ball, 0.5f);
+    shapes::Shape *shape = create_ball(0.5f);
     shapes::Shape *plain = sphere::create({.radius = 0.5f});
     const compound::CompoundShapeChild children[2] = {{{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, plain},
                                                       {{1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, shape}};
@@ -176,7 +173,7 @@ void test_user_shape_skipping_the_cache_reaches_through_compounds_and_wrappers(T
     compound::destroy(with_ball);
     compound::destroy(without_ball);
     sphere::destroy(plain);
-    destroy_ball(shape, ball);
+    destroy_ball(shape);
 }
 
 void counting_collide(collide_shape::CollideShapeCollector &collector, const collide_shape::CollideShapeSettings &settings,
@@ -192,15 +189,14 @@ void test_user_shape_own_pair_row_replaces_the_generic_one(TestCtx &ctx) {
     shapes::set_collide_shape_fn(shapes::SHAPE_USER_1, shapes::SHAPE_BOX, counting_collide);
     shapes::set_collide_shape_fn(shapes::SHAPE_BOX, shapes::SHAPE_USER_1, collide_shape::reversed_collide_shape_vs_shape<counting_collide>);
 
-    Ball ball;
-    shapes::Shape *shape = create_ball(ball, 0.5f);
+    shapes::Shape *shape = create_ball(0.5f);
     WorldScene scene = make_floor_scene();
     rigid_body::RigidBody *body = add_awake_body(scene, shape, {0.0f, 0.5f, 0.0f});
     for (uint32_t i = 0; i < 10; i++) step_world(*scene.world);
     CHECK(ctx, counters.own_collides == 10);
     CHECK_NEAR(ctx, body->position.y, 0.5f, 0.02f);
     release_world_scene(scene);
-    destroy_ball(shape, ball);
+    destroy_ball(shape);
 
     // a second init starts the tables over: the generic row is back
     init_with_ball();
@@ -215,8 +211,7 @@ void draw_cross(debug::DebugBuffers &out, const shapes::Shape *, const Transform
 
 void test_user_shape_draws_its_bounds_or_its_own_lines(TestCtx &ctx) {
     init_with_ball();
-    Ball ball;
-    shapes::Shape *shape = create_ball(ball, 0.5f);
+    shapes::Shape *shape = create_ball(0.5f);
     debug::DebugBuffers *buffers = debug::create();
 
     // no draw: the bounds' twelve edges, at the pose
@@ -236,5 +231,5 @@ void test_user_shape_draws_its_bounds_or_its_own_lines(TestCtx &ctx) {
     CHECK_NEAR(ctx, buffers->lines[1], 2.0f, 1e-6f);
 
     debug::release(buffers);
-    destroy_ball(shape, ball);
+    destroy_ball(shape);
 }

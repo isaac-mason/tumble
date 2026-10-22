@@ -12,33 +12,23 @@
 #include "tumble/physics/collision/support.h"
 #include "tumble/physics/utils/face.h"
 #include "tumble/tumble.h"
+#include "tumble/util/assert.h"
+#include "tumble/util/object.h"
 
 TUMBLE_NAMESPACE_BEGIN
 
-// the heavy data the per-type payloads point at, each defined by its shape's own header.
-namespace convex_hull {
-struct ConvexHullData;
-}
-namespace triangle_mesh_data {
-struct TriangleMeshData;
-}
-namespace compound {
-struct CompoundData;
-}
-namespace static_compound {
-struct StaticCompoundData;
-}
 namespace world {
 struct World;
 }
 namespace debug {
 struct DebugBuffers;
 }
-// a shape is the fields every shape has, then a union of the per-type payloads: small shapes inline, the heavy ones
-// (hull, mesh, compound) pointing at data many shapes can share, the wrappers holding the shape they wrap. read a
-// payload once `type` says which. each type's functions live in the namespace named after its file, and dispatch.cpp
-// gathers every def() into shape_defs and fills the collide and cast tables. a type of the caller's own takes a user
-// slot: its def goes to dispatch::init with the built-ins, its payload is the `user` arm
+// a shape is the fields every shape has, and each type's own struct derives from it: small shapes keep their payload
+// inline, the heavy ones (hull, mesh, compound) point at data many shapes can share, the wrappers hold the shape they
+// wrap. shapes::as<T> reads a shape as its type's struct once `type` says which. each type's struct and functions live in
+// the namespace named after its file, and dispatch.cpp gathers every def() into shape_defs and fills the collide and cast
+// tables. a type of the caller's own is a struct deriving from Shape in a user slot, its def going to dispatch::init
+// with the built-ins
 namespace shapes {
 
 enum ShapeType : uint32_t {
@@ -76,85 +66,10 @@ inline uint32_t shape_type_index(ShapeType type) { return (uint32_t)type; }
 
 constexpr float DEFAULT_SHAPE_DENSITY = 1000.0f;  // kg/m^3
 
-struct Shape;
-
-// the per-type payloads.
-struct SphereShape {
-    float radius;
-    float density;
-};
-
-struct BoxShape {
-    Float3 half_extents;
-    float convex_radius;
-    float density;
-};
-
-struct CapsuleShape {
-    /** half height of the central cylinder, the hemispheres excluded */
-    float half_height_of_cylinder;
-    /** the radius, which is the convex radius */
-    float radius;
-    float density;
-};
-
-struct CylinderShape {
-    float half_height;
-    float radius;
-    float convex_radius;
-    float density;
-};
-
-struct PlaneShape {
-    Plane3f plane;
-    /** the bounded extent the plane is treated as having */
-    float half_extent;
-};
-
-struct ConvexHullShape {
-    /** the caller's, shared by any number of shapes, unless owns_data */
-    convex_hull::ConvexHullData *data;
-    float density;
-    /** destroy releases the data */
-    bool owns_data;
-};
-
-struct TriangleMeshShape {
-    /** the caller's, shared by any number of shapes, unless owns_data */
-    triangle_mesh_data::TriangleMeshData *data;
-    /** destroy releases the data */
-    bool owns_data;
-};
-
-struct CompoundShape {
-    compound::CompoundData *data;
-};
-
-struct StaticCompoundShape {
-    static_compound::StaticCompoundData *data;
-};
-
-struct TransformedShape {
-    Shape *shape;
-    Float3 position;
-    Float4 quaternion;
-};
-
-struct ScaledShape {
-    Shape *shape;
-    Float3 scale;
-};
-
-struct OffsetCenterOfMassShape {
-    Shape *shape;
-    Float3 offset;
-};
-
-/** a user type's payload: whatever its def's functions read */
-struct UserShape {
-    void *data;
-};
-
+/**
+ * the fields every shape has. a type's struct derives from it with a `static constexpr ShapeType TYPE`, and is made by
+ * allocate<T>, read by as<T> and freed by release<T>. never copied: a copy would lose the type's fields
+ */
 struct Shape {
     ShapeType type;
     /** local bounds */
@@ -163,22 +78,46 @@ struct Shape {
     float volume;
     /** the surface material a hit on this shape reports; -1 for none. a mesh carries its own per triangle */
     int32_t material_id;
-    union {
-        SphereShape sphere;
-        BoxShape box;
-        CapsuleShape capsule;
-        CylinderShape cylinder;
-        PlaneShape plane;
-        ConvexHullShape convex_hull;
-        TriangleMeshShape triangle_mesh;
-        CompoundShape compound;
-        StaticCompoundShape static_compound;
-        TransformedShape transformed;
-        ScaledShape scaled;
-        OffsetCenterOfMassShape offset_center_of_mass;
-        UserShape user;
-    };
+
+    Shape() = default;
+    Shape(const Shape &) = delete;
+    Shape &operator=(const Shape &) = delete;
 };
+
+/** a shape of type T, zeroed but for its type; null (error set) when the allocator fails. the type's create fills it */
+template <typename T>
+T *allocate() {
+    T *shape = util::create<T>();
+    if (shape == nullptr) return nullptr;
+    shape->type = T::TYPE;
+    return shape;
+}
+
+/** the shape as its type's struct, which `type` must be */
+template <typename T>
+T &as(Shape &shape) {
+    TUMBLE_ASSERT(shape.type == T::TYPE);
+    return static_cast<T &>(shape);
+}
+template <typename T>
+const T &as(const Shape &shape) {
+    TUMBLE_ASSERT(shape.type == T::TYPE);
+    return static_cast<const T &>(shape);
+}
+template <typename T>
+T &as(Shape *shape) {
+    return as<T>(*shape);
+}
+template <typename T>
+const T &as(const Shape *shape) {
+    return as<T>(*shape);
+}
+
+/** frees the shape's own memory, sized as T, which `type` must be; a type's destroy frees what it points at first */
+template <typename T>
+void release(Shape *shape) {
+    util::destroy(&as<T>(shape));
+}
 
 struct SurfaceNormalResult {
     Vec3f normal;
@@ -290,10 +229,6 @@ void set_cast_shape_fn(ShapeType type_a, ShapeType type_b, CastShapeVsShapeFn fn
 inline CollideShapeVsShapeFn collide_fn(ShapeType a, ShapeType b) { return collide_table[shape_type_index(a)][shape_type_index(b)]; }
 inline CastShapeVsShapeFn cast_fn(ShapeType a, ShapeType b) { return cast_table[shape_type_index(a)][shape_type_index(b)]; }
 
-/** a zeroed shape of `type`, or null (error set) when the allocator fails; the type's create fills it. */
-Shape *allocate(ShapeType type);
-/** frees the shape's own memory; a type's destroy frees what it points at first. */
-void release(Shape *shape);
 
 // the calls every shape answers, through its def
 

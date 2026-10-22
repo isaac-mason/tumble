@@ -13,8 +13,8 @@ void test_capsule_create(TestCtx &ctx) {
     shapes::Shape *c = capsule::create({.half_height_of_cylinder = 2.0f, .radius = 0.5f});
     CHECK(ctx, c != nullptr);
     CHECK(ctx, c->type == shapes::SHAPE_CAPSULE);
-    CHECK(ctx, c->capsule.half_height_of_cylinder == 2.0f && c->capsule.radius == 0.5f);
-    CHECK(ctx, c->capsule.density == 1000.0f);
+    CHECK(ctx, shapes::as<capsule::CapsuleShape>(c).half_height_of_cylinder == 2.0f && shapes::as<capsule::CapsuleShape>(c).radius == 0.5f);
+    CHECK(ctx, shapes::as<capsule::CapsuleShape>(c).density == 1000.0f);
     CHECK(ctx, c->material_id == -1);
 
     // bounds reach half height plus radius along y, the radius across
@@ -34,7 +34,7 @@ void test_capsule_create(TestCtx &ctx) {
     custom.density = 500.0f;
     custom.material_id = 7;
     shapes::Shape *d = capsule::create(custom);
-    CHECK(ctx, d->capsule.density == 500.0f && d->material_id == 7);
+    CHECK(ctx, shapes::as<capsule::CapsuleShape>(d).density == 500.0f && d->material_id == 7);
 
     capsule::destroy(c);
     capsule::destroy(unit);

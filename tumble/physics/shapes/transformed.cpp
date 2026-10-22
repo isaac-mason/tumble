@@ -12,11 +12,11 @@ namespace transformed {
 
 Shape *create(const TransformedShapeSettings &settings) {
     TUMBLE_ASSERT(settings.shape != nullptr);
-    Shape *shape = shapes::allocate(shapes::SHAPE_TRANSFORMED);
+    TransformedShape *shape = shapes::allocate<TransformedShape>();
     if (shape == nullptr) return nullptr;
-    shape->transformed.shape = settings.shape;
-    shape->transformed.position = settings.position;
-    shape->transformed.quaternion = settings.quaternion;
+    shape->shape = settings.shape;
+    shape->position = settings.position;
+    shape->quaternion = settings.quaternion;
     shape->material_id = -1;
 
     update(shape);
@@ -24,17 +24,17 @@ Shape *create(const TransformedShapeSettings &settings) {
     return shape;
 }
 
-void destroy(Shape *shape) { shapes::release(shape); }
+void destroy(Shape *shape) { shapes::release<TransformedShape>(shape); }
 
 static float compute_transformed_volume(const Shape *shape) {
     // translation and rotation don't affect volume
-    return shape->transformed.shape->volume;
+    return shapes::as<TransformedShape>(shape).shape->volume;
 }
 
 static Box3f &compute_transformed_local_bounds(Box3f &out, const Shape *shape) {
-    const AABox child_aabb = aabox::load(shape->transformed.shape->aabb);
-    const Quatf rotation = quatf::load(shape->transformed.quaternion);
-    const Vec3f position = vec3f::load(shape->transformed.position);
+    const AABox child_aabb = aabox::load(shapes::as<TransformedShape>(shape).shape->aabb);
+    const Quatf rotation = quatf::load(shapes::as<TransformedShape>(shape).quaternion);
+    const Vec3f position = vec3f::load(shapes::as<TransformedShape>(shape).position);
 
     // transform all 8 corners of the child aabb
     AABox bounds = aabox::empty();
@@ -54,8 +54,8 @@ static Box3f &compute_transformed_local_bounds(Box3f &out, const Shape *shape) {
 
 static Vec3f compute_transformed_center_of_mass(const Shape *shape) {
     // the inner shape's centre of mass, rotated, then translated
-    const Vec3f rotated = vec3f::transform_quat(vec3f::load(shape->transformed.shape->center_of_mass), quatf::load(shape->transformed.quaternion));
-    return vec3f::add(rotated, vec3f::load(shape->transformed.position));
+    const Vec3f rotated = vec3f::transform_quat(vec3f::load(shapes::as<TransformedShape>(shape).shape->center_of_mass), quatf::load(shapes::as<TransformedShape>(shape).quaternion));
+    return vec3f::add(rotated, vec3f::load(shapes::as<TransformedShape>(shape).position));
 }
 
 void update(Shape *shape) {
@@ -66,40 +66,40 @@ void update(Shape *shape) {
 
 /** the inner shape's world transform: the parent's scale applies to this shape's position, and reaches the inner shape rotated into its frame */
 static void inner_transform(Transformf &out, const Transformf &parent, const Shape *shape) {
-    Vec3f translation = vec3f::multiply(vec3f::load(shape->transformed.position), vec3f::load(parent.scale));
+    Vec3f translation = vec3f::multiply(vec3f::load(shapes::as<TransformedShape>(shape).position), vec3f::load(parent.scale));
     translation = vec3f::transform_quat(translation, quatf::load(parent.quaternion));
     vec3f::store(out.position, vec3f::add(vec3f::load(parent.position), translation));
-    quatf::store(out.quaternion, quatf::multiply(quatf::load(parent.quaternion), quatf::load(shape->transformed.quaternion)));
-    vec3f::store(out.scale, shapes::transform_scale(quatf::load(shape->transformed.quaternion), vec3f::load(parent.scale)));
+    quatf::store(out.quaternion, quatf::multiply(quatf::load(parent.quaternion), quatf::load(shapes::as<TransformedShape>(shape).quaternion)));
+    vec3f::store(out.scale, shapes::transform_scale(quatf::load(shapes::as<TransformedShape>(shape).quaternion), vec3f::load(parent.scale)));
 }
 
 void compute_mass_properties(mass_properties::MassProperties &out, const Shape *shape) {
     // only rotates the inertia (translation doesn't affect inertia about the centre of mass)
     mass_properties::MassProperties child_mass_properties;
-    shapes::compute_mass_properties(child_mass_properties, shape->transformed.shape);
+    shapes::compute_mass_properties(child_mass_properties, shapes::as<TransformedShape>(shape).shape);
 
-    Mat4f rotation = mat4f::from_quat(quatf::load(shape->transformed.quaternion));
+    Mat4f rotation = mat4f::from_quat(quatf::load(shapes::as<TransformedShape>(shape).quaternion));
 
     mass_properties::rotate(out, child_mass_properties, rotation);
 }
 
 void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
     // transform surface position to the inner shape's local space
-    io.position = vec3f::subtract(io.position, vec3f::load(shape->transformed.position));
-    const Quatf inv_rotation = quatf::conjugate(quatf::load(shape->transformed.quaternion));
+    io.position = vec3f::subtract(io.position, vec3f::load(shapes::as<TransformedShape>(shape).position));
+    const Quatf inv_rotation = quatf::conjugate(quatf::load(shapes::as<TransformedShape>(shape).quaternion));
     io.position = vec3f::transform_quat(io.position, inv_rotation);
 
     // get normal from inner shape in its local space
-    shapes::def_of(shape->transformed.shape).get_surface_normal(io, shape->transformed.shape, sub_shape_id);
+    shapes::def_of(shapes::as<TransformedShape>(shape).shape).get_surface_normal(io, shapes::as<TransformedShape>(shape).shape, sub_shape_id);
 
     // the normal comes back in the inner shape's local space; this shape's rotation alone takes it out
-    io.normal = vec3f::transform_quat(io.normal, quatf::load(shape->transformed.quaternion));
+    io.normal = vec3f::transform_quat(io.normal, quatf::load(shapes::as<TransformedShape>(shape).quaternion));
 }
 
 void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
     // build the shape's local transform matrix. the transform carries no scale, so the position is scaled here
-    const Vec3f scaled_position = vec3f::multiply(vec3f::load(shape->transformed.position), io.scale);
-    const Mat4f shape_matrix = mat4f::from_rotation_translation(quatf::load(shape->transformed.quaternion), scaled_position);
+    const Vec3f scaled_position = vec3f::multiply(vec3f::load(shapes::as<TransformedShape>(shape).position), io.scale);
+    const Mat4f shape_matrix = mat4f::from_rotation_translation(quatf::load(shapes::as<TransformedShape>(shape).quaternion), scaled_position);
 
     // accumulate transform: transform = transform * shape matrix
     io.transform = mat4f::multiply(io.transform, shape_matrix);
@@ -108,33 +108,33 @@ void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, cons
     const Vec3f local_direction = mat4f::multiply3x3_transposed_vec(shape_matrix, direction);
 
     // the scale as the inner shape sees it
-    io.scale = shapes::transform_scale(quatf::load(shape->transformed.quaternion), io.scale);
+    io.scale = shapes::transform_scale(quatf::load(shapes::as<TransformedShape>(shape).quaternion), io.scale);
 
     // compute face in local space; the sub shape id passes unchanged (decorator shapes don't consume bits)
-    shapes::def_of(shape->transformed.shape).get_supporting_face(io, local_direction, shape->transformed.shape, sub_shape_id);
+    shapes::def_of(shapes::as<TransformedShape>(shape).shape).get_supporting_face(io, local_direction, shapes::as<TransformedShape>(shape).shape, sub_shape_id);
 }
 
-float get_inner_radius(const Shape *shape) { return shapes::get_shape_inner_radius(shape->transformed.shape); }
+float get_inner_radius(const Shape *shape) { return shapes::get_shape_inner_radius(shapes::as<TransformedShape>(shape).shape); }
 
 int32_t get_material(const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
-    return shapes::get_shape_material(shape->transformed.shape, sub_shape_id);
+    return shapes::get_shape_material(shapes::as<TransformedShape>(shape).shape, sub_shape_id);
 }
 
 void get_leaf_shape(shapes::GetLeafShapeResult &out, const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
     // pass through to inner shape
-    shapes::get_leaf_shape(out, shape->transformed.shape, sub_shape_id);
+    shapes::get_leaf_shape(out, shapes::as<TransformedShape>(shape).shape, sub_shape_id);
 }
 
 void get_sub_shape_transformed_shape(shapes::GetSubShapeTransformedShapeResult &out, const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
     // apply decorated transform: position += rotate(rotation, scale * shape position), rotation = rotation * shape rotation
-    Vec3f shape_position = vec3f::multiply(vec3f::load(shape->transformed.position), out.scale);
+    Vec3f shape_position = vec3f::multiply(vec3f::load(shapes::as<TransformedShape>(shape).position), out.scale);
     shape_position = vec3f::transform_quat(shape_position, out.rotation);
     out.position = vec3f::add(out.position, shape_position);
-    out.rotation = quatf::multiply(out.rotation, quatf::load(shape->transformed.quaternion));
-    out.scale = shapes::transform_scale(quatf::load(shape->transformed.quaternion), out.scale);
+    out.rotation = quatf::multiply(out.rotation, quatf::load(shapes::as<TransformedShape>(shape).quaternion));
+    out.scale = shapes::transform_scale(quatf::load(shapes::as<TransformedShape>(shape).quaternion), out.scale);
 
     // pass through to inner shape
-    shapes::get_sub_shape_transformed_shape(out, shape->transformed.shape, sub_shape_id);
+    shapes::get_sub_shape_transformed_shape(out, shapes::as<TransformedShape>(shape).shape, sub_shape_id);
 }
 
 /* cast ray */
@@ -156,7 +156,7 @@ void cast_ray_vs_transformed(cast_ray::CastRayCollector &collector, const cast_r
 
     // cast against the inner shape at the identity pose (already accumulated), with the scale it sees
     const Transformf local = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, world.scale};
-    shapes::def_of(shape->transformed.shape).cast_ray(collector, settings, local_ray, shape->transformed.shape, sub_shape_id, local);
+    shapes::def_of(shapes::as<TransformedShape>(shape).shape).cast_ray(collector, settings, local_ray, shapes::as<TransformedShape>(shape).shape, sub_shape_id, local);
 }
 
 /* collide point */
@@ -168,7 +168,7 @@ void collide_point_vs_transformed(collide_point::CollidePointCollector &collecto
     Transformf world;
     inner_transform(world, transform_b, shape_b);
 
-    shapes::def_of(shape_b->transformed.shape).collide_point(collector, settings, point, shape_b->transformed.shape, sub_shape_id_b, world);
+    shapes::def_of(shapes::as<TransformedShape>(shape_b).shape).collide_point(collector, settings, point, shapes::as<TransformedShape>(shape_b).shape, sub_shape_id_b, world);
 }
 
 /* collide shape */
@@ -180,7 +180,7 @@ void collide_transformed_vs_shape(collide_shape::CollideShapeCollector &collecto
     Transformf world_a;
     inner_transform(world_a, transform_a, shape_a);
 
-    const Shape *inner = shape_a->transformed.shape;
+    const Shape *inner = shapes::as<TransformedShape>(shape_a).shape;
     const shapes::CollideShapeVsShapeFn fn = shapes::collide_fn(inner->type, shape_b->type);
     if (fn == nullptr) return;
 
@@ -194,7 +194,7 @@ void collide_shape_vs_transformed(collide_shape::CollideShapeCollector &collecto
     Transformf world_b;
     inner_transform(world_b, transform_b, shape_b);
 
-    const Shape *inner = shape_b->transformed.shape;
+    const Shape *inner = shapes::as<TransformedShape>(shape_b).shape;
     const shapes::CollideShapeVsShapeFn fn = shapes::collide_fn(shape_a->type, inner->type);
     if (fn == nullptr) return;
 
@@ -210,7 +210,7 @@ void cast_transformed_vs_shape(cast_shape::CastShapeCollector &collector, const 
     Transformf world_a;
     inner_transform(world_a, transform_a, shape_a);
 
-    const Shape *inner = shape_a->transformed.shape;
+    const Shape *inner = shapes::as<TransformedShape>(shape_a).shape;
     const shapes::CastShapeVsShapeFn fn = shapes::cast_fn(inner->type, shape_b->type);
     if (fn == nullptr) return;
 
@@ -225,7 +225,7 @@ void cast_shape_vs_transformed(cast_shape::CastShapeCollector &collector, const 
     Transformf world_b;
     inner_transform(world_b, transform_b, shape_b);
 
-    const Shape *inner = shape_b->transformed.shape;
+    const Shape *inner = shapes::as<TransformedShape>(shape_b).shape;
     const shapes::CastShapeVsShapeFn fn = shapes::cast_fn(shape_a->type, inner->type);
     if (fn == nullptr) return;
 

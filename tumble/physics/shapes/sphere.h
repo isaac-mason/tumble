@@ -12,6 +12,12 @@ namespace sphere {
 
 using shapes::Shape;
 
+struct SphereShape : Shape {
+    static constexpr shapes::ShapeType TYPE = shapes::SHAPE_SPHERE;
+    float radius;
+    float density;
+};
+
 struct SphereShapeSettings {
     float radius;
     float density = shapes::DEFAULT_SHAPE_DENSITY;

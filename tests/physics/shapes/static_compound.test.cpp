@@ -23,7 +23,11 @@ static Shape *make_static(const CompoundShapeChild *children, uint32_t count, ui
     return static_compound::create({.children = children, .num_children = count, .bvh_max_leaf_children = max_leaf_children});
 }
 
-static const collections::Vec<CompoundShapeChild> &children_of(const Shape *shape) { return shape->static_compound.data->children; }
+/** the data the shape is over */
+static static_compound::StaticCompoundData &compound_data(const Shape *shape) {
+    return *shapes::as<static_compound::StaticCompoundShape>(shape).data;
+}
+static const collections::Vec<CompoundShapeChild> &children_of(const Shape *shape) { return compound_data(shape).children; }
 
 /** the child the first level of `id` names */
 static const CompoundShapeChild &child_of(const Shape *shape, sub_shape::SubShapeId id) {
@@ -52,7 +56,7 @@ void test_static_compound_creation(TestCtx &ctx) {
     Shape *empty = make_static(nullptr, 0);
     CHECK(ctx, empty->type == shapes::SHAPE_STATIC_COMPOUND);
     CHECK(ctx, children_of(empty).length == 0);
-    CHECK(ctx, empty->static_compound.data->bvh.length == 0);
+    CHECK(ctx, compound_data(empty).bvh.length == 0);
     CHECK(ctx, empty->volume == 0.0f);
 
     // single child
@@ -60,7 +64,7 @@ void test_static_compound_creation(TestCtx &ctx) {
     const CompoundShapeChild one[] = {{{0, 0, 0}, IDENTITY, s}};
     Shape *single = make_static(one, 1);
     CHECK(ctx, children_of(single).length == 1);
-    CHECK(ctx, single->static_compound.data->bvh.length > 0);
+    CHECK(ctx, compound_data(single).bvh.length > 0);
     CHECK_NEAR(ctx, single->volume, 4.0f / 3.0f * scalar::PI, 1e-4f);
 
     // multiple children
@@ -68,7 +72,7 @@ void test_static_compound_creation(TestCtx &ctx) {
     const CompoundShapeChild two[] = {{{0, 0, 0}, IDENTITY, s}, {{5, 0, 0}, IDENTITY, b}};
     Shape *multiple = make_static(two, 2);
     CHECK(ctx, children_of(multiple).length == 2);
-    CHECK(ctx, multiple->static_compound.data->bvh.length > 0);
+    CHECK(ctx, compound_data(multiple).bvh.length > 0);
 
     static_compound::destroy(empty);
     static_compound::destroy(single);
@@ -138,7 +142,7 @@ void test_static_compound_bvh_structure(TestCtx &ctx) {
     CompoundShapeChild row[10];
     for (uint32_t i = 0; i < 10; i++) row[i] = {{(float)i * 2.0f, 0, 0}, IDENTITY, s};
     Shape *shape = make_static(row, 10);
-    const collections::Vec<bvh::Node> &tree = shape->static_compound.data->bvh;
+    const collections::Vec<bvh::Node> &tree = compound_data(shape).bvh;
 
     const static_compound_bvh::StaticCompoundBvhStats stats = static_compound_bvh::stats(tree.data, tree.length);
     CHECK(ctx, stats.node_count == tree.length);
@@ -171,7 +175,7 @@ void test_static_compound_bvh_structure(TestCtx &ctx) {
         for (uint32_t y = 0; y < 5; y++)
             for (uint32_t z = 0; z < 5; z++) lattice[x * 25 + y * 5 + z] = {{(float)x * 3, (float)y * 3, (float)z * 3}, IDENTITY, s};
     Shape *cube = make_static(lattice, 125);
-    const collections::Vec<bvh::Node> &cube_tree = cube->static_compound.data->bvh;
+    const collections::Vec<bvh::Node> &cube_tree = compound_data(cube).bvh;
     const static_compound_bvh::StaticCompoundBvhStats cube_stats = static_compound_bvh::stats(cube_tree.data, cube_tree.length);
     CHECK(ctx, cube_stats.total_children == 125);
     CHECK(ctx, cube_stats.max_depth >= 3 && cube_stats.max_depth <= 20);
@@ -190,15 +194,15 @@ void test_static_compound_update(TestCtx &ctx) {
     Shape *s = sphere::create({.radius = 1.0f});
     const CompoundShapeChild one[] = {{{0, 0, 0}, IDENTITY, s}};
     Shape *shape = make_static(one, 1);
-    const uint32_t original_nodes = shape->static_compound.data->bvh.length;
+    const uint32_t original_nodes = compound_data(shape).bvh.length;
 
     // add a child by hand, then rebuild
     Shape *s2 = sphere::create({.radius = 1.0f});
-    shape->static_compound.data->children.push({{10, 0, 0}, IDENTITY, s2});
+    compound_data(shape).children.push({{10, 0, 0}, IDENTITY, s2});
     CHECK(ctx, static_compound::update(shape));
-    CHECK(ctx, shape->static_compound.data->bvh.length >= original_nodes);
+    CHECK(ctx, compound_data(shape).bvh.length >= original_nodes);
     CHECK_NEAR(ctx, shape->aabb.max.x, 11.0f, 1e-5f);
-    CHECK(ctx, static_compound_bvh::stats(shape->static_compound.data->bvh.data, shape->static_compound.data->bvh.length).total_children == 2);
+    CHECK(ctx, static_compound_bvh::stats(compound_data(shape).bvh.data, compound_data(shape).bvh.length).total_children == 2);
 
     static_compound::destroy(shape);
     sphere::destroy(s);
@@ -506,7 +510,7 @@ void test_static_compound_agrees_with_compound(TestCtx &ctx) {
         if (st_ray.has_hit == dyn_ray.has_hit &&
             (!st_ray.has_hit || (scalar::abs(st_ray.hits[0].fraction - dyn_ray.hits[0].fraction) <= 1e-6f &&
                                  near3(child_of(st, st_ray.hits[0].sub_shape_id).position,
-                                       dyn->compound.data->children[dyn_child_index(dyn_ray.hits[0].sub_shape_id)].position, 0.0f)))) {
+                                       shapes::as<compound::CompoundShape>(dyn).data->children[dyn_child_index(dyn_ray.hits[0].sub_shape_id)].position, 0.0f)))) {
             ray_agree++;
         }
         if (st_ray.has_hit) ray_hits++;
@@ -737,7 +741,7 @@ void test_static_compound_bvh_bounds_exact(TestCtx &ctx) {
         children[i] = {{(float)i * 0.1f + 0.37f, (float)(i % 7) * 0.13f - 0.3f, (float)(i % 5) * 0.29f + 0.01f}, IDENTITY, b};
     }
     Shape *shape = make_static(children, 64, 2);
-    const collections::Vec<bvh::Node> &tree = shape->static_compound.data->bvh;
+    const collections::Vec<bvh::Node> &tree = compound_data(shape).bvh;
 
     // every node contains its children with zero tolerance
     uint32_t checked = 0;

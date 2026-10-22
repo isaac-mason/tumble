@@ -16,7 +16,7 @@ import {
     KCCPolicy,
     MotionType,
     RigidBody,
-    type Shape,
+    Shape,
     Transformed,
     type Vec3,
     World,
@@ -70,7 +70,7 @@ function release(scene: Scene, characters: KCC[]): void {
     }
     Filter.destroy(scene.filter);
     World.destroy(scene.world);
-    for (const shape of scene.shapes.reverse()) Low.Transformed.destroy(shape);
+    for (const shape of scene.shapes.reverse()) Shape.destroy(shape);
 }
 
 /** a frame of a game: the velocity from the ground's when standing (else the vertical part), gravity and the input */

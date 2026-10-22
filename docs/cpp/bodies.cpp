@@ -329,7 +329,7 @@ int main() {
 
         // a shape changed in place: its centre of mass before the change keeps the anchors put
         const Vec3f previous_center_of_mass = vec3f::load(bigger->center_of_mass);
-        bigger->box.half_extents = {1.0f, 2.0f, 1.0f};
+        shapes::as<box::BoxShape>(bigger).half_extents = {1.0f, 2.0f, 1.0f};
         box::update(bigger);
         rigid_body::update_shape(*world, body, previous_center_of_mass);
         /* SNIPPET_END: shape */

@@ -33,12 +33,12 @@ Shape *create(const StaticCompoundShapeSettings &settings) {
     }
     for (uint32_t i = 0; i < settings.num_children; i++) data->children.push(settings.children[i]);
 
-    Shape *shape = shapes::allocate(shapes::SHAPE_STATIC_COMPOUND);
+    StaticCompoundShape *shape = shapes::allocate<StaticCompoundShape>();
     if (shape == nullptr) {
         release_data(data);
         return nullptr;
     }
-    shape->static_compound.data = data;
+    shape->data = data;
     shape->material_id = -1;
 
     if (!update(shape)) {
@@ -50,12 +50,12 @@ Shape *create(const StaticCompoundShapeSettings &settings) {
 }
 
 void destroy(Shape *shape) {
-    release_data(shape->static_compound.data);
-    shapes::release(shape);
+    release_data(shapes::as<StaticCompoundShape>(shape).data);
+    shapes::release<StaticCompoundShape>(shape);
 }
 
 bool update(Shape *shape) {
-    StaticCompoundData &data = *shape->static_compound.data;
+    StaticCompoundData &data = *shapes::as<StaticCompoundShape>(shape).data;
 
     // rebuild the bvh (reorders the children)
     if (!static_compound_bvh::build(data.bvh, data.children, data.bvh_settings)) return false;
@@ -69,7 +69,7 @@ bool update(Shape *shape) {
 
 void cast_ray(cast_ray::CastRayCollector &collector, const cast_ray::CastRaySettings &settings, const cast_ray::Rayf &ray, const Shape *shape,
               const sub_shape::SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
-    const StaticCompoundData &data = *shape->static_compound.data;
+    const StaticCompoundData &data = *shapes::as<StaticCompoundShape>(shape).data;
     const bvh::Node *nodes = data.bvh.data;
     if (data.bvh.length == 0) return;
 
@@ -159,7 +159,7 @@ void cast_ray(cast_ray::CastRayCollector &collector, const cast_ray::CastRaySett
 
 void collide_point(collide_point::CollidePointCollector &collector, const collide_point::CollidePointSettings &settings, Vec3f point,
                    const Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
-    const StaticCompoundData &data = *shape_b->static_compound.data;
+    const StaticCompoundData &data = *shapes::as<StaticCompoundShape>(shape_b).data;
     const bvh::Node *nodes = data.bvh.data;
     if (data.bvh.length == 0) return;
 
@@ -279,7 +279,7 @@ void collide_static_compound_vs_shape(collide_shape::CollideShapeCollector &coll
                                       const Shape *shape_a, const sub_shape::SubShapeIdBuilder &sub_shape_id_a,
                                       const Transformf &transform_a, const Shape *shape_b,
                                       const sub_shape::SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
-    const StaticCompoundData &data = *shape_a->static_compound.data;
+    const StaticCompoundData &data = *shapes::as<StaticCompoundShape>(shape_a).data;
     if (data.bvh.length == 0) return;
 
     // shape b's bounds (scaled by b's scale) in compound a's local space, for the bvh culling
@@ -311,7 +311,7 @@ void collide_shape_vs_static_compound(collide_shape::CollideShapeCollector &coll
                                       const Shape *shape_a, const sub_shape::SubShapeIdBuilder &sub_shape_id_a,
                                       const Transformf &transform_a, const Shape *shape_b,
                                       const sub_shape::SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
-    const StaticCompoundData &data = *shape_b->static_compound.data;
+    const StaticCompoundData &data = *shapes::as<StaticCompoundShape>(shape_b).data;
     if (data.bvh.length == 0) return;
 
     // shape a's bounds (scaled by a's scale) in compound b's local space, for the bvh culling
@@ -345,7 +345,7 @@ void cast_static_compound_vs_shape(cast_shape::CastShapeCollector &collector, co
                                    const Shape *shape_a, const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
                                    Vec3f displacement_a, const Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b,
                                    const Transformf &transform_b) {
-    const StaticCompoundData &data = *shape_a->static_compound.data;
+    const StaticCompoundData &data = *shapes::as<StaticCompoundShape>(shape_a).data;
     if (data.bvh.length == 0) return;
 
     // shape b's swept bounds in compound a's local space for the bvh culling: the compound moves by the
@@ -393,7 +393,7 @@ void cast_shape_vs_static_compound(cast_shape::CastShapeCollector &collector, co
                                    const Shape *shape_a, const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
                                    Vec3f displacement_a, const Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b,
                                    const Transformf &transform_b) {
-    const StaticCompoundData &data = *shape_b->static_compound.data;
+    const StaticCompoundData &data = *shapes::as<StaticCompoundShape>(shape_b).data;
     const bvh::Node *nodes = data.bvh.data;
 
     // early out if there are no children

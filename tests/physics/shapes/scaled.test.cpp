@@ -48,8 +48,8 @@ void test_scaled_create_and_aabb(TestCtx &ctx) {
     Shape *ss = scaled::create({.shape = s, .scale = {2, 3, 4}});
 
     CHECK(ctx, ss->type == shapes::SHAPE_SCALED);
-    CHECK(ctx, ss->scaled.shape == s);
-    CHECK(ctx, ss->scaled.scale.x == 2 && ss->scaled.scale.y == 3 && ss->scaled.scale.z == 4);
+    CHECK(ctx, shapes::as<scaled::ScaledShape>(ss).shape == s);
+    CHECK(ctx, shapes::as<scaled::ScaledShape>(ss).scale.x == 2 && shapes::as<scaled::ScaledShape>(ss).scale.y == 3 && shapes::as<scaled::ScaledShape>(ss).scale.z == 4);
 
     // [-2, -3, -4] to [2, 3, 4]
     CHECK(ctx, ss->aabb.min.x == -2 && ss->aabb.min.y == -3 && ss->aabb.min.z == -4);

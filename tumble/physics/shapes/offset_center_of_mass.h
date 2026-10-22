@@ -14,6 +14,12 @@ namespace offset_center_of_mass {
 
 using shapes::Shape;
 
+struct OffsetCenterOfMassShape : Shape {
+    static constexpr shapes::ShapeType TYPE = shapes::SHAPE_OFFSET_CENTER_OF_MASS;
+    Shape *shape;
+    Float3 offset;
+};
+
 struct OffsetCenterOfMassShapeSettings {
     /** the caller's; outlives every offset shape over it */
     Shape *shape = nullptr;

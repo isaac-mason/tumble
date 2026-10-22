@@ -27,9 +27,9 @@ void test_box_create(TestCtx &ctx) {
     shapes::Shape *b = box::create({.half_extents = {1.0f, 2.0f, 3.0f}});
     CHECK(ctx, b != nullptr);
     CHECK(ctx, b->type == shapes::SHAPE_BOX);
-    CHECK(ctx, b->box.half_extents.x == 1.0f && b->box.half_extents.y == 2.0f && b->box.half_extents.z == 3.0f);
-    CHECK(ctx, b->box.density == 1000.0f && b->material_id == -1);
-    CHECK(ctx, b->box.convex_radius == support::DEFAULT_CONVEX_RADIUS);
+    CHECK(ctx, shapes::as<box::BoxShape>(b).half_extents.x == 1.0f && shapes::as<box::BoxShape>(b).half_extents.y == 2.0f && shapes::as<box::BoxShape>(b).half_extents.z == 3.0f);
+    CHECK(ctx, shapes::as<box::BoxShape>(b).density == 1000.0f && b->material_id == -1);
+    CHECK(ctx, shapes::as<box::BoxShape>(b).convex_radius == support::DEFAULT_CONVEX_RADIUS);
 
     // bounds are +- the half extents, the centre of mass the origin
     CHECK(ctx, b->aabb.min.x == -1.0f && b->aabb.min.y == -2.0f && b->aabb.min.z == -3.0f);
@@ -40,13 +40,13 @@ void test_box_create(TestCtx &ctx) {
     CHECK(ctx, b->volume == 48.0f);
 
     // update after a change recomputes bounds and volume
-    b->box.half_extents = {0.5f, 0.5f, 2.0f};
+    shapes::as<box::BoxShape>(b).half_extents = {0.5f, 0.5f, 2.0f};
     box::update(b);
     CHECK(ctx, b->volume == 4.0f && b->aabb.max.z == 2.0f && b->aabb.min.x == -0.5f);
     box::destroy(b);
 
     shapes::Shape *dense = box::create({.half_extents = {1.0f, 1.0f, 1.0f}, .density = 250.0f, .material_id = 7});
-    CHECK(ctx, dense->box.density == 250.0f && dense->material_id == 7);
+    CHECK(ctx, shapes::as<box::BoxShape>(dense).density == 250.0f && dense->material_id == 7);
     box::destroy(dense);
 }
 
@@ -54,23 +54,23 @@ void test_box_convex_radius_clamp(TestCtx &ctx) {
 
     // fits: kept
     shapes::Shape *b = box::create({.half_extents = {0.5f, 1.0f, 2.0f}, .convex_radius = 0.1f});
-    CHECK(ctx, b->box.convex_radius == 0.1f);
+    CHECK(ctx, shapes::as<box::BoxShape>(b).convex_radius == 0.1f);
     box::destroy(b);
     // oversized: clamped to the smallest half extent
     b = box::create({.half_extents = {0.02f, 1.0f, 2.0f}, .convex_radius = 1.0f});
-    CHECK(ctx, b->box.convex_radius == 0.02f);
+    CHECK(ctx, shapes::as<box::BoxShape>(b).convex_radius == 0.02f);
     box::destroy(b);
     // the default clamps too
     b = box::create({.half_extents = {0.01f, 1.0f, 2.0f}});
-    CHECK(ctx, b->box.convex_radius == 0.01f);
+    CHECK(ctx, shapes::as<box::BoxShape>(b).convex_radius == 0.01f);
     box::destroy(b);
     // zero sized
     b = box::create({.half_extents = {0.0f, 0.0f, 0.0f}, .convex_radius = 1.0f});
-    CHECK(ctx, b->box.convex_radius == 0.0f && b->volume == 0.0f);
+    CHECK(ctx, shapes::as<box::BoxShape>(b).convex_radius == 0.0f && b->volume == 0.0f);
     box::destroy(b);
     // exactly the smallest half extent
     b = box::create({.half_extents = {0.3f, 1.0f, 2.0f}, .convex_radius = 0.3f});
-    CHECK(ctx, b->box.convex_radius == 0.3f);
+    CHECK(ctx, shapes::as<box::BoxShape>(b).convex_radius == 0.3f);
     box::destroy(b);
 }
 

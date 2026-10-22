@@ -15,8 +15,17 @@
 #include "tumble/physics/constraints/six_dof_constraint.h"
 #include "tumble/physics/constraints/slider_constraint.h"
 #include "tumble/physics/constraints/swing_twist_constraint.h"
+#include "tumble/physics/shapes/box.h"
+#include "tumble/physics/shapes/capsule.h"
 #include "tumble/physics/shapes/compound.h"
 #include "tumble/physics/shapes/convex_hull.h"
+#include "tumble/physics/shapes/cylinder.h"
+#include "tumble/physics/shapes/offset_center_of_mass.h"
+#include "tumble/physics/shapes/plane.h"
+#include "tumble/physics/shapes/scaled.h"
+#include "tumble/physics/shapes/sphere.h"
+#include "tumble/physics/shapes/transformed.h"
+#include "tumble/physics/shapes/triangle_mesh.h"
 #include "tumble/physics/shapes/utils/triangle_mesh_data.h"
 #include "tumble/util/object.h"
 
@@ -24,8 +33,18 @@ TUMBLE_NAMESPACE_BEGIN
 
 namespace debug {
 
+using box::BoxShape;
+using capsule::CapsuleShape;
+using convex_hull::ConvexHullShape;
+using cylinder::CylinderShape;
+using offset_center_of_mass::OffsetCenterOfMassShape;
+using plane::PlaneShape;
 using rigid_body::RigidBody;
+using scaled::ScaledShape;
 using shapes::Shape;
+using sphere::SphereShape;
+using transformed::TransformedShape;
+using triangle_mesh::TriangleMeshShape;
 using tumble::bodies::Bodies;
 using tumble::contact_constraints::ContactConstraint;
 using tumble::contact_constraints::ContactConstraints;
@@ -174,8 +193,8 @@ static void draw_shape(DebugBuffers &out, const Shape *shape, const Transformf &
 
 static void draw_sphere(DebugBuffers &out, const Shape *shape, const Transformf &transform, Vec3f color) {
     // sphere only supports uniform scaling
-    const float radius = shape->sphere.radius * transform.scale.x;
-    const float a = 1.0f / scalar::sqrt(2.0f);
+    const float radius = shapes::as<SphereShape>(shape).radius * transform.scale.x;
+    const float a =1.0f / scalar::sqrt(2.0f);
     const Vec3f normals[5] = {vec3f::make(1.0f, 0.0f, 0.0f), vec3f::make(0.0f, 1.0f, 0.0f), vec3f::make(0.0f, 0.0f, 1.0f), vec3f::make(a, 0.0f, a), vec3f::make(a, 0.0f, -a)};
     for (uint32_t i = 0; i < 5; i++) {
         Vec3f u, v;
@@ -201,14 +220,15 @@ static void draw_local_box(DebugBuffers &out, Vec3f lo, Vec3f hi, const Transfor
 }
 
 static void draw_box(DebugBuffers &out, const Shape *shape, const Transformf &transform, Vec3f color) {
-    const Vec3f h = vec3f::load(shape->box.half_extents);
+    const Vec3f h = vec3f::load(shapes::as<BoxShape>(shape).half_extents);
     draw_local_box(out, vec3f::negate(h), h, transform, color);
 }
 
 static void draw_capsule(DebugBuffers &out, const Shape *shape, const Transformf &transform, Vec3f color) {
     // capsule only supports uniform scaling
-    const float radius = shape->capsule.radius * transform.scale.x;
-    const float half_height = shape->capsule.half_height_of_cylinder * transform.scale.x;
+    const CapsuleShape &capsule = shapes::as<CapsuleShape>(shape);
+    const float radius = capsule.radius * transform.scale.x;
+    const float half_height = capsule.half_height_of_cylinder * transform.scale.x;
     const Vec3f position = vec3f::load(transform.position);
     Vec3f axis = vec3f::transform_quat(vec3f::make(0.0f, 1.0f, 0.0f), quatf::load(transform.quaternion));
     Vec3f u, v;
@@ -252,8 +272,9 @@ static void draw_capsule(DebugBuffers &out, const Shape *shape, const Transformf
 
 static void draw_cylinder(DebugBuffers &out, const Shape *shape, const Transformf &transform, Vec3f color) {
     // cylinder scales radius by x/z (uniform) and half-height by y
-    const float radius = shape->cylinder.radius * transform.scale.x;
-    const float half_height = shape->cylinder.half_height * transform.scale.y;
+    const CylinderShape &cylinder = shapes::as<CylinderShape>(shape);
+    const float radius = cylinder.radius * transform.scale.x;
+    const float half_height = cylinder.half_height * transform.scale.y;
     Vec3f axis = vec3f::transform_quat(vec3f::make(0.0f, 1.0f, 0.0f), quatf::load(transform.quaternion));
     Vec3f u, v;
     perpendicular_axes(u, v, axis);
@@ -276,11 +297,12 @@ static void draw_cylinder(DebugBuffers &out, const Shape *shape, const Transform
 static void draw_plane(DebugBuffers &out, const Shape *shape, const Transformf &transform, Vec3f color) {
     // infinite plane: draw a grid (sized by half_extent) in the plane's local frame, then transform every point into
     // world space by the node transform
-    const Vec3f n = vec3f::load(shape->plane.plane.normal);
-    const float size = shape->plane.half_extent;
+    const PlaneShape &plane = shapes::as<PlaneShape>(shape);
+    const Vec3f n = vec3f::load(plane.plane.normal);
+    const float size = plane.half_extent;
     Vec3f u, v;
     perpendicular_axes(u, v, n);
-    const Vec3f origin = vec3f::scale(n, -shape->plane.plane.constant);
+    const Vec3f origin = vec3f::scale(n, -plane.plane.constant);
     const int32_t steps = 5;
     for (int32_t i = -steps; i <= steps; i++) {
         const float t = ((float)i / (float)steps) * size;
@@ -298,7 +320,7 @@ static void draw_plane(DebugBuffers &out, const Shape *shape, const Transformf &
 
 static void draw_convex_hull(DebugBuffers &out, const Shape *shape, const Transformf &transform, Vec3f color) {
     // emit all face edges (may duplicate, fine for debug use)
-    const convex_hull::ConvexHullData &hull = *shape->convex_hull.data;
+    const convex_hull::ConvexHullData &hull = *shapes::as<ConvexHullShape>(shape).data;
     const float *points = hull.point_positions.data;
     for (uint32_t f = 0; f < hull.faces.length; f++) {
         const convex_hull::ConvexHullFace &face = hull.faces[f];
@@ -315,7 +337,7 @@ static void draw_convex_hull(DebugBuffers &out, const Shape *shape, const Transf
 }
 
 static void draw_triangle_mesh(DebugBuffers &out, const Shape *shape, const Transformf &transform, Vec3f color) {
-    const triangle_mesh_data::TriangleMeshData &mesh = *shape->triangle_mesh.data;
+    const triangle_mesh_data::TriangleMeshData &mesh = *shapes::as<TriangleMeshShape>(shape).data;
     const float *positions = mesh.positions;
     for (uint32_t i = 0; i < mesh.triangle_count; i++) {
         const triangle_mesh_data::Triangle &triangle = mesh.triangles[i];
@@ -366,26 +388,28 @@ static void draw_shape(DebugBuffers &out, const Shape *shape, const Transformf &
         }
         case shapes::SHAPE_TRANSFORMED: {
             // the parent's scale applies to the offset; the inner shape sees it in its own space
+            const TransformedShape &transformed = shapes::as<TransformedShape>(shape);
             Transformf inner;
-            Vec3f translation = vec3f::multiply(vec3f::load(shape->transformed.position), vec3f::load(transform.scale));
+            Vec3f translation = vec3f::multiply(vec3f::load(transformed.position), vec3f::load(transform.scale));
             translation = vec3f::transform_quat(translation, quatf::load(transform.quaternion));
             vec3f::store(inner.position, vec3f::add(vec3f::load(transform.position), translation));
-            quatf::store(inner.quaternion, quatf::multiply(quatf::load(transform.quaternion), quatf::load(shape->transformed.quaternion)));
-            vec3f::store(inner.scale, shapes::transform_scale(quatf::load(shape->transformed.quaternion), vec3f::load(transform.scale)));
-            draw_shape(out, shape->transformed.shape, inner, color);
+            quatf::store(inner.quaternion, quatf::multiply(quatf::load(transform.quaternion), quatf::load(transformed.quaternion)));
+            vec3f::store(inner.scale, shapes::transform_scale(quatf::load(transformed.quaternion), vec3f::load(transform.scale)));
+            draw_shape(out, transformed.shape, inner, color);
             break;
         }
         case shapes::SHAPE_SCALED: {
             // accumulate this node's scale into the local-space scale, then recurse. leaf shapes apply the scale to their
             // geometry; the inner shape's own data is never pre-scaled, so the scale must be threaded through here
+            const ScaledShape &scaled = shapes::as<ScaledShape>(shape);
             Transformf inner = transform;
-            vec3f::store(inner.scale, vec3f::multiply(vec3f::load(transform.scale), vec3f::load(shape->scaled.scale)));
-            draw_shape(out, shape->scaled.shape, inner, color);
+            vec3f::store(inner.scale, vec3f::multiply(vec3f::load(transform.scale), vec3f::load(scaled.scale)));
+            draw_shape(out, scaled.shape, inner, color);
             break;
         }
         case shapes::SHAPE_OFFSET_CENTER_OF_MASS:
             // offset only affects com, not geometry position
-            draw_shape(out, shape->offset_center_of_mass.shape, transform, color);
+            draw_shape(out, shapes::as<OffsetCenterOfMassShape>(shape).shape, transform, color);
             break;
         case shapes::SHAPE_EMPTY:
             break;

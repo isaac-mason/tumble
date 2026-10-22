@@ -86,6 +86,15 @@ struct ConvexHullData {
     float volume;
 };
 
+struct ConvexHullShape : Shape {
+    static constexpr shapes::ShapeType TYPE = shapes::SHAPE_CONVEX_HULL;
+    /** the caller's, shared by any number of shapes, unless owns_data */
+    ConvexHullData *data;
+    float density;
+    /** destroy releases the data */
+    bool owns_data;
+};
+
 struct ConvexHullBuildSettings {
     /** flat input points xyz, interior points allowed; read during build only */
     const float *positions = nullptr;

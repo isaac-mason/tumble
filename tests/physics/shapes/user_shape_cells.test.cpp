@@ -15,7 +15,8 @@
 
 namespace {
 
-struct Cells {
+struct CellsShape : shapes::Shape {
+    static constexpr shapes::ShapeType TYPE = shapes::SHAPE_USER_2;
     /** cells a side, in local space [0, size) on each axis */
     uint32_t size;
     /** size^3, x fastest then z then y */
@@ -26,24 +27,24 @@ struct Cells {
     shapes::Shape *cube;
 };
 
-const Cells &cells_of(const shapes::Shape *shape) { return *static_cast<const Cells *>(shape->user.data); }
+const CellsShape &cells_of(const shapes::Shape *shape) { return shapes::as<CellsShape>(shape); }
 
-uint32_t cell_count(const Cells &cells) { return cells.size * cells.size * cells.size; }
+uint32_t cell_count(const CellsShape &cells) { return cells.size * cells.size * cells.size; }
 
-void cell_at(uint32_t &x, uint32_t &y, uint32_t &z, const Cells &cells, uint32_t index) {
+void cell_at(uint32_t &x, uint32_t &y, uint32_t &z, const CellsShape &cells, uint32_t index) {
     x = index % cells.size;
     z = (index / cells.size) % cells.size;
     y = index / (cells.size * cells.size);
 }
 
-compound::CompoundShapeChild cell_child(const Cells &cells, uint32_t index) {
+compound::CompoundShapeChild cell_child(const CellsShape &cells, uint32_t index) {
     uint32_t x, y, z;
     cell_at(x, y, z, cells, index);
     return {{(float)x + 0.5f, (float)y + 0.5f, (float)z + 0.5f}, {0.0f, 0.0f, 0.0f, 1.0f}, cells.cube};
 }
 
 /** the cell an id names and what is left of the id below it; false for an id naming no solid cell */
-bool pop_cell(uint32_t &out_index, sub_shape::SubShapeId &out_remainder, const Cells &cells, sub_shape::SubShapeId sub_shape_id) {
+bool pop_cell(uint32_t &out_index, sub_shape::SubShapeId &out_remainder, const CellsShape &cells, sub_shape::SubShapeId sub_shape_id) {
     sub_shape::PopResult popped;
     sub_shape::pop_index(popped, sub_shape_id, cell_count(cells));
     if (popped.value >= cell_count(cells) || cells.solid[popped.value] == 0) return false;
@@ -57,7 +58,7 @@ void cells_compute_mass_properties(mass_properties::MassProperties &out, const s
 }
 
 void cells_get_surface_normal(shapes::SurfaceNormalResult &io, const shapes::Shape *shape, sub_shape::SubShapeId sub_shape_id) {
-    const Cells &cells = cells_of(shape);
+    const CellsShape &cells = cells_of(shape);
     uint32_t index;
     sub_shape::SubShapeId remainder;
     if (!pop_cell(index, remainder, cells, sub_shape_id)) return;
@@ -67,7 +68,7 @@ void cells_get_surface_normal(shapes::SurfaceNormalResult &io, const shapes::Sha
 }
 
 void cells_get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, const shapes::Shape *shape, sub_shape::SubShapeId sub_shape_id) {
-    const Cells &cells = cells_of(shape);
+    const CellsShape &cells = cells_of(shape);
     uint32_t index;
     sub_shape::SubShapeId remainder;
     if (!pop_cell(index, remainder, cells, sub_shape_id)) return;
@@ -77,14 +78,14 @@ void cells_get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction
 }
 
 int32_t cells_get_material(const shapes::Shape *shape, sub_shape::SubShapeId sub_shape_id) {
-    const Cells &cells = cells_of(shape);
+    const CellsShape &cells = cells_of(shape);
     uint32_t index;
     sub_shape::SubShapeId remainder;
     return pop_cell(index, remainder, cells, sub_shape_id) ? cells.materials[index] : -1;
 }
 
 void cells_get_leaf_shape(shapes::GetLeafShapeResult &out, const shapes::Shape *shape, sub_shape::SubShapeId sub_shape_id) {
-    const Cells &cells = cells_of(shape);
+    const CellsShape &cells = cells_of(shape);
     uint32_t index;
     sub_shape::SubShapeId remainder;
     if (!pop_cell(index, remainder, cells, sub_shape_id)) {
@@ -99,7 +100,7 @@ float cells_get_inner_radius(const shapes::Shape *) { return 0.5f; }
 
 void cells_cast_ray(cast_ray::CastRayCollector &collector, const cast_ray::CastRaySettings &settings, const cast_ray::Rayf &ray,
                     const shapes::Shape *shape, const sub_shape::SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
-    const Cells &cells = cells_of(shape);
+    const CellsShape &cells = cells_of(shape);
     for (uint32_t i = 0; i < cell_count(cells); i++) {
         if (cells.solid[i] == 0) continue;
         sub_shape::SubShapeIdBuilder cell_id;
@@ -112,7 +113,7 @@ void cells_cast_ray(cast_ray::CastRayCollector &collector, const cast_ray::CastR
 
 void cells_collide_point(collide_point::CollidePointCollector &collector, const collide_point::CollidePointSettings &settings, Vec3f point,
                          const shapes::Shape *shape, const sub_shape::SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
-    const Cells &cells = cells_of(shape);
+    const CellsShape &cells = cells_of(shape);
     for (uint32_t i = 0; i < cell_count(cells); i++) {
         if (cells.solid[i] == 0) continue;
         sub_shape::SubShapeIdBuilder cell_id;
@@ -127,7 +128,7 @@ void cells_collide_point(collide_point::CollidePointCollector &collector, const 
 void collide_cells_vs_shape(collide_shape::CollideShapeCollector &collector, const collide_shape::CollideShapeSettings &settings,
                             const shapes::Shape *shape_a, const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
                             const shapes::Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
-    const Cells &cells = cells_of(shape_a);
+    const CellsShape &cells = cells_of(shape_a);
     for (uint32_t i = 0; i < cell_count(cells); i++) {
         if (cells.solid[i] == 0) continue;
         sub_shape::SubShapeIdBuilder cell_id;
@@ -141,7 +142,7 @@ void collide_cells_vs_shape(collide_shape::CollideShapeCollector &collector, con
 void collide_shape_vs_cells(collide_shape::CollideShapeCollector &collector, const collide_shape::CollideShapeSettings &settings,
                             const shapes::Shape *shape_a, const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
                             const shapes::Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
-    const Cells &cells = cells_of(shape_b);
+    const CellsShape &cells = cells_of(shape_b);
     for (uint32_t i = 0; i < cell_count(cells); i++) {
         if (cells.solid[i] == 0) continue;
         sub_shape::SubShapeIdBuilder cell_id;
@@ -155,7 +156,7 @@ void collide_shape_vs_cells(collide_shape::CollideShapeCollector &collector, con
 void cast_shape_vs_cells(cast_shape::CastShapeCollector &collector, const cast_shape::CastShapeSettings &settings, const shapes::Shape *shape_a,
                          const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
                          const shapes::Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
-    const Cells &cells = cells_of(shape_b);
+    const CellsShape &cells = cells_of(shape_b);
     for (uint32_t i = 0; i < cell_count(cells); i++) {
         if (cells.solid[i] == 0) continue;
         sub_shape::SubShapeIdBuilder cell_id;
@@ -170,7 +171,7 @@ void cast_shape_vs_cells(cast_shape::CastShapeCollector &collector, const cast_s
 void cast_cells_vs_shape(cast_shape::CastShapeCollector &collector, const cast_shape::CastShapeSettings &settings, const shapes::Shape *shape_a,
                          const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
                          const shapes::Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
-    const Cells &cells = cells_of(shape_a);
+    const CellsShape &cells = cells_of(shape_a);
     for (uint32_t i = 0; i < cell_count(cells); i++) {
         if (cells.solid[i] == 0) continue;
         sub_shape::SubShapeIdBuilder cell_id;
@@ -183,7 +184,11 @@ void cast_cells_vs_shape(cast_shape::CastShapeCollector &collector, const cast_s
 }
 
 /** the user sphere: the built-in sphere's functions over an inner shape */
-const shapes::Shape *inner_of(const shapes::Shape *shape) { return static_cast<const shapes::Shape *>(shape->user.data); }
+struct BallShape : shapes::Shape {
+    static constexpr shapes::ShapeType TYPE = shapes::SHAPE_USER_1;
+    shapes::Shape *inner;
+};
+const shapes::Shape *inner_of(const shapes::Shape *shape) { return shapes::as<BallShape>(shape).inner; }
 void ball_set_support(support::Support &out, const shapes::Shape *shape, support::SupportFunctionMode mode, Vec3f scale) {
     sphere::set_support(out, inner_of(shape), mode, scale);
 }
@@ -238,15 +243,18 @@ void init_cells() {
     shapes::set_cast_shape_fn(shapes::SHAPE_USER_2, shapes::SHAPE_USER_2, cast_cells_vs_shape);
 }
 
-shapes::Shape *create_cells(Cells &cells) {
-    shapes::Shape *shape = shapes::allocate(shapes::SHAPE_USER_2);
-    shape->user.data = &cells;
+shapes::Shape *create_cells(uint32_t size, const uint8_t *solid, const int32_t *materials, shapes::Shape *cube) {
+    CellsShape *shape = shapes::allocate<CellsShape>();
+    shape->size = size;
+    shape->solid = solid;
+    shape->materials = materials;
+    shape->cube = cube;
     AABox bounds = aabox::empty();
     float volume = 0.0f;
-    for (uint32_t i = 0; i < cell_count(cells); i++) {
-        if (cells.solid[i] == 0) continue;
+    for (uint32_t i = 0; i < cell_count(*shape); i++) {
+        if (solid[i] == 0) continue;
         uint32_t x, y, z;
-        cell_at(x, y, z, cells, i);
+        cell_at(x, y, z, *shape, i);
         bounds = aabox::union_(bounds, aabox::make(vec3f::make((float)x, (float)y, (float)z), vec3f::make((float)x + 1.0f, (float)y + 1.0f, (float)z + 1.0f)));
         volume += 1.0f;
     }
@@ -261,7 +269,6 @@ shapes::Shape *create_cells(Cells &cells) {
 struct Floor {
     uint8_t solid[6 * 6 * 6];
     int32_t materials[6 * 6 * 6];
-    Cells cells;
     shapes::Shape *shape;
 };
 
@@ -270,8 +277,7 @@ void make_floor(Floor &floor, shapes::Shape *cube) {
         floor.solid[i] = i < 6 * 6 ? 1 : 0;
         floor.materials[i] = 100 + (int32_t)i;
     }
-    floor.cells = {6, floor.solid, floor.materials, cube};
-    floor.shape = create_cells(floor.cells);
+    floor.shape = create_cells(6, floor.solid, floor.materials, cube);
 }
 
 /** the floor's top at y 0, its cells at x and z in [-3, 3) */
@@ -314,14 +320,14 @@ void test_user_shape_cells_hold_a_box_flat_and_their_contacts_name_cells(TestCtx
         const sub_shape::SubShapeId id = ground_is_a ? event.sub_shape_id_a : event.sub_shape_id_b;
         uint32_t index;
         sub_shape::SubShapeId remainder;
-        CHECK(ctx, pop_cell(index, remainder, floor.cells, id));
+        CHECK(ctx, pop_cell(index, remainder, cells_of(floor.shape), id));
         uint32_t x, y, z;
-        cell_at(x, y, z, floor.cells, index);
+        cell_at(x, y, z, cells_of(floor.shape), index);
         CHECK(ctx, y == 0 && (x == 2 || x == 3) && (z == 2 || z == 3));
         CHECK(ctx, (ground_is_a ? event.material_id_a : event.material_id_b) == 100 + (int32_t)index);
     }
     release_world_scene(scene);
-    shapes::release(floor.shape);
+    shapes::release<CellsShape>(floor.shape);
     box::destroy(cube);
 }
 
@@ -333,15 +339,13 @@ void test_user_shape_cells_body_rests_on_cells_and_beside_a_user_sphere(TestCtx 
     // a plank of two cells, dynamic: its mass from its def, its pairs with the floor through the cells' own rows both ways
     uint8_t plank_solid[8] = {1, 1, 0, 0, 0, 0, 0, 0};
     int32_t plank_materials[8] = {};
-    Cells plank_cells = {2, plank_solid, plank_materials, cube};
-    shapes::Shape *plank = create_cells(plank_cells);
+    shapes::Shape *plank = create_cells(2, plank_solid, plank_materials, cube);
 
-    shapes::Shape *inner = sphere::create({.radius = 0.5f});
-    shapes::Shape *ball = shapes::allocate(shapes::SHAPE_USER_1);
-    ball->user.data = inner;
-    ball->aabb = inner->aabb;
-    ball->center_of_mass = inner->center_of_mass;
-    ball->volume = inner->volume;
+    BallShape *ball = shapes::allocate<BallShape>();
+    ball->inner = sphere::create({.radius = 0.5f});
+    ball->aabb = ball->inner->aabb;
+    ball->center_of_mass = ball->inner->center_of_mass;
+    ball->volume = ball->inner->volume;
     ball->material_id = -1;
 
     WorldScene scene = make_world_scene(ctx);
@@ -358,10 +362,10 @@ void test_user_shape_cells_body_rests_on_cells_and_beside_a_user_sphere(TestCtx 
     CHECK_NEAR(ctx, ball_body->position.y, 0.5f, 0.02f);
     release_world_scene(scene);
 
-    shapes::release(ball);
-    sphere::destroy(inner);
-    shapes::release(plank);
-    shapes::release(floor.shape);
+    sphere::destroy(ball->inner);
+    shapes::release<BallShape>(ball);
+    shapes::release<CellsShape>(plank);
+    shapes::release<CellsShape>(floor.shape);
     box::destroy(cube);
 }
 
@@ -384,7 +388,7 @@ void test_user_shape_cells_queries_name_the_cell_they_meet(TestCtx &ctx) {
         CHECK_NEAR(ctx, hit->fraction, 0.5f, 1e-5f);
         uint32_t index;
         sub_shape::SubShapeId remainder;
-        CHECK(ctx, pop_cell(index, remainder, floor.cells, hit->sub_shape_id));
+        CHECK(ctx, pop_cell(index, remainder, cells_of(floor.shape), hit->sub_shape_id));
         CHECK(ctx, index == 1 * 6 + 4);
         const Vec3f point = vec3f::scale_and_add(ray.origin, ray.direction, ray.length * hit->fraction);
         const Vec3f normal = rigid_body::get_world_space_surface_normal(ground, hit->sub_shape_id, point);
@@ -412,7 +416,7 @@ void test_user_shape_cells_queries_name_the_cell_they_meet(TestCtx &ctx) {
         CHECK_NEAR(ctx, touch->fraction, 0.5f, 1e-3f);
         uint32_t index;
         sub_shape::SubShapeId remainder;
-        CHECK(ctx, pop_cell(index, remainder, floor.cells, touch->sub_shape_id_b) && index == 1 * 6 + 4);
+        CHECK(ctx, pop_cell(index, remainder, cells_of(floor.shape), touch->sub_shape_id_b) && index == 1 * 6 + 4);
     }
     cast_shape::release(sweep);
     sphere::destroy(probe);
@@ -420,8 +424,7 @@ void test_user_shape_cells_queries_name_the_cell_they_meet(TestCtx &ctx) {
     // a plank of cells swept down onto the floor of cells: its low face, at its origin, meets the top at y 0
     uint8_t plank_solid[8] = {1, 1, 0, 0, 0, 0, 0, 0};
     int32_t plank_materials[8] = {};
-    Cells plank_cells = {2, plank_solid, plank_materials, cube};
-    shapes::Shape *plank = create_cells(plank_cells);
+    shapes::Shape *plank = create_cells(2, plank_solid, plank_materials, cube);
     cast_shape::CastShapeCollector drop = cast_shape::create_collector(collector::COLLECT_CLOSEST);
     const Transformf above = {{-1.7f, 3.0f, 0.2f}, {0.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}};
     query::cast_shape(*scene.world, drop, cast_shape::default_settings(), plank, above, vec3f::make(0.0f, -4.0f, 0.0f), filter);
@@ -431,13 +434,13 @@ void test_user_shape_cells_queries_name_the_cell_they_meet(TestCtx &ctx) {
         CHECK_NEAR(ctx, landing->fraction, 0.75f, 1e-3f);
         uint32_t index;
         sub_shape::SubShapeId remainder;
-        CHECK(ctx, pop_cell(index, remainder, plank_cells, landing->sub_shape_id_a) && pop_cell(index, remainder, floor.cells, landing->sub_shape_id_b));
+        CHECK(ctx, pop_cell(index, remainder, cells_of(plank), landing->sub_shape_id_a) && pop_cell(index, remainder, cells_of(floor.shape), landing->sub_shape_id_b));
     }
     cast_shape::release(drop);
-    shapes::release(plank);
+    shapes::release<CellsShape>(plank);
 
     filter::release(filter);
     release_world_scene(scene);
-    shapes::release(floor.shape);
+    shapes::release<CellsShape>(floor.shape);
     box::destroy(cube);
 }

@@ -12,6 +12,13 @@ namespace box {
 
 using shapes::Shape;
 
+struct BoxShape : Shape {
+    static constexpr shapes::ShapeType TYPE = shapes::SHAPE_BOX;
+    Float3 half_extents;
+    float convex_radius;
+    float density;
+};
+
 struct BoxShapeSettings {
     Float3 half_extents;
     float convex_radius = support::DEFAULT_CONVEX_RADIUS;

@@ -26,6 +26,11 @@ struct StaticCompoundData {
     static_compound_bvh::BvhBuildSettings bvh_settings;
 };
 
+struct StaticCompoundShape : Shape {
+    static constexpr shapes::ShapeType TYPE = shapes::SHAPE_STATIC_COMPOUND;
+    StaticCompoundData *data;
+};
+
 struct StaticCompoundShapeSettings {
     /** read during create only; the shapes they point at are borrowed */
     const CompoundShapeChild *children = nullptr;

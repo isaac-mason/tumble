@@ -50,8 +50,8 @@ void test_offset_center_of_mass_create(TestCtx &ctx) {
     Shape *o = offset_center_of_mass::create({.shape = s, .offset = {0, -2, 0}});
 
     CHECK(ctx, o->type == shapes::SHAPE_OFFSET_CENTER_OF_MASS);
-    CHECK(ctx, o->offset_center_of_mass.shape == s);
-    CHECK(ctx, near3(o->offset_center_of_mass.offset, 0, -2, 0, 0.0f));
+    CHECK(ctx, shapes::as<offset_center_of_mass::OffsetCenterOfMassShape>(o).shape == s);
+    CHECK(ctx, near3(shapes::as<offset_center_of_mass::OffsetCenterOfMassShape>(o).offset, 0, -2, 0, 0.0f));
 
     // the centre of mass moves; the geometry, so the bounds and volume, does not
     CHECK(ctx, near3(o->center_of_mass, 0, -2, 0, 1e-6f));

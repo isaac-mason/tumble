@@ -4,21 +4,15 @@
 #include "tumble/math/quatf.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/shapes/compound.h"
+#include "tumble/physics/shapes/offset_center_of_mass.h"
+#include "tumble/physics/shapes/scaled.h"
+#include "tumble/physics/shapes/transformed.h"
 #include "tumble/util/assert.h"
 #include "tumble/util/object.h"
 
 TUMBLE_NAMESPACE_BEGIN
 
 namespace shapes {
-
-Shape *allocate(ShapeType type) {
-    Shape *shape = util::create<Shape>();
-    if (shape == nullptr) return nullptr;
-    shape->type = type;
-    return shape;
-}
-
-void release(Shape *shape) { util::destroy(shape); }
 
 ShapeDef shape_defs[SHAPE_TYPE_COUNT];
 CollideShapeVsShapeFn collide_table[SHAPE_TYPE_COUNT][SHAPE_TYPE_COUNT];
@@ -61,9 +55,9 @@ void set_cast_shape_fn(ShapeType type_a, ShapeType type_b, CastShapeVsShapeFn fn
 
 bool caches_pairs(const Shape *shape) {
     switch (shape->type) {
-        case SHAPE_TRANSFORMED: return caches_pairs(shape->transformed.shape);
-        case SHAPE_SCALED: return caches_pairs(shape->scaled.shape);
-        case SHAPE_OFFSET_CENTER_OF_MASS: return caches_pairs(shape->offset_center_of_mass.shape);
+        case SHAPE_TRANSFORMED: return caches_pairs(as<transformed::TransformedShape>(shape).shape);
+        case SHAPE_SCALED: return caches_pairs(as<scaled::ScaledShape>(shape).shape);
+        case SHAPE_OFFSET_CENTER_OF_MASS: return caches_pairs(as<offset_center_of_mass::OffsetCenterOfMassShape>(shape).shape);
         case SHAPE_COMPOUND:
         case SHAPE_STATIC_COMPOUND: {
             const collections::Vec<compound::CompoundShapeChild> &children = compound::children_of(shape);

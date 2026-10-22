@@ -9,7 +9,7 @@ TUMBLE_NAMESPACE_BEGIN
 namespace empty {
 
 Shape *create() {
-    Shape *shape = shapes::allocate(shapes::SHAPE_EMPTY);
+    EmptyShape *shape = shapes::allocate<EmptyShape>();
     if (shape == nullptr) return nullptr;
     // zero-size bounds at the origin
     shape->aabb = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
@@ -18,7 +18,7 @@ Shape *create() {
     return shape;
 }
 
-void destroy(Shape *shape) { shapes::release(shape); }
+void destroy(Shape *shape) { shapes::release<EmptyShape>(shape); }
 
 void compute_mass_properties(mass_properties::MassProperties &out, const Shape *) {
     // unit mass and inertia, so a dynamic body without a shape still integrates

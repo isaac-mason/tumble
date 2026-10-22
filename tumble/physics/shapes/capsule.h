@@ -12,6 +12,15 @@ namespace capsule {
 
 using shapes::Shape;
 
+struct CapsuleShape : Shape {
+    static constexpr shapes::ShapeType TYPE = shapes::SHAPE_CAPSULE;
+    /** half height of the central cylinder, the hemispheres excluded */
+    float half_height_of_cylinder;
+    /** the radius, which is the convex radius */
+    float radius;
+    float density;
+};
+
 struct CapsuleShapeSettings {
     /** half height of the central cylinder, the hemispheres excluded */
     float half_height_of_cylinder;

@@ -11,10 +11,10 @@ TUMBLE_NAMESPACE_BEGIN
 namespace sphere {
 
 Shape *create(const SphereShapeSettings &settings) {
-    Shape *shape = shapes::allocate(shapes::SHAPE_SPHERE);
+    SphereShape *shape = shapes::allocate<SphereShape>();
     if (shape == nullptr) return nullptr;
-    shape->sphere.radius = settings.radius;
-    shape->sphere.density = settings.density;
+    shape->radius = settings.radius;
+    shape->density = settings.density;
     shape->material_id = settings.material_id;
     // always at origin
     vec3f::store(shape->center_of_mass, vec3f::zero());
@@ -22,7 +22,7 @@ Shape *create(const SphereShapeSettings &settings) {
     return shape;
 }
 
-void destroy(Shape *shape) { shapes::release(shape); }
+void destroy(Shape *shape) { shapes::release<SphereShape>(shape); }
 
 float compute_sphere_volume(float radius) {
     // V = (4/3) * pi * r^3
@@ -32,8 +32,8 @@ float compute_sphere_volume(float radius) {
 void compute_sphere_local_bounds(Box3f &out, float radius) { out = {{-radius, -radius, -radius}, {radius, radius, radius}}; }
 
 void update(Shape *shape) {
-    compute_sphere_local_bounds(shape->aabb, shape->sphere.radius);
-    shape->volume = compute_sphere_volume(shape->sphere.radius);
+    compute_sphere_local_bounds(shape->aabb, shapes::as<SphereShape>(shape).radius);
+    shape->volume = compute_sphere_volume(shapes::as<SphereShape>(shape).radius);
 }
 
 void set_support(support::Support &out, const Shape *shape, support::SupportFunctionMode mode, Vec3f scale) {
@@ -43,18 +43,18 @@ void set_support(support::Support &out, const Shape *shape, support::SupportFunc
     out.add_radius = 0.0f;
 
     if (mode == support::INCLUDE_CONVEX_RADIUS) {
-        out.sphere.radius = shape->sphere.radius * abs_scale;  // a sphere is a rounded point
+        out.sphere.radius = shapes::as<SphereShape>(shape).radius * abs_scale;  // a sphere is a rounded point
         out.convex_radius = 0.0f;
     } else {
         out.sphere.radius = 0.0f;  // core = origin, the radius is reported instead
-        out.convex_radius = shape->sphere.radius * abs_scale;
+        out.convex_radius = shapes::as<SphereShape>(shape).radius * abs_scale;
     }
 }
 
 void compute_mass_properties(mass_properties::MassProperties &out, const Shape *shape) {
-    const float radius = shape->sphere.radius;
+    const float radius = shapes::as<SphereShape>(shape).radius;
     const float r2 = radius * radius;
-    out.mass = (4.0f / 3.0f) * scalar::PI * radius * r2 * shape->sphere.density;
+    out.mass = (4.0f / 3.0f) * scalar::PI * radius * r2 * shapes::as<SphereShape>(shape).density;
 
     // I = (2/5) * m * r^2
     const float inertia = (2.0f / 5.0f) * out.mass * r2;
@@ -78,7 +78,7 @@ void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f, const Shape *,
     io.face.num_vertices = 0;
 }
 
-float get_inner_radius(const Shape *shape) { return shape->sphere.radius; }
+float get_inner_radius(const Shape *shape) { return shapes::as<SphereShape>(shape).radius; }
 
 shapes::ShapeDef def() {
     shapes::ShapeDef shape_def = {};
@@ -103,7 +103,7 @@ void collide_point_vs_sphere(collide_point::CollidePointCollector &collector, co
     const Vec3f local = vec3f::subtract(point, vec3f::load(transform_b.position));
 
     // apply accumulated scale to radius (uniform scale, using x component)
-    const float radius = shape_b->sphere.radius * scalar::abs(transform_b.scale.x);
+    const float radius = shapes::as<SphereShape>(shape_b).radius * scalar::abs(transform_b.scale.x);
 
     // sphere is centered at origin in local space, test distance squared
     if (vec3f::squared_length(local) <= radius * radius) {
@@ -122,8 +122,8 @@ void collide_sphere_vs_sphere(collide_shape::CollideShapeCollector &collector, c
     // optimized case for sphere vs sphere: simpler than gjk, just check distance between centers
 
     // apply accumulated scale to radii (uniform scale, using x component)
-    const float radius_a = shape_a->sphere.radius * scalar::abs(transform_a.scale.x);
-    const float radius_b = shape_b->sphere.radius * scalar::abs(transform_b.scale.x);
+    const float radius_a = shapes::as<SphereShape>(shape_a).radius * scalar::abs(transform_a.scale.x);
+    const float radius_b = shapes::as<SphereShape>(shape_b).radius * scalar::abs(transform_b.scale.x);
 
     // distance between centers
     const Vec3f delta = vec3f::subtract(vec3f::load(transform_b.position), vec3f::load(transform_a.position));

@@ -596,7 +596,7 @@ rigid_body::set_shape(*world, body, bigger);
 
 // a shape changed in place: its centre of mass before the change keeps the anchors put
 const Vec3f previous_center_of_mass = vec3f::load(bigger->center_of_mass);
-bigger->box.half_extents = {1.0f, 2.0f, 1.0f};
+shapes::as<box::BoxShape>(bigger).half_extents = {1.0f, 2.0f, 1.0f};
 box::update(bigger);
 rigid_body::update_shape(*world, body, previous_center_of_mass);
 ```
@@ -1216,19 +1216,19 @@ kcc::destroy(character);
 ## Custom shapes
 
 A shape type of your own takes one of eight user slots, `shapes::SHAPE_USER_1` to `SHAPE_USER_8`. Its def gives its
-functions, its shapes carry your payload in `shape->user.data`, and `dispatch::init` puts it beside the built-ins. This
-one is an ellipsoid:
+functions, and `dispatch::init` puts it beside the built-ins. Its shapes are a struct of yours deriving from
+`shapes::Shape`, as every built-in's is (`box::BoxShape`, `sphere::SphereShape`): `shapes::allocate<T>` makes one,
+`shapes::as<T>` reads a shape as it, and `shapes::release<T>` frees it. This one is an ellipsoid:
 
 ```cpp
-// an ellipsoid: a convex shape tumble does not have, in user slot 1. its payload is the shape's `user.data`
+// an ellipsoid: a convex shape tumble does not have, in user slot 1. its struct derives from Shape, as the built-ins' do
 constexpr shapes::ShapeType SHAPE_ELLIPSOID = shapes::SHAPE_USER_1;
 
-struct Ellipsoid {
+struct EllipsoidShape : shapes::Shape {
+    static constexpr shapes::ShapeType TYPE = SHAPE_ELLIPSOID;
     Float3 radii;
     float density;
 };
-
-const Ellipsoid &ellipsoid_of(const shapes::Shape *shape) { return *static_cast<const Ellipsoid *>(shape->user.data); }
 ```
 
 A convex type gives a support: gjk and epa need nothing else to collide it with every other convex shape.
@@ -1238,7 +1238,7 @@ A convex type gives a support: gjk and epa need nothing else to collide it with 
 // direction d it is r^2 d / |r d|, per component
 Vec3f ellipsoid_support(support::Support &support, Vec3f direction) {
     const Vec3f local = support::to_local_direction(support, direction);
-    const Ellipsoid &ellipsoid = *static_cast<const Ellipsoid *>(support.user.data);
+    const EllipsoidShape &ellipsoid = *static_cast<const EllipsoidShape *>(support.user.data);
     const Vec3f radii = vec3f::multiply(vec3f::load(ellipsoid.radii), vec3f::abs(support.user.scale));
     const Vec3f stretched = vec3f::multiply(radii, local);
     const float length = vec3f::length(stretched);
@@ -1252,14 +1252,14 @@ void ellipsoid_set_support(support::Support &out, const shapes::Shape *shape, su
     out.has_transform = false;
     out.add_radius = 0.0f;
     out.convex_radius = 0.0f;
-    out.user.data = shape->user.data;
+    out.user.data = shape;
     out.user.scale = scale;
 }
 ```
 
 ```cpp
 void ellipsoid_mass_properties(mass_properties::MassProperties &out, const shapes::Shape *shape) {
-    const Ellipsoid &ellipsoid = ellipsoid_of(shape);
+    const EllipsoidShape &ellipsoid = shapes::as<EllipsoidShape>(shape);
     const float a = ellipsoid.radii.x, b = ellipsoid.radii.y, c = ellipsoid.radii.z;
     out.mass = 4.0f / 3.0f * scalar::PI * a * b * c * ellipsoid.density;
     const float k = out.mass / 5.0f;
@@ -1268,7 +1268,7 @@ void ellipsoid_mass_properties(mass_properties::MassProperties &out, const shape
 
 // the gradient of x^2/a^2 + y^2/b^2 + z^2/c^2 at the point
 void ellipsoid_surface_normal(shapes::SurfaceNormalResult &io, const shapes::Shape *shape, sub_shape::SubShapeId) {
-    const Vec3f radii = vec3f::load(ellipsoid_of(shape).radii);
+    const Vec3f radii = vec3f::load(shapes::as<EllipsoidShape>(shape).radii);
     const Vec3f gradient = vec3f::divide(io.position, vec3f::multiply(radii, radii));
     io.normal = vec3f::squared_length(gradient) > 0.0f ? vec3f::normalize(gradient) : vec3f::axis_y();
 }
@@ -1281,7 +1281,7 @@ void ellipsoid_supporting_face(shapes::SupportingFaceResult &io, Vec3f, const sh
 int32_t ellipsoid_material(const shapes::Shape *shape, sub_shape::SubShapeId) { return shape->material_id; }
 
 float ellipsoid_inner_radius(const shapes::Shape *shape) {
-    const Float3 &r = ellipsoid_of(shape).radii;
+    const Float3 &r = shapes::as<EllipsoidShape>(shape).radii;
     return scalar::min(r.x, scalar::min(r.y, r.z));
 }
 
@@ -1289,7 +1289,7 @@ void ellipsoid_collide_point(collide_point::CollidePointCollector &collector, co
                              const shapes::Shape *shape, const sub_shape::SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
     // into the shape's space, then inside when the scaled coordinates are within the unit sphere
     const Vec3f local = vec3f::transform_quat(vec3f::subtract(point, vec3f::load(transform.position)), quatf::conjugate(quatf::load(transform.quaternion)));
-    const Vec3f radii = vec3f::multiply(vec3f::load(ellipsoid_of(shape).radii), vec3f::abs(vec3f::load(transform.scale)));
+    const Vec3f radii = vec3f::multiply(vec3f::load(shapes::as<EllipsoidShape>(shape).radii), vec3f::abs(vec3f::load(transform.scale)));
     if (vec3f::squared_length(vec3f::divide(local, radii)) > 1.0f) return;
     collide_point::CollidePointHit hit = collide_point::create_hit();
     hit.sub_shape_id_b = sub_shape_id.value;
@@ -1299,7 +1299,7 @@ void ellipsoid_collide_point(collide_point::CollidePointCollector &collector, co
 
 // three rings, one in each axis plane
 void ellipsoid_draw(debug::DebugBuffers &out, const shapes::Shape *shape, const Transformf &transform, Vec3f color) {
-    const Vec3f radii = vec3f::multiply(vec3f::load(ellipsoid_of(shape).radii), vec3f::load(transform.scale));
+    const Vec3f radii = vec3f::multiply(vec3f::load(shapes::as<EllipsoidShape>(shape).radii), vec3f::load(transform.scale));
     const Quatf rotation = quatf::load(transform.quaternion);
     const Vec3f centre = vec3f::load(transform.position);
     for (int plane = 0; plane < 3; plane++) {
@@ -1334,18 +1334,20 @@ shapes::ShapeDef ellipsoid_def() {
     return shapes::define_shape(def);
 }
 
-/** a shape of the type: its payload, and the bounds, centre of mass and volume every shape carries */
-shapes::Shape *create_ellipsoid(Ellipsoid *ellipsoid) {
-    shapes::Shape *shape = shapes::allocate(SHAPE_ELLIPSOID);
+/** a shape of the type: its own fields, and the bounds, centre of mass and volume every shape carries */
+shapes::Shape *create_ellipsoid(Float3 radii, float density) {
+    EllipsoidShape *shape = shapes::allocate<EllipsoidShape>();
     if (shape == nullptr) return nullptr;
-    shape->user.data = ellipsoid;
-    const Float3 &r = ellipsoid->radii;
-    shape->aabb = {{-r.x, -r.y, -r.z}, {r.x, r.y, r.z}};
+    shape->radii = radii;
+    shape->density = density;
+    shape->aabb = {{-radii.x, -radii.y, -radii.z}, {radii.x, radii.y, radii.z}};
     shape->center_of_mass = {0.0f, 0.0f, 0.0f};
-    shape->volume = 4.0f / 3.0f * scalar::PI * r.x * r.y * r.z;
+    shape->volume = 4.0f / 3.0f * scalar::PI * radii.x * radii.y * radii.z;
     shape->material_id = -1;
     return shape;
 }
+
+void destroy_ellipsoid(shapes::Shape *shape) { shapes::release<EllipsoidShape>(shape); }
 ```
 
 ```cpp
@@ -1357,8 +1359,7 @@ dispatch::init(&def, 1);
 
 ```cpp
 // an egg, 0.3 m wide and 0.5 m tall, dropped on its side: it rolls to lie on its long axis
-static Ellipsoid egg = {.radii = {0.3f, 0.5f, 0.3f}, .density = 1000.0f};
-shapes::Shape *egg_shape = create_ellipsoid(&egg);
+shapes::Shape *egg_shape = create_ellipsoid({0.3f, 0.5f, 0.3f}, 1000.0f);
 rigid_body::RigidBody *body = rigid_body::create(*world, {.shape = egg_shape, .object_layer = moving,
                                                           .motion_type = motion_type::MOTION_DYNAMIC, .position = {0.0f, 2.0f, 0.0f},
                                                           .quaternion = {0.0f, 0.0f, 0.38268343f, 0.92387953f}});

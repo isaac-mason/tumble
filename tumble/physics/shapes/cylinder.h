@@ -12,6 +12,14 @@ namespace cylinder {
 
 using shapes::Shape;
 
+struct CylinderShape : Shape {
+    static constexpr shapes::ShapeType TYPE = shapes::SHAPE_CYLINDER;
+    float half_height;
+    float radius;
+    float convex_radius;
+    float density;
+};
+
 struct CylinderShapeSettings {
     float half_height;
     float radius;

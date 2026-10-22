@@ -123,7 +123,7 @@ void test_debug_shape_line_counts_per_type(TestCtx &ctx) {
     shapes::Shape *offset_shape = offset_center_of_mass::create({.shape = cylinder_shape, .offset = {0.0f, 0.5f, 0.0f}});
     shapes::Shape *empty_shape = empty::create();
 
-    CHECK(ctx, hull_shape->convex_hull.data->faces.length == 6);
+    CHECK(ctx, shapes::as<convex_hull::ConvexHullShape>(hull_shape).data->faces.length == 6);
     CHECK(ctx, shape_lines(*buffers, sphere_shape) == SPHERE_LINES);
     CHECK(ctx, shape_lines(*buffers, box_shape) == BOX_LINES);
     CHECK(ctx, shape_lines(*buffers, capsule_shape) == CAPSULE_LINES);

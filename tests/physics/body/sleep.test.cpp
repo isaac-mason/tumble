@@ -2,6 +2,7 @@
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/body/rigid_body.h"
 #include "tumble/physics/body/sleep.h"
+#include "tumble/physics/shapes/box.h"
 #include "test.h"
 #include "test_math.h"
 
@@ -17,8 +18,7 @@ static constexpr float DT = 1.0f / 60.0f;
 static bool near_point(const Float3 &a, float x, float y, float z) { return vec3f::distance(vec3f::load(a), vec3f::make(x, y, z)) < 1e-5f; }
 
 /** a dynamic body over `shape` (whose aabb the test sets) at `com`, unrotated, allowed to sleep */
-static RigidBody make_body(shapes::Shape &shape, const Box3f &aabb, const Float3 &com) {
-    shape = {};
+static RigidBody make_body(box::BoxShape &shape, const Box3f &aabb, const Float3 &com) {
     shape.type = shapes::SHAPE_BOX;
     shape.aabb = aabb;
     RigidBody body = {};
@@ -33,7 +33,7 @@ static RigidBody make_body(shapes::Shape &shape, const Box3f &aabb, const Float3
 void test_sleep_test_points(TestCtx &ctx) {
     // half extents 0.5, 1, 2: x is smallest, so the points sit on the y and z axes
     const Box3f aabb = {{-0.5f, -1.0f, -2.0f}, {0.5f, 1.0f, 2.0f}};
-    shapes::Shape shape;
+    box::BoxShape shape{};
     RigidBody body = make_body(shape, aabb, {1.0f, 2.0f, 3.0f});
     Float3 points[3];
     sleep::get_sleep_test_points(points, &body);
@@ -67,7 +67,7 @@ void test_sleep_test_points(TestCtx &ctx) {
 
 /** steps a body moving at `velocity` and spinning at `spin` rad/s about y; the step on which it may first sleep, or -1. */
 static int steps_until_sleep(TestCtx &ctx, const Float3 &velocity, float spin, int max_steps) {
-    shapes::Shape shape;
+    box::BoxShape shape{};
     RigidBody body = make_body(shape, {{-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f}}, {0.0f, 1.0f, 0.0f});
     sleep::reset_sleep_timer(&body);
     CHECK(ctx, body.motion_properties.sleep_test_timer == 0.0f && body.motion_properties.sleep_test_spheres[0].radius == 0.0f);
@@ -102,7 +102,7 @@ void test_sleep_update_sleep_state(TestCtx &ctx) {
 }
 
 void test_sleep_reset_and_exclusions(TestCtx &ctx) {
-    shapes::Shape shape;
+    box::BoxShape shape{};
     RigidBody body = make_body(shape, {{-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f}}, {0.0f, 0.0f, 0.0f});
     motion_properties::MotionProperties &mp = body.motion_properties;
     sleep::reset_sleep_timer(&body);

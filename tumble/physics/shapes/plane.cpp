@@ -13,13 +13,13 @@ TUMBLE_NAMESPACE_BEGIN
 namespace plane {
 
 Shape *create(const PlaneShapeSettings &settings) {
-    Shape *shape = shapes::allocate(shapes::SHAPE_PLANE);
+    PlaneShape *shape = shapes::allocate<PlaneShape>();
     if (shape == nullptr) return nullptr;
     // normalise the whole equation so the plane stays where it was described
     const float normal_length = vec3f::length(vec3f::load(settings.plane.normal));
-    vec3f::store(shape->plane.plane.normal, vec3f::scale(vec3f::load(settings.plane.normal), 1.0f / normal_length));
-    shape->plane.plane.constant = settings.plane.constant / normal_length;
-    shape->plane.half_extent = settings.half_extent;
+    vec3f::store(shape->plane.normal, vec3f::scale(vec3f::load(settings.plane.normal), 1.0f / normal_length));
+    shape->plane.constant = settings.plane.constant / normal_length;
+    shape->half_extent = settings.half_extent;
     shape->material_id = settings.material_id;
     // always at the origin
     vec3f::store(shape->center_of_mass, vec3f::zero());
@@ -29,7 +29,7 @@ Shape *create(const PlaneShapeSettings &settings) {
     return shape;
 }
 
-void destroy(Shape *shape) { shapes::release(shape); }
+void destroy(Shape *shape) { shapes::release<PlaneShape>(shape); }
 
 /* geometry helpers */
 
@@ -90,18 +90,18 @@ static void get_quad_vertices(Vec3f out[4], Vec3f center, Vec3f perp1, Vec3f per
 }
 
 static void get_plane_vertices(Vec3f out[4], const Shape *shape) {
-    const Vec3f normal = vec3f::load(shape->plane.plane.normal);
+    const Vec3f normal = vec3f::load(shapes::as<PlaneShape>(shape).plane.normal);
 
     // create orthogonal basis
     Vec3f perp1, perp2;
     get_orthogonal_basis(normal, perp1, perp2);
 
     // scale by half extent
-    perp1 = vec3f::scale(perp1, shape->plane.half_extent);
-    perp2 = vec3f::scale(perp2, shape->plane.half_extent);
+    perp1 = vec3f::scale(perp1, shapes::as<PlaneShape>(shape).half_extent);
+    perp2 = vec3f::scale(perp2, shapes::as<PlaneShape>(shape).half_extent);
 
     // point on plane: -normal * constant
-    const Vec3f point = vec3f::scale(normal, -shape->plane.plane.constant);
+    const Vec3f point = vec3f::scale(normal, -shapes::as<PlaneShape>(shape).plane.constant);
 
     get_quad_vertices(out, point, perp1, perp2);
 }
@@ -110,7 +110,7 @@ static Box3f &compute_plane_local_bounds(Box3f &out, const Shape *shape) {
     Vec3f vertices[4];
     get_plane_vertices(vertices, shape);
 
-    const Vec3f offset = vec3f::scale(vec3f::load(shape->plane.plane.normal), shape->plane.half_extent);
+    const Vec3f offset = vec3f::scale(vec3f::load(shapes::as<PlaneShape>(shape).plane.normal), shapes::as<PlaneShape>(shape).half_extent);
 
     // encapsulate all vertices and points behind the plane
     AABox bounds = aabox::empty();
@@ -138,7 +138,7 @@ void compute_mass_properties(mass_properties::MassProperties &out, const Shape *
 
 void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub_shape::SubShapeId) {
     // the plane normal is always the surface normal
-    io.normal = vec3f::load(shape->plane.plane.normal);
+    io.normal = vec3f::load(shapes::as<PlaneShape>(shape).plane.normal);
 }
 
 void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f, const Shape *shape, sub_shape::SubShapeId) {
@@ -170,7 +170,7 @@ float get_inner_radius(const Shape *) {
 
 /** the plane in world space: scaled, then moved by the transform's rotation and translation */
 static Plane world_plane(const Shape *shape, const Transformf &transform) {
-    const Plane scaled_plane = scale_plane(plane3f::load(shape->plane.plane), vec3f::load(transform.scale));
+    const Plane scaled_plane = scale_plane(plane3f::load(shapes::as<PlaneShape>(shape).plane), vec3f::load(transform.scale));
     const Mat4f rotation_translation = mat4f::from_rotation_translation(quatf::load(transform.quaternion), vec3f::load(transform.position));
     return transform_plane(scaled_plane, rotation_translation);
 }
@@ -275,7 +275,7 @@ void collide_convex_vs_plane(collide_shape::CollideShapeCollector &collector, co
                              const Shape *shape_a, const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
                              const Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
     // scale plane b
-    const Plane scaled_plane = scale_plane(plane3f::load(shape_b->plane.plane), vec3f::load(transform_b.scale));
+    const Plane scaled_plane = scale_plane(plane3f::load(shapes::as<PlaneShape>(shape_b).plane), vec3f::load(transform_b.scale));
 
     // transform b: the plane's world transform, no scale (already applied to the plane)
     Mat4f plane_to_world = mat4f::from_rotation_translation(quatf::load(transform_b.quaternion), vec3f::load(transform_b.position));
@@ -360,7 +360,7 @@ void cast_convex_vs_plane(cast_shape::CastShapeCollector &collector, const cast_
     const Vec3f direction_in_b = vec3f::transform_quat(displacement_a, inv_quat_b);
 
     // in the plane's space only the scale remains to be applied to the plane
-    const Plane plane = scale_plane(plane3f::load(shape_b->plane.plane), vec3f::load(transform_b.scale));
+    const Plane plane = scale_plane(plane3f::load(shapes::as<PlaneShape>(shape_b).plane), vec3f::load(transform_b.scale));
     const Vec3f normal = plane.normal;
 
     // support function

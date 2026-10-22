@@ -11,6 +11,10 @@ namespace empty {
 
 using shapes::Shape;
 
+struct EmptyShape : Shape {
+    static constexpr shapes::ShapeType TYPE = shapes::SHAPE_EMPTY;
+};
+
 /** a zero-size bounds and centre of mass at the origin, zero volume */
 Shape *create();
 void destroy(Shape *shape);

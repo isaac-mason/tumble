@@ -432,8 +432,9 @@ discarded one. `update` is the same phases with contact tracking (`begin_contact
 ## Custom shapes
 
 A shape type of your own takes one of eight user slots, `shapes::SHAPE_USER_1` to `SHAPE_USER_8`. Its def gives its
-functions, its shapes carry your payload in `shape->user.data`, and `dispatch::init` puts it beside the built-ins. This
-one is an ellipsoid:
+functions, and `dispatch::init` puts it beside the built-ins. Its shapes are a struct of yours deriving from
+`shapes::Shape`, as every built-in's is (`box::BoxShape`, `sphere::SphereShape`): `shapes::allocate<T>` makes one,
+`shapes::as<T>` reads a shape as it, and `shapes::release<T>` frees it. This one is an ellipsoid:
 
 <Snippet source="./cpp/custom_shapes.cpp" select="data" />
 

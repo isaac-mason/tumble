@@ -11,23 +11,21 @@ TUMBLE_NAMESPACE_BEGIN
 
 namespace capsule {
 
-using shapes::CapsuleShape;
-
 Shape *create(const CapsuleShapeSettings &settings) {
     TUMBLE_ASSERT(settings.radius > 0.0f);
     TUMBLE_ASSERT(settings.half_height_of_cylinder > 0.0f);
 
-    Shape *shape = shapes::allocate(shapes::SHAPE_CAPSULE);
+    CapsuleShape *shape = shapes::allocate<CapsuleShape>();
     if (shape == nullptr) return nullptr;
-    shape->capsule.half_height_of_cylinder = settings.half_height_of_cylinder;
-    shape->capsule.radius = settings.radius;
-    shape->capsule.density = settings.density;
+    shape->half_height_of_cylinder = settings.half_height_of_cylinder;
+    shape->radius = settings.radius;
+    shape->density = settings.density;
     shape->material_id = settings.material_id;
     update(shape);
     return shape;
 }
 
-void destroy(Shape *shape) { shapes::release(shape); }
+void destroy(Shape *shape) { shapes::release<CapsuleShape>(shape); }
 
 float compute_capsule_volume(float half_height_of_cylinder, float radius) {
     // volume = cylinder volume + sphere volume
@@ -50,14 +48,14 @@ Vec3f compute_capsule_center_of_mass() {
 }
 
 void update(Shape *shape) {
-    const CapsuleShape &capsule = shape->capsule;
+    const CapsuleShape &capsule = shapes::as<CapsuleShape>(shape);
     compute_capsule_local_bounds(shape->aabb, capsule.half_height_of_cylinder, capsule.radius);
     vec3f::store(shape->center_of_mass, compute_capsule_center_of_mass());
     shape->volume = compute_capsule_volume(capsule.half_height_of_cylinder, capsule.radius);
 }
 
 void set_support(support::Support &out, const Shape *shape, support::SupportFunctionMode mode, Vec3f scale) {
-    const CapsuleShape &capsule = shape->capsule;
+    const CapsuleShape &capsule = shapes::as<CapsuleShape>(shape);
     const float abs_scale = scalar::abs(vec3f::x(scale));  // uniform scale only
     const float scaled_half_height = abs_scale * capsule.half_height_of_cylinder;
     const float scaled_radius = abs_scale * capsule.radius;
@@ -77,7 +75,7 @@ void set_support(support::Support &out, const Shape *shape, support::SupportFunc
 }
 
 void compute_mass_properties(mass_properties::MassProperties &out, const Shape *shape) {
-    const CapsuleShape &capsule = shape->capsule;
+    const CapsuleShape &capsule = shapes::as<CapsuleShape>(shape);
     const float r = capsule.radius;
     const float h = capsule.half_height_of_cylinder;
 
@@ -106,7 +104,7 @@ void compute_mass_properties(mass_properties::MassProperties &out, const Shape *
 void get_surface_normal(shapes::SurfaceNormalResult &io, const Shape *shape, sub_shape::SubShapeId sub_shape_id) {
     (void)sub_shape_id;
     TUMBLE_ASSERT(sub_shape::is_empty(sub_shape_id));
-    const CapsuleShape &capsule = shape->capsule;
+    const CapsuleShape &capsule = shapes::as<CapsuleShape>(shape);
 
     // clamp y to the cylinder range, then the normal is from the clamped point
     const float clamped_y = scalar::max(-capsule.half_height_of_cylinder, scalar::min(capsule.half_height_of_cylinder, vec3f::y(io.position)));
@@ -133,8 +131,8 @@ void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, cons
     // nothing; the transform then carries rotation and translation only
     face::Face &face = io.face;
     const float abs_scale = scalar::abs(vec3f::x(io.scale));
-    const float half_height_of_cylinder = abs_scale * shape->capsule.half_height_of_cylinder;
-    const float radius = abs_scale * shape->capsule.radius;
+    const float half_height_of_cylinder = abs_scale * shapes::as<CapsuleShape>(shape).half_height_of_cylinder;
+    const float radius = abs_scale * shapes::as<CapsuleShape>(shape).radius;
 
     // direction in the horizontal plane
     const float horizontal_dir_x = vec3f::x(direction);
@@ -180,7 +178,7 @@ void get_supporting_face(shapes::SupportingFaceResult &io, Vec3f direction, cons
     }
 }
 
-float get_inner_radius(const Shape *shape) { return shape->capsule.radius; }
+float get_inner_radius(const Shape *shape) { return shapes::as<CapsuleShape>(shape).radius; }
 
 shapes::ShapeDef def() {
     shapes::ShapeDef shape_def = {};

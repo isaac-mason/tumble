@@ -409,7 +409,7 @@ static shapes::Shape *cube_hull(float convex_radius) {
 }
 
 static void drop_hull(shapes::Shape *shape) {
-    convex_hull::ConvexHullData *data = shape->convex_hull.data;
+    convex_hull::ConvexHullData *data = shapes::as<convex_hull::ConvexHullShape>(shape).data;
     convex_hull::destroy(shape);
     convex_hull::release(data);
 }
@@ -425,7 +425,7 @@ static void scribble_freed(TestCtx &ctx) {
 
 void test_support_hull_scratch_outlives_its_hull(TestCtx &ctx) {
     shapes::Shape *first = cube_hull(0.1f);
-    CHECK(ctx, first != nullptr && first->convex_hull.data->convex_radius == 0.1f);
+    CHECK(ctx, first != nullptr && shapes::as<convex_hull::ConvexHullShape>(first).data->convex_radius == 0.1f);
     // mirrored non-uniform scale, convex radius excluded: shrunk corners at (+-1.95, +-0.95, +-0.45)
     convex_hull::set_support(mirrored_support, first, support::EXCLUDE_CONVEX_RADIUS, vec3f::make(-2.0f, 1.0f, 0.5f));
     CHECK(ctx, mirrored_support.hull.vertices == mirrored_support.hull.scratch);
