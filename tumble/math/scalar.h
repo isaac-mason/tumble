@@ -17,6 +17,7 @@ constexpr float FLOAT_EPSILON = __FLT_EPSILON__;
 inline float sqrt(float x) { return __builtin_sqrtf(x); }
 inline float abs(float x) { return __builtin_fabsf(x); }
 inline float floor(float x) { return __builtin_floorf(x); }
+inline float ceil(float x) { return __builtin_ceilf(x); }
 // nan propagates and -0 orders below +0; fminf / fmaxf would drop the nan
 #ifdef __wasm__
 inline float min(float a, float b) { return __builtin_wasm_min_f32(a, b); }

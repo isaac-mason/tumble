@@ -33,7 +33,9 @@ inline Vec3f axis_z() { return make(0.0f, 0.0f, 1.0f); }
 inline float x(Vec3f a) { return v4f::lane<0>(a.v); }
 inline float y(Vec3f a) { return v4f::lane<1>(a.v); }
 inline float z(Vec3f a) { return v4f::lane<2>(a.v); }
+inline Vec3f with_x(Vec3f a, float s) { return {v4f::set_lane<0>(a.v, s)}; }
 inline Vec3f with_y(Vec3f a, float s) { return {v4f::set_lane<1>(a.v, s)}; }
+inline Vec3f with_z(Vec3f a, float s) { return {v4f::shuffle2<0, 1, 4, 4>(a.v, v4f::splat(s))}; }
 
 inline Vec3f add(Vec3f a, Vec3f b) { return {v4f::add(a.v, b.v)}; }
 inline Vec3f subtract(Vec3f a, Vec3f b) { return {v4f::sub(a.v, b.v)}; }
@@ -43,6 +45,8 @@ inline Vec3f divide(Vec3f a, Vec3f b) { return {v4f::div(a.v, b.v)}; }
 inline Vec3f min(Vec3f a, Vec3f b) { return {v4f::min(a.v, b.v)}; }
 /** a < b ? b : a per lane */
 inline Vec3f max(Vec3f a, Vec3f b) { return {v4f::max(a.v, b.v)}; }
+/** scalar::min per lane */
+inline Vec3f fmin(Vec3f a, Vec3f b) { return {v4f::fmin(a.v, b.v)}; }
 /** scalar::max per lane */
 inline Vec3f fmax(Vec3f a, Vec3f b) { return {v4f::fmax(a.v, b.v)}; }
 inline Vec3f negate(Vec3f a) { return {v4f::neg(a.v)}; }
