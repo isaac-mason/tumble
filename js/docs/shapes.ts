@@ -23,7 +23,7 @@ import {
     TriangleMeshData,
     World,
     WorldSettings,
-} from 'tumble';
+} from 'tumble.js';
 
 await init();
 const settings = WorldSettings.create();

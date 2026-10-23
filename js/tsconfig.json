@@ -10,7 +10,7 @@
         "isolatedModules": true,
         "verbatimModuleSyntax": true,
         "skipLibCheck": true,
-        "paths": { "tumble": ["./src/index.ts"] }
+        "paths": { "tumble.js": ["./src/index.ts"] }
     },
     "include": ["src", "test", "docs", "vitest.config.ts"]
 }

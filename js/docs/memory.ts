@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { Box, HingeConstraint, init, MotionType, RigidBody, World, WorldSettings } from 'tumble';
+import { Box, HingeConstraint, init, MotionType, RigidBody, World, WorldSettings } from 'tumble.js';
 
 /* SNIPPET_START: init */
 // the wasm given as its bytes, read here from the package in node. it loads once a realm: later calls wait for the same

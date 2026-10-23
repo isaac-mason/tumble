@@ -1,5 +1,5 @@
 /* SNIPPET_START: quick-start */
-import { Box, init, MotionType, RigidBody, Sphere, type Vec3, World, WorldSettings } from 'tumble';
+import { Box, init, MotionType, RigidBody, Sphere, type Vec3, World, WorldSettings } from 'tumble.js';
 
 // load the wasm, once, before anything else
 await init();

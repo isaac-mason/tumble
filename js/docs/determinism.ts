@@ -1,4 +1,4 @@
-import { Box, init, MotionType, type Quat, RigidBody, type Shape, Sphere, type Vec3, World, WorldSettings } from 'tumble';
+import { Box, init, MotionType, type Quat, RigidBody, type Shape, Sphere, type Vec3, World, WorldSettings } from 'tumble.js';
 
 await init();
 const groundShape = Box.create({ halfExtents: [10, 0.5, 10] });

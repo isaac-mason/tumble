@@ -89,7 +89,7 @@ that URL to `init`.
 A world, a floor, and a box and a ball dropped onto it:
 
 ```ts
-import { Box, init, MotionType, RigidBody, Sphere, type Vec3, World, WorldSettings } from 'tumble';
+import { Box, init, MotionType, RigidBody, Sphere, type Vec3, World, WorldSettings } from 'tumble.js';
 
 // load the wasm, once, before anything else
 await init();

@@ -1,5 +1,5 @@
 // the package as an app imports it: by name, through its exports, from dist, the wasm from beside its modules
-import { Box, init, MotionType, RigidBody, World, WorldSettings } from 'tumble';
+import { Box, init, MotionType, RigidBody, World, WorldSettings } from 'tumble.js';
 
 await init();
 const settings = WorldSettings.create();

@@ -18,7 +18,7 @@ import {
     type Vec3,
     World,
     WorldSettings,
-} from 'tumble';
+} from 'tumble.js';
 
 await init();
 const worldSettings = WorldSettings.create();

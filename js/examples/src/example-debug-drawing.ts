@@ -15,7 +15,7 @@ import {
     Sphere,
     World,
     WorldSettings,
-} from 'tumble';
+} from 'tumble.js';
 import { caption, loop, setup } from './common';
 
 const view = await setup([14, 10, 18], [0, 3, 0]);

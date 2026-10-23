@@ -1,6 +1,6 @@
 import * as g from 'gpucat';
-import { init as initTumble } from 'tumble';
-import wasm from 'tumble/tumble.wasm?url';
+import { init as initTumble } from 'tumble.js';
+import wasm from 'tumble.js/tumble.wasm?url';
 
 export type View = {
     renderer: Awaited<ReturnType<typeof g.init>>;

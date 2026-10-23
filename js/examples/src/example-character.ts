@@ -15,7 +15,7 @@ import {
     type Vec3,
     World,
     WorldSettings,
-} from 'tumble';
+} from 'tumble.js';
 import { caption, loop, meshOf, setup } from './common';
 
 const view = await setup([0, 8, 14], [0, 1, 0]);

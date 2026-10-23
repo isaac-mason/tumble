@@ -1,5 +1,5 @@
 import type * as gpucat from 'gpucat';
-import { Box, Capsule, Cylinder, MotionType, Poses, RigidBody, type Shape, Sphere, World, WorldSettings } from 'tumble';
+import { Box, Capsule, Cylinder, MotionType, Poses, RigidBody, type Shape, Sphere, World, WorldSettings } from 'tumble.js';
 import { caption, loop, meshOf, type ShapeMesh, setup } from './common';
 
 const view = await setup([18, 14, 22], [0, 2, 0]);

@@ -1,6 +1,6 @@
 {
-    "name": "tumble",
-    "version": "0.0.0",
+    "name": "tumble.js",
+    "version": "0.0.0-rc.1",
     "private": true,
     "description": "a 3d rigid body physics engine in webassembly",
     "license": "MIT",

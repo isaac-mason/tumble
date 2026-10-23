@@ -1,4 +1,4 @@
-import { Box, ContactPairs, init, MotionType, RigidBody, Sphere, World, WorldSettings } from 'tumble';
+import { Box, ContactPairs, init, MotionType, RigidBody, Sphere, World, WorldSettings } from 'tumble.js';
 
 await init();
 const settings = WorldSettings.create();

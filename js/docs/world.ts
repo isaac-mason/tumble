@@ -1,4 +1,4 @@
-import { Box, init, MotionType, RigidBody, type Vec3, World, WorldSettings } from 'tumble';
+import { Box, init, MotionType, RigidBody, type Vec3, World, WorldSettings } from 'tumble.js';
 
 await init();
 
