@@ -1,6 +1,16 @@
 import type * as gpucat from 'gpucat';
 import { Box, Capsule, Cylinder, MotionType, RigidBody, type Shape, Sphere, World, WorldSettings } from 'tumble.js';
-import { addStepPose, blendStepPose, caption, createStepPoses, loop, meshOf, readStepPoses, type ShapeMesh, setup } from './common';
+import {
+    addStepPose,
+    blendStepPose,
+    caption,
+    createStepPoses,
+    loop,
+    meshOf,
+    readStepPoses,
+    type ShapeMesh,
+    setup,
+} from './common';
 
 const view = await setup([18, 14, 22], [0, 2, 0]);
 caption('a pile of shapes, posed from one Poses.read a step and drawn between the last two. click to drop more');
