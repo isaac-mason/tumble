@@ -27,14 +27,12 @@ void add_position_step(rigid_body::RigidBody *body, Vec3f linear_velocity_times_
 void sub_position_step(rigid_body::RigidBody *body, Vec3f linear_velocity_times_delta_time);
 
 /**
- * update rotation using an euler step (used during position solver).
- *
- * this uses a proper axis-angle quaternion construction instead of a first-order
- * approximation, which is more accurate for large rotations (important for kinematic bodies).
+ * turns the body by the rotation vector: a rotation of its length about its direction, before the current one,
+ * normalized. jolt's Body::AddRotationStep; the position solve's step.
  */
 void add_rotation_step(rigid_body::RigidBody *body, Vec3f angular_velocity_times_delta_time);
 
-/** update rotation using an euler step in the opposite direction (used during position solver). */
+/** add_rotation_step the other way. */
 void sub_rotation_step(rigid_body::RigidBody *body, Vec3f angular_velocity_times_delta_time);
 
 /**

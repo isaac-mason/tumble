@@ -32,12 +32,8 @@ void sub_position_step(rigid_body::RigidBody *body, Vec3f linear_velocity_times_
 
 /** the body's rotation turned by the rotation vector, angle sign times its length about its direction */
 static void rotate_by(rigid_body::RigidBody *body, Vec3f angular_velocity_times_delta_time, float sign) {
-    // this used to use the equation: d/dt R(t) = 1/2 * w(t) * R(t) so that R(t + dt) = R(t) + 1/2 * w(t) * R(t) * dt
-    // see: appendix b of an introduction to physically based modeling: rigid body simulation ii-nonpenetration constraints
-    // url: https://www.cs.cmu.edu/~baraff/sigcourse/notesd2.pdf
-    // but this is a first order approximation and does not work well for kinematic ragdolls that are driven to a new
-    // pose if the poses differ enough. so now we split w(t) * dt into an axis and angle part and create a quaternion with it.
-    // note that the resulting quaternion is normalized since otherwise numerical drift will eventually make the rotation non-normalized.
+    // the exact rotation, not the first-order R + 1/2 w R dt, which falls apart for a large step (a kinematic ragdoll
+    // driven to a new pose); normalized, or drift would make it stop being a rotation
     const float len = vec3f::length(angular_velocity_times_delta_time);
     if (len > 1.0e-6f) {
         const Vec3f axis = vec3f::scale(angular_velocity_times_delta_time, 1.0f / len);
