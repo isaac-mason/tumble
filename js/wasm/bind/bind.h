@@ -1,8 +1,8 @@
 #pragma once
 
-// the binder: wasm/bindings.cpp is a manifest of what the wasm exposes, written against this. the schema build
-// (wasm/toolchain/build-schema.sh) runs it once and writes a json description, from which generate.ts writes the typed
-// plumbing module (js/src/generated/tumble.ts) and the extern "C" layer (wasm/generated/exports.cpp). none of this is
+// the binder: js/wasm/bindings.cpp is a manifest of what the wasm exposes, written against this. the schema build
+// (js/wasm/toolchain/build-schema.sh) runs it once and writes a json description, from which generate.ts writes the typed
+// plumbing module (js/src/generated/tumble.ts) and the extern "C" layer (js/wasm/generated/exports.cpp). none of this is
 // compiled into the shipped binary.
 //
 // a function's js namespace and name are its innermost C++ namespace and its name with the case changed
@@ -419,5 +419,5 @@ inline EnumBinder enumeration(Binder &b, const char *name) {
 
 }  // namespace bind
 
-/** the one bindings block, wasm/bindings.cpp. */
+/** the one bindings block, js/wasm/bindings.cpp. */
 #define TUMBLE_BINDINGS void bind_all(bind::Binder &b)

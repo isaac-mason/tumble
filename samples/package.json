@@ -1,5 +1,5 @@
 {
-    "name": "tumble-labs",
+    "name": "tumble-samples",
     "private": true,
     "type": "module",
     "devDependencies": {

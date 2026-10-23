@@ -1,4 +1,4 @@
-// node screenshot.mjs <web build dir> <out.png> <app args...>: the labs page in headless chromium, the picture taken
+// node screenshot.mjs <web build dir> <out.png> <app args...>: the samples page in headless chromium, the picture taken
 // once the app says its frames are done
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -31,9 +31,9 @@ page.on('console', (message) => {
 });
 page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
 const query = new URLSearchParams(args.map((arg) => ['a', arg])).toString();
-await page.goto(`http://127.0.0.1:${server.address().port}/tumble_labs.html?${query}`);
+await page.goto(`http://127.0.0.1:${server.address().port}/tumble_samples.html?${query}`);
 try {
-    await page.waitForFunction(() => window.labsScreenshotReady === true, null, { timeout: 120_000 });
+    await page.waitForFunction(() => window.samplesScreenshotReady === true, null, { timeout: 120_000 });
     await page.screenshot({ path: out });
     console.log(`saved ${out}`);
 } catch (error) {

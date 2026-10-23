@@ -17,19 +17,19 @@ find_tool() {
     done
 }
 if [ -z "$WASM_CLANG$WASM_LD$WASM_OPT" ] && { [ ! -x "$LLVM_DIR/bin/clang" ] || [ ! -x "$BINARYEN_DIR/bin/wasm-opt" ]; }; then
-    echo "warning: the pinned wasm toolchain (llvm $LLVM_VERSION, binaryen $BINARYEN_VERSION) is not fetched; falling back to whatever llvm and binaryen are installed. run sh wasm/toolchain/scripts/fetch-toolchain.sh" >&2
+    echo "warning: the pinned wasm toolchain (llvm $LLVM_VERSION, binaryen $BINARYEN_VERSION) is not fetched; falling back to whatever llvm and binaryen are installed. run sh js/wasm/toolchain/scripts/fetch-toolchain.sh" >&2
 fi
 CLANG="${WASM_CLANG:-$(find_tool "$LLVM_DIR/bin/clang" /opt/homebrew/opt/llvm/bin/clang /usr/local/opt/llvm/bin/clang)}"
 WASM_LD="${WASM_LD:-$(find_tool "$LLVM_DIR/bin/wasm-ld" /opt/homebrew/opt/llvm/bin/wasm-ld /usr/local/opt/llvm/bin/wasm-ld)}"
 WASM_OPT="${WASM_OPT:-$(find_tool "$BINARYEN_DIR/bin/wasm-opt" /opt/homebrew/bin/wasm-opt /usr/local/bin/wasm-opt)}"
 
 if [ ! -x "$CLANG" ] || [ ! -x "$WASM_LD" ] || [ ! -x "$WASM_OPT" ]; then
-    echo "wasm toolchain not found: run sh wasm/toolchain/scripts/fetch-toolchain.sh, or set WASM_CLANG, WASM_LD and WASM_OPT" >&2
+    echo "wasm toolchain not found: run sh js/wasm/toolchain/scripts/fetch-toolchain.sh, or set WASM_CLANG, WASM_LD and WASM_OPT" >&2
     exit 1
 fi
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-ROOT="$(cd "$HERE/../.." && pwd)"
+ROOT="$(cd "$HERE/../../.." && pwd)"
 SRC="$ROOT/tumble"
 # each build script picks its own object dir under build/ so that builds running at once (several
 # people, or agents, testing in the same tree) never share objects or outputs.
@@ -47,7 +47,7 @@ COMMON="--target=wasm32 $OPT $FEATURES -nostdlib -nostdlibinc -ffreestanding -fv
 # ours: every warning is an error.
 # -Wglobal-constructors: a static needing a constructor would put a constructor list in the
 # module, and with no entry point the linker then runs that list on every export call.
-CXXFLAGS="$COMMON -std=c++20 -Wall -Wextra -Werror -Wglobal-constructors -I$ROOT"
+CXXFLAGS="$COMMON -std=c++20 -Wall -Wextra -Werror -Wglobal-constructors -I$ROOT -I$ROOT/js"
 
 LDFLAGS="--no-entry --import-memory --export-dynamic --export=__heap_base --export=__data_end --stack-first -z stack-size=1048576"
 

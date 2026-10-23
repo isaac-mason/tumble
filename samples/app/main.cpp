@@ -349,7 +349,7 @@ static void save_screenshot() {
 #if defined(__EMSCRIPTEN__)
     // the page holds this frame, and the headless browser takes the picture
     state.paused = true;
-    EM_ASM({ window.labsScreenshotReady = true; });
+    EM_ASM({ window.samplesScreenshotReady = true; });
     return;
 #else
     const int width = sapp_width();
@@ -547,7 +547,7 @@ sapp_desc sokol_main(int argc, char **argv) {
     desc.height = 800;
     desc.sample_count = 4;
     desc.high_dpi = true;
-    desc.window_title = "tumble labs";
+    desc.window_title = "tumble samples";
     desc.logger.func = slog_func;
     return desc;
 }

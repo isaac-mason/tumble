@@ -1,10 +1,10 @@
 #!/bin/sh
-# run: sh wasm/toolchain/build-test.sh
+# run: sh js/wasm/toolchain/build-test.sh
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
 # every test runs on both simd backends, and their digests must match: the backends compute the same bits
 if [ -z "$SIMD" ]; then
-    LOGS="$(cd "$HERE/../.." && pwd)/build/test-logs-$$"
+    LOGS="$(cd "$HERE/../../.." && pwd)/build/test-logs-$$"
     mkdir -p "$LOGS"
     trap 'rm -rf "$LOGS"' EXIT
     for backend in 1 0; do
@@ -26,7 +26,7 @@ fi
 
 BUILD="$ROOT/build/test-$$"
 TESTS="$ROOT/tests"
-RUNTIME="$ROOT/wasm/runtime"
+RUNTIME="$ROOT/js/wasm/runtime"
 mkdir -p "$BUILD"
 trap 'rm -rf "$BUILD"' EXIT
 

@@ -1,4 +1,4 @@
-# the examples on github pages: the js examples at the root, the C++ labs app built with emscripten at /labs/
+# the examples on github pages: the js examples at the root, the C++ samples app built with emscripten at /samples/
 name: pages
 
 on:
@@ -42,18 +42,18 @@ jobs:
               with:
                   version: 6.0.9
 
-            - name: labs
+            - name: samples
               run: |
                   sudo apt-get install -y ninja-build
-                  cmake --preset labs-web
-                  cmake --build --preset labs-web
+                  cmake --preset samples-web
+                  cmake --build --preset samples-web
 
             - name: site
               run: |
-                  mkdir -p site/labs
+                  mkdir -p site/samples
                   cp -r js/examples/dist/. site/
-                  cp build/labs/web/labs/tumble_labs.js build/labs/web/labs/tumble_labs.wasm build/labs/web/labs/tumble_labs.data site/labs/
-                  cp build/labs/web/labs/tumble_labs.html site/labs/index.html
+                  cp build/samples/web/samples/tumble_samples.js build/samples/web/samples/tumble_samples.wasm build/samples/web/samples/tumble_samples.data site/samples/
+                  cp build/samples/web/samples/tumble_samples.html site/samples/index.html
 
             - uses: actions/upload-pages-artifact@v3
               with:

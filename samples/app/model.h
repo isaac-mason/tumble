@@ -16,7 +16,7 @@ struct Model {
 
 namespace model {
 
-/** a file in labs/assets, by name */
+/** a file in samples/assets, by name */
 Model load(const char *name);
 void release(Model &model);
 

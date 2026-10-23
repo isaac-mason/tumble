@@ -1,7 +1,7 @@
 #!/bin/sh
 # download the pinned llvm (clang + lld) and binaryen releases into the toolchain cache, checksum-verified, keeping only
 # what the build runs: clang, wasm-ld, clang's builtin headers, and wasm-opt. macOS arm64 and Linux x64.
-# run: sh wasm/toolchain/scripts/fetch-toolchain.sh   (TUMBLE_TOOLCHAIN_CACHE overrides where it goes)
+# run: sh js/wasm/toolchain/scripts/fetch-toolchain.sh   (TUMBLE_TOOLCHAIN_CACHE overrides where it goes)
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
 . "$HERE/toolchain-pins.sh"

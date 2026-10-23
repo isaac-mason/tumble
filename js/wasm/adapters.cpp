@@ -1,5 +1,5 @@
 // what js calls where the C++ api does not cross as it is: bodies by id, settings holding pointers, the world's
-// settings built call by call. wasm/bindings.cpp binds them; the generated extern "C" layer calls them.
+// settings built call by call. js/wasm/bindings.cpp binds them; the generated extern "C" layer calls them.
 
 #include "wasm/adapters.h"
 

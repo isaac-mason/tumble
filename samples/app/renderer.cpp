@@ -74,7 +74,7 @@ static sg_shader make_color_shader() {
     desc.uniform_blocks[0].size = sizeof(ColorUniforms);
     desc.uniform_blocks[0].glsl_uniforms[0].type = SG_UNIFORMTYPE_MAT4;
     desc.uniform_blocks[0].glsl_uniforms[0].glsl_name = "mvp";
-    desc.label = "labs color shader";
+    desc.label = "samples color shader";
     return sg_make_shader(&desc);
 }
 
@@ -90,7 +90,7 @@ static sg_shader make_mesh_shader() {
     desc.uniform_blocks[0].glsl_uniforms[1] = {SG_UNIFORMTYPE_MAT4, 0, "model"};
     desc.uniform_blocks[0].glsl_uniforms[2] = {SG_UNIFORMTYPE_FLOAT4, 0, "tint"};
     desc.uniform_blocks[0].glsl_uniforms[3] = {SG_UNIFORMTYPE_FLOAT4, 0, "light"};
-    desc.label = "labs mesh shader";
+    desc.label = "samples mesh shader";
     return sg_make_shader(&desc);
 }
 
@@ -137,11 +137,11 @@ Renderer create() {
     Renderer renderer = {};
     renderer.color_shader = make_color_shader();
     renderer.mesh_shader = make_mesh_shader();
-    renderer.opaque_pipeline = make_color_pipeline(renderer.color_shader, SG_PRIMITIVETYPE_TRIANGLES, false, true, "labs opaque");
-    renderer.transparent_pipeline = make_color_pipeline(renderer.color_shader, SG_PRIMITIVETYPE_TRIANGLES, true, false, "labs transparent");
-    renderer.line_pipeline = make_color_pipeline(renderer.color_shader, SG_PRIMITIVETYPE_LINES, true, false, "labs lines");
-    renderer.mesh_pipeline = make_mesh_pipeline(renderer.mesh_shader, false, "labs meshes");
-    renderer.transparent_mesh_pipeline = make_mesh_pipeline(renderer.mesh_shader, true, "labs transparent meshes");
+    renderer.opaque_pipeline = make_color_pipeline(renderer.color_shader, SG_PRIMITIVETYPE_TRIANGLES, false, true, "samples opaque");
+    renderer.transparent_pipeline = make_color_pipeline(renderer.color_shader, SG_PRIMITIVETYPE_TRIANGLES, true, false, "samples transparent");
+    renderer.line_pipeline = make_color_pipeline(renderer.color_shader, SG_PRIMITIVETYPE_LINES, true, false, "samples lines");
+    renderer.mesh_pipeline = make_mesh_pipeline(renderer.mesh_shader, false, "samples meshes");
+    renderer.transparent_mesh_pipeline = make_mesh_pipeline(renderer.mesh_shader, true, "samples transparent meshes");
     return renderer;
 }
 
@@ -179,7 +179,7 @@ GpuMesh mesh_of(Renderer &renderer, const shapes::Shape *shape) {
     if (vertices.length > 0) {
         sg_buffer_desc desc = {};
         desc.data = {vertices.data, (size_t)vertices.length * sizeof(MeshVertex)};
-        desc.label = "labs shape mesh";
+        desc.label = "samples shape mesh";
         mesh = {sg_make_buffer(&desc), (int)vertices.length};
     }
     vertices.release();
@@ -261,7 +261,7 @@ static GpuMesh write_transient(TransientBuffer &transient, const collections::Ve
         desc.usage.vertex_buffer = true;
         desc.usage.immutable = false;
         desc.usage.write_transient = true;
-        desc.label = "labs frame vertices";
+        desc.label = "samples frame vertices";
         transient.buffer = sg_make_buffer(&desc);
         transient.capacity = capacity;
     }

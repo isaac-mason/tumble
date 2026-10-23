@@ -1,5 +1,5 @@
 // what the wasm exposes to js: the manifest the schema build turns into js/src/generated/tumble.ts and
-// wasm/generated/exports.cpp (see wasm/bind/bind.h). every field of a value that crosses is exposed: the bytes of one
+// js/wasm/generated/exports.cpp (see js/wasm/bind/bind.h). every field of a value that crosses is exposed: the bytes of one
 // that is not would be what the scratch held before.
 
 #include "tumble/util/error.h"

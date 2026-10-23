@@ -60,8 +60,8 @@ static void append_node(Model &model, const cgltf_node &node) {
 
 Model load(const char *name) {
     char path[512];
-#if defined(TUMBLE_LABS_ASSETS_DIR)
-    snprintf(path, sizeof(path), "%s/%s", TUMBLE_LABS_ASSETS_DIR, name);
+#if defined(TUMBLE_SAMPLES_ASSETS_DIR)
+    snprintf(path, sizeof(path), "%s/%s", TUMBLE_SAMPLES_ASSETS_DIR, name);
 #else
     snprintf(path, sizeof(path), "/assets/%s", name);
 #endif
@@ -70,11 +70,11 @@ Model load(const char *name) {
     cgltf_options options = {};
     cgltf_data *data = nullptr;
     if (cgltf_parse_file(&options, path, &data) != cgltf_result_success) {
-        fprintf(stderr, "labs: could not parse %s\n", path);
+        fprintf(stderr, "samples: could not parse %s\n", path);
         return model;
     }
     if (cgltf_load_buffers(&options, data, path) != cgltf_result_success) {
-        fprintf(stderr, "labs: could not load the buffers of %s\n", path);
+        fprintf(stderr, "samples: could not load the buffers of %s\n", path);
         cgltf_free(data);
         return model;
     }
