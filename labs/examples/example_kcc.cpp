@@ -50,6 +50,8 @@ static struct {
     /** the input asks to move: the character may slide on walkable slopes */
     bool allow_sliding;
     bool in_lava;
+    /** where the character's body was drawn last frame: the camera follows it on from there */
+    Float3 followed;
     rigid_body::RigidBody *spinning;
     rigid_body::RigidBody *sliding;
     rigid_body::RigidBody *diagonal;
@@ -124,6 +126,7 @@ static void make_character(App &app) {
     state.desired_velocity = {0, 0, 0};
     kcc::add(*app.world, *state.character);
     app::set_color(app, rigid_body::get(*app.world, state.character->inner_rigid_body_id), {0.95f, 0.75f, 0.3f, 1.0f});
+    state.followed = rigid_body::get(*app.world, state.character->inner_rigid_body_id)->position;
 }
 
 static void release_character(App &app) {
@@ -353,10 +356,10 @@ static void steer(App &app, float delta_time) {
 
 static void step(App &app, float delta_time) {
     kcc::KCC &character = *state.character;
-    if (state.in_lava) {
+    const bool respawned = state.in_lava;
+    if (respawned) {
         kcc::set_position(*app.world, character, v3(SPAWN));
         character.linear_velocity = vec3f::zero();
-        app.camera.target = SPAWN;
         state.in_lava = false;
     }
     const Float3 up = f3(character.up);
@@ -367,17 +370,25 @@ static void step(App &app, float delta_time) {
     steer(app, delta_time);
     move_platforms(app, delta_time);
 
-    const Float3 before = f3(character.position);
     kcc::update(*app.world, character, delta_time, v3(GRAVITY), state.update_settings, &state.listener, state.filter);
-    // the camera follows
-    const Float3 moved = vec::subtract(f3(character.position), before);
-    app.camera.target = vec::add(app.camera.target, moved);
+    if (respawned) {
+        // drawn at the spawn, not swept back across the level, the camera with it
+        const rigid_body::RigidBody &body = *rigid_body::get(*app.world, character.inner_rigid_body_id);
+        app::snap(app, body);
+        state.followed = body.position;
+        app.camera.target = SPAWN;
+    }
 
     state.steps++;
 }
 
 static void update(App &app, float) {
     const kcc::KCC &character = *state.character;
+    // the camera follows where the character is drawn, keeping the turn and pan it was given
+    const Float3 drawn = app::pose(app, *rigid_body::get(*app.world, character.inner_rigid_body_id)).position;
+    app.camera.target = vec::add(app.camera.target, vec::subtract(drawn, state.followed));
+    state.followed = drawn;
+
     DrawList &frame = app::frame(app);
     const Float3 position = f3(character.position);
     if (state.show_contacts) {

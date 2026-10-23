@@ -149,6 +149,7 @@ static void steer(App &app, Agent &agent, float delta_time) {
     kcc::KCC &character = *agent.character;
     if (vec3f::y(character.position) < FALL_THRESHOLD) {
         kcc::set_position(*app.world, character, vec3f::load(agent.spawn_position));
+        app::snap(app, *rigid_body::get(*app.world, character.inner_rigid_body_id));
         character.linear_velocity = vec3f::zero();
         return;
     }

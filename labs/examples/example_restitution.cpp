@@ -26,6 +26,7 @@ static float ball_x(int i) { return ((float)i - 0.5f * (float)(BALL_COUNT - 1)) 
 static void reset_balls(App &app) {
     for (int i = 0; i < BALL_COUNT; i++) {
         rigid_body::set_position(*app.world, state.balls[i], vec3f::make(ball_x(i), DROP_HEIGHT, 0.0f), true);
+        app::snap(app, *state.balls[i]);
         rigid_body::set_linear_velocity(*app.world, state.balls[i], vec3f::zero());
         rigid_body::set_angular_velocity(*app.world, state.balls[i], vec3f::zero());
     }

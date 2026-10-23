@@ -59,6 +59,8 @@ static int initial_example = 0;
 static const char *screenshot_path = nullptr;
 static int screenshot_frame = 30;
 static int frame_count = 0;
+/** seconds a frame, in place of the display's when above 0: a display rate the machine does not have, to try out */
+static float frame_time = 0.0f;
 
 /** at most this many steps a frame, so a slow step cannot snowball */
 static constexpr int MAX_STEPS_PER_FRAME = 4;
@@ -108,6 +110,8 @@ void clear_world(App &app) {
     app.hulls.length = 0;
     app.mesh_data.length = 0;
     app.body_colors.length = 0;
+    app.step_poses.length = 0;
+    app.step_sequences.length = 0;
     // a freed shape's memory may be reused by the next world's
     renderer::forget_shapes(app.renderer);
 }
@@ -126,6 +130,24 @@ triangle_mesh_data::TriangleMeshData *keep(App &app, triangle_mesh_data::Triangl
     app.mesh_data.push(data);
     return data;
 }
+
+BodyPose pose(const App &app, const rigid_body::RigidBody &body) {
+    const BodyPose now = {body.position, body.quaternion};
+    const uint32_t index = body.index;
+    if (app.alpha >= 1.0f || index >= app.step_poses.length || app.step_sequences[index] != app.world->bodies.sequences[index]) return now;
+    const BodyPose &before = app.step_poses[index];
+    return {vec::lerp(before.position, now.position, app.alpha), vec::quat_slerp(before.quaternion, now.quaternion, app.alpha)};
+}
+
+void snap(App &app, const rigid_body::RigidBody &body) {
+    if (body.index >= app.step_poses.length) return;
+    app.step_poses[body.index] = {body.position, body.quaternion};
+    app.step_sequences[body.index] = app.world->bodies.sequences[body.index];
+}
+
+Float3 blend(const App &app, Float3 before, Float3 now) { return app.alpha >= 1.0f ? now : vec::lerp(before, now, app.alpha); }
+
+Float4 blend(const App &app, Float4 before, Float4 now) { return app.alpha >= 1.0f ? now : vec::quat_slerp(before, now, app.alpha); }
 
 void set_color(App &app, const rigid_body::RigidBody *body, Color color) {
     const uint32_t index = body_id::index(body->id);
@@ -196,7 +218,8 @@ static void select_example(int index) {
     state.body_colors.length = 0;
     state.camera = camera::create();
     // each example starts from these, changing what it shows in its init
-    state.drawing = {true, true, false, false, false, false, true, debug::COLOR_MOTION_TYPE};
+    state.drawing = {true, true, false, false, false, false, true, debug::COLOR_MOTION_TYPE, true};
+    state.alpha = 1.0f;
     examples::at(current_example).init(state);
 }
 
@@ -259,7 +282,8 @@ static void draw_world(const world::World &world) {
             if (world.bodies.sequences[i] == bodies::SLOT_FREE) continue;
             const rigid_body::RigidBody &body = *world.bodies.pool[i];
             const GpuMesh mesh = renderer::mesh_of(state.renderer, body.shape);
-            renderer::mesh(state.renderer, mesh, matrix::compose(body.position, body.quaternion), body_color(body));
+            const BodyPose drawn = app::pose(state, body);
+            renderer::mesh(state.renderer, mesh, matrix::compose(drawn.position, drawn.quaternion), body_color(body));
         }
     }
     debug::clear(*state.debug);
@@ -274,6 +298,20 @@ static void draw_world(const world::World &world) {
     if (drawing.contact_manifolds) debug::contact_constraints(*state.debug, world);
     if (drawing.joints) debug::joints(*state.debug, world, {});
     renderer::debug(state.renderer.frame, *state.debug);
+}
+
+/** every body's pose as a step begins, what app::pose blends from */
+static void take_step_poses(App &app) {
+    const bodies::Bodies &bodies = app.world->bodies;
+    while (app.step_poses.length < bodies.pool.length) {
+        app.step_poses.push({});
+        app.step_sequences.push(bodies::SLOT_FREE);
+    }
+    for (uint32_t i = 0; i < bodies.pool.length; i++) {
+        app.step_sequences[i] = bodies.sequences[i];
+        if (bodies.sequences[i] == bodies::SLOT_FREE) continue;
+        app.step_poses[i] = {bodies.pool[i]->position, bodies.pool[i]->quaternion};
+    }
 }
 
 static void step_world(const Example &example, float delta_time) {
@@ -295,6 +333,7 @@ static void step_world(const Example &example, float delta_time) {
         if (steps == MAX_STEPS_PER_FRAME) state.accumulator = 0;
     }
     for (int i = 0; i < steps; i++) {
+        take_step_poses(state);
         if (example.step) example.step(state, step);
         const double start = app::now_milliseconds();
         if (example.step_world) {
@@ -359,6 +398,8 @@ static void ui(const Example &example) {
             Drawing &drawing = state.drawing;
             ImGui::Checkbox("grid", &drawing.grid);
             ImGui::Checkbox("meshes", &drawing.meshes);
+            ImGui::Checkbox("interpolate", &drawing.interpolate);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("draw between the last two steps; the debug overlays show the step");
             ImGui::Checkbox("wireframes", &drawing.wireframes);
             ImGui::Checkbox("with velocities", &drawing.velocities);
             ImGui::Checkbox("contacts", &drawing.contacts);
@@ -375,7 +416,7 @@ static void ui(const Example &example) {
 }
 
 static void frame() {
-    const float delta_time = (float)sapp_frame_duration();
+    const float delta_time = frame_time > 0.0f ? frame_time : (float)sapp_frame_duration();
 
     simgui_frame_desc_t imgui_frame = {};
     imgui_frame.width = sapp_width();
@@ -391,6 +432,9 @@ static void frame() {
     const Example &example = examples::at(current_example);
     // screenshots step a fixed time a frame, the same picture on every machine
     step_world(example, screenshot_path != nullptr ? 1.0f / state.step_rate : delta_time);
+    // paused, or for a screenshot, the step itself
+    const bool blending = state.drawing.interpolate && !state.paused && screenshot_path == nullptr;
+    state.alpha = blending ? state.accumulator * state.step_rate : 1.0f;
     if (example.update) example.update(state, delta_time);
     state.click = {};
     if (state.world != nullptr) draw_world(*state.world);
@@ -417,6 +461,8 @@ static void cleanup() {
     state.hulls.release();
     state.mesh_data.release();
     state.body_colors.release();
+    state.step_poses.release();
+    state.step_sequences.release();
     debug::release(state.debug);
     renderer::destroy(state.renderer);
     simgui_shutdown();
@@ -481,6 +527,10 @@ sapp_desc sokol_main(int argc, char **argv) {
         }
         if (strcmp(argv[arg], "--frames") == 0 && arg + 1 < argc) {
             screenshot_frame = atoi(argv[++arg]);
+            continue;
+        }
+        if (strcmp(argv[arg], "--frame-time") == 0 && arg + 1 < argc) {
+            frame_time = (float)atof(argv[++arg]);
             continue;
         }
         for (int i = 0; i < examples::count(); i++) {

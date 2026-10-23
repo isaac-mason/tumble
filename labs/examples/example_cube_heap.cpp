@@ -57,6 +57,7 @@ static void step(App &app, float) {
     if (state.cubes.length == 0) return;
     rigid_body::RigidBody *cube = state.cubes[(uint32_t)(seeded::next(state.random) * (float)state.cubes.length) % state.cubes.length];
     rigid_body::set_position(*app.world, cube, vec3f::make(0.0f, seeded::range(state.random, 0.0f, SPAWN_HEIGHT), 0.0f), true);
+    app::snap(app, *cube);
     rigid_body::set_linear_velocity(*app.world, cube, vec3f::zero());
     rigid_body::set_angular_velocity(*app.world, cube, vec3f::zero());
 }

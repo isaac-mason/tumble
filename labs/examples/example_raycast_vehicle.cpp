@@ -66,6 +66,9 @@ struct Wheel {
     Vec3f axle;
     Vec3f world_position;
     Quatf world_quaternion;
+    /** its pose as the last step began, which drawing blends on from */
+    Float3 before_position;
+    Float4 before_quaternion;
     float engine_force;
     float brake_force;
     float steering;
@@ -171,6 +174,15 @@ static void update_wheel_transforms() {
         const Quatf rotating = quatf::set_axis_angle(right, wheel.rotation);
         wheel.world_quaternion = quatf::normalize(quatf::multiply(quatf::multiply(chassis_quaternion(), steering), rotating));
         wheel.world_position = vec3f::scale_and_add(wheel.chassis_connection_point_world, wheel.direction_world, wheel.suspension_length);
+    }
+}
+
+/** each wheel's pose where the last step left the chassis, kept to blend from */
+static void keep_wheel_poses() {
+    update_wheel_transforms();
+    for (Wheel &wheel : state.wheels) {
+        wheel.before_position = stored(wheel.world_position);
+        quatf::store(wheel.before_quaternion, wheel.world_quaternion);
     }
 }
 
@@ -409,9 +421,10 @@ static void add_wheel(int index, Vec3f connection_point) {
 }
 
 /** where the camera wants to be, behind and above the chassis, and what it looks at */
-static void camera_ideal(Float3 &position, Float3 &look_at) {
-    const Float3 chassis = state.chassis->position;
-    const Float4 rotation = state.chassis->quaternion;
+static void camera_ideal(const App &app, Float3 &position, Float3 &look_at) {
+    const BodyPose drawn = app::pose(app, *state.chassis);
+    const Float3 chassis = drawn.position;
+    const Float4 rotation = drawn.quaternion;
     position = vec::add(chassis, vec::rotate(rotation, {0.0f, 3.0f, 10.0f}));
     look_at = vec::add(chassis, vec::rotate(rotation, {0.0f, 1.0f, 0.0f}));
 }
@@ -470,11 +483,13 @@ static void init(App &app) {
 
     app.drawing.grid = false;
     app.camera.fov_y = 60.0f * scalar::DEGREES_TO_RADIANS;
-    camera_ideal(state.camera_position, state.camera_look_at);
+    camera_ideal(app, state.camera_position, state.camera_look_at);
     camera::look_at(app.camera, state.camera_position, state.camera_look_at);
+    keep_wheel_poses();
 }
 
 static void step(App &app, float delta_time) {
+    keep_wheel_poses();
     const bool *keys = app.keys;
     float engine_force = 0.0f;
     float steering = 0.0f;
@@ -505,9 +520,10 @@ static void step(App &app, float delta_time) {
 }
 
 static void draw_wheel(App &app, const Wheel &wheel) {
-    const Float3 position = stored(wheel.world_position);
-    Float4 rotation;
-    quatf::store(rotation, wheel.world_quaternion);
+    Float4 now;
+    quatf::store(now, wheel.world_quaternion);
+    const Float3 position = app::blend(app, wheel.before_position, stored(wheel.world_position));
+    const Float4 rotation = app::blend(app, wheel.before_quaternion, now);
     // the cylinder's axis, y, along the axle, x
     const Float4 upright = vec::quat_multiply(rotation, vec::quat_axis_angle({0.0f, 0.0f, 1.0f}, 0.5f * scalar::PI));
     renderer::mesh(app.renderer, renderer::mesh_of(app.renderer, state.wheel_shape), matrix::compose(position, upright), hex(0x333333));
@@ -556,7 +572,7 @@ static void update(App &app, float delta_time) {
 
     if (state.camera_rig) {
         Float3 ideal_position, ideal_look_at;
-        camera_ideal(ideal_position, ideal_look_at);
+        camera_ideal(app, ideal_position, ideal_look_at);
         ideal_position.y = fmaxf(ideal_position.y, 0.5f);
         const float t = 1.0f - powf(0.01f, delta_time);
         state.camera_position = vec::add(state.camera_position, vec::scale(vec::subtract(ideal_position, state.camera_position), t));
@@ -564,7 +580,7 @@ static void update(App &app, float delta_time) {
         camera::look_at(app.camera, state.camera_position, state.camera_look_at);
     } else {
         // orbiting the chassis
-        app.camera.target = state.chassis->position;
+        app.camera.target = app::pose(app, *state.chassis).position;
     }
 }
 

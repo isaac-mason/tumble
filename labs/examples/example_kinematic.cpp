@@ -50,6 +50,7 @@ static Color hsl(float hue, float saturation, float lightness) {
 static void reset_ball(App &app, rigid_body::RigidBody *ball) {
     const float x = (seeded::next(state.random) - 0.5f) * MOVEMENT_RANGE * 2.0f;
     rigid_body::set_position(*app.world, ball, vec3f::make(x, SPAWN_HEIGHT, 0.0f), true);
+    app::snap(app, *ball);
     rigid_body::set_linear_velocity(*app.world, ball, vec3f::zero());
     rigid_body::set_angular_velocity(*app.world, ball, vec3f::zero());
 }

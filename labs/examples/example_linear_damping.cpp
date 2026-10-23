@@ -30,6 +30,7 @@ static float x_of(int i) { return START_X + SPACING * (float)i; }
 static void launch(App &app) {
     for (int i = 0; i < BOX_COUNT; i++) {
         rigid_body::set_position(*app.world, state.boxes[i], vec3f::make(x_of(i), START_HEIGHT, 0.0f), true);
+        app::snap(app, *state.boxes[i]);
         rigid_body::set_linear_velocity(*app.world, state.boxes[i], vec3f::make(0.0f, 0.0f, LAUNCH_SPEED));
         rigid_body::set_angular_velocity(*app.world, state.boxes[i], vec3f::zero());
     }

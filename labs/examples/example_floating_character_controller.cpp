@@ -644,8 +644,8 @@ static void step(App &app, float delta_time) {
 
 static void update(App &app, float) {
     const Character &c = state.character;
-    // the camera follows the character, keeping its orbit
-    app.camera.target = c.body->position;
+    // the camera follows the character as drawn, keeping its orbit
+    app.camera.target = app::pose(app, *c.body).position;
 
     DrawList &frame = app::frame(app);
     const Float3 feet = {c.body->position.x, c.body->position.y - c.capsule_half_height, c.body->position.z};
@@ -665,6 +665,7 @@ static void set_auto_balance(App &app, Character &c) {
     // upright and not turning
     rigid_body::set_angular_velocity(*app.world, body, vec3f::zero());
     rigid_body::set_quaternion(*app.world, body, quatf::identity(), true);
+    app::snap(app, *body);
 }
 
 static void ui(App &app) {

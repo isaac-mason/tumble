@@ -41,6 +41,28 @@ inline Float4 quat_axis_angle(Float3 axis, float angle) {
     return {a.x * s, a.y * s, a.z * s, cosf(angle * 0.5f)};
 }
 
+inline Float3 lerp(Float3 a, Float3 b, float t) { return {a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t}; }
+
+/** between unit quaternions a and b by t, the short way round */
+inline Float4 quat_slerp(Float4 a, Float4 b, float t) {
+    float d = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+    if (d < 0.0f) {
+        b = {-b.x, -b.y, -b.z, -b.w};
+        d = -d;
+    }
+    float wa = 1.0f - t, wb = t;
+    // nearly the same turn: the arc is too short for sin to divide by, so a normalized lerp
+    if (d < 0.9995f) {
+        const float angle = acosf(d);
+        const float s = sinf(angle);
+        wa = sinf(wa * angle) / s;
+        wb = sinf(wb * angle) / s;
+    }
+    const Float4 q = {a.x * wa + b.x * wb, a.y * wa + b.y * wb, a.z * wa + b.z * wb, a.w * wa + b.w * wb};
+    const float l = sqrtf(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
+    return {q.x / l, q.y / l, q.z / l, q.w / l};
+}
+
 /** the shortest rotation taking unit a onto unit b */
 inline Float4 quat_from_to(Float3 a, Float3 b) {
     const float d = dot(a, b);

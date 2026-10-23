@@ -32,6 +32,15 @@ struct Drawing {
     bool contact_manifolds;
     bool joints;
     tumble::debug::BodyColorMode color_mode;
+    /** the meshes, a camera following something and what examples draw themselves, between the last two steps; the
+     *  debug overlays always show the step */
+    bool interpolate;
+};
+
+/** a body's place and turn: its shape's origin */
+struct BodyPose {
+    tumble::Float3 position;
+    tumble::Float4 quaternion;
 };
 
 struct App {
@@ -48,6 +57,15 @@ struct App {
     /** world steps a second */
     float step_rate;
     float accumulator;
+    /**
+     * of a step, how far the frame is past the last one: what is drawn blends the state as that step began into the
+     * state it left by this, so things move evenly whatever the frame rate. 1 when paused, not interpolating, or
+     * taking a screenshot
+     */
+    float alpha;
+    /** each body slot's pose as the last step began, and the slot's sequence then: a slot reused since is not blended */
+    tumble::collections::Vec<BodyPose> step_poses;
+    tumble::collections::Vec<uint32_t> step_sequences;
     double step_milliseconds;
     Drawing drawing;
     tumble::debug::DebugBuffers *debug;
@@ -105,6 +123,14 @@ struct LabelStyle {
 
 /** text centred on a world point, over the scene; call it each frame from update or ui */
 void label(const App &app, tumble::Float3 at, const char *text, const LabelStyle &style = {});
+
+/** the body as drawn: from its pose as the last step began to its pose now, by alpha */
+BodyPose pose(const App &app, const tumble::rigid_body::RigidBody &body);
+/** the body drawn where it is rather than swept there: after moving it other than by stepping (a respawn, a reset) */
+void snap(App &app, const tumble::rigid_body::RigidBody &body);
+/** a value an example moves in its steps, from what it was as the last step began to what it is now, by alpha */
+tumble::Float3 blend(const App &app, tumble::Float3 before, tumble::Float3 now);
+tumble::Float4 blend(const App &app, tumble::Float4 before, tumble::Float4 now);
 
 void set_color(App &app, const tumble::rigid_body::RigidBody *body, Color color);
 DrawList &frame(App &app);

@@ -317,6 +317,7 @@ static void grab(App &app, const Ray &pointer) {
     state.plane_normal = app.camera.forward;
     state.pointer_position = point;
     rigid_body::set_position(*app.world, state.pointer, vec3f::load(point), false);
+    app::snap(app, *state.pointer);
     state.drag = distance_constraint::create(*app.world, state.pointer, body,
                                              {.point_a = point, .point_b = point, .min_distance = 0.0f, .max_distance = 1.0f,
                                               .constraint_priority = 100});

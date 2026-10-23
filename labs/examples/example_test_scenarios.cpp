@@ -514,6 +514,7 @@ static void distance_constraint_spring(App &app) {
              .point_b = {x, y, 0.0f},
              .spring_settings = {.mode = spring_settings::FREQUENCY_AND_DAMPING, .frequency_or_stiffness = frequency, .damping = damping}});
         rigid_body::set_position(*app.world, body, vec3f::make(x, bar_y - 4.0f, 0.0f), false);
+        app::snap(app, *body);
     };
     // the same frequency, lengths of 8 to 16 m
     for (int i = 0; i < 5; i++) hang(-25.0f + (float)i * 5.0f, 8.0f + (float)i * 2.0f, 0.33f, 0.0f);
