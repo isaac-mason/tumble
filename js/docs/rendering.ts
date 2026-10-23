@@ -38,17 +38,18 @@ const check = (ok: boolean, what: string): void => {
 
 /* SNIPPET_START: poses */
 // a renderer's bodies, each in a slot of its own: one read a frame brings every slot to its body's pose, in arrays
-// straight onto the wasm's memory, and lists the slots that changed, so only their meshes need updating
+// straight onto the wasm's memory, and lists the slots that changed, so only their meshes need updating. copied
+// number by number into the mesh's own arrays, nothing is allocated a frame
 const poses = Poses.create(world);
-const meshOf = new Map<number, { position: number[]; quaternion: number[] }>();
-for (const body of balls) meshOf.set(Poses.add(poses, body), { position: [0, 0, 0], quaternion: [0, 0, 0, 1] });
+const meshes: { position: number[]; quaternion: number[] }[] = [];
+for (const body of balls) meshes[Poses.add(poses, body)] = { position: [0, 0, 0], quaternion: [0, 0, 0, 1] };
 
 function render(): void {
     const { positions, quaternions, changed } = Poses.read(poses);
     for (const slot of changed) {
-        const mesh = meshOf.get(slot)!;
-        mesh.position = Array.from(positions.subarray(slot * 3, slot * 3 + 3));
-        mesh.quaternion = Array.from(quaternions.subarray(slot * 4, slot * 4 + 4));
+        const mesh = meshes[slot]!;
+        for (let k = 0; k < 3; k++) mesh.position[k] = positions[slot * 3 + k]!;
+        for (let k = 0; k < 4; k++) mesh.quaternion[k] = quaternions[slot * 4 + k]!;
     }
 }
 /* SNIPPET_END: poses */
@@ -60,7 +61,7 @@ render();
 const at: [number, number, number] = [0, 0, 0];
 RigidBody.getPosition(at, world, balls[42]!);
 check(
-    meshOf.get(42)!.position.every((value, axis) => value === at[axis]),
+    meshes[42]!.position.every((value, axis) => value === at[axis]),
     'mesh at the body',
 );
 // asleep, nothing changes

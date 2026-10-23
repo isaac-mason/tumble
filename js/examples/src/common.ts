@@ -161,13 +161,14 @@ function grown(array: Float32Array, length: number): Float32Array {
 /** the poses read take: the slots that changed into now, the slots just added into before as well */
 function take(stepPoses: StepPoses): void {
     const { positions, quaternions, changed } = Poses.read(stepPoses.poses);
+    const { beforePositions, beforeQuaternions, nowPositions, nowQuaternions } = stepPoses;
     for (const slot of changed) {
-        stepPoses.nowPositions.set(positions.subarray(slot * 3, slot * 3 + 3), slot * 3);
-        stepPoses.nowQuaternions.set(quaternions.subarray(slot * 4, slot * 4 + 4), slot * 4);
+        for (let k = slot * 3; k < slot * 3 + 3; k++) nowPositions[k] = positions[k]!;
+        for (let k = slot * 4; k < slot * 4 + 4; k++) nowQuaternions[k] = quaternions[k]!;
     }
     for (const slot of stepPoses.added) {
-        stepPoses.beforePositions.set(stepPoses.nowPositions.subarray(slot * 3, slot * 3 + 3), slot * 3);
-        stepPoses.beforeQuaternions.set(stepPoses.nowQuaternions.subarray(slot * 4, slot * 4 + 4), slot * 4);
+        for (let k = slot * 3; k < slot * 3 + 3; k++) beforePositions[k] = nowPositions[k]!;
+        for (let k = slot * 4; k < slot * 4 + 4; k++) beforeQuaternions[k] = nowQuaternions[k]!;
     }
     stepPoses.added.length = 0;
 }
