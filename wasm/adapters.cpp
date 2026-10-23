@@ -787,6 +787,8 @@ bool is_enabled(tumble::world::World *world, ConstraintId id) {
     return base != nullptr && base->enabled;
 }
 
+bool remove(tumble::world::World *world, ConstraintId id) { return found(constraints::get(world->constraints, id)) != nullptr && constraints::remove(*world, id); }
+
 }  // namespace constraint
 
 namespace point_constraint {
@@ -798,7 +800,6 @@ ConstraintId create(tumble::world::World *world, body_id::BodyId body_a, body_id
     return create_between(world, body_a, body_b, settings, tumble::point_constraint::create);
 }
 
-bool remove(tumble::world::World *world, ConstraintId id) { return found(tumble::point_constraint::get(*world, id)) && tumble::point_constraint::remove(*world, id); }
 
 bool get_total_lambda(Float3 &out, tumble::world::World *world, ConstraintId id) {
     const tumble::point_constraint::PointConstraint *constraint = found(tumble::point_constraint::get(*world, id));
@@ -818,9 +819,6 @@ ConstraintId create(tumble::world::World *world, body_id::BodyId body_a, body_id
     return create_between(world, body_a, body_b, settings, tumble::distance_constraint::create);
 }
 
-bool remove(tumble::world::World *world, ConstraintId id) {
-    return found(tumble::distance_constraint::get(*world, id)) && tumble::distance_constraint::remove(*world, id);
-}
 
 float get_total_lambda(tumble::world::World *world, ConstraintId id) {
     const tumble::distance_constraint::DistanceConstraint *constraint = found(tumble::distance_constraint::get(*world, id));
@@ -852,7 +850,6 @@ ConstraintId create(tumble::world::World *world, body_id::BodyId body_a, body_id
     return create_between(world, body_a, body_b, settings, tumble::hinge_constraint::create);
 }
 
-bool remove(tumble::world::World *world, ConstraintId id) { return found(tumble::hinge_constraint::get(*world, id)) && tumble::hinge_constraint::remove(*world, id); }
 
 bool set_limits(tumble::world::World *world, ConstraintId id, float min, float max) {
     tumble::hinge_constraint::HingeConstraint *constraint = found(tumble::hinge_constraint::get(*world, id));
@@ -926,9 +923,6 @@ ConstraintId create(tumble::world::World *world, body_id::BodyId body_a, body_id
     return create_between(world, body_a, body_b, settings, tumble::slider_constraint::create);
 }
 
-bool remove(tumble::world::World *world, ConstraintId id) {
-    return found(tumble::slider_constraint::get(*world, id)) && tumble::slider_constraint::remove(*world, id);
-}
 
 float get_current_position(tumble::world::World *world, ConstraintId id) {
     const tumble::slider_constraint::SliderConstraint *constraint = found(tumble::slider_constraint::get(*world, id));
@@ -1031,7 +1025,6 @@ ConstraintId create(tumble::world::World *world, body_id::BodyId body_a, body_id
     return create_between(world, body_a, body_b, settings, tumble::fixed_constraint::create);
 }
 
-bool remove(tumble::world::World *world, ConstraintId id) { return found(tumble::fixed_constraint::get(*world, id)) && tumble::fixed_constraint::remove(*world, id); }
 
 bool get_total_lambda_position(Float3 &out, tumble::world::World *world, ConstraintId id) {
     const tumble::fixed_constraint::FixedConstraint *constraint = found(tumble::fixed_constraint::get(*world, id));
@@ -1058,7 +1051,6 @@ ConstraintId create(tumble::world::World *world, body_id::BodyId body_a, body_id
     return create_between(world, body_a, body_b, settings, tumble::cone_constraint::create);
 }
 
-bool remove(tumble::world::World *world, ConstraintId id) { return found(tumble::cone_constraint::get(*world, id)) && tumble::cone_constraint::remove(*world, id); }
 
 bool set_half_cone_angle(tumble::world::World *world, ConstraintId id, float half_cone_angle) {
     tumble::cone_constraint::ConeConstraint *constraint = found(tumble::cone_constraint::get(*world, id));
@@ -1100,9 +1092,6 @@ ConstraintId create(tumble::world::World *world, body_id::BodyId body_a, body_id
     return create_between(world, body_a, body_b, settings, tumble::swing_twist_constraint::create);
 }
 
-bool remove(tumble::world::World *world, ConstraintId id) {
-    return found(tumble::swing_twist_constraint::get(*world, id)) && tumble::swing_twist_constraint::remove(*world, id);
-}
 
 bool set_normal_half_cone_angle(tumble::world::World *world, ConstraintId id, float angle) {
     tumble::swing_twist_constraint::SwingTwistConstraint *constraint = found(tumble::swing_twist_constraint::get(*world, id));
@@ -1257,9 +1246,6 @@ ConstraintId create(tumble::world::World *world, body_id::BodyId body_a, body_id
     return create_between(world, body_a, body_b, settings, tumble::six_dof_constraint::create);
 }
 
-bool remove(tumble::world::World *world, ConstraintId id) {
-    return found(tumble::six_dof_constraint::get(*world, id)) && tumble::six_dof_constraint::remove(*world, id);
-}
 
 bool set_translation_limits(tumble::world::World *world, ConstraintId id, const Float3 &limit_min, const Float3 &limit_max) {
     SixDOFConstraint *constraint = found(tumble::six_dof_constraint::get(*world, id));

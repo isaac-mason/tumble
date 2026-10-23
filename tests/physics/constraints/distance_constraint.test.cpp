@@ -79,7 +79,7 @@ void test_distance_constraint_reused_slot_starts_fresh(TestCtx &ctx) {
     distance_constraint::setup_velocity(*first, scene.world->bodies, 1.0f / 60.0f);
     CHECK(ctx, vec3f::exact_equals(first->world_space_normal, vec3f::make(1.0f, 0.0f, 0.0f)));
     const uint32_t first_index = first->base.index;
-    CHECK(ctx, distance_constraint::remove(*scene.world, first_id));
+    CHECK(ctx, constraints::remove(*scene.world, first_id));
 
     // coincident points have no direction of their own, so the normal is the fallback; no spring given is a hard limit
     const DistanceConstraint *second = distance_constraint::get(

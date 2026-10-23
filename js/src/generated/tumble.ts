@@ -7,7 +7,7 @@
 import type { Instance } from '../module.js';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x1dcc6557;
+export const SCHEMA_HASH = 0x2ab22e27;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 368;
 
@@ -6895,6 +6895,11 @@ export const Constraint = {
         const r = wasm.exports.tumble_constraint_is_enabled(world, constraint);
         return r !== 0;
     },
+
+    remove(world: World, constraint: number): boolean {
+        const r = wasm.exports.tumble_constraint_remove(world, constraint);
+        return r !== 0;
+    },
 };
 
 export const PointConstraint = {
@@ -6911,11 +6916,6 @@ export const PointConstraint = {
         const r = wasm.exports.tumble_point_constraint_create(world, bodyA, bodyB, scratch + 0);
         wasm.grew();
         return r >>> 0;
-    },
-
-    remove(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_point_constraint_remove(world, constraint);
-        return r !== 0;
     },
 
     getTotalLambda(out: Vec3, world: World, constraint: number): boolean {
@@ -6940,11 +6940,6 @@ export const DistanceConstraint = {
         const r = wasm.exports.tumble_distance_constraint_create(world, bodyA, bodyB, scratch + 0);
         wasm.grew();
         return r >>> 0;
-    },
-
-    remove(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_distance_constraint_remove(world, constraint);
-        return r !== 0;
     },
 
     getTotalLambda(world: World, constraint: number): number {
@@ -6979,11 +6974,6 @@ export const HingeConstraint = {
         const r = wasm.exports.tumble_hinge_constraint_create(world, bodyA, bodyB, scratch + 0);
         wasm.grew();
         return r >>> 0;
-    },
-
-    remove(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_hinge_constraint_remove(world, constraint);
-        return r !== 0;
     },
 
     setLimits(world: World, constraint: number, min: number, max: number): boolean {
@@ -7052,11 +7042,6 @@ export const SliderConstraint = {
         const r = wasm.exports.tumble_slider_constraint_create(world, bodyA, bodyB, scratch + 0);
         wasm.grew();
         return r >>> 0;
-    },
-
-    remove(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_slider_constraint_remove(world, constraint);
-        return r !== 0;
     },
 
     getCurrentPosition(world: World, constraint: number): number {
@@ -7156,11 +7141,6 @@ export const FixedConstraint = {
         return r >>> 0;
     },
 
-    remove(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_fixed_constraint_remove(world, constraint);
-        return r !== 0;
-    },
-
     getTotalLambdaPosition(out: Vec3, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_fixed_constraint_get_total_lambda_position(scratch + 0, world, constraint);
@@ -7190,11 +7170,6 @@ export const ConeConstraint = {
         const r = wasm.exports.tumble_cone_constraint_create(world, bodyA, bodyB, scratch + 0);
         wasm.grew();
         return r >>> 0;
-    },
-
-    remove(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_cone_constraint_remove(world, constraint);
-        return r !== 0;
     },
 
     setHalfConeAngle(world: World, constraint: number, halfConeAngle: number): boolean {
@@ -7239,11 +7214,6 @@ export const SwingTwistConstraint = {
         const r = wasm.exports.tumble_swing_twist_constraint_create(world, bodyA, bodyB, scratch + 0);
         wasm.grew();
         return r >>> 0;
-    },
-
-    remove(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_swing_twist_constraint_remove(world, constraint);
-        return r !== 0;
     },
 
     setNormalHalfConeAngle(world: World, constraint: number, angle: number): boolean {
@@ -7381,11 +7351,6 @@ export const SixDofConstraint = {
         const r = wasm.exports.tumble_six_dof_constraint_create(world, bodyA, bodyB, scratch + 0);
         wasm.grew();
         return r >>> 0;
-    },
-
-    remove(world: World, constraint: number): boolean {
-        const r = wasm.exports.tumble_six_dof_constraint_remove(world, constraint);
-        return r !== 0;
     },
 
     setTranslationLimits(world: World, constraint: number, limitMin: Vec3, limitMax: Vec3): boolean {
@@ -8405,19 +8370,17 @@ export type WasmExports = {
     tumble_constraint_exists(world: number, constraint: number): number;
     tumble_constraint_set_enabled(world: number, constraint: number, enabled: number): number;
     tumble_constraint_is_enabled(world: number, constraint: number): number;
+    tumble_constraint_remove(world: number, constraint: number): number;
     tumble_point_constraint_default_settings(out: number): void;
     tumble_point_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
-    tumble_point_constraint_remove(world: number, constraint: number): number;
     tumble_point_constraint_get_total_lambda(out: number, world: number, constraint: number): number;
     tumble_distance_constraint_default_settings(out: number): void;
     tumble_distance_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
-    tumble_distance_constraint_remove(world: number, constraint: number): number;
     tumble_distance_constraint_get_total_lambda(world: number, constraint: number): number;
     tumble_distance_constraint_set_distance(world: number, constraint: number, minDistance: number, maxDistance: number): number;
     tumble_distance_constraint_set_limits_spring_settings(world: number, constraint: number, settings: number): number;
     tumble_hinge_constraint_default_settings(out: number): void;
     tumble_hinge_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
-    tumble_hinge_constraint_remove(world: number, constraint: number): number;
     tumble_hinge_constraint_set_limits(world: number, constraint: number, min: number, max: number): number;
     tumble_hinge_constraint_set_limits_spring_settings(world: number, constraint: number, settings: number): number;
     tumble_hinge_constraint_set_max_friction_torque(world: number, constraint: number, torque: number): number;
@@ -8429,7 +8392,6 @@ export type WasmExports = {
     tumble_hinge_constraint_get_current_angle(world: number, constraint: number): number;
     tumble_slider_constraint_default_settings(out: number): void;
     tumble_slider_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
-    tumble_slider_constraint_remove(world: number, constraint: number): number;
     tumble_slider_constraint_get_current_position(world: number, constraint: number): number;
     tumble_slider_constraint_set_limits(world: number, constraint: number, min: number, max: number): number;
     tumble_slider_constraint_set_limits_spring_settings(world: number, constraint: number, settings: number): number;
@@ -8446,12 +8408,10 @@ export type WasmExports = {
     tumble_slider_constraint_get_total_lambda_motor(world: number, constraint: number): number;
     tumble_fixed_constraint_default_settings(out: number): void;
     tumble_fixed_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
-    tumble_fixed_constraint_remove(world: number, constraint: number): number;
     tumble_fixed_constraint_get_total_lambda_position(out: number, world: number, constraint: number): number;
     tumble_fixed_constraint_get_total_lambda_rotation(out: number, world: number, constraint: number): number;
     tumble_cone_constraint_default_settings(out: number): void;
     tumble_cone_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
-    tumble_cone_constraint_remove(world: number, constraint: number): number;
     tumble_cone_constraint_set_half_cone_angle(world: number, constraint: number, halfConeAngle: number): number;
     tumble_cone_constraint_get_half_cone_angle(world: number, constraint: number): number;
     tumble_cone_constraint_get_cos_half_cone_angle(world: number, constraint: number): number;
@@ -8459,7 +8419,6 @@ export type WasmExports = {
     tumble_cone_constraint_get_total_lambda_rotation(world: number, constraint: number): number;
     tumble_swing_twist_constraint_default_settings(out: number): void;
     tumble_swing_twist_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
-    tumble_swing_twist_constraint_remove(world: number, constraint: number): number;
     tumble_swing_twist_constraint_set_normal_half_cone_angle(world: number, constraint: number, angle: number): number;
     tumble_swing_twist_constraint_set_plane_half_cone_angle(world: number, constraint: number, angle: number): number;
     tumble_swing_twist_constraint_set_twist_min_angle(world: number, constraint: number, angle: number): number;
@@ -8482,7 +8441,6 @@ export type WasmExports = {
     tumble_swing_twist_constraint_get_total_lambda_motor(out: number, world: number, constraint: number): number;
     tumble_six_dof_constraint_default_settings(out: number): void;
     tumble_six_dof_constraint_create(world: number, bodyA: number, bodyB: number, settings: number): number;
-    tumble_six_dof_constraint_remove(world: number, constraint: number): number;
     tumble_six_dof_constraint_set_translation_limits(
         world: number,
         constraint: number,

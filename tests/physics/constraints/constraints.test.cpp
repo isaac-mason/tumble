@@ -92,15 +92,15 @@ void test_constraints_remove_by_id(TestCtx &ctx) {
     const ConstraintId aa = point_constraint::create(*scene.world, a, a, {});
     CHECK(ctx, a->constraint_ids.length == 2 && b->constraint_ids.length == 2 && c->constraint_ids.length == 1);
 
-    constraints::remove_constraint_by_id(scene.world->constraints, scene.world->bodies, ab);
+    CHECK(ctx, constraints::remove(*scene.world, ab));
     CHECK(ctx, constraints::get(scene.world->constraints, ab) == nullptr);
     CHECK(ctx, !has_id(a, ab) && !has_id(b, ab) && has_id(b, bc) && has_id(a, aa));
     CHECK(ctx, scene.world->constraints.pools[constraint_id::DISTANCE].free_indices.length == 1);
     // removing again is a no-op
-    constraints::remove_constraint_by_id(scene.world->constraints, scene.world->bodies, ab);
+    CHECK(ctx, !constraints::remove(*scene.world, ab));
     CHECK(ctx, scene.world->constraints.pools[constraint_id::DISTANCE].free_indices.length == 1);
 
-    constraints::remove_constraint_by_id(scene.world->constraints, scene.world->bodies, aa);
+    CHECK(ctx, constraints::remove(*scene.world, aa));
     CHECK(ctx, a->constraint_ids.length == 0);
 
     // the slot comes back with a fresh sequence
@@ -123,7 +123,7 @@ void test_constraints_sequence_per_slot(TestCtx &ctx) {
     bool bumped = true;
     for (uint32_t round = 0; round < constraint_id::MAX_SEQUENCE + 1; round++) {
         const ConstraintId stale = churned;
-        constraints::remove_constraint_by_id(scene.world->constraints, scene.world->bodies, stale);
+        constraints::remove(*scene.world, stale);
         churned = point_constraint::create(*scene.world, a, b, {});
         bumped = bumped && constraint_id::index(churned) == churned_index &&
                  constraint_id::sequence(churned) == ((constraint_id::sequence(stale) + 1) & constraint_id::SEQUENCE_MASK) &&
@@ -206,7 +206,7 @@ void test_constraints_overrides_and_sort(TestCtx &ctx) {
     ids.release();
 
     // a removal moves the last constraint into the gap, as jolt's
-    point_constraint::remove(*scene.world, p1);
+    constraints::remove(*scene.world, p1);
     constraints::get_constraint_sort_fields(fields, scene.world->constraints, p2);
     CHECK(ctx, fields.index == 1 && scene.world->constraints.list.length == 5 && scene.world->constraints.list[1] == p2);
     // and a body's removal takes its constraints out too

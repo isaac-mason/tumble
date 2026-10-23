@@ -74,10 +74,10 @@ check(Math.abs(HingeConstraint.getCurrentAngle(world, hinge) - 0.5 * Math.PI) < 
 
 /* SNIPPET_START: remove */
 // gone, or with either body: a stale id names nothing
-HingeConstraint.remove(world, hinge);
+Constraint.remove(world, hinge);
 Constraint.exists(world, hinge); // false
 /* SNIPPET_END: remove */
-check(!Constraint.exists(world, hinge) && !HingeConstraint.remove(world, hinge), 'removed');
+check(!Constraint.exists(world, hinge) && !Constraint.remove(world, hinge), 'removed');
 RigidBody.remove(world, door);
 
 /* SNIPPET_START: point */

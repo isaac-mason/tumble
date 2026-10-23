@@ -157,7 +157,7 @@ The wasm's memory is not collected. What you create, you free:
 
 ```ts
 // what you create, you free: worlds (their bodies and constraints go with them), shapes and their data, filters,
-// policies, characters, poses and debug buffers. a body or constraint goes with RigidBody.remove or its remove too
+// policies, characters, poses and debug buffers. a body or constraint goes with RigidBody.remove or Constraint.remove too
 World.destroy(world);
 Box.destroy(crateShape);
 ```
@@ -760,7 +760,7 @@ filter.bodyFilter = null;
 ## Constraints
 
 A constraint holds two bodies relative to each other. Each type's `create(world, bodyA, bodyB, settings)` returns its
-id, which its functions take. A constraint goes with either of its bodies, or with its type's `remove`.
+id, which its functions take. A constraint goes with either of its bodies, or with `Constraint.remove`.
 
 Points and axes are in world space by default. With `space: ConstraintSpace.LOCAL` they are relative to each body.
 
@@ -788,7 +788,7 @@ HingeConstraint.setTargetAngularVelocity(world, hinge, 2);
 
 ```ts
 // gone, or with either body: a stale id names nothing
-HingeConstraint.remove(world, hinge);
+Constraint.remove(world, hinge);
 Constraint.exists(world, hinge); // false
 ```
 

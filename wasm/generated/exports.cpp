@@ -153,19 +153,17 @@ WASM_EXPORT uint32_t tumble_constraint_get_type(uint32_t constraint) { return ad
 WASM_EXPORT bool tumble_constraint_exists(world::World * world, uint32_t constraint) { return adapters::constraint::exists(world, constraint); }
 WASM_EXPORT bool tumble_constraint_set_enabled(world::World * world, uint32_t constraint, bool enabled) { return adapters::constraint::set_enabled(world, constraint, enabled); }
 WASM_EXPORT bool tumble_constraint_is_enabled(world::World * world, uint32_t constraint) { return adapters::constraint::is_enabled(world, constraint); }
+WASM_EXPORT bool tumble_constraint_remove(world::World * world, uint32_t constraint) { return adapters::constraint::remove(world, constraint); }
 WASM_EXPORT void tumble_point_constraint_default_settings(point_constraint::PointConstraintSettings * out) { adapters::point_constraint::default_settings(*out); }
 WASM_EXPORT uint32_t tumble_point_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const point_constraint::PointConstraintSettings * settings) { return adapters::point_constraint::create(world, bodyA, bodyB, *settings); }
-WASM_EXPORT bool tumble_point_constraint_remove(world::World * world, uint32_t constraint) { return adapters::point_constraint::remove(world, constraint); }
 WASM_EXPORT bool tumble_point_constraint_get_total_lambda(Float3 * out, world::World * world, uint32_t constraint) { return adapters::point_constraint::get_total_lambda(*out, world, constraint); }
 WASM_EXPORT void tumble_distance_constraint_default_settings(distance_constraint::DistanceConstraintSettings * out) { adapters::distance_constraint::default_settings(*out); }
 WASM_EXPORT uint32_t tumble_distance_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const distance_constraint::DistanceConstraintSettings * settings) { return adapters::distance_constraint::create(world, bodyA, bodyB, *settings); }
-WASM_EXPORT bool tumble_distance_constraint_remove(world::World * world, uint32_t constraint) { return adapters::distance_constraint::remove(world, constraint); }
 WASM_EXPORT float tumble_distance_constraint_get_total_lambda(world::World * world, uint32_t constraint) { return adapters::distance_constraint::get_total_lambda(world, constraint); }
 WASM_EXPORT bool tumble_distance_constraint_set_distance(world::World * world, uint32_t constraint, float minDistance, float maxDistance) { return adapters::distance_constraint::set_distance(world, constraint, minDistance, maxDistance); }
 WASM_EXPORT bool tumble_distance_constraint_set_limits_spring_settings(world::World * world, uint32_t constraint, const spring_settings::SpringSettings * settings) { return adapters::distance_constraint::set_limits_spring_settings(world, constraint, *settings); }
 WASM_EXPORT void tumble_hinge_constraint_default_settings(hinge_constraint::HingeConstraintSettings * out) { adapters::hinge_constraint::default_settings(*out); }
 WASM_EXPORT uint32_t tumble_hinge_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const hinge_constraint::HingeConstraintSettings * settings) { return adapters::hinge_constraint::create(world, bodyA, bodyB, *settings); }
-WASM_EXPORT bool tumble_hinge_constraint_remove(world::World * world, uint32_t constraint) { return adapters::hinge_constraint::remove(world, constraint); }
 WASM_EXPORT bool tumble_hinge_constraint_set_limits(world::World * world, uint32_t constraint, float min, float max) { return adapters::hinge_constraint::set_limits(world, constraint, min, max); }
 WASM_EXPORT bool tumble_hinge_constraint_set_limits_spring_settings(world::World * world, uint32_t constraint, const spring_settings::SpringSettings * settings) { return adapters::hinge_constraint::set_limits_spring_settings(world, constraint, *settings); }
 WASM_EXPORT bool tumble_hinge_constraint_set_max_friction_torque(world::World * world, uint32_t constraint, float torque) { return adapters::hinge_constraint::set_max_friction_torque(world, constraint, torque); }
@@ -177,7 +175,6 @@ WASM_EXPORT bool tumble_hinge_constraint_set_target_angle(world::World * world, 
 WASM_EXPORT float tumble_hinge_constraint_get_current_angle(world::World * world, uint32_t constraint) { return adapters::hinge_constraint::get_current_angle(world, constraint); }
 WASM_EXPORT void tumble_slider_constraint_default_settings(slider_constraint::SliderConstraintSettings * out) { adapters::slider_constraint::default_settings(*out); }
 WASM_EXPORT uint32_t tumble_slider_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const slider_constraint::SliderConstraintSettings * settings) { return adapters::slider_constraint::create(world, bodyA, bodyB, *settings); }
-WASM_EXPORT bool tumble_slider_constraint_remove(world::World * world, uint32_t constraint) { return adapters::slider_constraint::remove(world, constraint); }
 WASM_EXPORT float tumble_slider_constraint_get_current_position(world::World * world, uint32_t constraint) { return adapters::slider_constraint::get_current_position(world, constraint); }
 WASM_EXPORT bool tumble_slider_constraint_set_limits(world::World * world, uint32_t constraint, float min, float max) { return adapters::slider_constraint::set_limits(world, constraint, min, max); }
 WASM_EXPORT bool tumble_slider_constraint_set_limits_spring_settings(world::World * world, uint32_t constraint, const spring_settings::SpringSettings * settings) { return adapters::slider_constraint::set_limits_spring_settings(world, constraint, *settings); }
@@ -194,12 +191,10 @@ WASM_EXPORT bool tumble_slider_constraint_get_total_lambda_rotation(Float3 * out
 WASM_EXPORT float tumble_slider_constraint_get_total_lambda_motor(world::World * world, uint32_t constraint) { return adapters::slider_constraint::get_total_lambda_motor(world, constraint); }
 WASM_EXPORT void tumble_fixed_constraint_default_settings(fixed_constraint::FixedConstraintSettings * out) { adapters::fixed_constraint::default_settings(*out); }
 WASM_EXPORT uint32_t tumble_fixed_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const fixed_constraint::FixedConstraintSettings * settings) { return adapters::fixed_constraint::create(world, bodyA, bodyB, *settings); }
-WASM_EXPORT bool tumble_fixed_constraint_remove(world::World * world, uint32_t constraint) { return adapters::fixed_constraint::remove(world, constraint); }
 WASM_EXPORT bool tumble_fixed_constraint_get_total_lambda_position(Float3 * out, world::World * world, uint32_t constraint) { return adapters::fixed_constraint::get_total_lambda_position(*out, world, constraint); }
 WASM_EXPORT bool tumble_fixed_constraint_get_total_lambda_rotation(Float3 * out, world::World * world, uint32_t constraint) { return adapters::fixed_constraint::get_total_lambda_rotation(*out, world, constraint); }
 WASM_EXPORT void tumble_cone_constraint_default_settings(cone_constraint::ConeConstraintSettings * out) { adapters::cone_constraint::default_settings(*out); }
 WASM_EXPORT uint32_t tumble_cone_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const cone_constraint::ConeConstraintSettings * settings) { return adapters::cone_constraint::create(world, bodyA, bodyB, *settings); }
-WASM_EXPORT bool tumble_cone_constraint_remove(world::World * world, uint32_t constraint) { return adapters::cone_constraint::remove(world, constraint); }
 WASM_EXPORT bool tumble_cone_constraint_set_half_cone_angle(world::World * world, uint32_t constraint, float halfConeAngle) { return adapters::cone_constraint::set_half_cone_angle(world, constraint, halfConeAngle); }
 WASM_EXPORT float tumble_cone_constraint_get_half_cone_angle(world::World * world, uint32_t constraint) { return adapters::cone_constraint::get_half_cone_angle(world, constraint); }
 WASM_EXPORT float tumble_cone_constraint_get_cos_half_cone_angle(world::World * world, uint32_t constraint) { return adapters::cone_constraint::get_cos_half_cone_angle(world, constraint); }
@@ -207,7 +202,6 @@ WASM_EXPORT bool tumble_cone_constraint_get_total_lambda_position(Float3 * out, 
 WASM_EXPORT float tumble_cone_constraint_get_total_lambda_rotation(world::World * world, uint32_t constraint) { return adapters::cone_constraint::get_total_lambda_rotation(world, constraint); }
 WASM_EXPORT void tumble_swing_twist_constraint_default_settings(swing_twist_constraint::SwingTwistConstraintSettings * out) { adapters::swing_twist_constraint::default_settings(*out); }
 WASM_EXPORT uint32_t tumble_swing_twist_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const swing_twist_constraint::SwingTwistConstraintSettings * settings) { return adapters::swing_twist_constraint::create(world, bodyA, bodyB, *settings); }
-WASM_EXPORT bool tumble_swing_twist_constraint_remove(world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::remove(world, constraint); }
 WASM_EXPORT bool tumble_swing_twist_constraint_set_normal_half_cone_angle(world::World * world, uint32_t constraint, float angle) { return adapters::swing_twist_constraint::set_normal_half_cone_angle(world, constraint, angle); }
 WASM_EXPORT bool tumble_swing_twist_constraint_set_plane_half_cone_angle(world::World * world, uint32_t constraint, float angle) { return adapters::swing_twist_constraint::set_plane_half_cone_angle(world, constraint, angle); }
 WASM_EXPORT bool tumble_swing_twist_constraint_set_twist_min_angle(world::World * world, uint32_t constraint, float angle) { return adapters::swing_twist_constraint::set_twist_min_angle(world, constraint, angle); }
@@ -230,7 +224,6 @@ WASM_EXPORT float tumble_swing_twist_constraint_get_total_lambda_swing_z(world::
 WASM_EXPORT bool tumble_swing_twist_constraint_get_total_lambda_motor(Float3 * out, world::World * world, uint32_t constraint) { return adapters::swing_twist_constraint::get_total_lambda_motor(*out, world, constraint); }
 WASM_EXPORT void tumble_six_dof_constraint_default_settings(six_dof_constraint::SixDOFConstraintSettings * out) { adapters::six_dof_constraint::default_settings(*out); }
 WASM_EXPORT uint32_t tumble_six_dof_constraint_create(world::World * world, uint32_t bodyA, uint32_t bodyB, const six_dof_constraint::SixDOFConstraintSettings * settings) { return adapters::six_dof_constraint::create(world, bodyA, bodyB, *settings); }
-WASM_EXPORT bool tumble_six_dof_constraint_remove(world::World * world, uint32_t constraint) { return adapters::six_dof_constraint::remove(world, constraint); }
 WASM_EXPORT bool tumble_six_dof_constraint_set_translation_limits(world::World * world, uint32_t constraint, const Float3 * limitMin, const Float3 * limitMax) { return adapters::six_dof_constraint::set_translation_limits(world, constraint, *limitMin, *limitMax); }
 WASM_EXPORT bool tumble_six_dof_constraint_set_rotation_limits(world::World * world, uint32_t constraint, const Float3 * limitMin, const Float3 * limitMax) { return adapters::six_dof_constraint::set_rotation_limits(world, constraint, *limitMin, *limitMax); }
 WASM_EXPORT bool tumble_six_dof_constraint_set_limits_spring_settings(world::World * world, uint32_t constraint, uint32_t axis, const spring_settings::SpringSettings * settings) { return adapters::six_dof_constraint::set_limits_spring_settings(world, constraint, axis, *settings); }

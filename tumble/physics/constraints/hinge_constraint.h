@@ -105,8 +105,6 @@ struct HingeConstraintSettings {
 /** a hinge constraint between two live bodies, linked into both bodies' constraint_ids; INVALID_CONSTRAINT_ID (error set) when the pool cannot grow */
 constraint_id::ConstraintId create(world::World &world, rigid_body::RigidBody *body_a,
                                    rigid_body::RigidBody *body_b, const HingeConstraintSettings &settings);
-/** false for a stale id or one of another type */
-bool remove(world::World &world, constraint_id::ConstraintId id);
 /** null when the id is stale or not a hinge constraint */
 HingeConstraint *get(world::World &world, constraint_id::ConstraintId id);
 

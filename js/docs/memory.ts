@@ -49,7 +49,7 @@ caught = [];
 
 /* SNIPPET_START: freeing */
 // what you create, you free: worlds (their bodies and constraints go with them), shapes and their data, filters,
-// policies, characters, poses and debug buffers. a body or constraint goes with RigidBody.remove or its remove too
+// policies, characters, poses and debug buffers. a body or constraint goes with RigidBody.remove or Constraint.remove too
 World.destroy(world);
 Box.destroy(crateShape);
 /* SNIPPET_END: freeing */

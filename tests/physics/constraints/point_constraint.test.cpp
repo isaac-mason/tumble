@@ -65,16 +65,17 @@ void test_point_constraint_remove(TestCtx &ctx) {
 
     PointConstraint *constraint = point_constraint::get(*scene.world, first);
     constraint->point_constraint_part.total_lambda = vec3f::make(1.0f, 2.0f, 3.0f);
-    CHECK(ctx, point_constraint::remove(*scene.world, first));
+    CHECK(ctx, constraints::remove(*scene.world, first));
     CHECK(ctx, point_constraint::get(*scene.world, first) == nullptr);
-    CHECK(ctx, !point_constraint::remove(*scene.world, first));
-    CHECK(ctx, constraint->base.pooled && constraint->base.id == constraint_id::INVALID_CONSTRAINT_ID);
-    CHECK(ctx, vec3f::exact_equals(constraint->point_constraint_part.total_lambda, vec3f::zero()));
+    CHECK(ctx, !constraints::remove(*scene.world, first));
+    CHECK(ctx, constraint->base.pooled);
     CHECK(ctx, a->constraint_ids.length == 1 && a->constraint_ids[0] == second);
     CHECK(ctx, b->constraint_ids.length == 1 && b->constraint_ids[0] == second);
 
-    // the freed slot is reused with its own sequence plus one; the old id stays dead
+    // the freed slot is reused with its own sequence plus one, starting with nothing of the removed one; the old id stays dead
     const constraint_id::ConstraintId third = point_constraint::create(*scene.world, a, b, {});
+    CHECK(ctx, point_constraint::get(*scene.world, third) == constraint);
+    CHECK(ctx, vec3f::exact_equals(constraint->point_constraint_part.total_lambda, vec3f::zero()));
     CHECK(ctx, constraint_id::index(third) == constraint_id::index(first));
     CHECK(ctx, constraint_id::sequence(third) == 2);
     CHECK(ctx, point_constraint::get(*scene.world, first) == nullptr);

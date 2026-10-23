@@ -298,7 +298,7 @@ static void init(App &app) {
 
 static void release_drag(App &app) {
     if (!state.dragging) return;
-    distance_constraint::remove(*app.world, state.drag);
+    constraints::remove(*app.world, state.drag);
     state.dragging = false;
 }
 

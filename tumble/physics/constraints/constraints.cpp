@@ -11,6 +11,7 @@
 #include "tumble/physics/constraints/six_dof_constraint.h"
 #include "tumble/physics/constraints/slider_constraint.h"
 #include "tumble/physics/constraints/swing_twist_constraint.h"
+#include "tumble/physics/world.h"
 #include "tumble/util/assert.h"
 #include "tumble/util/mem.h"
 #include "tumble/util/sort.h"
@@ -126,34 +127,30 @@ ConstraintBase *get(Constraints &constraints, ConstraintId id) {
     return constraint;
 }
 
-void remove_constraint_by_id(Constraints &constraints, bodies::Bodies &bodies, ConstraintId id) {
-    const ConstraintType type = constraint_id::type(id);
-    if (type >= constraint_id::CONSTRAINT_TYPE_COUNT) return;
-    ConstraintPool &pool = constraints.pools[type];
-    const uint32_t index = constraint_id::index(id);
-    if (pool.stride == 0 || index >= pool.count) return;
+/** unlinks a live constraint from both bodies and the list, and frees its record */
+static void free_constraint(Constraints &constraints, bodies::Bodies &bodies, ConstraintBase &constraint) {
+    const uint32_t a = constraint.body_index_a;
+    const uint32_t b = constraint.body_index_b;
+    if (is_body_live(bodies, a)) remove_constraint_id_from_body(*bodies.pool[a], constraint.id);
+    if (a != b && is_body_live(bodies, b)) remove_constraint_id_from_body(*bodies.pool[b], constraint.id);
+    remove_from_list(constraints, constraint);
+    constraints.pools[constraint_id::type(constraint.id)].free_indices.push(constraint.index);
+    constraint.pooled = true;
+}
 
-    ConstraintBase *constraint = base_at(pool, index);
-    if (!constraint->pooled && constraint->id == id) {
-        // remove from bodies' constraint_ids
-        const uint32_t a = constraint->body_index_a;
-        const uint32_t b = constraint->body_index_b;
-        if (is_body_live(bodies, a)) remove_constraint_id_from_body(*bodies.pool[a], id);
-        if (a != b && is_body_live(bodies, b)) remove_constraint_id_from_body(*bodies.pool[b], id);
-
-        remove_from_list(constraints, *constraint);
-
-        // return to pool
-        pool.free_indices.push(index);
-        constraint->pooled = true;
-    }
+bool remove(world::World &world, ConstraintId id) {
+    ConstraintBase *constraint = get(world.constraints, id);
+    if (constraint == nullptr) return false;
+    free_constraint(world.constraints, world.bodies, *constraint);
+    return true;
 }
 
 void destroy_body_constraints(Constraints &constraints, bodies::Bodies &bodies, rigid_body::RigidBody &body) {
     // backwards, since removing swap-removes from this body's list
     for (uint32_t i = body.constraint_ids.length; i-- > 0;) {
         if (i >= body.constraint_ids.length) continue;
-        remove_constraint_by_id(constraints, bodies, body.constraint_ids[i]);
+        ConstraintBase *constraint = get(constraints, body.constraint_ids[i]);
+        if (constraint != nullptr) free_constraint(constraints, bodies, *constraint);
     }
     body.constraint_ids.length = 0;
 }

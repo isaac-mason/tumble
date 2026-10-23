@@ -155,6 +155,10 @@ export const Constraint = {
     isEnabled(world: World, constraint: ConstraintId): boolean {
         return Low.Constraint.isEnabled(world, constraint);
     },
+    /** false when the id names no constraint */
+    remove(world: World, constraint: ConstraintId): boolean {
+        return Low.Constraint.remove(world, constraint);
+    },
 };
 
 // each type: create(world, bodyA, bodyB, settings) gives the id, throwing when a body id names no body. its setters and
@@ -174,9 +178,6 @@ export const PointConstraint = {
         expectCommon(settings);
         Low.errorClear();
         return created(Low.PointConstraint.create(world, bodyA, bodyB, over(pointDefaults(), settings)));
-    },
-    remove(world: World, constraint: ConstraintId): boolean {
-        return Low.PointConstraint.remove(world, constraint);
     },
     /** the impulse it applied in the last step, N s: for breaking it by force */
     getTotalLambda(out: Vec3, world: World, constraint: ConstraintId): boolean {
@@ -207,9 +208,6 @@ export const DistanceConstraint = {
         }
         Low.errorClear();
         return created(Low.DistanceConstraint.create(world, bodyA, bodyB, native));
-    },
-    remove(world: World, constraint: ConstraintId): boolean {
-        return Low.DistanceConstraint.remove(world, constraint);
     },
     setDistance(world: World, constraint: ConstraintId, minDistance: number, maxDistance: number): boolean {
         expect(minDistance <= maxDistance, 'minDistance is at most maxDistance');
@@ -256,9 +254,6 @@ export const HingeConstraint = {
         expectMotor(native.motorSettings);
         Low.errorClear();
         return created(Low.HingeConstraint.create(world, bodyA, bodyB, native));
-    },
-    remove(world: World, constraint: ConstraintId): boolean {
-        return Low.HingeConstraint.remove(world, constraint);
     },
     /** radians, min in [-pi, 0] and max in [0, pi]; [-pi, pi] is no limits */
     setLimits(world: World, constraint: ConstraintId, min: number, max: number): boolean {
@@ -335,9 +330,6 @@ export const SliderConstraint = {
         Low.errorClear();
         return created(Low.SliderConstraint.create(world, bodyA, bodyB, native));
     },
-    remove(world: World, constraint: ConstraintId): boolean {
-        return Low.SliderConstraint.remove(world, constraint);
-    },
     /** m along the axis from its rest position, from the bodies as they are */
     getCurrentPosition(world: World, constraint: ConstraintId): number {
         return Low.SliderConstraint.getCurrentPosition(world, constraint);
@@ -413,9 +405,6 @@ export const FixedConstraint = {
         Low.errorClear();
         return created(Low.FixedConstraint.create(world, bodyA, bodyB, over(fixedDefaults(), settings)));
     },
-    remove(world: World, constraint: ConstraintId): boolean {
-        return Low.FixedConstraint.remove(world, constraint);
-    },
     getTotalLambdaPosition(out: Vec3, world: World, constraint: ConstraintId): boolean {
         return copied(out, vec3, Low.FixedConstraint.getTotalLambdaPosition(vec3, world, constraint));
     },
@@ -448,9 +437,6 @@ export const ConeConstraint = {
         expectHalfConeAngle(native.halfConeAngle);
         Low.errorClear();
         return created(Low.ConeConstraint.create(world, bodyA, bodyB, native));
-    },
-    remove(world: World, constraint: ConstraintId): boolean {
-        return Low.ConeConstraint.remove(world, constraint);
     },
     setHalfConeAngle(world: World, constraint: ConstraintId, halfConeAngle: number): boolean {
         expectHalfConeAngle(halfConeAngle);
@@ -505,9 +491,6 @@ export const SwingTwistConstraint = {
         expectMotor(native.twistMotorSettings);
         Low.errorClear();
         return created(Low.SwingTwistConstraint.create(world, bodyA, bodyB, native));
-    },
-    remove(world: World, constraint: ConstraintId): boolean {
-        return Low.SwingTwistConstraint.remove(world, constraint);
     },
     setNormalHalfConeAngle(world: World, constraint: ConstraintId, angle: number): boolean {
         return Low.SwingTwistConstraint.setNormalHalfConeAngle(world, constraint, angle);
@@ -625,9 +608,6 @@ export const SixDOFConstraint = {
         for (const motor of native.motorSettings) expectMotor(motor);
         Low.errorClear();
         return created(Low.SixDofConstraint.create(world, bodyA, bodyB, native));
-    },
-    remove(world: World, constraint: ConstraintId): boolean {
-        return Low.SixDofConstraint.remove(world, constraint);
     },
     setTranslationLimits(world: World, constraint: ConstraintId, limitMin: Vec3, limitMax: Vec3): boolean {
         return Low.SixDofConstraint.setTranslationLimits(world, constraint, limitMin, limitMax);

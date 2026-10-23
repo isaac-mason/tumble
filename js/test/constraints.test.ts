@@ -88,9 +88,9 @@ describe('constraints', () => {
         steps(world, 90);
         expect(HingeConstraint.getCurrentAngle(world, hinge)).toBeCloseTo(0.5 * Math.PI, 1);
 
-        expect(HingeConstraint.remove(world, hinge)).toBe(true);
+        expect(Constraint.remove(world, hinge)).toBe(true);
         expect(Constraint.exists(world, hinge)).toBe(false);
-        expect(HingeConstraint.remove(world, hinge)).toBe(false);
+        expect(Constraint.remove(world, hinge)).toBe(false);
         expect(HingeConstraint.setTargetAngle(world, hinge, 0)).toBe(false);
         expect(HingeConstraint.getCurrentAngle(world, hinge)).toBe(0);
         releaseParts(parts);
@@ -124,7 +124,7 @@ describe('constraints', () => {
         expect(read.spring.damping).toBe(0.5);
         expect(() => HingeConstraint.setMotorSettings(world, hinge, { minTorqueLimit: 50 })).toThrow(RangeError);
 
-        HingeConstraint.remove(world, hinge);
+        Constraint.remove(world, hinge);
         expect(HingeConstraint.getMotorSettings(read, world, hinge)).toBe(false);
         expect(HingeConstraint.setMotorSettings(world, hinge, { maxTorqueLimit: 1 })).toBe(false);
         releaseParts(parts);

@@ -331,7 +331,7 @@ an overlap has no nearest; the casts' takes `COLLECT_CLOSEST` too.
 A constraint holds two bodies relative to each other. `<type>_constraint::create(world, body_a, body_b, settings)`
 returns its id. `get(world, id)` returns its record for changing it (limits, motors), valid until the next create of
 that type, so get it again rather than keeping it. A constraint goes with either of its bodies, or with
-`remove(world, id)`.
+`constraints::remove(world, id)`, whatever its type.
 
 Points and axes are in world space by default. With `.space = constraints::SPACE_LOCAL` they are relative to each body.
 The two sides of a constraint are always `_a` and `_b`, as its bodies are.

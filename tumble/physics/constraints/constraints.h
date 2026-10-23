@@ -116,8 +116,8 @@ void remove_from_list(Constraints &constraints, ConstraintBase &constraint);
 /** the record of the id, or null when its sequence no longer matches */
 ConstraintBase *get(Constraints &constraints, ConstraintId id);
 
-/** frees the constraint and unlinks it from both bodies */
-void remove_constraint_by_id(Constraints &constraints, bodies::Bodies &bodies, ConstraintId id);
+/** frees a constraint of any type and unlinks it from both bodies; false when the id names no constraint */
+bool remove(world::World &world, ConstraintId id);
 /** frees every constraint of the body */
 void destroy_body_constraints(Constraints &constraints, bodies::Bodies &bodies, rigid_body::RigidBody &body);
 

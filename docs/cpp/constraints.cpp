@@ -70,10 +70,10 @@ int main() {
 
         /* SNIPPET_START: remove */
         // gone, or with either body: a stale id resolves to nothing
-        hinge_constraint::remove(*world, hinge_id);
+        constraints::remove(*world, hinge_id);
         /* SNIPPET_END: remove */
         /* HIDE_START */
-        if (hinge_constraint::get(*world, hinge_id) != nullptr || hinge_constraint::remove(*world, hinge_id)) return 1;
+        if (hinge_constraint::get(*world, hinge_id) != nullptr || constraints::remove(*world, hinge_id)) return 1;
         rigid_body::remove(*world, door);
         rigid_body::remove(*world, frame);
         /* HIDE_END */

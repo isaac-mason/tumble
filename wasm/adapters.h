@@ -449,6 +449,8 @@ bool exists(tumble::world::World *world, tumble::constraint_id::ConstraintId id)
 /** a disabled constraint is skipped by the solve and does not join its bodies' islands */
 bool set_enabled(tumble::world::World *world, tumble::constraint_id::ConstraintId id, bool enabled);
 bool is_enabled(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
+/** any type's; false, with the error set, when the id names no constraint */
+bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 
 }  // namespace constraint
 
@@ -457,7 +459,6 @@ namespace point_constraint {
 void default_settings(tumble::point_constraint::PointConstraintSettings &out);
 tumble::constraint_id::ConstraintId create(tumble::world::World *world, tumble::body_id::BodyId body_a, tumble::body_id::BodyId body_b,
                                            const tumble::point_constraint::PointConstraintSettings &settings);
-bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 bool get_total_lambda(tumble::Float3 &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 
 }  // namespace point_constraint
@@ -467,7 +468,6 @@ namespace distance_constraint {
 void default_settings(tumble::distance_constraint::DistanceConstraintSettings &out);
 tumble::constraint_id::ConstraintId create(tumble::world::World *world, tumble::body_id::BodyId body_a, tumble::body_id::BodyId body_b,
                                            const tumble::distance_constraint::DistanceConstraintSettings &settings);
-bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 float get_total_lambda(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 bool set_distance(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float min_distance, float max_distance);
 bool set_limits_spring_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id,
@@ -480,7 +480,6 @@ namespace hinge_constraint {
 void default_settings(tumble::hinge_constraint::HingeConstraintSettings &out);
 tumble::constraint_id::ConstraintId create(tumble::world::World *world, tumble::body_id::BodyId body_a, tumble::body_id::BodyId body_b,
                                            const tumble::hinge_constraint::HingeConstraintSettings &settings);
-bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 bool set_limits(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float min, float max);
 bool set_limits_spring_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id,
                                 const tumble::spring_settings::SpringSettings &settings);
@@ -499,7 +498,6 @@ namespace slider_constraint {
 void default_settings(tumble::slider_constraint::SliderConstraintSettings &out);
 tumble::constraint_id::ConstraintId create(tumble::world::World *world, tumble::body_id::BodyId body_a, tumble::body_id::BodyId body_b,
                                            const tumble::slider_constraint::SliderConstraintSettings &settings);
-bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 float get_current_position(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 bool set_limits(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float min, float max);
 bool set_limits_spring_settings(tumble::world::World *world, tumble::constraint_id::ConstraintId id,
@@ -523,7 +521,6 @@ namespace fixed_constraint {
 void default_settings(tumble::fixed_constraint::FixedConstraintSettings &out);
 tumble::constraint_id::ConstraintId create(tumble::world::World *world, tumble::body_id::BodyId body_a, tumble::body_id::BodyId body_b,
                                            const tumble::fixed_constraint::FixedConstraintSettings &settings);
-bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 bool get_total_lambda_position(tumble::Float3 &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 bool get_total_lambda_rotation(tumble::Float3 &out, tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 
@@ -534,7 +531,6 @@ namespace cone_constraint {
 void default_settings(tumble::cone_constraint::ConeConstraintSettings &out);
 tumble::constraint_id::ConstraintId create(tumble::world::World *world, tumble::body_id::BodyId body_a, tumble::body_id::BodyId body_b,
                                            const tumble::cone_constraint::ConeConstraintSettings &settings);
-bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 bool set_half_cone_angle(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float half_cone_angle);
 float get_half_cone_angle(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 float get_cos_half_cone_angle(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
@@ -548,7 +544,6 @@ namespace swing_twist_constraint {
 void default_settings(tumble::swing_twist_constraint::SwingTwistConstraintSettings &out);
 tumble::constraint_id::ConstraintId create(tumble::world::World *world, tumble::body_id::BodyId body_a, tumble::body_id::BodyId body_b,
                                            const tumble::swing_twist_constraint::SwingTwistConstraintSettings &settings);
-bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 bool set_normal_half_cone_angle(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float angle);
 bool set_plane_half_cone_angle(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float angle);
 bool set_twist_min_angle(tumble::world::World *world, tumble::constraint_id::ConstraintId id, float angle);
@@ -579,7 +574,6 @@ namespace six_dof_constraint {
 void default_settings(tumble::six_dof_constraint::SixDOFConstraintSettings &out);
 tumble::constraint_id::ConstraintId create(tumble::world::World *world, tumble::body_id::BodyId body_a, tumble::body_id::BodyId body_b,
                                            const tumble::six_dof_constraint::SixDOFConstraintSettings &settings);
-bool remove(tumble::world::World *world, tumble::constraint_id::ConstraintId id);
 bool set_translation_limits(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::Float3 &limit_min,
                             const tumble::Float3 &limit_max);
 bool set_rotation_limits(tumble::world::World *world, tumble::constraint_id::ConstraintId id, const tumble::Float3 &limit_min,

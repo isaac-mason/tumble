@@ -80,9 +80,8 @@ static void reset_constraint(HingeConstraint &constraint) {
 ConstraintId create(world::World &world, RigidBody *body_a, RigidBody *body_b,
                     const HingeConstraintSettings &settings) {
     constraints::Constraints &constraints = world.constraints;
-    bodies::Bodies &bodies = world.bodies;
-    TUMBLE_ASSERT(is_body_live(bodies, body_a->index) && bodies.pool[body_a->index] == body_a);
-    TUMBLE_ASSERT(is_body_live(bodies, body_b->index) && bodies.pool[body_b->index] == body_b);
+    TUMBLE_ASSERT(is_body_live(world.bodies, body_a->index) && world.bodies.pool[body_a->index] == body_a);
+    TUMBLE_ASSERT(is_body_live(world.bodies, body_b->index) && world.bodies.pool[body_b->index] == body_b);
     constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::HINGE);
 
     const uint32_t index = constraints::allocate_index(pool);
@@ -159,34 +158,11 @@ ConstraintId create(world::World &world, RigidBody *body_a, RigidBody *body_b,
     if (linked && body_a != body_b) linked = body_b->constraint_ids.push(id);
     if (linked) linked = constraints::add_to_list(constraints, constraint.base);
     if (!linked) {
-        constraints::remove_constraint_by_id(constraints, bodies, id);
+        constraints::remove(world, id);
         return constraint_id::INVALID_CONSTRAINT_ID;
     }
 
     return id;
-}
-
-bool remove(world::World &world, ConstraintId id) {
-    HingeConstraint *found = get(world, id);
-    if (found == nullptr) return false;
-    HingeConstraint &constraint = *found;
-    constraints::Constraints &constraints = world.constraints;
-    bodies::Bodies &bodies = world.bodies;
-    constraints::ConstraintPool &pool = constraints::ensure_pool(constraints, constraint_id::HINGE);
-
-    // remove from bodies' constraint_ids
-    const uint32_t a = constraint.base.body_index_a;
-    const uint32_t b = constraint.base.body_index_b;
-    if (is_body_live(bodies, a)) constraints::remove_constraint_id_from_body(*bodies.pool[a], constraint.base.id);
-    if (a != b && is_body_live(bodies, b)) constraints::remove_constraint_id_from_body(*bodies.pool[b], constraint.base.id);
-
-    reset_constraint(constraint);
-
-    constraint.base.pooled = true;
-    constraint.base.id = constraint_id::INVALID_CONSTRAINT_ID;
-    constraints::remove_from_list(constraints, constraint.base);
-    pool.free_indices.push(constraint.base.index);
-    return true;
 }
 
 HingeConstraint *get(world::World &world, ConstraintId id) {

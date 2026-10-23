@@ -238,7 +238,7 @@ Each query walks the world, under a filter when given one, and reports to a coll
 ## Constraints
 
 A constraint holds two bodies relative to each other. Each type's `create(world, bodyA, bodyB, settings)` returns its
-id, which its functions take. A constraint goes with either of its bodies, or with its type's `remove`.
+id, which its functions take. A constraint goes with either of its bodies, or with `Constraint.remove`.
 
 Points and axes are in world space by default. With `space: ConstraintSpace.LOCAL` they are relative to each body.
 
