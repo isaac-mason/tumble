@@ -163,12 +163,26 @@ function take(stepPoses: StepPoses): void {
     const { positions, quaternions, changed } = Poses.read(stepPoses.poses);
     const { beforePositions, beforeQuaternions, nowPositions, nowQuaternions } = stepPoses;
     for (const slot of changed) {
-        for (let k = slot * 3; k < slot * 3 + 3; k++) nowPositions[k] = positions[k]!;
-        for (let k = slot * 4; k < slot * 4 + 4; k++) nowQuaternions[k] = quaternions[k]!;
+        const p = slot * 3;
+        const q = slot * 4;
+        nowPositions[p] = positions[p]!;
+        nowPositions[p + 1] = positions[p + 1]!;
+        nowPositions[p + 2] = positions[p + 2]!;
+        nowQuaternions[q] = quaternions[q]!;
+        nowQuaternions[q + 1] = quaternions[q + 1]!;
+        nowQuaternions[q + 2] = quaternions[q + 2]!;
+        nowQuaternions[q + 3] = quaternions[q + 3]!;
     }
     for (const slot of stepPoses.added) {
-        for (let k = slot * 3; k < slot * 3 + 3; k++) beforePositions[k] = nowPositions[k]!;
-        for (let k = slot * 4; k < slot * 4 + 4; k++) beforeQuaternions[k] = nowQuaternions[k]!;
+        const p = slot * 3;
+        const q = slot * 4;
+        beforePositions[p] = nowPositions[p]!;
+        beforePositions[p + 1] = nowPositions[p + 1]!;
+        beforePositions[p + 2] = nowPositions[p + 2]!;
+        beforeQuaternions[q] = nowQuaternions[q]!;
+        beforeQuaternions[q + 1] = nowQuaternions[q + 1]!;
+        beforeQuaternions[q + 2] = nowQuaternions[q + 2]!;
+        beforeQuaternions[q + 3] = nowQuaternions[q + 3]!;
     }
     stepPoses.added.length = 0;
 }
@@ -199,14 +213,23 @@ const _nowQuaternion: Quat = [0, 0, 0, 1];
 
 /** the slot's pose between the last two steps, by alpha, into a mesh's position and quaternion */
 export function blendStepPose(stepPoses: StepPoses, slot: number, alpha: number, position: Vec3, quaternion: Quat): void {
-    for (let k = 0; k < 3; k++) {
-        _beforePosition[k] = stepPoses.beforePositions[slot * 3 + k]!;
-        _nowPosition[k] = stepPoses.nowPositions[slot * 3 + k]!;
-    }
-    for (let k = 0; k < 4; k++) {
-        _beforeQuaternion[k] = stepPoses.beforeQuaternions[slot * 4 + k]!;
-        _nowQuaternion[k] = stepPoses.nowQuaternions[slot * 4 + k]!;
-    }
+    const { beforePositions, beforeQuaternions, nowPositions, nowQuaternions } = stepPoses;
+    const p = slot * 3;
+    const q = slot * 4;
+    _beforePosition[0] = beforePositions[p]!;
+    _beforePosition[1] = beforePositions[p + 1]!;
+    _beforePosition[2] = beforePositions[p + 2]!;
+    _nowPosition[0] = nowPositions[p]!;
+    _nowPosition[1] = nowPositions[p + 1]!;
+    _nowPosition[2] = nowPositions[p + 2]!;
+    _beforeQuaternion[0] = beforeQuaternions[q]!;
+    _beforeQuaternion[1] = beforeQuaternions[q + 1]!;
+    _beforeQuaternion[2] = beforeQuaternions[q + 2]!;
+    _beforeQuaternion[3] = beforeQuaternions[q + 3]!;
+    _nowQuaternion[0] = nowQuaternions[q]!;
+    _nowQuaternion[1] = nowQuaternions[q + 1]!;
+    _nowQuaternion[2] = nowQuaternions[q + 2]!;
+    _nowQuaternion[3] = nowQuaternions[q + 3]!;
     vec3.lerp(position, _beforePosition, _nowPosition, alpha);
     quat.slerp(quaternion, _beforeQuaternion, _nowQuaternion, alpha);
 }

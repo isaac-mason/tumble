@@ -1107,8 +1107,15 @@ function render(): void {
     const { positions, quaternions, changed } = Poses.read(poses);
     for (const slot of changed) {
         const mesh = meshes[slot]!;
-        for (let k = 0; k < 3; k++) mesh.position[k] = positions[slot * 3 + k]!;
-        for (let k = 0; k < 4; k++) mesh.quaternion[k] = quaternions[slot * 4 + k]!;
+        const p = slot * 3;
+        const q = slot * 4;
+        mesh.position[0] = positions[p]!;
+        mesh.position[1] = positions[p + 1]!;
+        mesh.position[2] = positions[p + 2]!;
+        mesh.quaternion[0] = quaternions[q]!;
+        mesh.quaternion[1] = quaternions[q + 1]!;
+        mesh.quaternion[2] = quaternions[q + 2]!;
+        mesh.quaternion[3] = quaternions[q + 3]!;
     }
 }
 ```

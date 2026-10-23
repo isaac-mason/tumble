@@ -1,4 +1,5 @@
 import type * as gpucat from 'gpucat';
+import { vec3 } from 'math';
 import {
     Box,
     Capsule,
@@ -15,7 +16,6 @@ import {
     World,
     WorldSettings,
 } from 'tumble.js';
-import { vec3 } from 'math';
 import { addStepPose, blendStepPose, caption, createStepPoses, loop, meshOf, readStepPoses, setup } from './common';
 
 const view = await setup([0, 8, 14], [0, 1, 0]);
@@ -149,10 +149,15 @@ loop(
         }
         vec3.lerp(drawn, characterBefore, characterNow, alpha);
         // the camera follows where the character is drawn, keeping the turn and zoom it was given
-        for (let k = 0; k < 3; k++) {
-            view.camera.position[k]! += drawn[k]! - followed[k]!;
-            view.controls.target[k]! += drawn[k]! - followed[k]!;
-        }
+        const dx = drawn[0] - followed[0];
+        const dy = drawn[1] - followed[1];
+        const dz = drawn[2] - followed[2];
+        view.camera.position[0] += dx;
+        view.camera.position[1] += dy;
+        view.camera.position[2] += dz;
+        view.controls.target[0] += dx;
+        view.controls.target[1] += dy;
+        view.controls.target[2] += dz;
         vec3.copy(followed, drawn);
         characterMesh.position.splice(0, 3, drawn[0], drawn[1] + 0.9, drawn[2]);
         view.render();

@@ -149,11 +149,14 @@ function draw(): void {
             grown.set(bucket.points);
             bucket.points = grown;
         }
+        const points = bucket.points;
         const to = bucket.count * 3;
-        for (let k = 0; k < 3; k++) {
-            bucket.points[to + k] = lines[a + k]!;
-            bucket.points[to + 3 + k] = lines[b + k]!;
-        }
+        points[to] = lines[a]!;
+        points[to + 1] = lines[a + 1]!;
+        points[to + 2] = lines[a + 2]!;
+        points[to + 3] = lines[b]!;
+        points[to + 4] = lines[b + 1]!;
+        points[to + 5] = lines[b + 2]!;
         bucket.count += 2;
     }
     for (const bucket of buckets.values()) {
