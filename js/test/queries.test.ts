@@ -208,6 +208,12 @@ describe('queries', () => {
         const any = createAnyCollidePointCollector();
         collidePoint(world, any, settings, [0, 1, 0], filter);
         expect(any.hit?.bodyIdB).toBe(stack.lower);
+        // the hit lowered its early-out fraction to the bound: a query into it stops before running, until a reset
+        collidePoint(world, any, settings, [0, 3, 0], filter);
+        expect(any.hit?.bodyIdB).toBe(stack.lower);
+        any.reset();
+        collidePoint(world, any, settings, [0, 3, 0], filter);
+        expect(any.hit?.bodyIdB).toBe(stack.upper);
         const all = createAllCollidePointCollector();
         collidePoint(world, all, settings, [0, 2, 0], filter);
         expect(all.hits.length).toBe(0);

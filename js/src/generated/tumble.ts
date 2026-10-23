@@ -7,7 +7,7 @@
 import type { Instance } from '../module.js';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x2ab22e27;
+export const SCHEMA_HASH = 0x2440c58d;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 368;
 
@@ -47,6 +47,9 @@ export const INITIAL_EARLY_OUT_FRACTION = 1.0000001192092896;
 
 /** a collide collector's before any hit: no bound on the penetration */
 export const UNBOUNDED_EARLY_OUT = 3.4028234663852886e+38;
+
+/** the bound at or below which a ray stops; a shape cast, a collide and a point stop at -UNBOUNDED_EARLY_OUT */
+export const SHOULD_EARLY_OUT_FRACTION = 0;
 
 export const KCC_CONTACT_STRIDE = 96;
 

@@ -720,6 +720,8 @@ TUMBLE_BINDINGS {
     bind::float_constant(b, "INITIAL_EARLY_OUT_FRACTION", collector::INITIAL_EARLY_OUT_FRACTION,
                    "a cast collector's early out fraction before any hit");
     bind::float_constant(b, "UNBOUNDED_EARLY_OUT", collector::UNBOUNDED, "a collide collector's before any hit: no bound on the penetration");
+    bind::float_constant(b, "SHOULD_EARLY_OUT_FRACTION", collector::SHOULD_EARLY_OUT_FRACTION,
+                         "the bound at or below which a ray stops; a shape cast, a collide and a point stop at -UNBOUNDED_EARLY_OUT");
     bind::fn(b, BIND(adapters::query::default_cast_ray_settings), names("out"));
     bind::fn(b, BIND(adapters::query::cast_ray),
              names("world", "kind", "earlyOutFraction", "settings", "origin", "direction", "length", "filter", "collisionGroups", "collisionMask"),

@@ -125,6 +125,15 @@ class Pool<Hit> {
 
 // cast ray
 
+// a query stops once its collector's early-out fraction is at or below the bound, as the c++ collectors': a collector
+// that wants no more lowers it there, and no hit then can beat it
+function rayDone(collector: { earlyOutFraction: number }): boolean {
+    return collector.earlyOutFraction <= Low.SHOULD_EARLY_OUT_FRACTION;
+}
+function boundDone(collector: { earlyOutFraction: number }): boolean {
+    return collector.earlyOutFraction <= -Low.UNBOUNDED_EARLY_OUT;
+}
+
 export type CastRaySettings = Low.CastRaySettings;
 
 export type CastRayHit = {
@@ -167,9 +176,6 @@ export class ClosestCastRayCollector {
             this.earlyOutFraction = hit.fraction;
         }
     }
-    shouldEarlyOut(): boolean {
-        return false;
-    }
     reset(): void {
         clearCastRayHit(this.hit);
         this.earlyOutFraction = Low.INITIAL_EARLY_OUT_FRACTION;
@@ -183,10 +189,7 @@ export class AnyCastRayCollector {
     addHit(hit: Low.CastRayHit): void {
         if (this.hit.status === CastRayStatus.COLLIDING) return;
         copyCastRayHit(this.hit, hit);
-        this.earlyOutFraction = 0;
-    }
-    shouldEarlyOut(): boolean {
-        return this.hit.status === CastRayStatus.COLLIDING;
+        this.earlyOutFraction = Low.SHOULD_EARLY_OUT_FRACTION;
     }
     reset(): void {
         clearCastRayHit(this.hit);
@@ -201,9 +204,6 @@ export class AllCastRayCollector {
     earlyOutFraction = Low.INITIAL_EARLY_OUT_FRACTION;
     addHit(hit: Low.CastRayHit): void {
         copyCastRayHit(this.#pool.next(), hit);
-    }
-    shouldEarlyOut(): boolean {
-        return false;
     }
     /** closest first */
     sort(): void {
@@ -239,7 +239,7 @@ export function castRay(
     length: number,
     filter: Filter = EVERYTHING,
 ): void {
-    if (collector.shouldEarlyOut()) return;
+    if (rayDone(collector)) return;
     const { bodyFilter } = filter;
     const kind = bodyFilter === null ? collector.kind : Low.CollectorKind.ALL;
     Low.errorClear();
@@ -256,7 +256,7 @@ export function castRay(
         filter.collisionMask >>> 0,
     );
     Low.getWasm().check();
-    for (let i = 0; i < count && !collector.shouldEarlyOut(); i++) {
+    for (let i = 0; i < count && !rayDone(collector); i++) {
         Low.Query.readCastRayHit(rayHit, i);
         if (bodyFilter === null || bodyFilter(rayHit.bodyIdB)) collector.addHit(rayHit);
     }
@@ -340,9 +340,6 @@ export class ClosestCastShapeCollector {
             this.earlyOutFraction = castShapeEarlyOut(hit);
         }
     }
-    shouldEarlyOut(): boolean {
-        return false;
-    }
     reset(): void {
         clearCastShapeHit(this.hit);
         this.earlyOutFraction = Low.INITIAL_EARLY_OUT_FRACTION;
@@ -358,9 +355,6 @@ export class AnyCastShapeCollector {
         copyCastShapeHit(this.hit, hit);
         this.earlyOutFraction = -Low.UNBOUNDED_EARLY_OUT;
     }
-    shouldEarlyOut(): boolean {
-        return this.hit.status === CastShapeStatus.COLLIDING;
-    }
     reset(): void {
         clearCastShapeHit(this.hit);
         this.earlyOutFraction = Low.INITIAL_EARLY_OUT_FRACTION;
@@ -374,9 +368,6 @@ export class AllCastShapeCollector {
     earlyOutFraction = Low.INITIAL_EARLY_OUT_FRACTION;
     addHit(hit: Low.CastShapeHit): void {
         copyCastShapeHit(this.#pool.next(), hit);
-    }
-    shouldEarlyOut(): boolean {
-        return false;
     }
     /** closest first */
     sort(): void {
@@ -414,7 +405,7 @@ export function castShape(
     displacement: Vec3,
     filter: Filter = EVERYTHING,
 ): void {
-    if (collector.shouldEarlyOut()) return;
+    if (boundDone(collector)) return;
     const { bodyFilter } = filter;
     const kind = bodyFilter === null ? collector.kind : Low.CollectorKind.ALL;
     Low.errorClear();
@@ -433,7 +424,7 @@ export function castShape(
         filter.collisionMask >>> 0,
     );
     Low.getWasm().check();
-    for (let i = 0; i < count && !collector.shouldEarlyOut(); i++) {
+    for (let i = 0; i < count && !boundDone(collector); i++) {
         Low.Query.readCastShapeHit(shapeHit, i);
         if (bodyFilter === null || bodyFilter(shapeHit.bodyIdB)) collector.addHit(shapeHit);
     }
@@ -496,9 +487,6 @@ export class ClosestCollideShapeCollector {
             this.earlyOutFraction = -hit.penetration;
         }
     }
-    shouldEarlyOut(): boolean {
-        return false;
-    }
     reset(): void {
         this.hit = null;
         this.earlyOutFraction = Low.UNBOUNDED_EARLY_OUT;
@@ -516,9 +504,6 @@ export class AnyCollideShapeCollector {
         this.hit = this.#hit;
         this.earlyOutFraction = -Low.UNBOUNDED_EARLY_OUT;
     }
-    shouldEarlyOut(): boolean {
-        return this.hit !== null;
-    }
     reset(): void {
         this.hit = null;
         this.earlyOutFraction = Low.UNBOUNDED_EARLY_OUT;
@@ -532,9 +517,6 @@ export class AllCollideShapeCollector {
     earlyOutFraction = Low.UNBOUNDED_EARLY_OUT;
     addHit(hit: Low.CollideShapeHit): void {
         copyCollideShapeHit(this.#pool.next(), hit);
-    }
-    shouldEarlyOut(): boolean {
-        return false;
     }
     reset(): void {
         this.#pool.reset();
@@ -567,7 +549,7 @@ function collide(
     internalEdgeRemoval: boolean,
     filter: Filter,
 ): void {
-    if (collector.shouldEarlyOut()) return;
+    if (boundDone(collector)) return;
     const { bodyFilter } = filter;
     const kind = bodyFilter === null ? collector.kind : Low.CollectorKind.ALL;
     Low.errorClear();
@@ -586,7 +568,7 @@ function collide(
         filter.collisionMask >>> 0,
     );
     Low.getWasm().check();
-    for (let i = 0; i < count && !collector.shouldEarlyOut(); i++) {
+    for (let i = 0; i < count && !boundDone(collector); i++) {
         Low.Query.readCollideShapeHit(collideHit, i);
         if (bodyFilter === null || bodyFilter(collideHit.bodyIdB)) collector.addHit(collideHit);
     }
@@ -646,17 +628,17 @@ function copyCollidePointHit(out: CollidePointHit, from: Low.CollidePointHit): v
 export class AnyCollidePointCollector {
     readonly kind = Low.CollectorKind.ANY;
     hit: CollidePointHit | null = null;
+    earlyOutFraction = Low.UNBOUNDED_EARLY_OUT;
     readonly #hit = createCollidePointHit();
     addHit(hit: Low.CollidePointHit): void {
         if (this.hit !== null) return;
         copyCollidePointHit(this.#hit, hit);
         this.hit = this.#hit;
-    }
-    shouldEarlyOut(): boolean {
-        return this.hit !== null;
+        this.earlyOutFraction = -Low.UNBOUNDED_EARLY_OUT;
     }
     reset(): void {
         this.hit = null;
+        this.earlyOutFraction = Low.UNBOUNDED_EARLY_OUT;
     }
 }
 
@@ -664,11 +646,9 @@ export class AllCollidePointCollector {
     readonly kind = Low.CollectorKind.ALL;
     readonly #pool = new Pool(createCollidePointHit);
     readonly hits: readonly CollidePointHit[] = this.#pool.hits;
+    earlyOutFraction = Low.UNBOUNDED_EARLY_OUT;
     addHit(hit: Low.CollidePointHit): void {
         copyCollidePointHit(this.#pool.next(), hit);
-    }
-    shouldEarlyOut(): boolean {
-        return false;
     }
     reset(): void {
         this.#pool.reset();
@@ -694,7 +674,7 @@ export function collidePoint(
     point: Vec3,
     filter: Filter = EVERYTHING,
 ): void {
-    if (collector.shouldEarlyOut()) return;
+    if (boundDone(collector)) return;
     const { bodyFilter } = filter;
     const kind = bodyFilter === null ? collector.kind : Low.CollectorKind.ALL;
     Low.errorClear();
@@ -708,7 +688,7 @@ export function collidePoint(
         filter.collisionMask >>> 0,
     );
     Low.getWasm().check();
-    for (let i = 0; i < count && !collector.shouldEarlyOut(); i++) {
+    for (let i = 0; i < count && !boundDone(collector); i++) {
         Low.Query.readCollidePointHit(pointHit, i);
         if (bodyFilter === null || bodyFilter(pointHit.bodyIdB)) collector.addHit(pointHit);
     }
