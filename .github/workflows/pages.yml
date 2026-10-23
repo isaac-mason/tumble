@@ -3,7 +3,7 @@ name: pages
 
 on:
     push:
-        branches: [dev]
+        branches: [main]
     workflow_dispatch:
 
 permissions:
