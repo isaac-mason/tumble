@@ -1,0 +1,70 @@
+# the examples on github pages: the js examples at the root, the C++ labs app built with emscripten at /labs/
+name: pages
+
+on:
+    push:
+        branches: [dev]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+
+concurrency:
+    group: pages
+    cancel-in-progress: true
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+
+            # the package the js examples import, built over the committed dist/tumble.wasm
+            - name: js package
+              working-directory: js
+              run: |
+                  npm install --no-audit --no-fund
+                  npm run build
+
+            - name: js examples
+              working-directory: js/examples
+              run: |
+                  npm ci --no-audit --no-fund
+                  npm run build
+
+            - uses: mymindstorm/setup-emsdk@v14
+              with:
+                  version: 6.0.9
+
+            - name: labs
+              run: |
+                  sudo apt-get install -y ninja-build
+                  cmake --preset labs-web
+                  cmake --build --preset labs-web
+
+            - name: site
+              run: |
+                  mkdir -p site/labs
+                  cp -r js/examples/dist/. site/
+                  cp build/labs/web/labs/tumble_labs.js build/labs/web/labs/tumble_labs.wasm build/labs/web/labs/tumble_labs.data site/labs/
+                  cp build/labs/web/labs/tumble_labs.html site/labs/index.html
+
+            - uses: actions/upload-pages-artifact@v3
+              with:
+                  path: site
+
+    deploy:
+        needs: build
+        runs-on: ubuntu-latest
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        steps:
+            - id: deployment
+              uses: actions/deploy-pages@v4
