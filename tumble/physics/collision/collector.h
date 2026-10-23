@@ -7,9 +7,11 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
-// a collector is a struct with a kind; COLLECT_CUSTOM hands its calls to function pointers with a context, which is how
-// a wrapper chains to the collector it wraps. a query calls the collectors' free functions, never the pointers, and a
-// shape reads early_out_fraction to skip work that cannot beat the best hit
+// a collector is a struct with a kind; COLLECT_CUSTOM hands its hits and misses to function pointers with a context,
+// which is how a wrapper chains to the collector it wraps. a query calls the collectors' free functions, never the
+// pointers. a shape reads early_out_fraction to skip work that cannot beat the best hit, and a query stops once it is at
+// or below the collector's bound; a custom collector stops one with force_early_out, a wrapper by copying the fraction
+// of the collector it wraps
 namespace collector {
 
 enum CollectorKind : uint32_t {
@@ -26,9 +28,10 @@ enum CollectorKind : uint32_t {
 /** a cast collector's early-out fraction before any hit: just past the end of the sweep. */
 /** 1 + FLT_EPSILON: a hit a rounding error past the end of the cast still counts */
 constexpr float INITIAL_EARLY_OUT_FRACTION = 1.0f + scalar::FLOAT_EPSILON;
-/** the fraction a ray any-collector drops to, and the bound at or below which a cast collector stops. */
+/** the bound at or below which a ray or a broadphase cast stops */
 constexpr float SHOULD_EARLY_OUT_FRACTION = 0.0f;
-/** a collide collector's early-out "fraction" is a penetration bound; this is unbounded. */
+/** a collide collector's early-out "fraction" is a penetration bound; this is unbounded, and -UNBOUNDED the bound at or
+ * below which a shape cast, a collide, a point collide or a broadphase overlap stops */
 constexpr float UNBOUNDED = scalar::FLOAT_MAX;
 
 }  // namespace collector

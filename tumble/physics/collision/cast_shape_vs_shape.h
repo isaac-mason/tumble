@@ -102,7 +102,6 @@ inline CastShapeSettings default_settings() { return {false, false, false, 1e-4f
 struct CastShapeCollector;
 typedef void (*CastShapeAddHit)(CastShapeCollector &collector, const CastShapeHit &hit);
 typedef void (*CastShapeAddMiss)(CastShapeCollector &collector);
-typedef bool (*CastShapeShouldEarlyOut)(const CastShapeCollector &collector);
 
 struct CastShapeCollector {
     CollectorKind kind;
@@ -112,7 +111,6 @@ struct CastShapeCollector {
     bool has_hit;
     CastShapeAddHit custom_add_hit;
     CastShapeAddMiss custom_add_miss;
-    CastShapeShouldEarlyOut custom_should_early_out;
     void *context;
 };
 
@@ -175,18 +173,10 @@ inline void add_miss(CastShapeCollector &c) {
     if (c.kind == collector::COLLECT_CUSTOM && c.custom_add_miss != nullptr) c.custom_add_miss(c);
 }
 
-inline bool should_early_out(const CastShapeCollector &c) {
-    switch (c.kind) {
-        case collector::COLLECT_ANY:
-            return c.early_out_fraction <= -collector::UNBOUNDED;
-        case collector::COLLECT_CLOSEST:
-            return c.early_out_fraction <= -collector::UNBOUNDED;
-        case collector::COLLECT_CUSTOM:
-            return c.custom_should_early_out(c);
-        default:
-            return false;
-    }
-}
+inline bool should_early_out(const CastShapeCollector &c) { return c.early_out_fraction <= -collector::UNBOUNDED; }
+
+/** stops the query: for a custom collector's add_hit */
+inline void force_early_out(CastShapeCollector &c) { c.early_out_fraction = -collector::UNBOUNDED; }
 
 /** stable, closest first by their early-out value (deepest first among those that start overlapping) */
 inline void sort(CastShapeCollector &c) {
@@ -206,7 +196,6 @@ struct InvertedContext {
 
 void inverted_add_hit(CastShapeCollector &c, const CastShapeHit &h);
 void inverted_add_miss(CastShapeCollector &c);
-bool inverted_should_early_out(const CastShapeCollector &c);
 
 typedef void (*CastFn)(CastShapeCollector &collector, const CastShapeSettings &settings, const shapes::Shape *shape_a,
                        const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
@@ -223,7 +212,6 @@ void reversed_cast_shape_vs_shape(CastShapeCollector &collector, const CastShape
     inverted.early_out_fraction = collector.early_out_fraction;
     inverted.custom_add_hit = inverted_add_hit;
     inverted.custom_add_miss = inverted_add_miss;
-    inverted.custom_should_early_out = inverted_should_early_out;
     const Vec3f displacement_b = vec3f::negate(displacement_a);
     InvertedContext context = {&collector, displacement_b};
     inverted.context = &context;

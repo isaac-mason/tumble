@@ -31,7 +31,6 @@ inline CollidePointSettings default_settings() { return {1e-4f}; }
 struct CollidePointCollector;
 typedef void (*CollidePointAddHit)(CollidePointCollector &collector, const CollidePointHit &hit);
 typedef void (*CollidePointAddMiss)(CollidePointCollector &collector);
-typedef bool (*CollidePointShouldEarlyOut)(const CollidePointCollector &collector);
 
 struct CollidePointCollector {
     CollectorKind kind;
@@ -41,7 +40,6 @@ struct CollidePointCollector {
     bool has_hit;
     CollidePointAddHit custom_add_hit;
     CollidePointAddMiss custom_add_miss;
-    CollidePointShouldEarlyOut custom_should_early_out;
     void *context;
 };
 
@@ -77,10 +75,11 @@ inline void add_hit(CollidePointCollector &c, const CollidePointHit &h) {
             c.early_out_fraction = -collector::UNBOUNDED;
             break;
         case collector::COLLECT_CLOSEST:
+            // a point is in a shape or not, so the first hit is as close as any
             if (c.hits.length == 0) c.hits.push(h);
             else c.hits[0] = h;
             c.has_hit = true;
-            c.early_out_fraction = 0.0f;
+            c.early_out_fraction = -collector::UNBOUNDED;
             break;
         case collector::COLLECT_CUSTOM:
             c.custom_add_hit(c, h);
@@ -92,17 +91,10 @@ inline void add_miss(CollidePointCollector &c) {
     if (c.kind == collector::COLLECT_CUSTOM && c.custom_add_miss != nullptr) c.custom_add_miss(c);
 }
 
-inline bool should_early_out(const CollidePointCollector &c) {
-    switch (c.kind) {
-        case collector::COLLECT_ANY:
-        case collector::COLLECT_CLOSEST:
-            return c.has_hit;
-        case collector::COLLECT_CUSTOM:
-            return c.custom_should_early_out(c);
-        default:
-            return false;
-    }
-}
+inline bool should_early_out(const CollidePointCollector &c) { return c.early_out_fraction <= -collector::UNBOUNDED; }
+
+/** stops the query: for a custom collector's add_hit */
+inline void force_early_out(CollidePointCollector &c) { c.early_out_fraction = -collector::UNBOUNDED; }
 
 }  // namespace collide_point
 

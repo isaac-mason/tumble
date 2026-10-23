@@ -44,9 +44,6 @@ static void counting_add_hit(cast_ray::CastRayCollector &c, const cast_ray::Cast
     cast_ray::add_hit(inner, h);
     c.early_out_fraction = inner.early_out_fraction;
 }
-static bool counting_should_early_out(const cast_ray::CastRayCollector &c) {
-    return cast_ray::should_early_out(*static_cast<const cast_ray::CastRayCollector *>(c.context));
-}
 
 void test_collectors(TestCtx &ctx) {
 
@@ -81,7 +78,6 @@ void test_collectors(TestCtx &ctx) {
     // custom: chains to the closest one through its context
     cast_ray::CastRayCollector custom = cast_ray::create_collector(collector::COLLECT_CUSTOM);
     custom.custom_add_hit = counting_add_hit;
-    custom.custom_should_early_out = counting_should_early_out;
     custom.context = &closest;
     cast_ray::add_hit(custom, ray_hit(0.4f));
     cast_ray::add_hit(custom, ray_hit(0.8f));

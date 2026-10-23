@@ -269,16 +269,11 @@ static void counting_add_hit(CastShapeCollector &c, const CastShapeHit &h) {
     c.early_out_fraction = counting.inner.early_out_fraction;
 }
 
-static bool counting_should_early_out(const CastShapeCollector &c) {
-    return cast_shape::should_early_out(static_cast<const CountingCollector *>(c.context)->inner);
-}
-
 /** counts the hits that get past a shape's early-out check and reach `kind` */
 static void init_counting(CountingCollector &counting, collector::CollectorKind kind) {
     counting.inner = cast_shape::create_collector(kind);
     counting.collector = cast_shape::create_collector(collector::COLLECT_CUSTOM);
     counting.collector.custom_add_hit = counting_add_hit;
-    counting.collector.custom_should_early_out = counting_should_early_out;
     counting.collector.context = &counting;
     counting.hit_count = 0;
 }

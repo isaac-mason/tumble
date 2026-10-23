@@ -53,7 +53,6 @@ inline CastRaySettings default_settings() { return {false, false, true}; }
 struct CastRayCollector;
 typedef void (*CastRayAddHit)(CastRayCollector &collector, const CastRayHit &hit);
 typedef void (*CastRayAddMiss)(CastRayCollector &collector);
-typedef bool (*CastRayShouldEarlyOut)(const CastRayCollector &collector);
 
 struct CastRayCollector {
     CollectorKind kind;
@@ -66,7 +65,6 @@ struct CastRayCollector {
     /** CUSTOM: the behaviour, with whatever it needs in context (a wrapped collector, say) */
     CastRayAddHit custom_add_hit;
     CastRayAddMiss custom_add_miss;
-    CastRayShouldEarlyOut custom_should_early_out;
     void *context;
 };
 
@@ -123,16 +121,10 @@ inline void add_miss(CastRayCollector &c) {
     if (c.kind == collector::COLLECT_CUSTOM && c.custom_add_miss != nullptr) c.custom_add_miss(c);
 }
 
-inline bool should_early_out(const CastRayCollector &c) {
-    switch (c.kind) {
-        case collector::COLLECT_ANY:
-            return c.has_hit;
-        case collector::COLLECT_CUSTOM:
-            return c.custom_should_early_out(c);
-        default:
-            return false;
-    }
-}
+inline bool should_early_out(const CastRayCollector &c) { return c.early_out_fraction <= collector::SHOULD_EARLY_OUT_FRACTION; }
+
+/** stops the query: for a custom collector's add_hit */
+inline void force_early_out(CastRayCollector &c) { c.early_out_fraction = collector::SHOULD_EARLY_OUT_FRACTION; }
 
 /** stable, closest first */
 inline void sort(CastRayCollector &c) {

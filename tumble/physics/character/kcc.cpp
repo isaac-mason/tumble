@@ -449,10 +449,6 @@ static void character_collide_add_hit(collide_shape::CollideShapeCollector &coll
     contact->can_push_character = true;
 }
 
-static bool character_collide_should_early_out(const collide_shape::CollideShapeCollector &collector) {
-    return collector.early_out_fraction <= -scalar::FLOAT_MAX;
-}
-
 /** orders contacts by body id then sub shape id, stable, so the order is the same across frames and runs */
 static void sort_contacts(collections::Vec<CharacterContact> &contacts) {
     sort::insertion_sort(contacts.data, contacts.data + contacts.length, [](const CharacterContact &a, const CharacterContact &b) {
@@ -481,7 +477,6 @@ static void get_contacts_at_position(KCC &character, World &world, Vec3f positio
     CollideCollectorContext context = {&world, &character, listener, &contacts, character.max_num_hits, false, character.hit_reduction_cos_max_angle};
     collide_shape::CollideShapeCollector collector = collide_shape::create_collector(collector::COLLECT_CUSTOM);
     collector.custom_add_hit = character_collide_add_hit;
-    collector.custom_should_early_out = character_collide_should_early_out;
     collector.context = &context;
 
     IgnoreSingleBodyChainedBodyFilter ignore_inner_body;
@@ -559,11 +554,6 @@ static void character_cast_add_hit(cast_shape::CastShapeCollector &collector, co
         context.has_hit = true;
         collector.early_out_fraction = hit.fraction;
     }
-}
-
-static bool character_cast_should_early_out(const cast_shape::CastShapeCollector &collector) {
-    // fraction 0 hits are rejected and the bound only ever drops to a positive fraction, so the cast runs to the end
-    return collector.early_out_fraction <= -scalar::FLOAT_MAX;
 }
 
 /** what the padding correction casts with */
@@ -654,7 +644,6 @@ static bool validate_movement(CharacterContact &out, KCC &character, World &worl
     CastCollectorContext context = {&world, &character, listener, ignored_contacts, displacement, &out, false, true};
     cast_shape::CastShapeCollector collector = cast_shape::create_collector(collector::COLLECT_CUSTOM);
     collector.custom_add_hit = character_cast_add_hit;
-    collector.custom_should_early_out = character_cast_should_early_out;
     collector.context = &context;
     // allow the cast beyond 1 for the padding correction
     collector.early_out_fraction = 1.0f + character_padding_fraction;
@@ -725,7 +714,6 @@ static bool get_first_contact_for_sweep(CharacterContact &out, KCC &character, W
     CastCollectorContext context = {&world, &character, listener, ignored_contacts, displacement, &out, false, false};
     cast_shape::CastShapeCollector collector = cast_shape::create_collector(collector::COLLECT_CUSTOM);
     collector.custom_add_hit = character_cast_add_hit;
-    collector.custom_should_early_out = character_cast_should_early_out;
     collector.context = &context;
     // as jolt's 1 + FLT_MIN, which is 1 in floats: a hit must come before the end of the sweep
     collector.early_out_fraction = 1.0f;

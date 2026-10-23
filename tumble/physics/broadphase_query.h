@@ -22,15 +22,15 @@ using collector::CollectorKind;
 
 struct BodyCollector;
 typedef void (*BodyAddHit)(BodyCollector &collector, body_id::BodyId body_id);
-typedef bool (*BodyShouldEarlyOut)(const BodyCollector &collector);
 
 /** the bodies an overlap query meets; overlaps have no distance, so COLLECT_CLOSEST is not a kind it takes */
 struct BodyCollector {
     CollectorKind kind;
+    /** UNBOUNDED until the collector is done; an overlap has nothing for it to bound */
+    float early_out_fraction;
     collections::Vec<body_id::BodyId> hits;
     bool has_hit;
     BodyAddHit custom_add_hit;
-    BodyShouldEarlyOut custom_should_early_out;
     void *context;
 };
 
@@ -38,10 +38,12 @@ inline BodyCollector create_body_collector(CollectorKind kind) {
     TUMBLE_ASSERT(kind != collector::COLLECT_CLOSEST);
     BodyCollector c = {};
     c.kind = kind;
+    c.early_out_fraction = collector::UNBOUNDED;
     return c;
 }
 
 inline void reset(BodyCollector &c) {
+    c.early_out_fraction = collector::UNBOUNDED;
     c.hits.length = 0;
     c.has_hit = false;
 }
@@ -58,6 +60,7 @@ inline void add_hit(BodyCollector &c, body_id::BodyId body_id) {
             if (c.hits.length == 0) c.hits.push(body_id);
             else c.hits[0] = body_id;
             c.has_hit = true;
+            c.early_out_fraction = -collector::UNBOUNDED;
             break;
         case collector::COLLECT_CUSTOM:
             c.custom_add_hit(c, body_id);
@@ -67,16 +70,10 @@ inline void add_hit(BodyCollector &c, body_id::BodyId body_id) {
     }
 }
 
-inline bool should_early_out(const BodyCollector &c) {
-    switch (c.kind) {
-        case collector::COLLECT_ANY:
-            return c.has_hit;
-        case collector::COLLECT_CUSTOM:
-            return c.custom_should_early_out != nullptr && c.custom_should_early_out(c);
-        default:
-            return false;
-    }
-}
+inline bool should_early_out(const BodyCollector &c) { return c.early_out_fraction <= -collector::UNBOUNDED; }
+
+/** stops the query: for a custom collector's add_hit */
+inline void force_early_out(BodyCollector &c) { c.early_out_fraction = -collector::UNBOUNDED; }
 
 /** a body whose bounds a cast entered, and the fraction of the cast where */
 struct BodyCastHit {
@@ -86,7 +83,6 @@ struct BodyCastHit {
 
 struct BodyCastCollector;
 typedef void (*BodyCastAddHit)(BodyCastCollector &collector, const BodyCastHit &hit);
-typedef bool (*BodyCastShouldEarlyOut)(const BodyCastCollector &collector);
 
 /** the bodies a cast meets; a hit at or past early_out_fraction is not reported, and COLLECT_CLOSEST lowers it each hit */
 struct BodyCastCollector {
@@ -95,7 +91,6 @@ struct BodyCastCollector {
     collections::Vec<BodyCastHit> hits;
     bool has_hit;
     BodyCastAddHit custom_add_hit;
-    BodyCastShouldEarlyOut custom_should_early_out;
     void *context;
 };
 
@@ -142,16 +137,10 @@ inline void add_hit(BodyCastCollector &c, const BodyCastHit &h) {
     }
 }
 
-inline bool should_early_out(const BodyCastCollector &c) {
-    switch (c.kind) {
-        case collector::COLLECT_ANY:
-            return c.has_hit;
-        case collector::COLLECT_CUSTOM:
-            return c.custom_should_early_out != nullptr && c.custom_should_early_out(c);
-        default:
-            return false;
-    }
-}
+inline bool should_early_out(const BodyCastCollector &c) { return c.early_out_fraction <= collector::SHOULD_EARLY_OUT_FRACTION; }
+
+/** stops the query: for a custom collector's add_hit */
+inline void force_early_out(BodyCastCollector &c) { c.early_out_fraction = collector::SHOULD_EARLY_OUT_FRACTION; }
 
 /** a COLLECT_ALL collector's hits, nearest first */
 inline void sort(BodyCastCollector &c) {

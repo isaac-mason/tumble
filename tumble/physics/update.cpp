@@ -22,8 +22,6 @@ namespace update {
 using rigid_body::RigidBody;
 using world::World;
 
-/** a collide collector's bound that never stops it: below any -penetration */
-static constexpr float COLLIDE_EARLY_OUT = -scalar::FLOAT_MAX;
 /** the most manifolds the reduction keeps per body pair */
 static constexpr uint32_t MAX_REDUCTION_MANIFOLDS = 32;
 
@@ -150,10 +148,6 @@ static manifold::ContactManifold narrowphase_temp_manifold;
 
 static float max_contact_distance(const World &world) {
     return world.settings.narrowphase.speculative_contact_distance + world.settings.narrowphase.manifold_tolerance;
-}
-
-static bool narrowphase_should_early_out(const collide_shape::CollideShapeCollector &collector) {
-    return collector.early_out_fraction <= COLLIDE_EARLY_OUT;
 }
 
 static void start_manifold(manifold::ContactManifold &m, Vec3f base_offset, Vec3f world_space_normal,
@@ -297,7 +291,6 @@ static bool narrowphase_pair(World &world, RigidBody &body_a, RigidBody &body_b,
     collide_shape::CollideShapeCollector collector = collide_shape::create_collector(collector::COLLECT_CUSTOM);
     collector.body_id_b = body_b.id;
     collector.custom_add_hit = use_manifold_reduction ? reduction_add_hit : non_reduction_add_hit;
-    collector.custom_should_early_out = narrowphase_should_early_out;
     collector.context = &context;
 
     const Transformf transform_a = body_transform(body_a);
@@ -599,8 +592,6 @@ static void ccd_add_hit(cast_shape::CastShapeCollector &collector, const cast_sh
     collector.early_out_fraction = fraction_plus_slop;
 }
 
-static bool ccd_should_early_out(const cast_shape::CastShapeCollector &) { return false; }
-
 /** a body the swept bounds reach: the filters, a ray test against its bounds, then the shape cast */
 static void visit_ccd_body(body_visitor::BodyVisitor *visitor, RigidBody *body_b) {
     CCDSweep &sweep = *static_cast<CCDSweep *>(visitor->context);
@@ -637,7 +628,6 @@ static void visit_ccd_body(body_visitor::BodyVisitor *visitor, RigidBody *body_b
     cast_shape::CastShapeCollector collector = cast_shape::create_collector(collector::COLLECT_CUSTOM);
     collector.body_id_b = body_b->id;
     collector.custom_add_hit = ccd_add_hit;
-    collector.custom_should_early_out = ccd_should_early_out;
     collector.context = &sweep;
     // starts from the visitor's best so far
     collector.early_out_fraction = visitor->early_out_fraction;

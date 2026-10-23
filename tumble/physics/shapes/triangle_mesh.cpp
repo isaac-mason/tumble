@@ -252,10 +252,6 @@ static void hit_count_add_hit(cast_ray::CastRayCollector &collector, const cast_
     context.last_sub_shape_id = hit.sub_shape_id;
 }
 
-static bool hit_count_should_early_out(const cast_ray::CastRayCollector &) {
-    return false;  // never early out, count all hits
-}
-
 void collide_point_vs_triangle_mesh(collide_point::CollidePointCollector &collector, const collide_point::CollidePointSettings &,
                                     Vec3f point, const Shape *shape_b, const sub_shape::SubShapeIdBuilder &sub_shape_id_b,
                                     const Transformf &transform_b) {
@@ -286,7 +282,6 @@ void collide_point_vs_triangle_mesh(collide_point::CollidePointCollector &collec
     cast_ray::CastRayCollector hit_counter = cast_ray::create_collector(collector::COLLECT_CUSTOM);
     hit_counter.body_id_b = collector.body_id_b;
     hit_counter.custom_add_hit = hit_count_add_hit;
-    hit_counter.custom_should_early_out = hit_count_should_early_out;
     hit_counter.context = &context;
 
     // cast ray through mesh, counting all triangle intersections; the mesh is already in local space

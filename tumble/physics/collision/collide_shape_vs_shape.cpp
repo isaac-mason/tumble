@@ -24,10 +24,6 @@ void inverted_add_hit(CollideShapeCollector &c, const CollideShapeHit &h) {
 
 void inverted_add_miss(CollideShapeCollector &c) { add_miss(*static_cast<CollideShapeCollector *>(c.context)); }
 
-bool inverted_should_early_out(const CollideShapeCollector &c) {
-    return should_early_out(*static_cast<const CollideShapeCollector *>(c.context));
-}
-
 }  // namespace collide_shape
 
 TUMBLE_NAMESPACE_END

@@ -774,6 +774,8 @@ Each query walks the broadphase under a filter and runs against every body it re
 - `collector::COLLECT_CLOSEST`: the nearest hit.
 - `collector::COLLECT_ANY`: the first hit found, then stops.
 - `collector::COLLECT_ALL`: every hit; `sort` orders them nearest first.
+- `collector::COLLECT_CUSTOM`: your `custom_add_hit` and `custom_add_miss`, with a `context`. Lowering
+  `early_out_fraction` lets shapes skip what cannot beat it, and `force_early_out` stops the query.
 
 ### Rays
 

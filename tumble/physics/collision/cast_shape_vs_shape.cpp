@@ -38,8 +38,6 @@ void inverted_add_hit(CastShapeCollector &c, const CastShapeHit &h) {
 
 void inverted_add_miss(CastShapeCollector &c) { add_miss(*static_cast<InvertedContext *>(c.context)->base); }
 
-bool inverted_should_early_out(const CastShapeCollector &c) { return should_early_out(*static_cast<const InvertedContext *>(c.context)->base); }
-
 }  // namespace cast_shape
 
 TUMBLE_NAMESPACE_END

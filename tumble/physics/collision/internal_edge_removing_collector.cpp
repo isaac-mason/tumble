@@ -177,14 +177,11 @@ static void add_hit(CollideShapeCollector &collector, const CollideShapeHit &hit
 
 static void add_miss(CollideShapeCollector &collector) { collide_shape::add_miss(*wrapper_of(collector).chained); }
 
-static bool should_early_out(const CollideShapeCollector &collector) { return collide_shape::should_early_out(*wrapper_of(collector).chained); }
-
 InternalEdgeRemovingCollector create() {
     InternalEdgeRemovingCollector wrapper = {};
     wrapper.collector = collide_shape::create_collector(collector::COLLECT_CUSTOM);
     wrapper.collector.custom_add_hit = add_hit;
     wrapper.collector.custom_add_miss = add_miss;
-    wrapper.collector.custom_should_early_out = should_early_out;
     return wrapper;
 }
 

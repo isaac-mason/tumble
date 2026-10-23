@@ -89,7 +89,6 @@ inline CollideShapeSettings default_settings() {
 struct CollideShapeCollector;
 typedef void (*CollideShapeAddHit)(CollideShapeCollector &collector, const CollideShapeHit &hit);
 typedef void (*CollideShapeAddMiss)(CollideShapeCollector &collector);
-typedef bool (*CollideShapeShouldEarlyOut)(const CollideShapeCollector &collector);
 typedef void (*CollideShapeOnBody)(CollideShapeCollector &collector, body_id::BodyId body_id);
 typedef void (*CollideShapeOnBodyEnd)(CollideShapeCollector &collector);
 
@@ -102,7 +101,6 @@ struct CollideShapeCollector {
     bool has_hit;
     CollideShapeAddHit custom_add_hit;
     CollideShapeAddMiss custom_add_miss;
-    CollideShapeShouldEarlyOut custom_should_early_out;
     /** optional, any kind: told when a query moves on to the next body and when it is done with it */
     CollideShapeOnBody on_body;
     CollideShapeOnBodyEnd on_body_end;
@@ -163,16 +161,10 @@ inline void add_miss(CollideShapeCollector &c) {
     if (c.kind == collector::COLLECT_CUSTOM && c.custom_add_miss != nullptr) c.custom_add_miss(c);
 }
 
-inline bool should_early_out(const CollideShapeCollector &c) {
-    switch (c.kind) {
-        case collector::COLLECT_ANY:
-            return c.has_hit;
-        case collector::COLLECT_CUSTOM:
-            return c.custom_should_early_out(c);
-        default:
-            return false;
-    }
-}
+inline bool should_early_out(const CollideShapeCollector &c) { return c.early_out_fraction <= -collector::UNBOUNDED; }
+
+/** stops the query: for a custom collector's add_hit */
+inline void force_early_out(CollideShapeCollector &c) { c.early_out_fraction = -collector::UNBOUNDED; }
 
 /** stable, deepest first */
 inline void sort(CollideShapeCollector &c) {
@@ -194,7 +186,6 @@ inline void on_body_end(CollideShapeCollector &c) {
 
 void inverted_add_hit(CollideShapeCollector &c, const CollideShapeHit &h);
 void inverted_add_miss(CollideShapeCollector &c);
-bool inverted_should_early_out(const CollideShapeCollector &c);
 
 typedef void (*CollideFn)(CollideShapeCollector &collector, const CollideShapeSettings &settings, const shapes::Shape *shape_a,
                           const sub_shape::SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, const shapes::Shape *shape_b,
@@ -211,7 +202,6 @@ void reversed_collide_shape_vs_shape(CollideShapeCollector &collector, const Col
     inverted.early_out_fraction = collector.early_out_fraction;
     inverted.custom_add_hit = inverted_add_hit;
     inverted.custom_add_miss = inverted_add_miss;
-    inverted.custom_should_early_out = inverted_should_early_out;
     inverted.context = &collector;
     fn(inverted, settings, shape_b, sub_shape_id_b, transform_b, shape_a, sub_shape_id_a, transform_a);
 }

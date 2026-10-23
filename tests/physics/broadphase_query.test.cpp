@@ -265,8 +265,9 @@ void test_broadphase_query_collectors_stop_and_filter(TestCtx &ctx) {
     } count = {0};
     broadphase_query::BodyCollector custom = broadphase_query::create_body_collector(collector::COLLECT_CUSTOM);
     custom.context = &count;
-    custom.custom_add_hit = [](broadphase_query::BodyCollector &c, body_id::BodyId) { static_cast<Count *>(c.context)->seen++; };
-    custom.custom_should_early_out = [](const broadphase_query::BodyCollector &c) { return static_cast<const Count *>(c.context)->seen >= 3; };
+    custom.custom_add_hit = [](broadphase_query::BodyCollector &c, body_id::BodyId) {
+        if (++static_cast<Count *>(c.context)->seen == 3) broadphase_query::force_early_out(c);
+    };
     broadphase_query::collide_aabb(*scene.world, custom, everything, filter);
     CHECK(ctx, count.seen == 3);
 

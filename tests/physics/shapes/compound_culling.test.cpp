@@ -26,36 +26,34 @@ static Shape *row(Shape *child, uint32_t count) {
 // a box ray reports either a hit or a miss, so counting both counts the children the walk hands the ray to
 static void count_ray_hit(cast_ray::CastRayCollector &c, const cast_ray::CastRayHit &) { (*static_cast<uint32_t *>(c.context))++; }
 static void count_ray_miss(cast_ray::CastRayCollector &c) { (*static_cast<uint32_t *>(c.context))++; }
-static bool never_early_out(const cast_ray::CastRayCollector &) { return false; }
 
 static uint32_t ray_visits(const Shape *shape, const Transformf &transform, const Float3 &origin) {
     uint32_t visits = 0;
     cast_ray::CastRayCollector collector = cast_ray::create_collector(collector::COLLECT_CUSTOM);
     collector.custom_add_hit = count_ray_hit;
     collector.custom_add_miss = count_ray_miss;
-    collector.custom_should_early_out = never_early_out;
     collector.context = &visits;
     shapes::def_of(shape).cast_ray(collector, cast_ray::default_settings(), {vec3f::load(origin), vec3f::make(0, -1, 0), 20}, shape, NO_SUB_SHAPE, transform);
     return visits;
 }
 
-// a compound asks its collector whether to stop once per child it looks at, so nesting one-child compounds
-// as the children counts the children the outer walk hands on: one extra ask each
-static void count_collide_hit(collide_shape::CollideShapeCollector &, const collide_shape::CollideShapeHit &) {}
-static bool count_collide_early_out(const collide_shape::CollideShapeCollector &c) {
-    (*static_cast<uint32_t *>(c.context))++;
-    return false;
+// the sphere-vs-sphere row swapped for a count, so a compound of spheres counts the children its walk hands on
+static uint32_t sphere_collides = 0;
+static void count_sphere_collide(collide_shape::CollideShapeCollector &, const collide_shape::CollideShapeSettings &, const Shape *,
+                                 const sub_shape::SubShapeIdBuilder &, const Transformf &, const Shape *, const sub_shape::SubShapeIdBuilder &,
+                                 const Transformf &) {
+    sphere_collides++;
 }
 
-static uint32_t collide_visits(const Shape *ball, const Shape *shape, uint32_t num_children) {
-    uint32_t asks = 0;
-    collide_shape::CollideShapeCollector collector = collide_shape::create_collector(collector::COLLECT_CUSTOM);
-    collector.custom_add_hit = count_collide_hit;
-    collector.custom_should_early_out = count_collide_early_out;
-    collector.context = &asks;
+static uint32_t collide_visits(const Shape *ball, const Shape *shape) {
+    shapes::set_collide_shape_fn(shapes::SHAPE_SPHERE, shapes::SHAPE_SPHERE, count_sphere_collide);
+    sphere_collides = 0;
+    collide_shape::CollideShapeCollector collector = collide_shape::create_collector(collector::COLLECT_ALL);
     shapes::collide_fn(ball->type, shape->type)(collector, collide_shape::default_settings(), ball, NO_SUB_SHAPE, pose({0, 0.8f, 0}), shape,
                                                 NO_SUB_SHAPE, pose({0, 0, 0}));
-    return asks - num_children;
+    collide_shape::release(collector);
+    dispatch::init();
+    return sphere_collides;
 }
 
 void test_compound_culling_ray(TestCtx &ctx) {
@@ -77,15 +75,12 @@ void test_compound_culling_ray(TestCtx &ctx) {
 void test_compound_culling_collide(TestCtx &ctx) {
     dispatch::init();
     Shape *ball = sphere::create({.radius = 0.5f});
-    const CompoundShapeChild inner_children[] = {{{0, 0, 0}, IDENTITY, ball}};
-    Shape *inner = compound::create({.children = inner_children, .num_children = 1});
-    Shape *many = row(inner, 8);
+    Shape *many = row(ball, 8);
 
     // a sphere overlapping the child at the origin: only it is visited
-    CHECK(ctx, collide_visits(ball, many, 8) == 1);
+    CHECK(ctx, collide_visits(ball, many) == 1);
 
     compound::destroy(many);
-    compound::destroy(inner);
     sphere::destroy(ball);
 }
 

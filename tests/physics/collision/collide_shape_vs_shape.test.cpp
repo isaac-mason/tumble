@@ -285,16 +285,11 @@ static void counting_add_hit(CollideShapeCollector &c, const CollideShapeHit &h)
     c.early_out_fraction = counting.inner.early_out_fraction;
 }
 
-static bool counting_should_early_out(const CollideShapeCollector &c) {
-    return collide_shape::should_early_out(static_cast<const CountingCollector *>(c.context)->inner);
-}
-
 /** counts the hits that get past a shape's early-out check and reach `kind` */
 static void init_counting(CountingCollector &counting, collector::CollectorKind kind) {
     counting.inner = collide_shape::create_collector(kind);
     counting.collector = collide_shape::create_collector(collector::COLLECT_CUSTOM);
     counting.collector.custom_add_hit = counting_add_hit;
-    counting.collector.custom_should_early_out = counting_should_early_out;
     counting.collector.context = &counting;
     counting.hit_count = 0;
 }
