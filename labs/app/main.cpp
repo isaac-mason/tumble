@@ -78,7 +78,8 @@ static void destroy_shape(shapes::Shape *shape) {
         case shapes::SHAPE_OFFSET_CENTER_OF_MASS: offset_center_of_mass::destroy(shape); break;
         case shapes::SHAPE_PLANE: plane::destroy(shape); break;
         case shapes::SHAPE_EMPTY: empty::destroy(shape); break;
-        default: shapes::release(shape); break;
+        // a user type's shape is its example's to free, at its own size
+        default: TUMBLE_ASSERT(false); break;
     }
 }
 

@@ -37,7 +37,7 @@ static constexpr int MAX_BRUSH_SIZE = 10;
 static constexpr int REMESHES_PER_FRAME = 3;
 static constexpr float PI = 3.14159265f;
 
-/* a voxel shape in user slot 1: chunks of 16^3 voxels in a fixed box of chunks, its payload the shape's user.data */
+/* a voxel shape in user slot 1: chunks of 16^3 voxels in a fixed box of chunks, which the shape points at */
 
 static constexpr shapes::ShapeType SHAPE_VOXELS = shapes::SHAPE_USER_1;
 
@@ -59,6 +59,11 @@ struct Voxels {
     int chunk_count[3];
     /** one per chunk in the bounds, null until a voxel in it is set */
     collections::Vec<Chunk *> chunks;
+};
+
+struct VoxelsShape : shapes::Shape {
+    static constexpr shapes::ShapeType TYPE = SHAPE_VOXELS;
+    Voxels *voxels;
 };
 
 /** a chunk's surface as quads, for drawing */
@@ -99,7 +104,7 @@ static struct {
 
 static Color hex(uint32_t rgb) { return {(float)((rgb >> 16) & 255) / 255.0f, (float)((rgb >> 8) & 255) / 255.0f, (float)(rgb & 255) / 255.0f, 1.0f}; }
 
-static const Voxels &voxels_of(const shapes::Shape *shape) { return *static_cast<const Voxels *>(shape->user.data); }
+static const Voxels &voxels_of(const shapes::Shape *shape) { return *shapes::as<VoxelsShape>(shape).voxels; }
 
 static int floor_div_chunk(int voxel) { return voxel >> CHUNK_BITS; }
 
@@ -389,9 +394,9 @@ static void register_voxels() {
 }
 
 static shapes::Shape *create_voxel_shape(Voxels *voxels) {
-    shapes::Shape *shape = shapes::allocate(SHAPE_VOXELS);
+    VoxelsShape *shape = shapes::allocate<VoxelsShape>();
     if (shape == nullptr) return nullptr;
-    shape->user.data = voxels;
+    shape->voxels = voxels;
     const int *bounds = voxels->chunk_bounds;
     shape->aabb = {{(float)(bounds[0] * CHUNK_SIZE), (float)(bounds[1] * CHUNK_SIZE), (float)(bounds[2] * CHUNK_SIZE)},
                    {(float)(bounds[3] * CHUNK_SIZE), (float)(bounds[4] * CHUNK_SIZE), (float)(bounds[5] * CHUNK_SIZE)}};
@@ -678,7 +683,8 @@ static void init(App &app) {
     state.ray_hit = cast_ray::create_collector(collector::COLLECT_CLOSEST);
 
     make_terrain();
-    state.voxel_shape = app::keep(app, create_voxel_shape(&state.voxels));
+    // the example's own: app::keep frees built-in types alone
+    state.voxel_shape = create_voxel_shape(&state.voxels);
     state.voxel_box = app::keep(app, box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.05f}));
     rigid_body::RigidBodySettings terrain;
     terrain.shape = state.voxel_shape;
@@ -734,7 +740,10 @@ static void ui(App &app) {
     ImGui::Text("brush %d ([ and ]): left click breaks, right click builds", state.brush_size);
 }
 
-static void shutdown(App &) {
+static void shutdown(App &app) {
+    // the world before the shape its terrain is made of
+    app::clear_world(app);
+    shapes::release<VoxelsShape>(state.voxel_shape);
     for (uint32_t i = 0; i < state.voxels.chunks.length; i++) {
         if (state.voxels.chunks[i] != nullptr) util::free(state.voxels.chunks[i]);
     }

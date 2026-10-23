@@ -87,7 +87,7 @@ tumble::world::World *create_world(Layers &out, tumble::Float3 gravity = {0.0f, 
  */
 void clear_world(App &app);
 
-/** the shape, freed with the example's world: a shape and the shapes it wraps are kept separately */
+/** the shape, of a built-in type, freed with the example's world: a shape and the shapes it wraps are kept separately */
 tumble::shapes::Shape *keep(App &app, tumble::shapes::Shape *shape);
 tumble::convex_hull::ConvexHullData *keep(App &app, tumble::convex_hull::ConvexHullData *hull);
 tumble::triangle_mesh_data::TriangleMeshData *keep(App &app, tumble::triangle_mesh_data::TriangleMeshData *data);

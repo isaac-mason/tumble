@@ -3,8 +3,17 @@
 #include <math.h>
 
 #include "app/vec.h"
+#include "tumble/physics/shapes/box.h"
+#include "tumble/physics/shapes/capsule.h"
 #include "tumble/physics/shapes/compound.h"
 #include "tumble/physics/shapes/convex_hull.h"
+#include "tumble/physics/shapes/cylinder.h"
+#include "tumble/physics/shapes/offset_center_of_mass.h"
+#include "tumble/physics/shapes/plane.h"
+#include "tumble/physics/shapes/scaled.h"
+#include "tumble/physics/shapes/sphere.h"
+#include "tumble/physics/shapes/transformed.h"
+#include "tumble/physics/shapes/triangle_mesh.h"
 #include "tumble/physics/shapes/utils/triangle_mesh_data.h"
 
 using namespace tumble;
@@ -134,7 +143,7 @@ static void triangle_mesh(Builder &builder, const triangle_mesh_data::TriangleMe
     }
 }
 
-static void plane(Builder &builder, const shapes::PlaneShape &shape) {
+static void plane(Builder &builder, const plane::PlaneShape &shape) {
     const Float3 normal = shape.plane.normal;
     const Float3 center = scale(normal, -shape.plane.constant);
     const Float4 turn = quat_from_to({0, 1, 0}, normal);
@@ -159,25 +168,29 @@ static void child(Builder &builder, const shapes::Shape *inner, Float3 position,
 static void shape(Builder &builder, const shapes::Shape *shape) {
     switch (shape->type) {
         case shapes::SHAPE_SPHERE:
-            rounded(builder, shape->sphere.radius, 0.0f);
+            rounded(builder, shapes::as<sphere::SphereShape>(shape).radius, 0.0f);
             break;
         case shapes::SHAPE_BOX:
-            box(builder, shape->box.half_extents);
+            box(builder, shapes::as<box::BoxShape>(shape).half_extents);
             break;
-        case shapes::SHAPE_CAPSULE:
-            rounded(builder, shape->capsule.radius, shape->capsule.half_height_of_cylinder);
+        case shapes::SHAPE_CAPSULE: {
+            const capsule::CapsuleShape &capsule = shapes::as<capsule::CapsuleShape>(shape);
+            rounded(builder, capsule.radius, capsule.half_height_of_cylinder);
             break;
-        case shapes::SHAPE_CYLINDER:
-            cylinder(builder, shape->cylinder.radius, shape->cylinder.half_height);
+        }
+        case shapes::SHAPE_CYLINDER: {
+            const cylinder::CylinderShape &cylinder = shapes::as<cylinder::CylinderShape>(shape);
+            shape_mesh::cylinder(builder, cylinder.radius, cylinder.half_height);
             break;
+        }
         case shapes::SHAPE_CONVEX_HULL:
-            convex_hull(builder, *shape->convex_hull.data);
+            convex_hull(builder, *shapes::as<convex_hull::ConvexHullShape>(shape).data);
             break;
         case shapes::SHAPE_TRIANGLE_MESH:
-            triangle_mesh(builder, *shape->triangle_mesh.data);
+            triangle_mesh(builder, *shapes::as<triangle_mesh::TriangleMeshShape>(shape).data);
             break;
         case shapes::SHAPE_PLANE:
-            plane(builder, shape->plane);
+            plane(builder, shapes::as<plane::PlaneShape>(shape));
             break;
         case shapes::SHAPE_COMPOUND:
         case shapes::SHAPE_STATIC_COMPOUND: {
@@ -185,18 +198,21 @@ static void shape(Builder &builder, const shapes::Shape *shape) {
             for (uint32_t i = 0; i < children.length; i++) child(builder, children[i].shape, children[i].position, children[i].quaternion);
             break;
         }
-        case shapes::SHAPE_TRANSFORMED:
-            child(builder, shape->transformed.shape, shape->transformed.position, shape->transformed.quaternion);
+        case shapes::SHAPE_TRANSFORMED: {
+            const transformed::TransformedShape &transformed = shapes::as<transformed::TransformedShape>(shape);
+            child(builder, transformed.shape, transformed.position, transformed.quaternion);
             break;
+        }
         case shapes::SHAPE_SCALED: {
+            const scaled::ScaledShape &scaled = shapes::as<scaled::ScaledShape>(shape);
             const Float3 outer = builder.placement.scale;
-            builder.placement.scale = multiply(outer, shape->scaled.scale);
-            shape_mesh::shape(builder, shape->scaled.shape);
+            builder.placement.scale = multiply(outer, scaled.scale);
+            shape_mesh::shape(builder, scaled.shape);
             builder.placement.scale = outer;
             break;
         }
         case shapes::SHAPE_OFFSET_CENTER_OF_MASS:
-            shape_mesh::shape(builder, shape->offset_center_of_mass.shape);
+            shape_mesh::shape(builder, shapes::as<offset_center_of_mass::OffsetCenterOfMassShape>(shape).shape);
             break;
         default:
             // empty, and user shapes: the debug wireframes draw those
