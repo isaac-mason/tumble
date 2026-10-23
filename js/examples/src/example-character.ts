@@ -8,7 +8,6 @@ import {
     KCC,
     KCCPolicy,
     MotionType,
-    Poses,
     type Quat,
     RigidBody,
     Transformed,
@@ -16,7 +15,8 @@ import {
     World,
     WorldSettings,
 } from 'tumble.js';
-import { caption, loop, meshOf, setup } from './common';
+import { vec3 } from 'math';
+import { addStepPose, blendStepPose, caption, createStepPoses, loop, meshOf, readStepPoses, setup } from './common';
 
 const view = await setup([0, 8, 14], [0, 1, 0]);
 caption('WASD to walk, space to jump: up the stairs and slope, onto the belt and the moving platform, into the crates');
@@ -29,7 +29,7 @@ WorldSettings.enableCollision(settings, moving, notMoving);
 const gravity: Vec3 = [0, -20, 0];
 settings.gravity = gravity;
 const world = World.create(settings);
-const poses = Poses.create(world);
+const poses = createStepPoses(world);
 const posed: gpucat.Object3D[] = [];
 
 /** a box body and its mesh: static ones placed once, the rest posed each frame */
@@ -53,7 +53,7 @@ function box(
         mesh.position.splice(0, 3, ...position);
         mesh.quaternion.splice(0, 4, ...quaternion);
     } else {
-        posed[Poses.add(poses, body)] = mesh;
+        posed[addStepPose(poses, body)] = mesh;
     }
     view.scene.add(mesh);
     return body;
@@ -83,6 +83,11 @@ const filter = Filter.create(world);
 Filter.setFromBody(filter, world, character.innerRigidBodyId);
 const characterMesh = meshOf({ kind: 'capsule', halfHeightOfCylinder: 0.5, radius: 0.4 }, '#f2bf4c');
 view.scene.add(characterMesh);
+// where the character was as the last step began and where the step left it, and where it was drawn last frame
+const characterBefore: Vec3 = [...character.position];
+const characterNow: Vec3 = [...character.position];
+const drawn: Vec3 = [...character.position];
+const followed: Vec3 = [...character.position];
 
 const keys = new Set<string>();
 window.addEventListener('keydown', (event) => keys.add(event.code));
@@ -131,25 +136,25 @@ loop(
         const time = steps * deltaTime;
         RigidBody.moveKinematic(world, platform, [-8 + Math.sin(time * 0.6) * 3, 1, 6], [0, 0, 0, 1], deltaTime);
         steer(deltaTime);
-        const before: Vec3 = [...character.position];
+        vec3.copy(characterBefore, characterNow);
         KCC.update(world, character, deltaTime, gravity, updateSettings, policy, filter);
-        const after = character.position;
-        // the camera follows
-        for (let k = 0; k < 3; k++) {
-            view.camera.position[k]! += after[k]! - before[k]!;
-            view.controls.target[k]! += after[k]! - before[k]!;
-        }
+        vec3.copy(characterNow, character.position);
         World.step(world, undefined, deltaTime);
+        readStepPoses(poses);
     },
-    () => {
-        const { positions, quaternions, changed } = Poses.read(poses);
-        for (const slot of changed) {
+    (alpha) => {
+        for (let slot = 0; slot < posed.length; slot++) {
             const mesh = posed[slot]!;
-            for (let k = 0; k < 3; k++) mesh.position[k] = positions[slot * 3 + k]!;
-            for (let k = 0; k < 4; k++) mesh.quaternion[k] = quaternions[slot * 4 + k]!;
+            blendStepPose(poses, slot, alpha, mesh.position, mesh.quaternion);
         }
-        const at = character.position;
-        characterMesh.position.splice(0, 3, at[0], at[1] + 0.9, at[2]);
+        vec3.lerp(drawn, characterBefore, characterNow, alpha);
+        // the camera follows where the character is drawn, keeping the turn and zoom it was given
+        for (let k = 0; k < 3; k++) {
+            view.camera.position[k]! += drawn[k]! - followed[k]!;
+            view.controls.target[k]! += drawn[k]! - followed[k]!;
+        }
+        vec3.copy(followed, drawn);
+        characterMesh.position.splice(0, 3, drawn[0], drawn[1] + 0.9, drawn[2]);
         view.render();
     },
 );

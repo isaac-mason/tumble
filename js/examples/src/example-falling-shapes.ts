@@ -1,9 +1,9 @@
 import type * as gpucat from 'gpucat';
-import { Box, Capsule, Cylinder, MotionType, Poses, RigidBody, type Shape, Sphere, World, WorldSettings } from 'tumble.js';
-import { caption, loop, meshOf, type ShapeMesh, setup } from './common';
+import { Box, Capsule, Cylinder, MotionType, RigidBody, type Shape, Sphere, World, WorldSettings } from 'tumble.js';
+import { addStepPose, blendStepPose, caption, createStepPoses, loop, meshOf, readStepPoses, type ShapeMesh, setup } from './common';
 
 const view = await setup([18, 14, 22], [0, 2, 0]);
-caption('a pile of shapes, each mesh posed from one Poses.read a frame. click to drop more');
+caption('a pile of shapes, posed from one Poses.read a step and drawn between the last two. click to drop more');
 
 const settings = WorldSettings.create();
 const moving = WorldSettings.addObjectLayer(settings, WorldSettings.addBroadphaseLayer(settings));
@@ -40,7 +40,7 @@ const kinds: { shape: Shape; mesh: ShapeMesh; color: string }[] = [
     { mesh: { kind: 'box', halfExtents: [1, 0.2, 0.4] }, color: '#f39c12', shape: Box.create({ halfExtents: [1, 0.2, 0.4] }) },
 ];
 
-const poses = Poses.create(world);
+const poses = createStepPoses(world);
 // a body's mesh by its slot in the poses
 const meshes: gpucat.Object3D[] = [];
 let seed = 1;
@@ -65,7 +65,7 @@ function drop(count: number): void {
             friction: 0.5,
         });
         const mesh = meshOf(kind.mesh, kind.color);
-        meshes[Poses.add(poses, body)] = mesh;
+        meshes[addStepPose(poses, body)] = mesh;
         view.scene.add(mesh);
     }
 }
@@ -73,14 +73,14 @@ drop(150);
 window.addEventListener('click', () => drop(20));
 
 loop(
-    (deltaTime) => World.step(world, undefined, deltaTime),
-    () => {
-        // only the slots whose bodies moved since the last read
-        const { positions, quaternions, changed } = Poses.read(poses);
-        for (const slot of changed) {
+    (deltaTime) => {
+        World.step(world, undefined, deltaTime);
+        readStepPoses(poses);
+    },
+    (alpha) => {
+        for (let slot = 0; slot < meshes.length; slot++) {
             const mesh = meshes[slot]!;
-            for (let k = 0; k < 3; k++) mesh.position[k] = positions[slot * 3 + k]!;
-            for (let k = 0; k < 4; k++) mesh.quaternion[k] = quaternions[slot * 4 + k]!;
+            blendStepPose(poses, slot, alpha, mesh.position, mesh.quaternion);
         }
         view.render();
     },
