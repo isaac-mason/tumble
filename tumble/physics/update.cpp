@@ -402,7 +402,7 @@ void narrowphase(World &world) {
         bool pair_handled = false;
         Vec3f current_delta_position;
         Quatf current_delta_rotation;
-        const bool pair_cacheable = use_body_pair_cache && shapes::caches_pairs(body_a->shape) && shapes::caches_pairs(body_b->shape);
+        const bool pair_cacheable = use_body_pair_cache && body_a->caches_pairs && body_b->caches_pairs;
         if (pair_cacheable) {
             compute_body_pair_delta(current_delta_position, current_delta_rotation, *body_a, *body_b);
             pair_handled = get_contacts_from_cache(world, delta_time, current_delta_position, current_delta_rotation, pair_record);

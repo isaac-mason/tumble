@@ -266,6 +266,8 @@ void update_aabb(RigidBody *body) {
 }
 
 static void update_body_shape(RigidBody *body) {
+    body->caches_pairs = shapes::caches_pairs(body->shape);
+
     // handle mass properties based on mode
     if (body->mass_properties_override == CALCULATE_MASS_AND_INERTIA) {
         // auto-calculate from shape

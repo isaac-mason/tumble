@@ -172,6 +172,9 @@ struct RigidBody {
     /** read only */
     bool sleeping;
 
+    /** read only: shapes::caches_pairs of its shape, worked out as the shape is set */
+    bool caches_pairs;
+
     /** world space */
     Box3f aabb;
 
