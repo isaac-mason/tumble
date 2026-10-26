@@ -27,12 +27,16 @@
         "build": "tsc -p tsconfig.build.json",
         "typecheck": "tsc --noEmit -p tsconfig.json",
         "test": "vitest run",
+        "bench": "cd bench && labs",
+        "bench:smoke": "tsx bench/smoke.ts",
         "format": "biome format --write src test",
         "lint": "biome lint src test"
     },
     "devDependencies": {
         "@biomejs/biome": "2.2.0",
+        "@pmndrs/labs": "0.9.0",
         "@types/node": "24.10.1",
+        "tsx": "4.23.15",
         "typescript": "5.9.3",
         "vitest": "3.2.4"
     }

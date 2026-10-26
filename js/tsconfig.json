@@ -12,5 +12,5 @@
         "skipLibCheck": true,
         "paths": { "tumble.js": ["./src/index.ts"] }
     },
-    "include": ["src", "test", "docs", "vitest.config.ts"]
+    "include": ["src", "test", "docs", "bench", "vitest.config.ts"]
 }
