@@ -1,4 +1,4 @@
-import type { ShapeMesh } from '../../js/examples/src/common';
+import type { ShapeMesh } from '../examples/src/common';
 
 export type Kind = { mesh: ShapeMesh; color: string };
 

@@ -22,7 +22,7 @@ import {
     type Vec3,
 } from 'tumble.js';
 import wasm from 'tumble.js/tumble.wasm?url';
-import type { ShapeMesh } from '../../js/examples/src/common';
+import type { ShapeMesh } from '../examples/src/common';
 import { type FrameRequest, KINDS, POSE_STRIDE, type WorkerMessage } from './shared';
 
 const STEP = 1 / 60;

@@ -11,13 +11,7 @@
         "noUncheckedIndexedAccess": true,
         "skipLibCheck": true,
         "isolatedModules": true,
-        "types": ["@webgpu/types", "vite/client"],
-        "paths": {
-            "gpucat": ["./node_modules/gpucat"],
-            "math": ["./node_modules/math"],
-            "tumble.js": ["./node_modules/tumble.js"],
-            "tumble.js/*": ["./node_modules/tumble.js/*"]
-        }
+        "types": ["@webgpu/types", "vite/client"]
     },
-    "include": ["src"]
+    "include": ["src", "examples/src"]
 }

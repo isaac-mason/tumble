@@ -1,12 +1,13 @@
-// node scripts/screenshot.mjs <example> <out.png> [milliseconds] [key codes held...]: the built example (vite build) in
-// headless chromium with webgpu, the page saved after the given time, the keys held from the start. no window opens
+// node scripts/screenshot.mjs <page> <out.png> [milliseconds] [key codes held...]: a page of the built site (vite build),
+// such as index or examples/example-character, in headless chromium with webgpu, saved after the given time, the keys
+// held from the start. no window opens
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
-const [example, out, wait = '3000', ...held] = process.argv.slice(2);
+const [pagePath, out, wait = '3000', ...held] = process.argv.slice(2);
 const root = fileURLToPath(new URL('../dist', import.meta.url));
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.wasm': 'application/wasm', '.css': 'text/css' };
 const server = createServer(async (request, response) => {
@@ -29,8 +30,8 @@ page.on('console', (message) => {
     if (message.type() === 'error') errors.push(`console: ${message.text()}`);
 });
 page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
-await page.goto(`http://127.0.0.1:${server.address().port}/${example}.html`);
-// the example listens once its wasm and renderer are up
+await page.goto(`http://127.0.0.1:${server.address().port}/${pagePath}.html`);
+// the page listens once its wasm and renderer are up
 await page.waitForTimeout(held.length > 0 ? 1000 : 0);
 for (const key of held) await page.keyboard.down(key);
 await page.waitForTimeout(Number(wait));

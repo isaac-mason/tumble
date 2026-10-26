@@ -96,20 +96,14 @@ jobs:
                   node-version: 24
                   package-manager-cache: false
 
-            # the package the js examples import, built over the committed dist/tumble.wasm
+            # the package the site imports, built over the committed dist/tumble.wasm
             - name: js package
               working-directory: js
               run: |
                   pnpm install --frozen-lockfile
                   pnpm run build
 
-            - name: js examples
-              working-directory: js/examples
-              run: |
-                  npm ci --no-audit --no-fund
-                  npm run build
-
-            # imports the examples' common code, so it builds after their install
+            # the site, with the js samples under examples/
             - name: website
               working-directory: website
               run: |
@@ -128,9 +122,8 @@ jobs:
 
             - name: site
               run: |
-                  mkdir -p site/examples site/samples
+                  mkdir -p site/samples
                   cp -r website/dist/. site/
-                  cp -r js/examples/dist/. site/examples/
                   cp build/samples/web/samples/tumble_samples.js build/samples/web/samples/tumble_samples.wasm build/samples/web/samples/tumble_samples.data site/samples/
                   cp build/samples/web/samples/tumble_samples.html site/samples/index.html
 

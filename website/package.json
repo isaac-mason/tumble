@@ -5,15 +5,21 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
-        "typecheck": "tsc --noEmit -p tsconfig.json"
+        "typecheck": "tsc --noEmit -p tsconfig.json",
+        "format": "biome format --write src examples/src scripts",
+        "lint": "biome lint src examples/src scripts",
+        "screenshot": "node scripts/screenshot.mjs"
     },
     "dependencies": {
         "gpucat": "github:isaac-mason/gpucat#4adf918857a8e0a602aca2afbc7fc93a40868d78",
+        "lil-gui": "0.20.0",
         "math": "0.1.0",
         "tumble.js": "file:../js"
     },
     "devDependencies": {
+        "@biomejs/biome": "2.2.0",
         "@webgpu/types": "0.1.69",
+        "playwright": "1.61.1",
         "typescript": "5.9.3",
         "vite": "7.1.10"
     }

@@ -1,5 +1,5 @@
 import type * as gpucat from 'gpucat';
-import { createDebugLines, meshOf, setup, showDebugLines } from '../../js/examples/src/common';
+import { createDebugLines, meshOf, setup, showDebugLines } from '../examples/src/common';
 import { type FrameRequest, KINDS, POSE_STRIDE, type WorkerMessage } from './shared';
 
 const view = await setup([12, 9, 14], [0, 2, 0]);

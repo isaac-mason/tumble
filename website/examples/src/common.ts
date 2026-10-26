@@ -29,7 +29,6 @@ export function loadTumble(): Promise<void> {
 
 /** a webgpu renderer onto a full window canvas, a camera orbiting the target */
 export async function setup(eye: [number, number, number], target: [number, number, number]): Promise<View> {
-
     const canvas = document.createElement('canvas');
     canvas.style.display = 'block';
     document.body.appendChild(canvas);
