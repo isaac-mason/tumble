@@ -5,8 +5,6 @@ import {
     type BodyId,
     createActiveBody,
     DEBUG_VERTEX_STRIDE,
-    type DebugDraw,
-    debugDraw,
     getActiveBodies,
     getActiveBodyAt,
     init as initTumble,
@@ -24,9 +22,13 @@ export type View = {
     render: () => void;
 };
 
-/** the wasm, a webgpu renderer onto a full window canvas, a camera orbiting the target */
+/** the wasm, from beside the page */
+export function loadTumble(): Promise<void> {
+    return initTumble({ wasm });
+}
+
+/** a webgpu renderer onto a full window canvas, a camera orbiting the target */
 export async function setup(eye: [number, number, number], target: [number, number, number]): Promise<View> {
-    await initTumble({ wasm });
 
     const canvas = document.createElement('canvas');
     canvas.style.display = 'block';
@@ -288,11 +290,11 @@ export function blendStepPose(stepPoses: StepPoses, slot: number, alpha: number,
 /** a frame's lines of one colour */
 type DebugBucket = { points: Float32Array; count: number; geometry: g.LineSegmentsGeometry; lines: g.LineSegments };
 
-/** a debug draw for the library to draw into, shown in the scene as line segments, one set per colour */
-export type DebugLines = { scene: g.Scene; buffers: DebugDraw; buckets: Map<number, DebugBucket> };
+/** the library's debug lines, shown in the scene as line segments, one set per colour */
+export type DebugLines = { scene: g.Scene; buckets: Map<number, DebugBucket> };
 
 export function createDebugLines(scene: g.Scene): DebugLines {
-    return { scene, buffers: debugDraw.create(), buckets: new Map() };
+    return { scene, buckets: new Map() };
 }
 
 function bucketOf(debugLines: DebugLines, r: number, gr: number, b: number): DebugBucket {
@@ -310,10 +312,8 @@ function bucketOf(debugLines: DebugLines, r: number, gr: number, b: number): Deb
     return bucket;
 }
 
-/** what was drawn into the buffers since they were last cleared, into the scene's line segments */
-export function showDebugLines(debugLines: DebugLines): void {
-    // views onto the wasm's memory: read them now, before anything draws again
-    const { lines, lineCount } = debugDraw.read(debugLines.buffers);
+/** lines as debugDraw.read gives them, into the scene's line segments, in place of the last */
+export function showDebugLines(debugLines: DebugLines, lines: Float32Array, lineCount: number): void {
     for (const bucket of debugLines.buckets.values()) bucket.count = 0;
     for (let i = 0; i < lineCount; i++) {
         const a = i * 2 * DEBUG_VERTEX_STRIDE;

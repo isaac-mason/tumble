@@ -19,6 +19,7 @@ import {
     blendStepPose,
     caption,
     createStepPoses,
+    loadTumble,
     loop,
     meshOf,
     readStepPoses,
@@ -26,6 +27,7 @@ import {
     setup,
 } from './common';
 
+await loadTumble();
 const view = await setup([18, 14, 22], [0, 2, 0]);
 caption('a pile of shapes, posed from the active bodies after each step and drawn between the last two. click to drop more');
 

@@ -17,8 +17,9 @@ import {
     sphere,
     updateWorld,
 } from 'tumble.js';
-import { caption, createDebugLines, loop, setup, showDebugLines } from './common';
+import { caption, createDebugLines, loadTumble, loop, setup, showDebugLines } from './common';
 
+await loadTumble();
 const view = await setup([14, 10, 18], [0, 3, 0]);
 caption("the library's own debug drawing: lines read from debugDraw each frame into gpucat line segments");
 
@@ -107,10 +108,10 @@ gui.add(options, 'colorMode', {
     island: debug.BodyColorMode.ISLAND,
 });
 
+const buffers = debugDraw.create();
 const debugLines = createDebugLines(view.scene);
 
 function draw(): void {
-    const buffers = debugLines.buffers;
     debugDraw.clear(buffers);
     if (options.bodies)
         debug.bodies(buffers, world, {
@@ -120,7 +121,9 @@ function draw(): void {
         });
     if (options.contacts) debug.contactConstraints(buffers, world);
     if (options.joints) debug.joints(buffers, world);
-    showDebugLines(debugLines);
+    // views onto the wasm's memory: read them now, before anything draws again
+    const { lines, lineCount } = debugDraw.read(buffers);
+    showDebugLines(debugLines, lines, lineCount);
 }
 
 loop(

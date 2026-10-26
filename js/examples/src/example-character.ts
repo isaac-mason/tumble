@@ -18,8 +18,9 @@ import {
     updateWorld,
     type Vec3,
 } from 'tumble.js';
-import { addStepPose, blendStepPose, caption, createStepPoses, loop, meshOf, readStepPoses, setup } from './common';
+import { addStepPose, blendStepPose, caption, createStepPoses, loadTumble, loop, meshOf, readStepPoses, setup } from './common';
 
+await loadTumble();
 const view = await setup([0, 8, 14], [0, 1, 0]);
 caption('WASD to walk, space to jump: up the stairs and slope, onto the belt and the moving platform, into the crates');
 
