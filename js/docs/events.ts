@@ -54,32 +54,33 @@ const other = (contact: ContactEvent, of: number): number | null =>
     contact.bodyA === of ? contact.bodyB : contact.bodyB === of ? contact.bodyA : null;
 
 /* SNIPPET_START: listener */
-// the step's events, and your answers to them, as it runs
+// the listener hears the step's events and answers them while it runs
 const listener: Listener = {
-    // two bodies whose bounds overlap, before the narrowphase: false and they do not collide this step. the cheapest
-    // place to filter a pair: here a player's parts pass through each other
+    // called for two bodies whose bounds overlap, before the narrowphase. return false and they do not collide this step.
+    // this is the cheapest place to filter a pair. here a player's parts pass through each other
     onBodyPairValidate(bodyA, bodyB) {
         return !(rigidBody.getUserData(world, bodyA) === PLAYER && rigidBody.getUserData(world, bodyB) === PLAYER);
     },
-    // every contact, each step, before it is solved: false drops it this step. a one-way platform: solid only from above
+    // called for every contact each step, before it is solved. return false to drop it this step. here a one-way platform
+    // is solid only from above
     onContactValidate(contact) {
         if (other(contact, platform) === null) return true;
-        // the normal is from a to b: from the platform up into what lands on it is up
+        // the normal points from a to b. from the platform to a body landing on it, that is up
         const up = contact.bodyA === platform ? contact.normal[1] : -contact.normal[1];
         return up > 0.5;
     },
-    // a contact new this step, its settings yours to change: a pad that bounces whatever lands on it
+    // called for a new contact. you can change its settings. here a pad bounces whatever lands on it
     onContactAdded(contact, settings) {
         if (other(contact, pad) !== null) settings.combinedRestitution = 1;
     },
-    // a contact kept from the last step: a belt whose surface moves 2 m/s along x, carrying what rests on it. the
-    // surface velocity is b's less a's
+    // called for a contact kept from the last step. here a belt's surface moves 2 m/s along x and carries what rests on
+    // it. the surface velocity is b's minus a's
     onContactPersisted(contact, settings) {
         if (other(contact, belt) === null) return;
         const carry = contact.bodyA === belt ? -2 : 2;
         settings.relativeLinearSurfaceVelocity = [carry, 0, 0];
     },
-    // after the solve: a contact gone, a removed body's included
+    // called after the solve for each contact that ended, including those of removed bodies
     onContactRemoved(removed) {
         removed.bodyA;
     },
@@ -112,8 +113,8 @@ rigidBody.getPosition(at, world, ghostB);
 check(Math.abs(at[1] - a) < 0.1, "a player's parts fell through each other");
 
 /* SNIPPET_START: rules */
-// a hook's events are reused: copy what you keep. the world is mid step while hooks run, so read it but do not change
-// it. a hook that throws ends the step's hooks: the step finishes, then throws it
+// hook events are reused, so copy what you keep. the world is mid step while hooks run. read it, but do not change it.
+// if a hook throws, no more hooks run. the step finishes, then throws the error
 const kept: { bodyA: number; normal: Vec3 }[] = [];
 updateWorld(
     world,

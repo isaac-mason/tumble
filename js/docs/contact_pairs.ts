@@ -27,7 +27,7 @@ rigidBody.create(world, { shape: floorShape, objectLayer: notMoving, motionType:
 const ballShape = sphere.create({ radius: 0.5 });
 
 /* SNIPPET_START: observe */
-// only the pairs a body observing contacts is a side of are kept: the few a game reacts to, not every contact
+// only pairs that include a body observing contacts are kept. these are the few a game reacts to
 const ball = rigidBody.create(world, {
     shape: ballShape,
     objectLayer: moving,
@@ -39,8 +39,8 @@ const ball = rigidBody.create(world, {
 /* SNIPPET_END: observe */
 
 /* SNIPPET_START: frame */
-// a frame of contact pairs: begin, record what moved (each world step, each character's update), end. a pair is
-// added the frame it starts, persisted while it lasts, and removed the frame after it was last recorded
+// a contact pairs frame. begin it, record each world step and character update, then end it. a pair is added in the
+// frame it starts, persisted while it lasts, and removed in the frame after it was last recorded
 function frame(steps: number): void {
     contactPairs.begin(world);
     for (let i = 0; i < steps; i++) {

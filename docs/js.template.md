@@ -1,9 +1,9 @@
 # tumble for JavaScript
 
 tumble is a 3D rigid body physics engine. The JS package is the C++ library compiled to WebAssembly, with a TypeScript
-API over it, and it simulates the same bits as the native library does.
+API. It gives the same results as the native library.
 
-Every code block here is part of a program in `js/docs/` that the tests run, and each program checks what it shows.
+Every code block here comes from a program in `js/docs/`. The tests run each program, and each one checks what it shows.
 
 The C++ library and its guide are at [github.com/isaac-mason/tumble](https://github.com/isaac-mason/tumble#readme).
 
@@ -11,69 +11,72 @@ The C++ library and its guide are at [github.com/isaac-mason/tumble](https://git
 
 ## Getting tumble
 
-The package is `tumble.js`: ES modules with their types, and `tumble.wasm` beside them. Load the wasm once, before anything
-else, with `await init()`. With no options it loads the wasm from beside the package's modules, which suits Node and
-bundlers that copy the file. Otherwise give it the wasm as a URL, its bytes or a compiled `WebAssembly.Module`, as here
-with its bytes:
+The package is `tumble.js`. It holds ES modules, their types, and `tumble.wasm`.
+
+Load the wasm once, before anything else, with `await init()`. With no options, `init` loads the wasm from next to the
+package's modules. This works in Node and in bundlers that copy the file. You can also pass the wasm as a URL, as bytes
+or as a compiled `WebAssembly.Module`. This example passes bytes:
 
 <Snippet source="../js/docs/memory.ts" select="init" />
 
-The package exports the file as `tumble.js/tumble.wasm` for a bundler to resolve: with Vite, import it with `?url` and pass
-that URL to `init`.
+The package exports the wasm as `tumble.js/tumble.wasm`. With Vite, import it with `?url` and pass the URL to `init`.
 
 ## Quick start
 
-A world, a floor, and a box and a ball dropped onto it:
+This creates a world and a floor, then drops a box and a ball onto it:
 
 <Snippet source="../js/docs/quick_start.ts" select="quick-start" />
 
-The rest of this guide leaves out the imports and the world's setup.
+The rest of this guide leaves out the imports and the world setup.
 
 ## Conventions
 
-- Each subject is a namespace of functions: `rigidBody.create`, `box.create`, `hingeConstraint.setMotorState`. The
-  world's are free: `createWorld`, `updateWorld`, `setGravity`, as are the queries: `castRay`, `collideShape`.
-- A call that reads or changes a world takes the world first, after any out: `rigidBody.setPosition(world, body, ...)`.
-- A reader takes what it fills first, and returns it or whether it could: `rigidBody.getPosition(out, world, body)`. It
-  allocates nothing, so keep your arrays and reuse them.
-- Vectors are arrays: a `Vec3` is `[x, y, z]` and a `Quat` is `[x, y, z, w]`, the identity `[0, 0, 0, 1]`.
-- Bodies and constraints are ids, plain numbers, checked on every call: a removed one's id names nothing, even once its
-  slot is reused.
-- Settings are object literals. Leave out what you do not need: the C++ defaults fill the rest, at every depth, so
-  `motorSettings: { maxTorqueLimit: 100 }` keeps the motor's default spring.
-- The simulation is in 32-bit floats: what you read back is a float32 value.
+- Each subject is a namespace of functions, such as `rigidBody.create`, `box.create` and
+  `hingeConstraint.setMotorState`.
+- World functions and queries are not in a namespace. Examples are `createWorld`, `updateWorld`, `setGravity`,
+  `castRay` and `collideShape`.
+- A function that reads or changes a world takes the world first, after any out parameter:
+  `rigidBody.setPosition(world, body, ...)`.
+- A getter takes the object it fills first, and returns it or a success flag: `rigidBody.getPosition(out, world, body)`.
+  Getters allocate nothing, so keep your arrays and reuse them.
+- Vectors are arrays. A `Vec3` is `[x, y, z]`. A `Quat` is `[x, y, z, w]`, and the identity is `[0, 0, 0, 1]`.
+- Bodies and constraints are ids. An id is a plain number, and every call checks it. The id of a removed body names
+  nothing, even after its slot is reused.
+- Settings are object literals. Leave out what you do not need, and the defaults fill in the rest at every depth. For
+  example, `motorSettings: { maxTorqueLimit: 100 }` keeps the motor's default spring.
+- The simulation uses 32-bit floats. Values you read back are float32 values.
 - Units are metres, kilograms, seconds and radians.
 
 ## From crashcat
 
-The names are crashcat's, so most of a crashcat program reads the same. What differs:
+The names match crashcat's, so most crashcat code reads the same. These are the differences:
 
-- A body is an id, not an object: its state comes from getters (`rigidBody.getPosition(out, world, body)`) and changes
-  through setters, and the bodies that moved since a step are listed by `getActiveBodies`.
-- The world and what it holds live in the wasm, so they are freed, not collected: `destroyWorld`, `releaseShape`,
-  `filter.destroy`, `kcc.release`.
-- A shape changes in place with its type's `update`, and each body using it takes it again with `rigidBody.setShape`;
-  there is no `updateShape`, and no writable `body.shape`.
+- A body is an id, not an object. You read its state with getters, such as `rigidBody.getPosition(out, world, body)`,
+  and change it with setters. `getActiveBodies` lists the bodies that moved in a step.
+- The world and everything in it live in the wasm. You free them yourself with `destroyWorld`, `releaseShape`,
+  `filter.destroy` and `kcc.release`.
+- A shape changes in place with its type's `update`. Then pass it to `rigidBody.setShape` for each body that uses it.
+  There is no `updateShape`, and `body.shape` is not writable.
 
 ## Memory and errors
 
-The wasm's memory is not collected. What you create, you free:
+The garbage collector does not free wasm memory. Free what you create:
 
 <Snippet source="../js/docs/memory.ts" select="freeing" />
 
-A call that cannot do what it was asked throws, and backs out of what it began:
+A call that cannot do what you asked throws, and undoes anything it started:
 
 <Snippet source="../js/docs/memory.ts" select="errors" />
 
-Running out of memory is not one of those: as Emscripten's `ABORTING_MALLOC` does, the wasm stops. The call throws a
-`WebAssembly.RuntimeError` and the instance is done, as a JoltPhysics.js one is.
+Running out of memory is different. The wasm stops, the call throws a `WebAssembly.RuntimeError`, and the instance
+cannot be used again.
 
-A view onto the wasm's memory (from `debugDraw.read`) is detached when the memory grows. Take views
-from their read each time rather than keeping them.
+A view into wasm memory, such as one from `debugDraw.read`, breaks when the memory grows. Read new views each time
+instead of keeping them.
 
 ## The world
 
-A world holds bodies, constraints and the simulation's state. Several worlds can live side by side.
+A world holds bodies, constraints and the simulation state. You can run several worlds at once.
 
 ### Layers
 
@@ -85,20 +88,20 @@ A world holds bodies, constraints and the simulation's state. Several worlds can
 
 ### Stepping
 
-`updateWorld(world, listener, deltaTime)` advances the world one step, its events going to the listener (see
-[Events](#events)), or nowhere with `undefined`. Step by a fixed time:
+`updateWorld(world, listener, deltaTime)` advances the world by one step. It sends the step's events to the listener
+(see [Events](#events)). Pass `undefined` to ignore them. Step by a fixed time:
 
 <Snippet source="../js/docs/world.ts" select="fixed-step" />
 
-Bodies resting on others sink up to `settings.solver.penetrationSlop` (2 cm) into them: the solver allows it to keep
+A resting body can sink into the body below by up to `settings.solver.penetrationSlop`, which is 2 cm. This keeps
 stacks from jittering.
 
 ### Materials
 
 <Snippet source="../js/docs/world.ts" select="materials" />
 
-A query's hit names the part it met by sub shape id: `rigidBody.getMaterial(world, hit.bodyIdB, hit.subShapeId)` is that
-part's material id.
+A query hit names the part it hit with a sub shape id. `rigidBody.getMaterial(world, hit.bodyIdB, hit.subShapeId)`
+returns that part's material id.
 
 ## Rigid bodies
 
@@ -114,8 +117,8 @@ part's material id.
 
 <Snippet source="../js/docs/bodies.ts" select="transform" />
 
-Teleporting a body skips the simulation in between. Move a kinematic body by velocity instead (see
-[Kinematic bodies](#kinematic-bodies)).
+Setting a position teleports the body and skips the simulation in between. To move a kinematic body, set its velocity
+instead (see [Kinematic bodies](#kinematic-bodies)).
 
 ### Velocity
 
@@ -129,7 +132,7 @@ Teleporting a body skips the simulation in between. Move a kinematic body by vel
 
 <Snippet source="../js/docs/bodies.ts" select="mass" />
 
-A triangle mesh has no volume to take a mass from: a dynamic body with one needs `massPropertiesOverride`.
+A triangle mesh has no volume, so it has no mass. A dynamic body with a mesh shape needs `massPropertiesOverride`.
 
 ### Damping, limits and degrees of freedom
 
@@ -167,10 +170,13 @@ A triangle mesh has no volume to take a mass from: a dynamic body with one needs
 
 ## Shapes
 
-Shapes are created by each type's `create` and shared by any number of bodies. A body, a character and a shape built
-over another each hold the shape they use, and the shape you made is held for you until `releaseShape`: the last to let
-go frees it, so release a shape once you no longer make anything with it, in any order. `getShapeRefCount` says how many
-hold it. A body's pose places its shape: a shape's own geometry is centred on its origin.
+Each shape type has a `create` function. Any number of bodies can share a shape.
+
+Shapes are reference counted. A body, a character, or a shape built from another shape holds the shape it uses. The
+shape you create is held for you until you call `releaseShape`. The last holder to let go frees it. So release a shape
+when you stop making things with it, in any order. `getShapeRefCount` returns how many holders a shape has.
+
+A shape's geometry is centred on its origin. The body's pose places it in the world.
 
 ### Convex shapes
 
@@ -188,7 +194,7 @@ hold it. A body's pose places its shape: a shape's own geometry is centred on it
 
 <Snippet source="../js/docs/shapes.ts" select="triangle-mesh" />
 
-Meshes are for static bodies: they are hollow, with no volume, no inside and no mass.
+Use meshes for static bodies. A mesh is hollow. It has no volume, no inside and no mass.
 
 ### Compounds
 
@@ -208,8 +214,9 @@ Meshes are for static bodies: they are hollow, with no volume, no inside and no 
 
 ## Events
 
-A step's listener hears its events and answers them as it runs. The wasm never calls into JS: `updateWorld` runs the
-step's phases and calls the hooks between them, so a step with no hooks is one call into the wasm.
+A listener receives a step's events and answers them during the step. The wasm never calls into JS. Instead,
+`updateWorld` runs the step in phases and calls your hooks between them. A step with no hooks is a single call into the
+wasm.
 
 <Snippet source="../js/docs/events.ts" select="listener" />
 
@@ -217,9 +224,10 @@ step's phases and calls the hooks between them, so a step with no hooks is one c
 
 ## Contact pairs
 
-The listener hears every contact of every step. Contact pairs keep the few you care about, between frames: each pair of
-body parts in contact, with a stable handle while the pair lasts, added, persisted or removed each frame. A frame can
-span several world steps and the characters' updates between them.
+A listener hears every contact in every step. Contact pairs track only the contacts you care about, across frames.
+
+Each pair is two body parts in contact. It has a stable handle while the contact lasts, and is marked added, persisted
+or removed each frame. A frame can cover several world steps and the character updates between them.
 
 <Snippet source="../js/docs/contact_pairs.ts" select="observe" />
 
@@ -229,8 +237,8 @@ span several world steps and the characters' updates between them.
 
 ## Queries
 
-Each query walks the world, under a filter when given one, and reports to a collector: the closest hit, any hit
-(stopping at the first), or every hit.
+A query searches the world and reports hits to a collector. An optional filter decides what it can hit. A collector
+keeps the closest hit, any one hit, or every hit. An any-hit collector stops at the first hit.
 
 ### Rays
 
@@ -256,10 +264,11 @@ Each query walks the world, under a filter when given one, and reports to a coll
 
 ## Constraints
 
-A constraint holds two bodies relative to each other. Each type's `create(world, bodyA, bodyB, settings)` returns its
-id, which its functions take. A constraint goes with either of its bodies, or with `constraints.remove`.
+A constraint holds two bodies relative to each other. Each type's `create(world, bodyA, bodyB, settings)` returns an id.
+The type's other functions take that id. Removing either body removes the constraint. You can also remove it with
+`constraints.remove`.
 
-Points and axes are in world space by default. With `space: ConstraintSpace.LOCAL` they are relative to each body.
+Points and axes are in world space by default. With `space: ConstraintSpace.LOCAL`, they are relative to each body.
 
 ### Hinge
 
@@ -295,11 +304,17 @@ Points and axes are in world space by default. With `space: ConstraintSpace.LOCA
 
 ### Motors and springs
 
-A motor drives a hinge, slider, swing-twist or six-dof axis. `MotorState.VELOCITY` drives to a target velocity;
-`POSITION` drives to a target position through the motor's spring. A motor's torque and force are unbounded unless its
-`motorSettings` limit them. Limit one that drives into a limit, or it pushes past the limit. A spring's
-`frequencyOrStiffness` above 0 makes a limit or a distance soft. Settings the C++ would refuse, such as a hinge's
-limits outside [-pi, pi], throw a `RangeError`.
+A motor drives a hinge, slider, swing-twist or six-dof axis.
+
+- `MotorState.VELOCITY` drives to a target velocity.
+- `MotorState.POSITION` drives to a target position, using the motor's spring.
+
+A motor's torque and force are unbounded unless its `motorSettings` limit them. Set a limit on a motor that drives
+against a constraint limit. Otherwise it pushes past the constraint limit.
+
+A spring with `frequencyOrStiffness` above 0 makes a limit or a distance soft.
+
+Invalid settings throw a `RangeError`. One example is hinge limits outside [-pi, pi].
 
 ### Breaking
 
@@ -307,10 +322,14 @@ limits outside [-pi, pi], throw a `RangeError`.
 
 ## Character controller
 
-`KCC` moves a character through the world by sweeps: it walks up slopes and stairs, slides along walls, sticks to the
-floor going down, and stands on moving bodies. It is not a rigid body. Its optional inner body, a kinematic body that
-follows it, is its presence in the world for bodies, queries and contact pairs. The character is a plain object: its
-`position`, `quaternion`, `ground` and `contacts` are as its last call left them, and `linearVelocity` is yours to set.
+`KCC` moves a character through the world with sweeps. It walks up slopes and stairs, slides along walls, sticks to the
+floor going down, and stands on moving bodies.
+
+A character is not a rigid body. It can have an optional inner body. This is a kinematic body that follows the
+character, so other bodies, queries and contact pairs can see it.
+
+The character is a plain object. Its `position`, `quaternion`, `ground` and `contacts` show the result of its last call.
+You set its `linearVelocity`.
 
 <Snippet source="../js/docs/character.ts" select="create" />
 
@@ -318,21 +337,24 @@ follows it, is its presence in the world for bodies, queries and contact pairs. 
 
 <Snippet source="../js/docs/character.ts" select="update" />
 
-`character.ground` says what it stands on: its `state` (`ON_GROUND`, `ON_STEEP_GROUND`, `NOT_SUPPORTED`, `IN_AIR`), its
-`bodyId`, the `normal` and the ground's `velocity`.
+`character.ground` describes what the character stands on. It has a `state`, which is one of `ON_GROUND`,
+`ON_STEEP_GROUND`, `NOT_SUPPORTED` and `IN_AIR`. It also has a `bodyId`, a `normal`, and the ground's `velocity`.
 
 ### Policy
 
-A body's policy: `ignore` passes through it, `canPushCharacter` false blocks without moving the character,
-`canReceiveImpulses` false keeps the character from pushing it, `slideOnWalkable` false stops the character on a still,
-walkable surface of it, and `surfaceLinearVelocity` and `surfaceAngularVelocity` move the character as a conveyor's
-belt would.
+A policy sets how a character treats each body it meets:
+
+- `ignore`: the character passes through the body.
+- `canPushCharacter: false`: the body blocks the character but does not move it.
+- `canReceiveImpulses: false`: the character does not push the body.
+- `slideOnWalkable: false`: the character does not slide on a still, walkable surface of the body.
+- `surfaceLinearVelocity` and `surfaceAngularVelocity`: the body moves the character like a conveyor belt.
 
 ### Changing shape
 
 <Snippet source="../js/docs/character.ts" select="crouch" />
 
-Give every shape the character's feet as its origin, and swap them freely.
+Put the origin of every shape at the character's feet. Then you can swap shapes freely.
 
 <Snippet source="../js/docs/character.ts" select="tuning" />
 
@@ -340,12 +362,20 @@ Give every shape the character's feet as its origin, and swap them freely.
 
 <Snippet source="../js/docs/character.ts" select="toolkit" />
 
-`collide`, `solve` and `cast` are a move's phases, as `move` runs them each collision iteration. Between `collide` and
-`solve`, each of `character.contacts` is a plain object yours to edit: set its `wasDiscarded`, or give it another
-`linearVelocity`. The solve, the sweep and the ground pass over a discarded one. `update` is the same phases with
-contact tracking (`beginContactTracking`, `endContactTracking`), `cancelVelocityTowardsSteepSlopes` before, and
-`stickToFloor` and `walkStairs` after. A character's queries run in the wasm, so a filter's `bodyFilter` cannot reach
-them: set `ignore` in its policy instead.
+`collide`, `solve` and `cast` are the phases of a move. `move` runs them once per collision iteration.
+
+Between `collide` and `solve`, each entry in `character.contacts` is a plain object you can edit. Set `wasDiscarded`
+to skip a contact, or give it a different `linearVelocity`. The solve, the sweep and the ground check skip discarded
+contacts.
+
+`update` runs the same phases, plus a few more:
+
+- Contact tracking, with `beginContactTracking` and `endContactTracking`.
+- `cancelVelocityTowardsSteepSlopes` before the move.
+- `stickToFloor` and `walkStairs` after it.
+
+A character's queries run in the wasm, so a filter's `bodyFilter` does not apply to them. Set `ignore` in the
+character's policy instead.
 
 ### Contacts
 
@@ -361,21 +391,25 @@ them: set `ignore` in its policy instead.
 
 <Snippet source="../js/docs/rendering.ts" select="active-bodies" />
 
-`onBodyActivated` hears a body join the active list, as `onBodyDeactivated` hears one leave it: both are told after the
-step, in order, whatever changed the list, the step or a call since the last one.
+`onBodyActivated` runs when a body joins the active list. `onBodyDeactivated` runs when one leaves it. Both run after
+the step, in order. They report every change to the list, whether the step made it or a call you made since the last
+step.
 
 ### Debug drawing
 
 <Snippet source="../js/docs/rendering.ts" select="debug" />
 
-`debug.characterContacts` draws a character's contacts, `debug.shape` a shape at a pose, and `debug.line` a line.
+`debug.characterContacts` draws a character's contacts. `debug.shape` draws a shape at a pose. `debug.line` draws a
+line.
 
 ## Determinism
 
 <Snippet source="../js/docs/determinism.ts" select="replay" />
 
-The wasm is built as the native library is: no fused multiply-add, no fast math, and its own trigonometry. So the same
-steps give the same bits in the browser, in Node and natively. The tests hold the JS package to the native library's
-hash of a simulated pile. To keep it, create bodies and constraints, and step, in the same order with the same values:
-a number crosses into the wasm as a float32, so a value computed in JS (in 64 bits) may round differently from the same
-sum in C++.
+The wasm and the native library build the same way. Neither uses fused multiply-add or fast math, and both use their
+own trigonometry. So the same steps give exactly the same results in the browser, in Node and natively. The tests check
+that the JS package matches the native library's hash of a simulated pile.
+
+To get the same results, create bodies and constraints and step in the same order, with the same values. A number
+becomes a float32 when it crosses into the wasm. So a value computed in JS, with 64-bit floats, may round differently
+from the same sum computed in C++.

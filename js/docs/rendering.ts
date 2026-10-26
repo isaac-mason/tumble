@@ -48,9 +48,9 @@ const check = (ok: boolean, what: string): void => {
 };
 
 /* SNIPPET_START: active-bodies */
-// after a step, the bodies it moved are the active list: read it once, then copy each body's pose into its mesh,
-// number by number, so nothing is allocated a frame. a body the step put to sleep has left the list, so the listener
-// names it and its last pose is read once
+// after a step, the active list holds the bodies it moved. read the list once and copy each pose into its mesh,
+// number by number, so nothing is allocated per frame. a body that fell asleep leaves the list. the listener names it,
+// so its last pose is read once
 const meshes = new Map<BodyId, { position: Vec3; quaternion: Quat }>();
 for (const body of balls) meshes.set(body, { position: [0, 0, 0], quaternion: [0, 0, 0, 1] });
 
@@ -102,8 +102,8 @@ for (const body of balls) {
 }
 
 /* SNIPPET_START: debug */
-// wireframes drawn into buffers kept in the wasm: clear, draw, read. the views are x y z r g b a vertex, two a line,
-// three a triangle, straight onto the wasm's memory: copy them out before the next draw
+// wireframes drawn into buffers in the wasm. clear, draw, then read. each vertex is x y z r g b. a line has two
+// vertices and a triangle three. the views point into wasm memory, so copy them out before the next draw
 const buffers = debugDraw.create();
 let gpuLines = new Float32Array(1 << 16);
 function drawDebug(): number {

@@ -72,7 +72,7 @@ const raySettings = createDefaultCastRaySettings();
 const origin: Vec3 = [0, 10, 0];
 const down: Vec3 = [0, -1, 0];
 
-// the nearest hit, its fraction along the ray's 20 m
+// the nearest hit, and its fraction along the 20 m ray
 const closest = createClosestCastRayCollector();
 castRay(world, closest, raySettings, origin, down, 20);
 if (closest.hit.status === CastRayStatus.COLLIDING) {
@@ -81,7 +81,7 @@ if (closest.hit.status === CastRayStatus.COLLIDING) {
     console.log(`body ${closest.hit.bodyIdB} hit at ${point}`); // the upper crate, its top at y 3.5
 }
 
-// the first hit found, for line of sight; every hit, nearest first after sort
+// the first hit found, for line of sight. then every hit, nearest first after sorting
 const any = createAnyCastRayCollector();
 castRay(world, any, raySettings, origin, down, 20);
 const all = createAllCastRayCollector();
@@ -89,14 +89,14 @@ castRay(world, all, raySettings, origin, down, 20);
 all.sort();
 all.hits.length; // 3: the crates and the floor
 
-// a collector keeps what it had, across queries, until reset
+// a collector keeps its hits across queries until you reset it
 closest.reset();
 /* SNIPPET_END: cast-ray */
 check(any.hit.status === CastRayStatus.COLLIDING, 'any');
 check(all.hits.length === 3 && all.hits[0]!.bodyIdB === upper && all.hits[2]!.bodyIdB === floor, 'all, nearest first');
 
 /* SNIPPET_START: collide-point */
-// the bodies whose shapes hold a point
+// the bodies whose shapes contain a point
 const inside = createAllCollidePointCollector();
 collidePoint(world, inside, createDefaultCollidePointSettings(), [0, 1, 0]);
 inside.hits[0]?.bodyIdB; // the lower crate
@@ -104,7 +104,7 @@ inside.hits[0]?.bodyIdB; // the lower crate
 check(inside.hits.length === 1 && inside.hits[0]!.bodyIdB === lower, 'the point in the lower crate');
 
 /* SNIPPET_START: collide-shape */
-// what a shape overlaps, posed and scaled: placing something, or a blast's reach. the closest is the deepest
+// what a posed, scaled shape overlaps. use it to place things or find a blast's reach. the closest hit is the deepest
 const probe = sphere.create({ radius: 0.8 });
 const deepest = createClosestCollideShapeCollector();
 collideShape(world, deepest, createDefaultCollideShapeSettings(), probe, [0, 2, 0], [0, 0, 0, 1], [1, 1, 1]);
@@ -113,7 +113,7 @@ deepest.hit?.penetration; // into a crate by 0.3
 check(deepest.hit !== null && Math.abs(deepest.hit.penetration - 0.3) < 0.01, 'overlapping a crate by 0.3');
 
 /* SNIPPET_START: cast-shape */
-// a shape swept: where a falling ball first meets something, for placing it or for a projectile's path
+// a swept shape. it finds where a falling ball first hits something, for placing it or for a projectile's path
 const sweep = createClosestCastShapeCollector();
 const ball = sphere.create({ radius: 0.5 });
 castShape(world, sweep, createDefaultCastShapeSettings(), ball, [0, 10, 0], [0, 0, 0, 1], [1, 1, 1], [0, -20, 0]);
@@ -125,20 +125,20 @@ if (sweep.hit.status === CastShapeStatus.COLLIDING) {
 check(Math.abs(sweep.hit.fraction - 0.3) < 0.01 && sweep.hit.normal[1] > 0.99, 'swept onto the upper crate');
 
 /* SNIPPET_START: filters */
-// a query without a filter hits everything. a filter, held in the wasm and freed when done, starts with every layer
-// of the world's enabled; then layers, groups and masks, and a body filter must all pass
+// a query without a filter hits everything. a filter lives in the wasm, so free it when done. it starts with every
+// layer enabled. a body must pass its layers, groups and mask, and its body filter
 const queryFilter = filter.create(world);
 filter.disableObjectLayer(queryFilter, world, notMoving); // the floor's layer: crates only
 queryFilter.collisionMask = ~2 >>> 0; // no body in group 2
 filter.setAllEnabled(queryFilter, world); // back to everything
-// what a body collides with: its layer's layers, and its groups and mask
+// set a filter from a body, so it hits what that body collides with
 filter.setFromBody(queryFilter, world, upper);
 /* SNIPPET_END: filters */
 filter.setAllEnabled(queryFilter, world);
 
 /* SNIPPET_START: body-filter */
-// your own test, for each body a query reaches: the closest it passes, not the closest there is. such a query collects
-// every hit first, losing its early out, so prefer layers and masks where they do
+// your own test for each body a query reaches. the result is the closest body that passes. such a query collects
+// every hit first and loses its early out, so prefer layers and masks when they are enough
 queryFilter.bodyFilter = (body) => rigidBody.getUserData(world, body) !== 9;
 closest.reset();
 castRay(world, closest, raySettings, origin, down, 20, queryFilter);

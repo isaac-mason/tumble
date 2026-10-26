@@ -57,8 +57,8 @@ const dynamic = (shape: typeof nothing, position: Vec3): number =>
     rigidBody.create(world, { shape, objectLayer: moving, motionType: MotionType.DYNAMIC, position });
 
 /* SNIPPET_START: hinge */
-// a door on a hinge along y at its left edge, opening a quarter turn at most, driven open by its motor. a motor's
-// torque is unbounded unless limited, and an unbounded motor driving into a limit pushes past it: give it a limit
+// a door hinged along y at its left edge. it opens a quarter turn at most, and its motor drives it open. a motor's
+// torque is unbounded unless you limit it. an unbounded motor pushes past the hinge limit, so this one has a limit
 const frame = anchor([0, 1, 0]);
 const door = dynamic(doorShape, [0.5, 1, 0]);
 const hinge = hingeConstraint.create(world, frame, door, {
@@ -79,7 +79,7 @@ steps(90);
 check(Math.abs(hingeConstraint.getCurrentAngle(world, hinge) - 0.5 * Math.PI) < 0.05, 'opened a quarter turn');
 
 /* SNIPPET_START: remove */
-// gone, or with either body: a stale id names nothing
+// remove it, or remove either body. after that, the id names nothing
 constraints.remove(world, hinge);
 constraints.exists(world, hinge); // false
 /* SNIPPET_END: remove */
@@ -87,7 +87,7 @@ check(!constraints.exists(world, hinge) && !constraints.remove(world, hinge), 'r
 rigidBody.remove(world, door);
 
 /* SNIPPET_START: point */
-// a pendulum: a ball held 2 m from the point it swings about
+// a pendulum. the ball stays 2 m from the point it swings about
 const pivot = anchor([10, 5, 0]);
 const bob = dynamic(ballShape, [12, 5, 0]);
 pointConstraint.create(world, pivot, bob, { pointA: [10, 5, 0], pointB: [10, 5, 0] });
@@ -96,7 +96,7 @@ steps(90);
 check(Math.abs(Math.hypot(positionOf(bob)[0] - 10, at[1] - 5) - 2) < 0.02 && at[1] < 4.9, 'swinging at 2 m');
 
 /* SNIPPET_START: distance */
-// a bungee: no further than 3 m, pulled back by a spring; minDistance and maxDistance of -1 keep where it starts
+// a bungee. a spring pulls it back past 3 m. a minDistance or maxDistance of -1 keeps the starting distance
 const jumper = dynamic(ballShape, [14, 5, 0]);
 distanceConstraint.create(world, pivot, jumper, {
     pointA: [10, 5, 0],
@@ -110,8 +110,8 @@ steps(240);
 check(Math.hypot(positionOf(jumper)[0] - 10, at[1] - 5) < 3.3, 'held within 3 m, give or take its spring');
 
 /* SNIPPET_START: slider */
-// a lift: a platform that slides along y only, its position motor holding it 2 m up the rail. a position motor drives
-// through a spring, which a load sags: this one is stiff enough (10 Hz) to sag by millimetres
+// a lift. the platform slides along y only, and its position motor holds it 2 m up the rail. a position motor drives
+// through a spring, so a load makes it sag. at 10 Hz this spring sags by only millimetres
 const rail = anchor([20, 0, 0]);
 const platform = dynamic(blockShape, [20, 0, 0]);
 const lift = sliderConstraint.create(world, rail, platform, {
@@ -131,7 +131,7 @@ steps(240);
 check(Math.abs(sliderConstraint.getCurrentPosition(world, lift) - 2) < 0.005, 'held 2 m up');
 
 /* SNIPPET_START: fixed */
-// a weld: two bodies held as they are, moving as one
+// a weld. the two bodies keep their relative pose and move as one
 const left = dynamic(blockShape, [30, 3, 0]);
 const right = dynamic(blockShape, [31, 3, 0]);
 fixedConstraint.create(world, left, right, { autoDetectPoint: true });
@@ -141,8 +141,8 @@ const leftAt: Vec3 = [...positionOf(left)];
 check(Math.abs(positionOf(right)[0] - leftAt[0] - 1) < 0.01 && leftAt[1] < 2.5, 'falling as one');
 
 /* SNIPPET_START: ragdoll */
-// a shoulder: the arm swings within a 45 degree cone about the shoulder's twist axis (x here), twisting up to 30
-// degrees either way. a cone constraint is the same without the twist limits
+// a shoulder. the arm swings within a 45 degree cone around the twist axis, here x. it twists up to 30 degrees either
+// way. a cone constraint is the same without the twist limits
 const torso = anchor([40, 3, 0]);
 const arm = dynamic(ballShape, [40.5, 3, 0]);
 swingTwistConstraint.create(world, torso, arm, {
@@ -175,7 +175,8 @@ check(Math.abs(Math.atan2(-(positionOf(arm)[1] - 3), at[0] - 40) - 0.25 * Math.P
 check(Math.abs(Math.atan2(-(positionOf(coneArm)[1] - 6), at[0] - 40) - 0.25 * Math.PI) < 0.05, 'the cone held at 45 degrees');
 
 /* SNIPPET_START: six-dof */
-// every axis its own: here free to slide along x within a metre either way and to turn about y, the rest locked
+// each axis has its own setting. here the body slides along x up to a metre either way and turns about y. the other
+// axes are locked
 const base = anchor([50, 3, 0]);
 const cart = dynamic(blockShape, [50, 3, 0]);
 const limitMin: SixDOFValues = [0, 0, 0, 0, 0, 0];
@@ -191,8 +192,8 @@ steps(60);
 check(Math.abs(positionOf(cart)[1] - 3) < 0.02 && at[0] < 51.05, 'held up, stopped at the end of its rail');
 
 /* SNIPPET_START: breaking */
-// a joint that breaks: read the impulse it applied each step, and disable it past a strength. a disabled constraint
-// holds nothing and joins nothing, until enabled again
+// a breakable joint. read the impulse it applied each step, and disable it above a strength. a disabled constraint
+// holds nothing and links nothing until you enable it again
 const hook = anchor([60, 5, 0]);
 const weight = rigidBody.create(world, {
     shape: blockShape,

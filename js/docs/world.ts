@@ -18,8 +18,8 @@ import {
 await init();
 
 /* SNIPPET_START: layers */
-// object layers decide what collides with what; each is in a broadphase layer, a tree of its own. keep what moves and
-// what does not in trees of their own
+// object layers decide what collides with what. each object layer belongs to a broadphase layer, which has its own
+// tree. put moving and still bodies in separate broadphase layers
 const settings = createWorldSettings();
 const movingTree = addBroadphaseLayer(settings);
 const staticTree = addBroadphaseLayer(settings);
@@ -32,7 +32,8 @@ enableCollision(settings, debris, scenery);
 /* SNIPPET_END: layers */
 
 /* SNIPPET_START: settings */
-// plain data, from the C++ defaults: change what you need. create copies them, so they can make another world
+// settings are plain data with the defaults filled in. change what you need. createWorld copies them, so they can
+// make another world
 settings.gravity = [0, -20, 0];
 settings.solver.velocityIterations = 12;
 settings.sleeping.timeBeforeSleep = 1;
@@ -50,7 +51,7 @@ const crate = rigidBody.create(world, {
 });
 
 /* SNIPPET_START: fixed-step */
-// step by a fixed time, catching up a few steps when a frame runs long, so the simulation does not depend on the
+// step by a fixed time, and catch up a few steps when a frame runs long. then the simulation does not depend on the
 // frame rate
 const STEP = 1 / 60;
 let pending = 0;
@@ -72,8 +73,8 @@ if (Math.abs(at[1] - 0.48) > 0.02) throw new Error(`the crate at y ${at[1]}`);
 /* HIDE_END */
 
 /* SNIPPET_START: materials */
-// surfaces by index: a shape's or a mesh triangle's materialId picks one, which stands in for the body's friction
-// and restitution on its side of a contact
+// materials by index. a shape's or a mesh triangle's materialId picks one. it replaces the body's friction and
+// restitution on its side of a contact
 setMaterials(world, [
     { friction: 0, restitution: 0 },
     { friction: 1, restitution: 0.8 },

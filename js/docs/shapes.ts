@@ -43,10 +43,10 @@ const check = (ok: boolean, what: string): void => {
 const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-3;
 
 /* SNIPPET_START: convex */
-// each centred on its origin; density in kg/m3 (1000 by default) gives the mass
+// each shape is centred on its origin. its density in kg/m3 gives the mass, and defaults to 1000
 const crate = box.create({ halfExtents: [0.5, 0.5, 0.5], convexRadius: 0.05, density: 200 });
 const ball = sphere.create({ radius: 0.5 });
-// along y: a cylinder of half height 0.5 between two hemispheres
+// along y. a cylinder with half height 0.5 between two hemispheres
 const pill = capsule.create({ halfHeightOfCylinder: 0.5, radius: 0.3 });
 const barrel = cylinder.create({ halfHeight: 0.6, radius: 0.4 });
 getShapeVolume(ball); // 4/3 pi r^3
@@ -54,11 +54,11 @@ getShapeVolume(ball); // 4/3 pi r^3
 check(near(getShapeVolume(ball), (4 / 3) * Math.PI * 0.125), 'volume');
 
 /* SNIPPET_START: convex-hull */
-// the hull around the points, which the shape builds and frees with itself; points inside it are dropped. any number of
-// bodies can share the shape
+// the convex hull around the points. the shape builds it and frees it with itself. points inside the hull are
+// dropped. any number of bodies can share the shape
 const points = [-1, -1, -1, 1, -1, -1, -1, 1, -1, 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, 1, 1, 1, 1, 1, 0, 0, 0];
 const rock = convexHull.create({ positions: points, density: 2500 });
-// points that make no hull throw, saying why
+// points that make no hull throw an error that says why
 try {
     convexHull.create({ positions: [0, 0, 0, 1, 0, 0] });
 } catch (error) {
@@ -74,14 +74,14 @@ try {
 }
 
 /* SNIPPET_START: plane */
-// everything below y 0 is solid; halfExtent bounds it for the broadphase
+// everything below y 0 is solid. halfExtent bounds it for the broadphase
 const ground = plane.create({ normal: [0, 1, 0], constant: 0, halfExtent: 1000 });
 rigidBody.create(world, { shape: ground, objectLayer: notMoving, motionType: MotionType.STATIC });
 /* SNIPPET_END: plane */
 
 /* SNIPPET_START: triangle-mesh */
-// welded, its bvh made and its edges marked so things slide over the joins. a material per triangle, picking a surface
-// from setMaterials
+// the mesh is welded, gets a bvh, and marks its edges so things slide over the joins. each triangle can pick a
+// material from setMaterials
 const terrain = triangleMesh.create({
     positions: [-10, 0, -10, 10, 0, -10, 10, 0, 10, -10, 0, 10],
     indices: [0, 2, 1, 0, 3, 2],
@@ -94,8 +94,8 @@ getShapeLocalBounds(bounds, terrain);
 check(bounds.max[0] === 10 && bounds.min[2] === -10, 'mesh bounds');
 
 /* SNIPPET_START: compound */
-// shapes placed in one: a table, its top and four legs. a static compound is for static bodies, with a tree over its
-// children for many of them
+// several shapes placed as one, here a table top and four legs. a static compound suits static bodies with many
+// children, and builds a tree over them
 const leg = box.create({ halfExtents: [0.05, 0.4, 0.05] });
 const top = box.create({ halfExtents: [0.6, 0.05, 0.4] });
 const table = compound.create({
@@ -124,7 +124,7 @@ rigidBody.getPosition(at, world, placed);
 check(Math.abs(at[1] - 0.38) < 0.002, `the table at y ${at[1]}`);
 
 /* SNIPPET_START: decorators */
-// a shape moved, scaled, or with its centre of mass offset (a weighted toy that rights itself)
+// a shape moved, scaled, or with its centre of mass offset, such as a weighted toy that rights itself
 const raised = transformed.create({ shape: crate, position: [0, 1, 0], quaternion: [0, 0, 0, 1] });
 const stretched = scaled.create({ shape: crate, scale: [2, 1, 1] });
 const weighted = offsetCenterOfMass.create({ shape: pill, offset: [0, -0.4, 0] });
@@ -132,12 +132,12 @@ const weighted = offsetCenterOfMass.create({ shape: pill, offset: [0, -0.4, 0] }
 check(near(getShapeVolume(stretched), 2 * getShapeVolume(crate)), 'scaled');
 
 /* SNIPPET_START: empty */
-// no volume and no collisions: a static anchor for a constraint, or a body whose shape comes later
+// no volume and no collisions. use it as a static constraint anchor, or for a body whose shape comes later
 const nothing = emptyShape.create();
 /* SNIPPET_END: empty */
 
 /* SNIPPET_START: freeing */
-// what is built over a shape holds it, so the shapes go in any order, before or after the world
+// a shape built from another holds it, so you can release shapes in any order, before or after the world
 for (const shape of [crate, leg, top, ball, pill, barrel, rock, terrain, ground, nothing]) releaseShape(shape);
 for (const shape of [raised, stretched, weighted, table, fence]) releaseShape(shape);
 destroyWorld(world);

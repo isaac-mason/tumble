@@ -40,7 +40,7 @@ const check = (ok: boolean, what: string): void => {
 };
 
 /* SNIPPET_START: create */
-// a body is an id: its index and a sequence, so the id of a removed body names nothing, even once its slot is reused
+// a body is an id. it holds an index and a sequence, so a removed body's id names nothing, even after its slot is reused
 const crate = rigidBody.create(world, {
     shape: crateShape,
     objectLayer: moving,
@@ -51,14 +51,14 @@ const crate = rigidBody.create(world, {
 const doomed = rigidBody.create(world, { shape: ballShape, objectLayer: moving, motionType: MotionType.DYNAMIC });
 rigidBody.remove(world, doomed);
 rigidBody.exists(world, doomed); // false
-// a call with an id naming no body does nothing: a reader returns false and leaves its out as it was
+// a call with a stale id does nothing. a getter returns false and leaves its out unchanged
 rigidBody.getPosition(at, world, doomed); // false
 /* SNIPPET_END: create */
 check(rigidBody.exists(world, crate) && !rigidBody.exists(world, doomed), 'ids');
 
 /* SNIPPET_START: motion-types */
-// static never moves; kinematic moves by its velocity and pushes dynamic bodies aside; dynamic is moved by gravity,
-// forces and contacts. the type can change later
+// a static body never moves. a kinematic body moves by its velocity and pushes dynamic bodies aside. a dynamic body is
+// moved by gravity, forces and contacts. the type can change later
 const platform = rigidBody.create(world, {
     shape: crateShape,
     objectLayer: moving,
@@ -73,7 +73,7 @@ check(rigidBody.getMotionType(world, platform) === MotionType.DYNAMIC, 'motion t
 const position: Vec3 = [0, 0, 0];
 const quaternion: Quat = [0, 0, 0, 1];
 rigidBody.getTransform(position, quaternion, world, crate);
-// a teleport: nothing between here and there stops it. the last argument wakes it
+// this teleports the body, so nothing in between stops it. the last argument wakes it
 rigidBody.setTransform(world, crate, [0, 6, 0], [0, Math.SQRT1_2, 0, Math.SQRT1_2], true);
 /* SNIPPET_END: transform */
 rigidBody.getPosition(at, world, crate);
@@ -84,14 +84,14 @@ rigidBody.setLinearVelocity(world, crate, [2, 0, 0]);
 rigidBody.setAngularVelocity(world, crate, [0, Math.PI, 0]);
 const velocity: Vec3 = [0, 0, 0];
 rigidBody.getLinearVelocity(velocity, world, crate);
-// the velocity of a point carried with the body, a corner here
+// the velocity of a point that moves with the body, here a corner
 rigidBody.getVelocityAtPoint(velocity, world, crate, [0.5, 6.5, 0.5]);
 /* SNIPPET_END: velocity */
 check(velocity[0] !== 2, 'a corner turning moves faster than the centre');
 
 /* SNIPPET_START: forces */
-// a force acts over the next step, then is cleared; an impulse changes the velocity at once. both move only dynamic
-// bodies. a crate's mass is from its shape: 1000 kg/m3 by default
+// a force acts over the next step, then is cleared. an impulse changes the velocity at once. both move only dynamic
+// bodies. a crate's mass comes from its shape, at 1000 kg/m3 by default
 const mass = rigidBody.getMass(world, crate);
 rigidBody.addForce(world, crate, [0, 20 * mass, 0], true);
 rigidBody.addImpulseAtPosition(world, crate, [0, 0, 5 * mass], [0.5, 6, 0]);
@@ -102,7 +102,7 @@ rigidBody.getLinearVelocity(velocity, world, crate);
 check(velocity[2] > 4.9 && velocity[1] > 0, 'pushed');
 
 /* SNIPPET_START: mass */
-// a mass the shape's inertia is scaled to, or mass properties outright: a hollow mesh has no volume to take one from
+// set a mass and the inertia scales to it, or set the mass properties directly. a hollow mesh has no volume to give a mass
 const heavy = rigidBody.create(world, {
     shape: ballShape,
     objectLayer: moving,
@@ -115,8 +115,8 @@ rigidBody.getMass(world, heavy); // 80
 check(Math.abs(rigidBody.getMass(world, heavy) - 80) < 1e-3, 'mass');
 
 /* SNIPPET_START: tuning */
-// damping slows it each step; the most it may move and turn; the axes it is free on: here a puck, sliding on x and z
-// and turning only about y
+// damping slows the body each step. the limits cap how fast it moves and turns. the degrees of freedom pick its free axes.
+// here it is a puck that slides on x and z and turns only about y
 const puck = rigidBody.create(world, {
     shape: ballShape,
     objectLayer: moving,
@@ -135,17 +135,17 @@ rigidBody.getPosition(at, world, puck);
 check(at[1] === 0.25, 'held to its plane');
 
 /* SNIPPET_START: sleeping */
-// a body at rest sleeps, costing nothing until something touches it or you wake it
+// a body at rest sleeps. it costs nothing until something touches it or you wake it
 steps(120);
 rigidBody.isSleeping(world, heavy); // true
 rigidBody.wake(world, heavy);
 rigidBody.sleep(world, heavy);
-// one that should never sleep: allowSleeping false
+// set allowSleeping to false for a body that should never sleep
 /* SNIPPET_END: sleeping */
 check(rigidBody.isSleeping(world, heavy), 'asleep');
 
 /* SNIPPET_START: kinematic */
-// a lift: its velocity brings it to the target in deltaTime, pushing what it meets, and wakes it
+// a lift. moveKinematic sets the velocity that reaches the target in deltaTime. it pushes what it meets and wakes the body
 const lift = rigidBody.create(world, {
     shape: crateShape,
     objectLayer: moving,
@@ -161,8 +161,7 @@ rigidBody.getPosition(at, world, lift);
 check(Math.abs(at[1] - 2.5) < 1e-4, 'lifted');
 
 /* SNIPPET_START: ccd */
-// fast and thin: a discrete body can step clean over a wall between one step and the next (5 m a step here); a
-// linear cast cannot
+// a fast body can jump over a thin wall between two steps. this one moves 5 m a step. linear cast stops that
 const wallShape = box.create({ halfExtents: [0.05, 2, 2] });
 rigidBody.create(world, { shape: wallShape, objectLayer: notMoving, motionType: MotionType.STATIC, position: [20, 2, 0] });
 const bullet = rigidBody.create(world, {
@@ -190,15 +189,15 @@ rigidBody.getPosition(at, world, tunneller);
 check(at[0] > 20, 'the discrete body went through');
 
 /* SNIPPET_START: user-data */
-// your own value for a body, an integer up to 2^53: an entity's index, say. it comes back with the body in events
+// your own value for a body, such as an entity index. it is an integer up to 2^53, and events report it with the body
 rigidBody.setUserData(world, crate, 2 ** 40 + 7);
 rigidBody.getUserData(world, crate); // 1099511627783
 /* SNIPPET_END: user-data */
 check(rigidBody.getUserData(world, crate) === 2 ** 40 + 7, 'user data');
 
 /* SNIPPET_START: groups */
-// within layers that collide, two bodies collide when each is in a group of the other's mask: a ghost in group 2, its
-// mask without group 1, passes through everything in group 1 (every body's group by default)
+// two bodies in colliding layers collide when each one's group is in the other's mask. every body is in group 1 by
+// default. this ghost is in group 2, and its mask leaves out group 1, so it passes through everything else
 const ghost = rigidBody.create(world, {
     shape: ballShape,
     objectLayer: moving,
@@ -221,7 +220,8 @@ rigidBody.getPosition(at, world, ghost);
 check(at[1] < 1, 'through the group 1 floor');
 
 /* SNIPPET_START: sensors */
-// a sensor reports contacts and pushes nothing: through the listener (see Events), its contacts' settings say so
+// a sensor reports contacts but pushes nothing. the listener sees them (see Events), and their settings mark them as
+// sensor contacts
 const zoneShape = box.create({ halfExtents: [1, 1, 1] });
 const zone = rigidBody.create(world, {
     shape: zoneShape,
@@ -249,10 +249,10 @@ rigidBody.getPosition(at, world, visitor);
 check(entered.includes(visitor) && at[1] < 0.3, 'fell through the zone, seen entering');
 
 /* SNIPPET_START: shape */
-// a new shape: the mass, centre of mass and bounds follow, and constraints keep their anchors on the body
+// a new shape updates the mass, centre of mass and bounds. constraints keep their anchors on the body
 const lump = sphere.create({ radius: 0.3 });
 rigidBody.setShape(world, crate, lump, true);
-// a shape changed in place: each body using it takes it again
+// after changing a shape in place, pass it to setShape for each body that uses it
 sphere.update(lump, { radius: 0.5 });
 rigidBody.setShape(world, crate, lump, true);
 /* SNIPPET_END: shape */

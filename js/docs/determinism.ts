@@ -41,8 +41,8 @@ function makePile(ground: Shape, ball: Shape): { world: World; bodies: number[] 
 }
 
 /* SNIPPET_START: replay */
-// the same scene, made in the same order and stepped by the same steps, is the same to the last bit: in another
-// world, another run, another machine, or natively in C++
+// the same scene, built in the same order and stepped the same way, gives exactly the same result. this holds in
+// another world, another run, another machine, or natively in C++
 const first = makePile(groundShape, ballShape);
 const second = makePile(groundShape, ballShape);
 for (let i = 0; i < 300; i++) {

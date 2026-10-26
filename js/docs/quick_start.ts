@@ -16,10 +16,10 @@ import {
     type Vec3,
 } from 'tumble.js';
 
-// load the wasm, once, before anything else
+// load the wasm once, before anything else
 await init();
 
-// two layers, one for what moves and one for what does not: what moves collides with both
+// one layer for what moves and one for what does not. moving bodies collide with both
 const settings = createWorldSettings();
 const moving = addObjectLayer(settings, addBroadphaseLayer(settings));
 const notMoving = addObjectLayer(settings, addBroadphaseLayer(settings));
@@ -27,7 +27,7 @@ enableCollision(settings, moving, moving);
 enableCollision(settings, moving, notMoving);
 const world = createWorld(settings);
 
-// shapes are yours, shared by any number of bodies; a body is an id in its world
+// you own the shapes, and any number of bodies can share them. a body is an id in its world
 const floorShape = box.create({ halfExtents: [20, 0.5, 20] });
 const boxShape = box.create({ halfExtents: [0.5, 0.5, 0.5] });
 const ballShape = sphere.create({ radius: 0.5 });
@@ -48,7 +48,7 @@ const ball = rigidBody.create(world, {
 // two seconds at 60 Hz
 for (let i = 0; i < 120; i++) updateWorld(world, undefined, 1 / 60);
 
-// readers take what they fill first, and allocate nothing
+// getters take the array they fill first, and allocate nothing
 const position: Vec3 = [0, 0, 0];
 rigidBody.getPosition(position, world, boxBody);
 console.log(`the box rests at y ${position[1].toFixed(2)}`);
@@ -58,7 +58,7 @@ rigidBody.getPosition(position, world, ball);
 if (Math.abs(position[1] - 0.48) > 0.02) throw new Error(`the ball at y ${position[1]}`);
 /* HIDE_END */
 
-// what you create, you free: the world takes its bodies with it
+// free what you create. destroying the world frees its bodies
 destroyWorld(world);
 releaseShape(floorShape);
 releaseShape(boxShape);

@@ -45,8 +45,8 @@ const check = (ok: boolean, what: string): void => {
 };
 
 /* SNIPPET_START: create */
-// a capsule standing on its feet: the character's position is its feet, the capsule raised 0.8 m to stand on them.
-// the inner body is its presence in the world, which bodies and queries see and contact pairs name it by
+// a capsule standing on its feet. the character's position is at its feet, so the capsule is raised 0.8 m. the inner
+// body represents the character in the world. bodies and queries see it, and contact pairs use it
 const standingCapsule = capsule.create({ halfHeightOfCylinder: 0.5, radius: 0.3 });
 const standing = transformed.create({ shape: standingCapsule, position: [0, 0.8, 0] });
 const character = kcc.create(
@@ -60,22 +60,22 @@ const character = kcc.create(
     [0, 0, 0, 1],
 );
 kcc.add(world, character);
-// what the character collides with: everything its inner body does
+// the character collides with everything its inner body collides with
 const queryFilter = filter.create(world);
 filter.setFromBody(queryFilter, world, character.innerRigidBodyId);
 /* SNIPPET_END: create */
 
 /* SNIPPET_START: policy */
-// how characters treat the bodies they meet, by body, the rest at the defaults; one policy serves any number of
-// characters. here the crate may be pushed (until the character crouches, below)
+// a policy sets how characters treat each body. bodies without their own entry use the defaults. one policy can serve
+// any number of characters. here the crate can be pushed, until the character crouches below
 const policy = kccPolicy.create();
 kccPolicy.set(policy, crate, { canReceiveImpulses: true });
 /* SNIPPET_END: policy */
 
 const gravity: Vec3 = [0, -9.81, 0];
 /* SNIPPET_START: update */
-// a frame of a game: the velocity from the ground's when standing, else falling on, plus the input; then the character
-// moves (sliding along walls, up stairs, sticking to floors going down), then the world steps
+// one game frame. the velocity starts from the ground's when standing, or keeps falling when not, and adds the input.
+// then the character moves. it slides along walls, climbs stairs and sticks to floors going down. then the world steps
 const updateSettings = kcc.createDefaultUpdateSettings();
 function frame(input: Vec3, deltaTime: number): void {
     kcc.updateGroundVelocity(world, character, policy);
@@ -99,8 +99,7 @@ character.position; // up the step, along it and down again
 check(character.position[0] > 8 && character.ground.state === kcc.GroundState.ON_GROUND, `at ${character.position}`);
 
 /* SNIPPET_START: events */
-// what the character met in its last update (or refreshContacts, or setShape): each contact added or persisted as it
-// was first touched, and each gone by the end
+// the contacts from the last update, refreshContacts or setShape. each one is added, persisted or removed
 for (const event of character.contactEvents) {
     if (event.kind === kcc.KCCContactEventKind.ADDED) event.bodyId; // footsteps, say
 }
@@ -108,7 +107,8 @@ for (const event of character.contactEvents) {
 check(character.contactEvents.length > 0, 'events');
 
 /* SNIPPET_START: crouch */
-// a shorter shape on the same feet, where it fits: refused, false, if it would sink deeper than the given depth
+// a shorter shape on the same feet. setShape returns false and keeps the old shape if the new one would sink deeper
+// than the given depth
 const crouchingCapsule = capsule.create({ halfHeightOfCylinder: 0.2, radius: 0.3 });
 const crouching = transformed.create({ shape: crouchingCapsule, position: [0, 0.5, 0] });
 if (kcc.setShape(world, character, crouching, queryFilter, policy, 0.01))
@@ -117,12 +117,12 @@ if (kcc.setShape(world, character, crouching, queryFilter, policy, 0.01))
 check(character.shape === crouching, 'crouched');
 
 /* SNIPPET_START: tuning */
-// its settings, tuned after create: here a lower point of support while crouched
+// settings can change after create. here the supporting point is lower while crouched
 kcc.setTuning(character, { supportingVolumePlane: [0, 1, 0, -0.3] });
 /* SNIPPET_END: tuning */
 
 /* SNIPPET_START: contacts */
-// its contacts as data, through its inner body, in a contact pairs frame
+// read the character's contacts as data, through its inner body, in a contact pairs frame
 contactPairs.begin(world);
 kcc.refreshContacts(world, character, queryFilter, policy);
 contactPairs.recordCharacterContacts(world, character);
@@ -135,9 +135,9 @@ check(
 );
 
 /* SNIPPET_START: toolkit */
-// update is the whole move in one call; the toolkit is its phases, for a loop of your own that edits the contacts
-// between collide and solve. here a one-way platform overhead, jumped up through: from below, its contacts and the
-// sweep's hit on it are passed over
+// update does the whole move in one call. the toolkit splits it into phases, so your own loop can edit the contacts
+// between collide and solve. here the character jumps up through a one-way platform. from below, the loop discards the
+// platform's contacts and the sweep's hit on it
 const platformShape = box.create({ halfExtents: [1.5, 0.1, 1.5] });
 const platform = rigidBody.create(world, {
     shape: platformShape,
@@ -177,7 +177,7 @@ for (let i = 0; i < 90; i++) {
     }
     kcc.setPosition(world, character, position);
     kcc.updateGround(world, character, deltaTime, false, policy);
-    // landed, coming down
+    // it lands on the platform on the way down
     if (character.ground.state === kcc.GroundState.ON_GROUND && character.linearVelocity[1] <= 0)
         character.linearVelocity = [0, 0, 0];
     updateWorld(world, undefined, deltaTime);

@@ -3,9 +3,9 @@
 # tumble for JavaScript
 
 tumble is a 3D rigid body physics engine. The JS package is the C++ library compiled to WebAssembly, with a TypeScript
-API over it, and it simulates the same bits as the native library does.
+API. It gives the same results as the native library.
 
-Every code block here is part of a program in `js/docs/` that the tests run, and each program checks what it shows.
+Every code block here comes from a program in `js/docs/`. The tests run each program, and each one checks what it shows.
 
 The C++ library and its guide are at [github.com/isaac-mason/tumble](https://github.com/isaac-mason/tumble#readme).
 
@@ -73,23 +73,23 @@ The C++ library and its guide are at [github.com/isaac-mason/tumble](https://git
 
 ## Getting tumble
 
-The package is `tumble.js`: ES modules with their types, and `tumble.wasm` beside them. Load the wasm once, before anything
-else, with `await init()`. With no options it loads the wasm from beside the package's modules, which suits Node and
-bundlers that copy the file. Otherwise give it the wasm as a URL, its bytes or a compiled `WebAssembly.Module`, as here
-with its bytes:
+The package is `tumble.js`. It holds ES modules, their types, and `tumble.wasm`.
+
+Load the wasm once, before anything else, with `await init()`. With no options, `init` loads the wasm from next to the
+package's modules. This works in Node and in bundlers that copy the file. You can also pass the wasm as a URL, as bytes
+or as a compiled `WebAssembly.Module`. This example passes bytes:
 
 ```ts
-// the wasm given as its bytes, read here from the package in node. it loads once a realm: later calls wait for the same
+// pass the wasm as bytes, here read from the package in node. it loads once per realm. later calls wait for that load
 const bytes = await readFile(new URL('../dist/tumble.wasm', import.meta.url));
 await init({ wasm: bytes });
 ```
 
-The package exports the file as `tumble.js/tumble.wasm` for a bundler to resolve: with Vite, import it with `?url` and pass
-that URL to `init`.
+The package exports the wasm as `tumble.js/tumble.wasm`. With Vite, import it with `?url` and pass the URL to `init`.
 
 ## Quick start
 
-A world, a floor, and a box and a ball dropped onto it:
+This creates a world and a floor, then drops a box and a ball onto it:
 
 ```ts
 import {
@@ -109,10 +109,10 @@ import {
     type Vec3,
 } from 'tumble.js';
 
-// load the wasm, once, before anything else
+// load the wasm once, before anything else
 await init();
 
-// two layers, one for what moves and one for what does not: what moves collides with both
+// one layer for what moves and one for what does not. moving bodies collide with both
 const settings = createWorldSettings();
 const moving = addObjectLayer(settings, addBroadphaseLayer(settings));
 const notMoving = addObjectLayer(settings, addBroadphaseLayer(settings));
@@ -120,7 +120,7 @@ enableCollision(settings, moving, moving);
 enableCollision(settings, moving, notMoving);
 const world = createWorld(settings);
 
-// shapes are yours, shared by any number of bodies; a body is an id in its world
+// you own the shapes, and any number of bodies can share them. a body is an id in its world
 const floorShape = box.create({ halfExtents: [20, 0.5, 20] });
 const boxShape = box.create({ halfExtents: [0.5, 0.5, 0.5] });
 const ballShape = sphere.create({ radius: 0.5 });
@@ -141,63 +141,66 @@ const ball = rigidBody.create(world, {
 // two seconds at 60 Hz
 for (let i = 0; i < 120; i++) updateWorld(world, undefined, 1 / 60);
 
-// readers take what they fill first, and allocate nothing
+// getters take the array they fill first, and allocate nothing
 const position: Vec3 = [0, 0, 0];
 rigidBody.getPosition(position, world, boxBody);
 console.log(`the box rests at y ${position[1].toFixed(2)}`);
 
-// what you create, you free: the world takes its bodies with it
+// free what you create. destroying the world frees its bodies
 destroyWorld(world);
 releaseShape(floorShape);
 releaseShape(boxShape);
 releaseShape(ballShape);
 ```
 
-The rest of this guide leaves out the imports and the world's setup.
+The rest of this guide leaves out the imports and the world setup.
 
 ## Conventions
 
-- Each subject is a namespace of functions: `rigidBody.create`, `box.create`, `hingeConstraint.setMotorState`. The
-  world's are free: `createWorld`, `updateWorld`, `setGravity`, as are the queries: `castRay`, `collideShape`.
-- A call that reads or changes a world takes the world first, after any out: `rigidBody.setPosition(world, body, ...)`.
-- A reader takes what it fills first, and returns it or whether it could: `rigidBody.getPosition(out, world, body)`. It
-  allocates nothing, so keep your arrays and reuse them.
-- Vectors are arrays: a `Vec3` is `[x, y, z]` and a `Quat` is `[x, y, z, w]`, the identity `[0, 0, 0, 1]`.
-- Bodies and constraints are ids, plain numbers, checked on every call: a removed one's id names nothing, even once its
-  slot is reused.
-- Settings are object literals. Leave out what you do not need: the C++ defaults fill the rest, at every depth, so
-  `motorSettings: { maxTorqueLimit: 100 }` keeps the motor's default spring.
-- The simulation is in 32-bit floats: what you read back is a float32 value.
+- Each subject is a namespace of functions, such as `rigidBody.create`, `box.create` and
+  `hingeConstraint.setMotorState`.
+- World functions and queries are not in a namespace. Examples are `createWorld`, `updateWorld`, `setGravity`,
+  `castRay` and `collideShape`.
+- A function that reads or changes a world takes the world first, after any out parameter:
+  `rigidBody.setPosition(world, body, ...)`.
+- A getter takes the object it fills first, and returns it or a success flag: `rigidBody.getPosition(out, world, body)`.
+  Getters allocate nothing, so keep your arrays and reuse them.
+- Vectors are arrays. A `Vec3` is `[x, y, z]`. A `Quat` is `[x, y, z, w]`, and the identity is `[0, 0, 0, 1]`.
+- Bodies and constraints are ids. An id is a plain number, and every call checks it. The id of a removed body names
+  nothing, even after its slot is reused.
+- Settings are object literals. Leave out what you do not need, and the defaults fill in the rest at every depth. For
+  example, `motorSettings: { maxTorqueLimit: 100 }` keeps the motor's default spring.
+- The simulation uses 32-bit floats. Values you read back are float32 values.
 - Units are metres, kilograms, seconds and radians.
 
 ## From crashcat
 
-The names are crashcat's, so most of a crashcat program reads the same. What differs:
+The names match crashcat's, so most crashcat code reads the same. These are the differences:
 
-- A body is an id, not an object: its state comes from getters (`rigidBody.getPosition(out, world, body)`) and changes
-  through setters, and the bodies that moved since a step are listed by `getActiveBodies`.
-- The world and what it holds live in the wasm, so they are freed, not collected: `destroyWorld`, `releaseShape`,
-  `filter.destroy`, `kcc.release`.
-- A shape changes in place with its type's `update`, and each body using it takes it again with `rigidBody.setShape`;
-  there is no `updateShape`, and no writable `body.shape`.
+- A body is an id, not an object. You read its state with getters, such as `rigidBody.getPosition(out, world, body)`,
+  and change it with setters. `getActiveBodies` lists the bodies that moved in a step.
+- The world and everything in it live in the wasm. You free them yourself with `destroyWorld`, `releaseShape`,
+  `filter.destroy` and `kcc.release`.
+- A shape changes in place with its type's `update`. Then pass it to `rigidBody.setShape` for each body that uses it.
+  There is no `updateShape`, and `body.shape` is not writable.
 
 ## Memory and errors
 
-The wasm's memory is not collected. What you create, you free:
+The garbage collector does not free wasm memory. Free what you create:
 
 ```ts
-// what you create, you free: worlds (their bodies and constraints go with them), filters, policies and debug
-// buffers. a body or constraint goes with rigidBody.remove or constraints.remove too. a shape or a character you made
-// you release: whatever else holds it lets go of it itself
+// free what you create: worlds, filters, policies and debug draws. a world frees its bodies and constraints. you can
+// also remove them with rigidBody.remove and constraints.remove. release the shapes and characters you make. anything
+// else that holds them lets go by itself
 destroyWorld(world);
 releaseShape(crateShape);
 ```
 
-A call that cannot do what it was asked throws, and backs out of what it began:
+A call that cannot do what you asked throws, and undoes anything it started:
 
 ```ts
-// a call that cannot do what it was asked throws, having undone what it began: an id naming nothing, or settings the
-// C++ would refuse
+// a call that cannot do what you asked throws, and undoes anything it started. causes include a stale id or invalid
+// settings
 rigidBody.remove(world, b);
 try {
     hingeConstraint.create(world, a, b, {});
@@ -209,25 +212,25 @@ try {
 } catch (error) {
     error instanceof RangeError; // true: a hinge's limitsMin is in [-pi, 0]
 }
-// readers and setters with an id naming nothing return false instead, doing nothing
+// getters and setters given a stale id return false and do nothing instead
 rigidBody.setLinearVelocity(world, b, [1, 0, 0]); // false
 ```
 
-Running out of memory is not one of those: as Emscripten's `ABORTING_MALLOC` does, the wasm stops. The call throws a
-`WebAssembly.RuntimeError` and the instance is done, as a JoltPhysics.js one is.
+Running out of memory is different. The wasm stops, the call throws a `WebAssembly.RuntimeError`, and the instance
+cannot be used again.
 
-A view onto the wasm's memory (from `debugDraw.read`) is detached when the memory grows. Take views
-from their read each time rather than keeping them.
+A view into wasm memory, such as one from `debugDraw.read`, breaks when the memory grows. Read new views each time
+instead of keeping them.
 
 ## The world
 
-A world holds bodies, constraints and the simulation's state. Several worlds can live side by side.
+A world holds bodies, constraints and the simulation state. You can run several worlds at once.
 
 ### Layers
 
 ```ts
-// object layers decide what collides with what; each is in a broadphase layer, a tree of its own. keep what moves and
-// what does not in trees of their own
+// object layers decide what collides with what. each object layer belongs to a broadphase layer, which has its own
+// tree. put moving and still bodies in separate broadphase layers
 const settings = createWorldSettings();
 const movingTree = addBroadphaseLayer(settings);
 const staticTree = addBroadphaseLayer(settings);
@@ -242,7 +245,8 @@ enableCollision(settings, debris, scenery);
 ### Settings
 
 ```ts
-// plain data, from the C++ defaults: change what you need. create copies them, so they can make another world
+// settings are plain data with the defaults filled in. change what you need. createWorld copies them, so they can
+// make another world
 settings.gravity = [0, -20, 0];
 settings.solver.velocityIterations = 12;
 settings.sleeping.timeBeforeSleep = 1;
@@ -251,11 +255,11 @@ const world = createWorld(settings);
 
 ### Stepping
 
-`updateWorld(world, listener, deltaTime)` advances the world one step, its events going to the listener (see
-[Events](#events)), or nowhere with `undefined`. Step by a fixed time:
+`updateWorld(world, listener, deltaTime)` advances the world by one step. It sends the step's events to the listener
+(see [Events](#events)). Pass `undefined` to ignore them. Step by a fixed time:
 
 ```ts
-// step by a fixed time, catching up a few steps when a frame runs long, so the simulation does not depend on the
+// step by a fixed time, and catch up a few steps when a frame runs long. then the simulation does not depend on the
 // frame rate
 const STEP = 1 / 60;
 let pending = 0;
@@ -268,14 +272,14 @@ function frame(elapsed: number): void {
 }
 ```
 
-Bodies resting on others sink up to `settings.solver.penetrationSlop` (2 cm) into them: the solver allows it to keep
+A resting body can sink into the body below by up to `settings.solver.penetrationSlop`, which is 2 cm. This keeps
 stacks from jittering.
 
 ### Materials
 
 ```ts
-// surfaces by index: a shape's or a mesh triangle's materialId picks one, which stands in for the body's friction
-// and restitution on its side of a contact
+// materials by index. a shape's or a mesh triangle's materialId picks one. it replaces the body's friction and
+// restitution on its side of a contact
 setMaterials(world, [
     { friction: 0, restitution: 0 },
     { friction: 1, restitution: 0.8 },
@@ -284,15 +288,15 @@ const iceShape = box.create({ halfExtents: [5, 0.1, 5], materialId: 0 });
 rigidBody.create(world, { shape: iceShape, objectLayer: scenery, motionType: MotionType.STATIC, position: [10, 0.1, 0] });
 ```
 
-A query's hit names the part it met by sub shape id: `rigidBody.getMaterial(world, hit.bodyIdB, hit.subShapeId)` is that
-part's material id.
+A query hit names the part it hit with a sub shape id. `rigidBody.getMaterial(world, hit.bodyIdB, hit.subShapeId)`
+returns that part's material id.
 
 ## Rigid bodies
 
 ### Creating and removing
 
 ```ts
-// a body is an id: its index and a sequence, so the id of a removed body names nothing, even once its slot is reused
+// a body is an id. it holds an index and a sequence, so a removed body's id names nothing, even after its slot is reused
 const crate = rigidBody.create(world, {
     shape: crateShape,
     objectLayer: moving,
@@ -303,15 +307,15 @@ const crate = rigidBody.create(world, {
 const doomed = rigidBody.create(world, { shape: ballShape, objectLayer: moving, motionType: MotionType.DYNAMIC });
 rigidBody.remove(world, doomed);
 rigidBody.exists(world, doomed); // false
-// a call with an id naming no body does nothing: a reader returns false and leaves its out as it was
+// a call with a stale id does nothing. a getter returns false and leaves its out unchanged
 rigidBody.getPosition(at, world, doomed); // false
 ```
 
 ### Motion types
 
 ```ts
-// static never moves; kinematic moves by its velocity and pushes dynamic bodies aside; dynamic is moved by gravity,
-// forces and contacts. the type can change later
+// a static body never moves. a kinematic body moves by its velocity and pushes dynamic bodies aside. a dynamic body is
+// moved by gravity, forces and contacts. the type can change later
 const platform = rigidBody.create(world, {
     shape: crateShape,
     objectLayer: moving,
@@ -327,12 +331,12 @@ rigidBody.setMotionType(world, platform, MotionType.DYNAMIC, true);
 const position: Vec3 = [0, 0, 0];
 const quaternion: Quat = [0, 0, 0, 1];
 rigidBody.getTransform(position, quaternion, world, crate);
-// a teleport: nothing between here and there stops it. the last argument wakes it
+// this teleports the body, so nothing in between stops it. the last argument wakes it
 rigidBody.setTransform(world, crate, [0, 6, 0], [0, Math.SQRT1_2, 0, Math.SQRT1_2], true);
 ```
 
-Teleporting a body skips the simulation in between. Move a kinematic body by velocity instead (see
-[Kinematic bodies](#kinematic-bodies)).
+Setting a position teleports the body and skips the simulation in between. To move a kinematic body, set its velocity
+instead (see [Kinematic bodies](#kinematic-bodies)).
 
 ### Velocity
 
@@ -341,15 +345,15 @@ rigidBody.setLinearVelocity(world, crate, [2, 0, 0]);
 rigidBody.setAngularVelocity(world, crate, [0, Math.PI, 0]);
 const velocity: Vec3 = [0, 0, 0];
 rigidBody.getLinearVelocity(velocity, world, crate);
-// the velocity of a point carried with the body, a corner here
+// the velocity of a point that moves with the body, here a corner
 rigidBody.getVelocityAtPoint(velocity, world, crate, [0.5, 6.5, 0.5]);
 ```
 
 ### Forces and impulses
 
 ```ts
-// a force acts over the next step, then is cleared; an impulse changes the velocity at once. both move only dynamic
-// bodies. a crate's mass is from its shape: 1000 kg/m3 by default
+// a force acts over the next step, then is cleared. an impulse changes the velocity at once. both move only dynamic
+// bodies. a crate's mass comes from its shape, at 1000 kg/m3 by default
 const mass = rigidBody.getMass(world, crate);
 rigidBody.addForce(world, crate, [0, 20 * mass, 0], true);
 rigidBody.addImpulseAtPosition(world, crate, [0, 0, 5 * mass], [0.5, 6, 0]);
@@ -359,7 +363,7 @@ rigidBody.addAngularImpulse(world, crate, [0, 0, 0]);
 ### Mass
 
 ```ts
-// a mass the shape's inertia is scaled to, or mass properties outright: a hollow mesh has no volume to take one from
+// set a mass and the inertia scales to it, or set the mass properties directly. a hollow mesh has no volume to give a mass
 const heavy = rigidBody.create(world, {
     shape: ballShape,
     objectLayer: moving,
@@ -370,13 +374,13 @@ const heavy = rigidBody.create(world, {
 rigidBody.getMass(world, heavy); // 80
 ```
 
-A triangle mesh has no volume to take a mass from: a dynamic body with one needs `massPropertiesOverride`.
+A triangle mesh has no volume, so it has no mass. A dynamic body with a mesh shape needs `massPropertiesOverride`.
 
 ### Damping, limits and degrees of freedom
 
 ```ts
-// damping slows it each step; the most it may move and turn; the axes it is free on: here a puck, sliding on x and z
-// and turning only about y
+// damping slows the body each step. the limits cap how fast it moves and turns. the degrees of freedom pick its free axes.
+// here it is a puck that slides on x and z and turns only about y
 const puck = rigidBody.create(world, {
     shape: ballShape,
     objectLayer: moving,
@@ -393,18 +397,18 @@ const puck = rigidBody.create(world, {
 ### Sleeping
 
 ```ts
-// a body at rest sleeps, costing nothing until something touches it or you wake it
+// a body at rest sleeps. it costs nothing until something touches it or you wake it
 steps(120);
 rigidBody.isSleeping(world, heavy); // true
 rigidBody.wake(world, heavy);
 rigidBody.sleep(world, heavy);
-// one that should never sleep: allowSleeping false
+// set allowSleeping to false for a body that should never sleep
 ```
 
 ### Kinematic bodies
 
 ```ts
-// a lift: its velocity brings it to the target in deltaTime, pushing what it meets, and wakes it
+// a lift. moveKinematic sets the velocity that reaches the target in deltaTime. it pushes what it meets and wakes the body
 const lift = rigidBody.create(world, {
     shape: crateShape,
     objectLayer: moving,
@@ -420,8 +424,7 @@ for (let i = 1; i <= 60; i++) {
 ### Continuous collision detection
 
 ```ts
-// fast and thin: a discrete body can step clean over a wall between one step and the next (5 m a step here); a
-// linear cast cannot
+// a fast body can jump over a thin wall between two steps. this one moves 5 m a step. linear cast stops that
 const wallShape = box.create({ halfExtents: [0.05, 2, 2] });
 rigidBody.create(world, { shape: wallShape, objectLayer: notMoving, motionType: MotionType.STATIC, position: [20, 2, 0] });
 const bullet = rigidBody.create(world, {
@@ -438,7 +441,7 @@ rigidBody.setLinearVelocity(world, bullet, [300, 0, 0]);
 ### User data
 
 ```ts
-// your own value for a body, an integer up to 2^53: an entity's index, say. it comes back with the body in events
+// your own value for a body, such as an entity index. it is an integer up to 2^53, and events report it with the body
 rigidBody.setUserData(world, crate, 2 ** 40 + 7);
 rigidBody.getUserData(world, crate); // 1099511627783
 ```
@@ -446,8 +449,8 @@ rigidBody.getUserData(world, crate); // 1099511627783
 ### Collision groups and masks
 
 ```ts
-// within layers that collide, two bodies collide when each is in a group of the other's mask: a ghost in group 2, its
-// mask without group 1, passes through everything in group 1 (every body's group by default)
+// two bodies in colliding layers collide when each one's group is in the other's mask. every body is in group 1 by
+// default. this ghost is in group 2, and its mask leaves out group 1, so it passes through everything else
 const ghost = rigidBody.create(world, {
     shape: ballShape,
     objectLayer: moving,
@@ -461,7 +464,8 @@ const ghost = rigidBody.create(world, {
 ### Sensors
 
 ```ts
-// a sensor reports contacts and pushes nothing: through the listener (see Events), its contacts' settings say so
+// a sensor reports contacts but pushes nothing. the listener sees them (see Events), and their settings mark them as
+// sensor contacts
 const zoneShape = box.create({ halfExtents: [1, 1, 1] });
 const zone = rigidBody.create(world, {
     shape: zoneShape,
@@ -482,10 +486,10 @@ const sensing: Listener = {
 ### Changing a body's shape or layer
 
 ```ts
-// a new shape: the mass, centre of mass and bounds follow, and constraints keep their anchors on the body
+// a new shape updates the mass, centre of mass and bounds. constraints keep their anchors on the body
 const lump = sphere.create({ radius: 0.3 });
 rigidBody.setShape(world, crate, lump, true);
-// a shape changed in place: each body using it takes it again
+// after changing a shape in place, pass it to setShape for each body that uses it
 sphere.update(lump, { radius: 0.5 });
 rigidBody.setShape(world, crate, lump, true);
 ```
@@ -496,18 +500,21 @@ rigidBody.setObjectLayer(world, crate, notMoving);
 
 ## Shapes
 
-Shapes are created by each type's `create` and shared by any number of bodies. A body, a character and a shape built
-over another each hold the shape they use, and the shape you made is held for you until `releaseShape`: the last to let
-go frees it, so release a shape once you no longer make anything with it, in any order. `getShapeRefCount` says how many
-hold it. A body's pose places its shape: a shape's own geometry is centred on its origin.
+Each shape type has a `create` function. Any number of bodies can share a shape.
+
+Shapes are reference counted. A body, a character, or a shape built from another shape holds the shape it uses. The
+shape you create is held for you until you call `releaseShape`. The last holder to let go frees it. So release a shape
+when you stop making things with it, in any order. `getShapeRefCount` returns how many holders a shape has.
+
+A shape's geometry is centred on its origin. The body's pose places it in the world.
 
 ### Convex shapes
 
 ```ts
-// each centred on its origin; density in kg/m3 (1000 by default) gives the mass
+// each shape is centred on its origin. its density in kg/m3 gives the mass, and defaults to 1000
 const crate = box.create({ halfExtents: [0.5, 0.5, 0.5], convexRadius: 0.05, density: 200 });
 const ball = sphere.create({ radius: 0.5 });
-// along y: a cylinder of half height 0.5 between two hemispheres
+// along y. a cylinder with half height 0.5 between two hemispheres
 const pill = capsule.create({ halfHeightOfCylinder: 0.5, radius: 0.3 });
 const barrel = cylinder.create({ halfHeight: 0.6, radius: 0.4 });
 getShapeVolume(ball); // 4/3 pi r^3
@@ -516,11 +523,11 @@ getShapeVolume(ball); // 4/3 pi r^3
 ### Convex hulls
 
 ```ts
-// the hull around the points, which the shape builds and frees with itself; points inside it are dropped. any number of
-// bodies can share the shape
+// the convex hull around the points. the shape builds it and frees it with itself. points inside the hull are
+// dropped. any number of bodies can share the shape
 const points = [-1, -1, -1, 1, -1, -1, -1, 1, -1, 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, 1, 1, 1, 1, 1, 0, 0, 0];
 const rock = convexHull.create({ positions: points, density: 2500 });
-// points that make no hull throw, saying why
+// points that make no hull throw an error that says why
 try {
     convexHull.create({ positions: [0, 0, 0, 1, 0, 0] });
 } catch (error) {
@@ -531,7 +538,7 @@ try {
 ### Planes
 
 ```ts
-// everything below y 0 is solid; halfExtent bounds it for the broadphase
+// everything below y 0 is solid. halfExtent bounds it for the broadphase
 const ground = plane.create({ normal: [0, 1, 0], constant: 0, halfExtent: 1000 });
 rigidBody.create(world, { shape: ground, objectLayer: notMoving, motionType: MotionType.STATIC });
 ```
@@ -539,8 +546,8 @@ rigidBody.create(world, { shape: ground, objectLayer: notMoving, motionType: Mot
 ### Triangle meshes
 
 ```ts
-// welded, its bvh made and its edges marked so things slide over the joins. a material per triangle, picking a surface
-// from setMaterials
+// the mesh is welded, gets a bvh, and marks its edges so things slide over the joins. each triangle can pick a
+// material from setMaterials
 const terrain = triangleMesh.create({
     positions: [-10, 0, -10, 10, 0, -10, 10, 0, 10, -10, 0, 10],
     indices: [0, 2, 1, 0, 3, 2],
@@ -549,13 +556,13 @@ const terrain = triangleMesh.create({
 rigidBody.create(world, { shape: terrain, objectLayer: notMoving, motionType: MotionType.STATIC, position: [0, 5, 0] });
 ```
 
-Meshes are for static bodies: they are hollow, with no volume, no inside and no mass.
+Use meshes for static bodies. A mesh is hollow. It has no volume, no inside and no mass.
 
 ### Compounds
 
 ```ts
-// shapes placed in one: a table, its top and four legs. a static compound is for static bodies, with a tree over its
-// children for many of them
+// several shapes placed as one, here a table top and four legs. a static compound suits static bodies with many
+// children, and builds a tree over them
 const leg = box.create({ halfExtents: [0.05, 0.4, 0.05] });
 const top = box.create({ halfExtents: [0.6, 0.05, 0.4] });
 const table = compound.create({
@@ -575,7 +582,7 @@ const fence = staticCompound.create({
 ### Decorators
 
 ```ts
-// a shape moved, scaled, or with its centre of mass offset (a weighted toy that rights itself)
+// a shape moved, scaled, or with its centre of mass offset, such as a weighted toy that rights itself
 const raised = transformed.create({ shape: crate, position: [0, 1, 0], quaternion: [0, 0, 0, 1] });
 const stretched = scaled.create({ shape: crate, scale: [2, 1, 1] });
 const weighted = offsetCenterOfMass.create({ shape: pill, offset: [0, -0.4, 0] });
@@ -584,14 +591,14 @@ const weighted = offsetCenterOfMass.create({ shape: pill, offset: [0, -0.4, 0] }
 ### Empty
 
 ```ts
-// no volume and no collisions: a static anchor for a constraint, or a body whose shape comes later
+// no volume and no collisions. use it as a static constraint anchor, or for a body whose shape comes later
 const nothing = emptyShape.create();
 ```
 
 ### Freeing shapes
 
 ```ts
-// what is built over a shape holds it, so the shapes go in any order, before or after the world
+// a shape built from another holds it, so you can release shapes in any order, before or after the world
 for (const shape of [crate, leg, top, ball, pill, barrel, rock, terrain, ground, nothing]) releaseShape(shape);
 for (const shape of [raised, stretched, weighted, table, fence]) releaseShape(shape);
 destroyWorld(world);
@@ -599,36 +606,38 @@ destroyWorld(world);
 
 ## Events
 
-A step's listener hears its events and answers them as it runs. The wasm never calls into JS: `updateWorld` runs the
-step's phases and calls the hooks between them, so a step with no hooks is one call into the wasm.
+A listener receives a step's events and answers them during the step. The wasm never calls into JS. Instead,
+`updateWorld` runs the step in phases and calls your hooks between them. A step with no hooks is a single call into the
+wasm.
 
 ```ts
-// the step's events, and your answers to them, as it runs
+// the listener hears the step's events and answers them while it runs
 const listener: Listener = {
-    // two bodies whose bounds overlap, before the narrowphase: false and they do not collide this step. the cheapest
-    // place to filter a pair: here a player's parts pass through each other
+    // called for two bodies whose bounds overlap, before the narrowphase. return false and they do not collide this step.
+    // this is the cheapest place to filter a pair. here a player's parts pass through each other
     onBodyPairValidate(bodyA, bodyB) {
         return !(rigidBody.getUserData(world, bodyA) === PLAYER && rigidBody.getUserData(world, bodyB) === PLAYER);
     },
-    // every contact, each step, before it is solved: false drops it this step. a one-way platform: solid only from above
+    // called for every contact each step, before it is solved. return false to drop it this step. here a one-way platform
+    // is solid only from above
     onContactValidate(contact) {
         if (other(contact, platform) === null) return true;
-        // the normal is from a to b: from the platform up into what lands on it is up
+        // the normal points from a to b. from the platform to a body landing on it, that is up
         const up = contact.bodyA === platform ? contact.normal[1] : -contact.normal[1];
         return up > 0.5;
     },
-    // a contact new this step, its settings yours to change: a pad that bounces whatever lands on it
+    // called for a new contact. you can change its settings. here a pad bounces whatever lands on it
     onContactAdded(contact, settings) {
         if (other(contact, pad) !== null) settings.combinedRestitution = 1;
     },
-    // a contact kept from the last step: a belt whose surface moves 2 m/s along x, carrying what rests on it. the
-    // surface velocity is b's less a's
+    // called for a contact kept from the last step. here a belt's surface moves 2 m/s along x and carries what rests on
+    // it. the surface velocity is b's minus a's
     onContactPersisted(contact, settings) {
         if (other(contact, belt) === null) return;
         const carry = contact.bodyA === belt ? -2 : 2;
         settings.relativeLinearSurfaceVelocity = [carry, 0, 0];
     },
-    // after the solve: a contact gone, a removed body's included
+    // called after the solve for each contact that ended, including those of removed bodies
     onContactRemoved(removed) {
         removed.bodyA;
     },
@@ -637,8 +646,8 @@ updateWorld(world, listener, 1 / 60);
 ```
 
 ```ts
-// a hook's events are reused: copy what you keep. the world is mid step while hooks run, so read it but do not change
-// it. a hook that throws ends the step's hooks: the step finishes, then throws it
+// hook events are reused, so copy what you keep. the world is mid step while hooks run. read it, but do not change it.
+// if a hook throws, no more hooks run. the step finishes, then throws the error
 const kept: { bodyA: number; normal: Vec3 }[] = [];
 updateWorld(
     world,
@@ -653,12 +662,13 @@ updateWorld(
 
 ## Contact pairs
 
-The listener hears every contact of every step. Contact pairs keep the few you care about, between frames: each pair of
-body parts in contact, with a stable handle while the pair lasts, added, persisted or removed each frame. A frame can
-span several world steps and the characters' updates between them.
+A listener hears every contact in every step. Contact pairs track only the contacts you care about, across frames.
+
+Each pair is two body parts in contact. It has a stable handle while the contact lasts, and is marked added, persisted
+or removed each frame. A frame can cover several world steps and the character updates between them.
 
 ```ts
-// only the pairs a body observing contacts is a side of are kept: the few a game reacts to, not every contact
+// only pairs that include a body observing contacts are kept. these are the few a game reacts to
 const ball = rigidBody.create(world, {
     shape: ballShape,
     objectLayer: moving,
@@ -670,8 +680,8 @@ const ball = rigidBody.create(world, {
 ```
 
 ```ts
-// a frame of contact pairs: begin, record what moved (each world step, each character's update), end. a pair is
-// added the frame it starts, persisted while it lasts, and removed the frame after it was last recorded
+// a contact pairs frame. begin it, record each world step and character update, then end it. a pair is added in the
+// frame it starts, persisted while it lasts, and removed in the frame after it was last recorded
 function frame(steps: number): void {
     contactPairs.begin(world);
     for (let i = 0; i < steps; i++) {
@@ -700,8 +710,8 @@ function read(): void {
 
 ## Queries
 
-Each query walks the world, under a filter when given one, and reports to a collector: the closest hit, any hit
-(stopping at the first), or every hit.
+A query searches the world and reports hits to a collector. An optional filter decides what it can hit. A collector
+keeps the closest hit, any one hit, or every hit. An any-hit collector stops at the first hit.
 
 ### Rays
 
@@ -710,7 +720,7 @@ const raySettings = createDefaultCastRaySettings();
 const origin: Vec3 = [0, 10, 0];
 const down: Vec3 = [0, -1, 0];
 
-// the nearest hit, its fraction along the ray's 20 m
+// the nearest hit, and its fraction along the 20 m ray
 const closest = createClosestCastRayCollector();
 castRay(world, closest, raySettings, origin, down, 20);
 if (closest.hit.status === CastRayStatus.COLLIDING) {
@@ -719,7 +729,7 @@ if (closest.hit.status === CastRayStatus.COLLIDING) {
     console.log(`body ${closest.hit.bodyIdB} hit at ${point}`); // the upper crate, its top at y 3.5
 }
 
-// the first hit found, for line of sight; every hit, nearest first after sort
+// the first hit found, for line of sight. then every hit, nearest first after sorting
 const any = createAnyCastRayCollector();
 castRay(world, any, raySettings, origin, down, 20);
 const all = createAllCastRayCollector();
@@ -727,14 +737,14 @@ castRay(world, all, raySettings, origin, down, 20);
 all.sort();
 all.hits.length; // 3: the crates and the floor
 
-// a collector keeps what it had, across queries, until reset
+// a collector keeps its hits across queries until you reset it
 closest.reset();
 ```
 
 ### Points
 
 ```ts
-// the bodies whose shapes hold a point
+// the bodies whose shapes contain a point
 const inside = createAllCollidePointCollector();
 collidePoint(world, inside, createDefaultCollidePointSettings(), [0, 1, 0]);
 inside.hits[0]?.bodyIdB; // the lower crate
@@ -743,7 +753,7 @@ inside.hits[0]?.bodyIdB; // the lower crate
 ### Overlaps
 
 ```ts
-// what a shape overlaps, posed and scaled: placing something, or a blast's reach. the closest is the deepest
+// what a posed, scaled shape overlaps. use it to place things or find a blast's reach. the closest hit is the deepest
 const probe = sphere.create({ radius: 0.8 });
 const deepest = createClosestCollideShapeCollector();
 collideShape(world, deepest, createDefaultCollideShapeSettings(), probe, [0, 2, 0], [0, 0, 0, 1], [1, 1, 1]);
@@ -753,7 +763,7 @@ deepest.hit?.penetration; // into a crate by 0.3
 ### Sweeps
 
 ```ts
-// a shape swept: where a falling ball first meets something, for placing it or for a projectile's path
+// a swept shape. it finds where a falling ball first hits something, for placing it or for a projectile's path
 const sweep = createClosestCastShapeCollector();
 const ball = sphere.create({ radius: 0.5 });
 castShape(world, sweep, createDefaultCastShapeSettings(), ball, [0, 10, 0], [0, 0, 0, 1], [1, 1, 1], [0, -20, 0]);
@@ -766,19 +776,19 @@ if (sweep.hit.status === CastShapeStatus.COLLIDING) {
 ### Filters
 
 ```ts
-// a query without a filter hits everything. a filter, held in the wasm and freed when done, starts with every layer
-// of the world's enabled; then layers, groups and masks, and a body filter must all pass
+// a query without a filter hits everything. a filter lives in the wasm, so free it when done. it starts with every
+// layer enabled. a body must pass its layers, groups and mask, and its body filter
 const queryFilter = filter.create(world);
 filter.disableObjectLayer(queryFilter, world, notMoving); // the floor's layer: crates only
 queryFilter.collisionMask = ~2 >>> 0; // no body in group 2
 filter.setAllEnabled(queryFilter, world); // back to everything
-// what a body collides with: its layer's layers, and its groups and mask
+// set a filter from a body, so it hits what that body collides with
 filter.setFromBody(queryFilter, world, upper);
 ```
 
 ```ts
-// your own test, for each body a query reaches: the closest it passes, not the closest there is. such a query collects
-// every hit first, losing its early out, so prefer layers and masks where they do
+// your own test for each body a query reaches. the result is the closest body that passes. such a query collects
+// every hit first and loses its early out, so prefer layers and masks when they are enough
 queryFilter.bodyFilter = (body) => rigidBody.getUserData(world, body) !== 9;
 closest.reset();
 castRay(world, closest, raySettings, origin, down, 20, queryFilter);
@@ -788,16 +798,17 @@ queryFilter.bodyFilter = null;
 
 ## Constraints
 
-A constraint holds two bodies relative to each other. Each type's `create(world, bodyA, bodyB, settings)` returns its
-id, which its functions take. A constraint goes with either of its bodies, or with `constraints.remove`.
+A constraint holds two bodies relative to each other. Each type's `create(world, bodyA, bodyB, settings)` returns an id.
+The type's other functions take that id. Removing either body removes the constraint. You can also remove it with
+`constraints.remove`.
 
-Points and axes are in world space by default. With `space: ConstraintSpace.LOCAL` they are relative to each body.
+Points and axes are in world space by default. With `space: ConstraintSpace.LOCAL`, they are relative to each body.
 
 ### Hinge
 
 ```ts
-// a door on a hinge along y at its left edge, opening a quarter turn at most, driven open by its motor. a motor's
-// torque is unbounded unless limited, and an unbounded motor driving into a limit pushes past it: give it a limit
+// a door hinged along y at its left edge. it opens a quarter turn at most, and its motor drives it open. a motor's
+// torque is unbounded unless you limit it. an unbounded motor pushes past the hinge limit, so this one has a limit
 const frame = anchor([0, 1, 0]);
 const door = dynamic(doorShape, [0.5, 1, 0]);
 const hinge = hingeConstraint.create(world, frame, door, {
@@ -816,7 +827,7 @@ hingeConstraint.setTargetAngularVelocity(world, hinge, 2);
 ```
 
 ```ts
-// gone, or with either body: a stale id names nothing
+// remove it, or remove either body. after that, the id names nothing
 constraints.remove(world, hinge);
 constraints.exists(world, hinge); // false
 ```
@@ -824,7 +835,7 @@ constraints.exists(world, hinge); // false
 ### Point
 
 ```ts
-// a pendulum: a ball held 2 m from the point it swings about
+// a pendulum. the ball stays 2 m from the point it swings about
 const pivot = anchor([10, 5, 0]);
 const bob = dynamic(ballShape, [12, 5, 0]);
 pointConstraint.create(world, pivot, bob, { pointA: [10, 5, 0], pointB: [10, 5, 0] });
@@ -833,7 +844,7 @@ pointConstraint.create(world, pivot, bob, { pointA: [10, 5, 0], pointB: [10, 5, 
 ### Distance
 
 ```ts
-// a bungee: no further than 3 m, pulled back by a spring; minDistance and maxDistance of -1 keep where it starts
+// a bungee. a spring pulls it back past 3 m. a minDistance or maxDistance of -1 keeps the starting distance
 const jumper = dynamic(ballShape, [14, 5, 0]);
 distanceConstraint.create(world, pivot, jumper, {
     pointA: [10, 5, 0],
@@ -847,8 +858,8 @@ distanceConstraint.create(world, pivot, jumper, {
 ### Slider
 
 ```ts
-// a lift: a platform that slides along y only, its position motor holding it 2 m up the rail. a position motor drives
-// through a spring, which a load sags: this one is stiff enough (10 Hz) to sag by millimetres
+// a lift. the platform slides along y only, and its position motor holds it 2 m up the rail. a position motor drives
+// through a spring, so a load makes it sag. at 10 Hz this spring sags by only millimetres
 const rail = anchor([20, 0, 0]);
 const platform = dynamic(blockShape, [20, 0, 0]);
 const lift = sliderConstraint.create(world, rail, platform, {
@@ -868,7 +879,7 @@ sliderConstraint.setTargetPosition(world, lift, 2);
 ### Fixed
 
 ```ts
-// a weld: two bodies held as they are, moving as one
+// a weld. the two bodies keep their relative pose and move as one
 const left = dynamic(blockShape, [30, 3, 0]);
 const right = dynamic(blockShape, [31, 3, 0]);
 fixedConstraint.create(world, left, right, { autoDetectPoint: true });
@@ -877,8 +888,8 @@ fixedConstraint.create(world, left, right, { autoDetectPoint: true });
 ### Swing-twist and cone
 
 ```ts
-// a shoulder: the arm swings within a 45 degree cone about the shoulder's twist axis (x here), twisting up to 30
-// degrees either way. a cone constraint is the same without the twist limits
+// a shoulder. the arm swings within a 45 degree cone around the twist axis, here x. it twists up to 30 degrees either
+// way. a cone constraint is the same without the twist limits
 const torso = anchor([40, 3, 0]);
 const arm = dynamic(ballShape, [40.5, 3, 0]);
 swingTwistConstraint.create(world, torso, arm, {
@@ -908,7 +919,8 @@ coneConstraint.create(world, coneAnchor, coneArm, {
 ### Six degrees of freedom
 
 ```ts
-// every axis its own: here free to slide along x within a metre either way and to turn about y, the rest locked
+// each axis has its own setting. here the body slides along x up to a metre either way and turns about y. the other
+// axes are locked
 const base = anchor([50, 3, 0]);
 const cart = dynamic(blockShape, [50, 3, 0]);
 const limitMin: SixDOFValues = [0, 0, 0, 0, 0, 0];
@@ -923,17 +935,23 @@ rigidBody.setLinearVelocity(world, cart, [5, 0, 0]);
 
 ### Motors and springs
 
-A motor drives a hinge, slider, swing-twist or six-dof axis. `MotorState.VELOCITY` drives to a target velocity;
-`POSITION` drives to a target position through the motor's spring. A motor's torque and force are unbounded unless its
-`motorSettings` limit them. Limit one that drives into a limit, or it pushes past the limit. A spring's
-`frequencyOrStiffness` above 0 makes a limit or a distance soft. Settings the C++ would refuse, such as a hinge's
-limits outside [-pi, pi], throw a `RangeError`.
+A motor drives a hinge, slider, swing-twist or six-dof axis.
+
+- `MotorState.VELOCITY` drives to a target velocity.
+- `MotorState.POSITION` drives to a target position, using the motor's spring.
+
+A motor's torque and force are unbounded unless its `motorSettings` limit them. Set a limit on a motor that drives
+against a constraint limit. Otherwise it pushes past the constraint limit.
+
+A spring with `frequencyOrStiffness` above 0 makes a limit or a distance soft.
+
+Invalid settings throw a `RangeError`. One example is hinge limits outside [-pi, pi].
 
 ### Breaking
 
 ```ts
-// a joint that breaks: read the impulse it applied each step, and disable it past a strength. a disabled constraint
-// holds nothing and joins nothing, until enabled again
+// a breakable joint. read the impulse it applied each step, and disable it above a strength. a disabled constraint
+// holds nothing and links nothing until you enable it again
 const hook = anchor([60, 5, 0]);
 const weight = rigidBody.create(world, {
     shape: blockShape,
@@ -955,14 +973,18 @@ for (let i = 0; i < 120; i++) {
 
 ## Character controller
 
-`KCC` moves a character through the world by sweeps: it walks up slopes and stairs, slides along walls, sticks to the
-floor going down, and stands on moving bodies. It is not a rigid body. Its optional inner body, a kinematic body that
-follows it, is its presence in the world for bodies, queries and contact pairs. The character is a plain object: its
-`position`, `quaternion`, `ground` and `contacts` are as its last call left them, and `linearVelocity` is yours to set.
+`KCC` moves a character through the world with sweeps. It walks up slopes and stairs, slides along walls, sticks to the
+floor going down, and stands on moving bodies.
+
+A character is not a rigid body. It can have an optional inner body. This is a kinematic body that follows the
+character, so other bodies, queries and contact pairs can see it.
+
+The character is a plain object. Its `position`, `quaternion`, `ground` and `contacts` show the result of its last call.
+You set its `linearVelocity`.
 
 ```ts
-// a capsule standing on its feet: the character's position is its feet, the capsule raised 0.8 m to stand on them.
-// the inner body is its presence in the world, which bodies and queries see and contact pairs name it by
+// a capsule standing on its feet. the character's position is at its feet, so the capsule is raised 0.8 m. the inner
+// body represents the character in the world. bodies and queries see it, and contact pairs use it
 const standingCapsule = capsule.create({ halfHeightOfCylinder: 0.5, radius: 0.3 });
 const standing = transformed.create({ shape: standingCapsule, position: [0, 0.8, 0] });
 const character = kcc.create(
@@ -976,21 +998,21 @@ const character = kcc.create(
     [0, 0, 0, 1],
 );
 kcc.add(world, character);
-// what the character collides with: everything its inner body does
+// the character collides with everything its inner body collides with
 const queryFilter = filter.create(world);
 filter.setFromBody(queryFilter, world, character.innerRigidBodyId);
 ```
 
 ```ts
-// how characters treat the bodies they meet, by body, the rest at the defaults; one policy serves any number of
-// characters. here the crate may be pushed (until the character crouches, below)
+// a policy sets how characters treat each body. bodies without their own entry use the defaults. one policy can serve
+// any number of characters. here the crate can be pushed, until the character crouches below
 const policy = kccPolicy.create();
 kccPolicy.set(policy, crate, { canReceiveImpulses: true });
 ```
 
 ```ts
-// a frame of a game: the velocity from the ground's when standing, else falling on, plus the input; then the character
-// moves (sliding along walls, up stairs, sticking to floors going down), then the world steps
+// one game frame. the velocity starts from the ground's when standing, or keeps falling when not, and adds the input.
+// then the character moves. it slides along walls, climbs stairs and sticks to floors going down. then the world steps
 const updateSettings = kcc.createDefaultUpdateSettings();
 function frame(input: Vec3, deltaTime: number): void {
     kcc.updateGroundVelocity(world, character, policy);
@@ -1011,39 +1033,43 @@ for (let i = 0; i < 180; i++) frame([3, 0, 0], 1 / 60);
 character.position; // up the step, along it and down again
 ```
 
-`character.ground` says what it stands on: its `state` (`ON_GROUND`, `ON_STEEP_GROUND`, `NOT_SUPPORTED`, `IN_AIR`), its
-`bodyId`, the `normal` and the ground's `velocity`.
+`character.ground` describes what the character stands on. It has a `state`, which is one of `ON_GROUND`,
+`ON_STEEP_GROUND`, `NOT_SUPPORTED` and `IN_AIR`. It also has a `bodyId`, a `normal`, and the ground's `velocity`.
 
 ### Policy
 
-A body's policy: `ignore` passes through it, `canPushCharacter` false blocks without moving the character,
-`canReceiveImpulses` false keeps the character from pushing it, `slideOnWalkable` false stops the character on a still,
-walkable surface of it, and `surfaceLinearVelocity` and `surfaceAngularVelocity` move the character as a conveyor's
-belt would.
+A policy sets how a character treats each body it meets:
+
+- `ignore`: the character passes through the body.
+- `canPushCharacter: false`: the body blocks the character but does not move it.
+- `canReceiveImpulses: false`: the character does not push the body.
+- `slideOnWalkable: false`: the character does not slide on a still, walkable surface of the body.
+- `surfaceLinearVelocity` and `surfaceAngularVelocity`: the body moves the character like a conveyor belt.
 
 ### Changing shape
 
 ```ts
-// a shorter shape on the same feet, where it fits: refused, false, if it would sink deeper than the given depth
+// a shorter shape on the same feet. setShape returns false and keeps the old shape if the new one would sink deeper
+// than the given depth
 const crouchingCapsule = capsule.create({ halfHeightOfCylinder: 0.2, radius: 0.3 });
 const crouching = transformed.create({ shape: crouchingCapsule, position: [0, 0.5, 0] });
 if (kcc.setShape(world, character, crouching, queryFilter, policy, 0.01))
     kccPolicy.set(policy, crate, { canReceiveImpulses: false });
 ```
 
-Give every shape the character's feet as its origin, and swap them freely.
+Put the origin of every shape at the character's feet. Then you can swap shapes freely.
 
 ```ts
-// its settings, tuned after create: here a lower point of support while crouched
+// settings can change after create. here the supporting point is lower while crouched
 kcc.setTuning(character, { supportingVolumePlane: [0, 1, 0, -0.3] });
 ```
 
 ### Your own loop
 
 ```ts
-// update is the whole move in one call; the toolkit is its phases, for a loop of your own that edits the contacts
-// between collide and solve. here a one-way platform overhead, jumped up through: from below, its contacts and the
-// sweep's hit on it are passed over
+// update does the whole move in one call. the toolkit splits it into phases, so your own loop can edit the contacts
+// between collide and solve. here the character jumps up through a one-way platform. from below, the loop discards the
+// platform's contacts and the sweep's hit on it
 const platformShape = box.create({ halfExtents: [1.5, 0.1, 1.5] });
 const platform = rigidBody.create(world, {
     shape: platformShape,
@@ -1083,32 +1109,39 @@ for (let i = 0; i < 90; i++) {
     }
     kcc.setPosition(world, character, position);
     kcc.updateGround(world, character, deltaTime, false, policy);
-    // landed, coming down
+    // it lands on the platform on the way down
     if (character.ground.state === kcc.GroundState.ON_GROUND && character.linearVelocity[1] <= 0)
         character.linearVelocity = [0, 0, 0];
     updateWorld(world, undefined, deltaTime);
 }
 ```
 
-`collide`, `solve` and `cast` are a move's phases, as `move` runs them each collision iteration. Between `collide` and
-`solve`, each of `character.contacts` is a plain object yours to edit: set its `wasDiscarded`, or give it another
-`linearVelocity`. The solve, the sweep and the ground pass over a discarded one. `update` is the same phases with
-contact tracking (`beginContactTracking`, `endContactTracking`), `cancelVelocityTowardsSteepSlopes` before, and
-`stickToFloor` and `walkStairs` after. A character's queries run in the wasm, so a filter's `bodyFilter` cannot reach
-them: set `ignore` in its policy instead.
+`collide`, `solve` and `cast` are the phases of a move. `move` runs them once per collision iteration.
+
+Between `collide` and `solve`, each entry in `character.contacts` is a plain object you can edit. Set `wasDiscarded`
+to skip a contact, or give it a different `linearVelocity`. The solve, the sweep and the ground check skip discarded
+contacts.
+
+`update` runs the same phases, plus a few more:
+
+- Contact tracking, with `beginContactTracking` and `endContactTracking`.
+- `cancelVelocityTowardsSteepSlopes` before the move.
+- `stickToFloor` and `walkStairs` after it.
+
+A character's queries run in the wasm, so a filter's `bodyFilter` does not apply to them. Set `ignore` in the
+character's policy instead.
 
 ### Contacts
 
 ```ts
-// what the character met in its last update (or refreshContacts, or setShape): each contact added or persisted as it
-// was first touched, and each gone by the end
+// the contacts from the last update, refreshContacts or setShape. each one is added, persisted or removed
 for (const event of character.contactEvents) {
     if (event.kind === kcc.KCCContactEventKind.ADDED) event.bodyId; // footsteps, say
 }
 ```
 
 ```ts
-// its contacts as data, through its inner body, in a contact pairs frame
+// read the character's contacts as data, through its inner body, in a contact pairs frame
 contactPairs.begin(world);
 kcc.refreshContacts(world, character, queryFilter, policy);
 contactPairs.recordCharacterContacts(world, character);
@@ -1126,9 +1159,9 @@ kccPolicy.destroy(policy);
 ### Active bodies
 
 ```ts
-// after a step, the bodies it moved are the active list: read it once, then copy each body's pose into its mesh,
-// number by number, so nothing is allocated a frame. a body the step put to sleep has left the list, so the listener
-// names it and its last pose is read once
+// after a step, the active list holds the bodies it moved. read the list once and copy each pose into its mesh,
+// number by number, so nothing is allocated per frame. a body that fell asleep leaves the list. the listener names it,
+// so its last pose is read once
 const meshes = new Map<BodyId, { position: Vec3; quaternion: Quat }>();
 for (const body of balls) meshes.set(body, { position: [0, 0, 0], quaternion: [0, 0, 0, 1] });
 
@@ -1160,14 +1193,15 @@ function step(): void {
 }
 ```
 
-`onBodyActivated` hears a body join the active list, as `onBodyDeactivated` hears one leave it: both are told after the
-step, in order, whatever changed the list, the step or a call since the last one.
+`onBodyActivated` runs when a body joins the active list. `onBodyDeactivated` runs when one leaves it. Both run after
+the step, in order. They report every change to the list, whether the step made it or a call you made since the last
+step.
 
 ### Debug drawing
 
 ```ts
-// wireframes drawn into buffers kept in the wasm: clear, draw, read. the views are x y z r g b a vertex, two a line,
-// three a triangle, straight onto the wasm's memory: copy them out before the next draw
+// wireframes drawn into buffers in the wasm. clear, draw, then read. each vertex is x y z r g b. a line has two
+// vertices and a triangle three. the views point into wasm memory, so copy them out before the next draw
 const buffers = debugDraw.create();
 let gpuLines = new Float32Array(1 << 16);
 function drawDebug(): number {
@@ -1182,13 +1216,14 @@ function drawDebug(): number {
 }
 ```
 
-`debug.characterContacts` draws a character's contacts, `debug.shape` a shape at a pose, and `debug.line` a line.
+`debug.characterContacts` draws a character's contacts. `debug.shape` draws a shape at a pose. `debug.line` draws a
+line.
 
 ## Determinism
 
 ```ts
-// the same scene, made in the same order and stepped by the same steps, is the same to the last bit: in another
-// world, another run, another machine, or natively in C++
+// the same scene, built in the same order and stepped the same way, gives exactly the same result. this holds in
+// another world, another run, another machine, or natively in C++
 const first = makePile(groundShape, ballShape);
 const second = makePile(groundShape, ballShape);
 for (let i = 0; i < 300; i++) {
@@ -1205,8 +1240,10 @@ const same = first.bodies.every((body, i) => {
 console.log(same ? 'bit for bit the same' : 'they differ');
 ```
 
-The wasm is built as the native library is: no fused multiply-add, no fast math, and its own trigonometry. So the same
-steps give the same bits in the browser, in Node and natively. The tests hold the JS package to the native library's
-hash of a simulated pile. To keep it, create bodies and constraints, and step, in the same order with the same values:
-a number crosses into the wasm as a float32, so a value computed in JS (in 64 bits) may round differently from the same
-sum in C++.
+The wasm and the native library build the same way. Neither uses fused multiply-add or fast math, and both use their
+own trigonometry. So the same steps give exactly the same results in the browser, in Node and natively. The tests check
+that the JS package matches the native library's hash of a simulated pile.
+
+To get the same results, create bodies and constraints and step in the same order, with the same values. A number
+becomes a float32 when it crosses into the wasm. So a value computed in JS, with 64-bit floats, may round differently
+from the same sum computed in C++.
