@@ -24,7 +24,7 @@ tumble is a 3D physics engine in C++, built for games and simulations. It also r
 **Examples**
 
 - [Samples](https://isaac-mason.github.io/tumble/samples/), the C++ samples built for the web
-- [tumble.js examples](https://isaac-mason.github.io/tumble/)
+- [tumble.js examples](https://isaac-mason.github.io/tumble/examples/)
 
 **Documentation**
 

@@ -1,0 +1,20 @@
+{
+    "name": "tumble-website",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "typecheck": "tsc --noEmit -p tsconfig.json"
+    },
+    "dependencies": {
+        "gpucat": "github:isaac-mason/gpucat#4adf918857a8e0a602aca2afbc7fc93a40868d78",
+        "math": "0.1.0",
+        "tumble.js": "file:../js"
+    },
+    "devDependencies": {
+        "@webgpu/types": "0.1.69",
+        "typescript": "5.9.3",
+        "vite": "7.1.10"
+    }
+}

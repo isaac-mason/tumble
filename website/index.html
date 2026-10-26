@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tumble - 3d rigid body physics</title>
+    <meta name="description" content="A 3D rigid body physics engine for C++ and JavaScript, built for games and simulations.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect x=%2225%22 y=%2225%22 width=%2250%22 height=%2250%22 fill=%22%23fff%22 transform=%22rotate(20 50 50)%22/></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./src/index.css" />
+  </head>
+  <body>
+    <div id="root">
+      <div id="loading" class="loading-container">
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-info">
+        <h1 class="nav-title">tumble</h1>
+        <p class="nav-subtitle">3d rigid body physics for c++ and javascript</p>
+      </div>
+      <div class="nav-links">
+        <a href="./examples/">examples</a>
+        <a href="./samples/">samples</a>
+        <a href="https://github.com/isaac-mason/tumble#readme">docs</a>
+        <a href="https://github.com/isaac-mason/tumble" target="_blank" rel="noopener noreferrer">github</a>
+        <a href="https://www.npmjs.com/package/tumble.js">npm</a>
+      </div>
+    </nav>
+
+    <footer class="footer">
+      <button id="debug-toggle">show debug view [d]</button>
+      <div class="footer-links">
+        <a href="https://x.com/isaac_mason_" class="footer-link" target="_blank" rel="noopener noreferrer">x.com/isaac_mason_</a>
+        <a href="https://github.com/sponsors/isaac-mason" class="footer-link" target="_blank" rel="noopener noreferrer">sponsor me!</a>
+      </div>
+    </footer>
+
+    <script type="module" src="./src/index.ts"></script>
+  </body>
+</html>

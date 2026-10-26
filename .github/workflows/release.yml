@@ -109,6 +109,13 @@ jobs:
                   npm ci --no-audit --no-fund
                   npm run build
 
+            # imports the examples' common code, so it builds after their install
+            - name: website
+              working-directory: website
+              run: |
+                  npm ci --no-audit --no-fund
+                  npm run build
+
             - uses: mymindstorm/setup-emsdk@v14
               with:
                   version: 6.0.9
@@ -121,8 +128,9 @@ jobs:
 
             - name: site
               run: |
-                  mkdir -p site/samples
-                  cp -r js/examples/dist/. site/
+                  mkdir -p site/examples site/samples
+                  cp -r website/dist/. site/
+                  cp -r js/examples/dist/. site/examples/
                   cp build/samples/web/samples/tumble_samples.js build/samples/web/samples/tumble_samples.wasm build/samples/web/samples/tumble_samples.data site/samples/
                   cp build/samples/web/samples/tumble_samples.html site/samples/index.html
 

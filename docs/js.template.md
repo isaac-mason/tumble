@@ -25,9 +25,9 @@ WebAssembly, with a TypeScript API.
 
 **Examples**
 
-- [Falling shapes](https://isaac-mason.github.io/tumble/example-falling-shapes.html)
-- [Character](https://isaac-mason.github.io/tumble/example-character.html)
-- [Debug drawing](https://isaac-mason.github.io/tumble/example-debug-drawing.html)
+- [Falling shapes](https://isaac-mason.github.io/tumble/examples/example-falling-shapes.html)
+- [Character](https://isaac-mason.github.io/tumble/examples/example-character.html)
+- [Debug drawing](https://isaac-mason.github.io/tumble/examples/example-debug-drawing.html)
 
 **Documentation**
 
