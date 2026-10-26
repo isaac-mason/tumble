@@ -4,6 +4,9 @@ import {
     type ActiveBody,
     type BodyId,
     createActiveBody,
+    DEBUG_VERTEX_STRIDE,
+    type DebugDraw,
+    debugDraw,
     getActiveBodies,
     getActiveBodyAt,
     init as initTumble,
@@ -280,6 +283,61 @@ export function blendStepPose(stepPoses: StepPoses, slot: number, alpha: number,
     _nowQuaternion[3] = nowQuaternions[q + 3]!;
     vec3.lerp(position, _beforePosition, _nowPosition, alpha);
     quat.slerp(quaternion, _beforeQuaternion, _nowQuaternion, alpha);
+}
+
+/** a frame's lines of one colour */
+type DebugBucket = { points: Float32Array; count: number; geometry: g.LineSegmentsGeometry; lines: g.LineSegments };
+
+/** a debug draw for the library to draw into, shown in the scene as line segments, one set per colour */
+export type DebugLines = { scene: g.Scene; buffers: DebugDraw; buckets: Map<number, DebugBucket> };
+
+export function createDebugLines(scene: g.Scene): DebugLines {
+    return { scene, buffers: debugDraw.create(), buckets: new Map() };
+}
+
+function bucketOf(debugLines: DebugLines, r: number, gr: number, b: number): DebugBucket {
+    const key = (Math.round(r * 255) << 16) | (Math.round(gr * 255) << 8) | Math.round(b * 255);
+    let bucket = debugLines.buckets.get(key);
+    if (bucket === undefined) {
+        const points = new Float32Array(6 * 1024);
+        // it grows as an update needs
+        const geometry = new g.LineSegmentsGeometry(new Float32Array(6), 2048);
+        const lines = new g.LineSegments(geometry, new g.LineMaterial({ color: g.vec4f(r, gr, b, 1) as never, lineWidth: 1.5 }));
+        debugLines.scene.add(lines);
+        bucket = { points, count: 0, geometry, lines };
+        debugLines.buckets.set(key, bucket);
+    }
+    return bucket;
+}
+
+/** what was drawn into the buffers since they were last cleared, into the scene's line segments */
+export function showDebugLines(debugLines: DebugLines): void {
+    // views onto the wasm's memory: read them now, before anything draws again
+    const { lines, lineCount } = debugDraw.read(debugLines.buffers);
+    for (const bucket of debugLines.buckets.values()) bucket.count = 0;
+    for (let i = 0; i < lineCount; i++) {
+        const a = i * 2 * DEBUG_VERTEX_STRIDE;
+        const b = a + DEBUG_VERTEX_STRIDE;
+        const bucket = bucketOf(debugLines, lines[a + 3]!, lines[a + 4]!, lines[a + 5]!);
+        if ((bucket.count + 2) * 3 > bucket.points.length) {
+            const grown = new Float32Array(bucket.points.length * 2);
+            grown.set(bucket.points);
+            bucket.points = grown;
+        }
+        const points = bucket.points;
+        const to = bucket.count * 3;
+        points[to] = lines[a]!;
+        points[to + 1] = lines[a + 1]!;
+        points[to + 2] = lines[a + 2]!;
+        points[to + 3] = lines[b]!;
+        points[to + 4] = lines[b + 1]!;
+        points[to + 5] = lines[b + 2]!;
+        bucket.count += 2;
+    }
+    for (const bucket of debugLines.buckets.values()) {
+        bucket.lines.visible = bucket.count > 0;
+        if (bucket.count > 0) bucket.geometry.update(bucket.points.subarray(0, bucket.count * 3));
+    }
 }
 
 /** a line of help over the canvas */

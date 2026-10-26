@@ -1,4 +1,3 @@
-import * as g from 'gpucat';
 import GUI from 'lil-gui';
 import {
     addBroadphaseLayer,
@@ -7,7 +6,6 @@ import {
     capsule,
     createWorld,
     createWorldSettings,
-    DEBUG_VERTEX_STRIDE,
     debug,
     debugDraw,
     emptyShape,
@@ -19,7 +17,7 @@ import {
     sphere,
     updateWorld,
 } from 'tumble.js';
-import { caption, loop, setup } from './common';
+import { caption, createDebugLines, loop, setup, showDebugLines } from './common';
 
 const view = await setup([14, 10, 18], [0, 3, 0]);
 caption("the library's own debug drawing: lines read from debugDraw each frame into gpucat line segments");
@@ -109,28 +107,10 @@ gui.add(options, 'colorMode', {
     island: debug.BodyColorMode.ISLAND,
 });
 
-/** a frame's lines of one colour */
-type Bucket = { points: Float32Array; count: number; geometry: g.LineSegmentsGeometry; lines: g.LineSegments };
-const buckets = new Map<number, Bucket>();
-
-function bucketOf(r: number, gr: number, b: number): Bucket {
-    const key = (Math.round(r * 255) << 16) | (Math.round(gr * 255) << 8) | Math.round(b * 255);
-    let bucket = buckets.get(key);
-    if (bucket === undefined) {
-        const points = new Float32Array(6 * 1024);
-        // it grows as an update needs
-        const geometry = new g.LineSegmentsGeometry(new Float32Array(6), 2048);
-        const lines = new g.LineSegments(geometry, new g.LineMaterial({ color: g.vec4f(r, gr, b, 1) as never, lineWidth: 1.5 }));
-        view.scene.add(lines);
-        bucket = { points, count: 0, geometry, lines };
-        buckets.set(key, bucket);
-    }
-    return bucket;
-}
-
-const buffers = debugDraw.create();
+const debugLines = createDebugLines(view.scene);
 
 function draw(): void {
+    const buffers = debugLines.buffers;
     debugDraw.clear(buffers);
     if (options.bodies)
         debug.bodies(buffers, world, {
@@ -140,32 +120,7 @@ function draw(): void {
         });
     if (options.contacts) debug.contactConstraints(buffers, world);
     if (options.joints) debug.joints(buffers, world);
-    // views onto the wasm's memory: read them now, before anything draws again
-    const { lines, lineCount } = debugDraw.read(buffers);
-    for (const bucket of buckets.values()) bucket.count = 0;
-    for (let i = 0; i < lineCount; i++) {
-        const a = i * 2 * DEBUG_VERTEX_STRIDE;
-        const b = a + DEBUG_VERTEX_STRIDE;
-        const bucket = bucketOf(lines[a + 3]!, lines[a + 4]!, lines[a + 5]!);
-        if ((bucket.count + 2) * 3 > bucket.points.length) {
-            const grown = new Float32Array(bucket.points.length * 2);
-            grown.set(bucket.points);
-            bucket.points = grown;
-        }
-        const points = bucket.points;
-        const to = bucket.count * 3;
-        points[to] = lines[a]!;
-        points[to + 1] = lines[a + 1]!;
-        points[to + 2] = lines[a + 2]!;
-        points[to + 3] = lines[b]!;
-        points[to + 4] = lines[b + 1]!;
-        points[to + 5] = lines[b + 2]!;
-        bucket.count += 2;
-    }
-    for (const bucket of buckets.values()) {
-        bucket.lines.visible = bucket.count > 0;
-        if (bucket.count > 0) bucket.geometry.update(bucket.points.subarray(0, bucket.count * 3));
-    }
+    showDebugLines(debugLines);
 }
 
 loop(
