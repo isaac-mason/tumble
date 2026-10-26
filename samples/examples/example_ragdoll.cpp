@@ -354,10 +354,10 @@ static void step_world(App &app, float delta_time) {
         const uint32_t first_pair = world.events.pairs.length;
         update::find_pairs(world);
         for (uint32_t i = first_pair; i < world.events.pairs.length; i++) {
-            const PairEvent &pair = world.events.pairs[i];
+            PairEvent &pair = world.events.pairs[i];
             const RigidBody *body_a = rigid_body::get(world, pair.body_id_a);
             const RigidBody *body_b = rigid_body::get(world, pair.body_id_b);
-            if (body_a && body_b && rigid_body::bodies_share_constraint(body_a, body_b)) events::reject_pair(world.answers, i);
+            if (body_a && body_b && rigid_body::bodies_share_constraint(body_a, body_b)) pair.rejected = true;
         }
         update::narrowphase(world);
     } while (world.events.woken > 0);

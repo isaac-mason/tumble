@@ -84,7 +84,7 @@ struct Example {
     void (*ui)(App &app);
     /** what the example made beyond its world and the shapes it kept; may be null */
     void (*shutdown)(App &app);
-    /** the world step itself, run by its phases (update.h) for an example that answers them; null: world::step */
+    /** the world step itself, run by its phases (update.h) for an example that rejects or changes its events; null: world::step */
     void (*step_world)(App &app, float delta_time);
 };
 

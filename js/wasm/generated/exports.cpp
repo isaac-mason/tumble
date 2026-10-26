@@ -44,15 +44,17 @@ WASM_EXPORT uint32_t tumble_events_contacts_persisted(const World * world) { ret
 WASM_EXPORT bool tumble_events_read_contact_persisted(adapters::ContactEvent * out, const World * world, uint32_t index) { return adapters::events::read_contact_persisted(*out, world, index); }
 WASM_EXPORT uint32_t tumble_events_contacts_removed(const World * world) { return adapters::events::contacts_removed(world); }
 WASM_EXPORT bool tumble_events_read_contact_removed(adapters::ContactRemovedEvent * out, const World * world, uint32_t index) { return adapters::events::read_contact_removed(*out, world, index); }
+WASM_EXPORT bool tumble_events_reject_pair(World * world, uint32_t index) { return adapters::events::reject_pair(world, index); }
+WASM_EXPORT bool tumble_events_reject_contact_added(World * world, uint32_t index) { return adapters::events::reject_contact_added(world, index); }
+WASM_EXPORT bool tumble_events_reject_contact_persisted(World * world, uint32_t index) { return adapters::events::reject_contact_persisted(world, index); }
+WASM_EXPORT bool tumble_events_change_contact_added(World * world, uint32_t index, const ContactSettings * settings) { return adapters::events::change_contact_added(world, index, *settings); }
+WASM_EXPORT bool tumble_events_change_contact_persisted(World * world, uint32_t index, const ContactSettings * settings) { return adapters::events::change_contact_persisted(world, index, *settings); }
 WASM_EXPORT uint32_t tumble_activation_events(const World * world) { return adapters::activation::events(world); }
 WASM_EXPORT bool tumble_activation_read_event(adapters::ActivationEvent * out, const World * world, uint32_t index) { return adapters::activation::read_event(*out, world, index); }
 WASM_EXPORT void tumble_activation_clear(World * world) { adapters::activation::clear(world); }
 WASM_EXPORT uint32_t tumble_active_bodies_count(const World * world) { return adapters::active_bodies::count(world); }
 WASM_EXPORT uint32_t tumble_active_bodies_read(World * world) { return adapters::active_bodies::read(world); }
 WASM_EXPORT const uint32_t * tumble_active_bodies_rows(const World * world) { return adapters::active_bodies::rows(world); }
-WASM_EXPORT bool tumble_answers_reject_pair(World * world, uint32_t index) { return adapters::answers::reject_pair(world, index); }
-WASM_EXPORT bool tumble_answers_override_contact(World * world, uint32_t index, const ContactSettings * settings) { return adapters::answers::override_contact(world, index, *settings); }
-WASM_EXPORT bool tumble_answers_reject_contact(World * world, uint32_t index) { return adapters::answers::reject_contact(world, index); }
 WASM_EXPORT void tumble_rigid_body_default_settings(adapters::BodySettings * out) { adapters::rigid_body::default_settings(*out); }
 WASM_EXPORT uint32_t tumble_rigid_body_create(World * world, const adapters::BodySettings * settings) { return adapters::rigid_body::create(world, *settings); }
 WASM_EXPORT bool tumble_rigid_body_remove(World * world, uint32_t body) { return adapters::rigid_body::remove(world, body); }

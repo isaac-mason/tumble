@@ -14,7 +14,7 @@ tumble is a 3D physics engine in C++, built for games and simulations. It comes 
 - constraints with motors and springs: hinge, slider, distance, point, fixed, cone, swing-twist and six-dof
 - a character controller that walks up slopes and stairs, slides along walls and rides moving bodies
 - ray, point, overlap, sweep and bounds queries, with collision filtering
-- a step you can run phase by phase, reading and answering its contacts in between
+- a step you can run phase by phase, reading, rejecting and changing its contacts in between
 - contact pairs that track only the contacts you care about
 - deterministic: the same steps give the same results natively and in WebAssembly, with or without SIMD
 - C++20 with no dependencies: no standard library, no exceptions and no RTTI
@@ -42,7 +42,7 @@ This README is the guide. Every code block comes from a program in `docs/cpp/`, 
   - [Layers](#layers)
   - [Settings](#settings)
   - [Stepping](#stepping)
-  - [Events and answers](#events-and-answers)
+  - [Events](#events)
   - [Active bodies](#active-bodies)
 - [Rigid bodies](#rigid-bodies)
   - [Creating and removing](#creating-and-removing)
@@ -207,7 +207,7 @@ The rest of this guide leaves out the includes, `using namespace tumble;` and th
 These headers are tumble's API. The rest are internals. They can change without notice, and you never need them:
 
 - **The world:** `world.h`, `world_settings.h`, `layers.h`, `filter.h`, `update.h`, `events.h`, `contact_pairs.h` and
-  `debug.h`. `update.h` has the phases of a step, which you can answer between.
+  `debug.h`. `update.h` has the phases of a step, which you can run yourself.
 - **Bodies:** `body/rigid_body.h`, `body/body_id.h`, `body/motion_type.h`, `body/dof.h`, `body/mass_properties.h` and
   `body/sub_shape.h`. You can read a body's fields. Change them only through `rigid_body` functions, which keep the
   broadphase, the pairs and the sleep state up to date.
@@ -354,39 +354,44 @@ for (float frame_time : frame_times) {
 A resting body can sink into the body below by up to `settings.solver.penetration_slop`, which is 2 cm. This keeps
 stacks from jittering.
 
-### Events and answers
+### Events
 
 There are no callbacks. A step runs in phases. Between two phases, you read what the last phase found in
-`world.events`, and write your answers to `world.answers`. The next phase reads them. `world::step` runs all the phases
-and answers nothing. To answer, run the phases yourself:
+`world.events`. You can reject or change an event on the event itself, and the next phase reads that. `world::step`
+runs all the phases and changes nothing. To reject or change events, run the phases yourself:
 
 ```cpp
-// world::step runs these phases and answers nothing. between phases, the world's events say what a phase found, and
-// its answers say what to do about it. here pairs with a body whose user data is 7 are rejected, so that body passes
-// through everything. no contact bounces
-void step_with_answers(World &world, float delta_time) {
+// world::step runs these phases and changes nothing. between phases, the world's events say what a phase found, and you
+// can reject or change them. here pairs with a body whose user data is 7 are rejected, so that body passes through
+// everything. no contact bounces
+void step_with_changes(World &world, float delta_time) {
     update::step_begin(world, delta_time);
     do {
         update::find_pairs(world);
         for (uint32_t i = 0; i < world.events.pairs.length; i++) {
-            const PairEvent &pair = world.events.pairs[i];
-            if (pair.user_data_a == 7 || pair.user_data_b == 7) events::reject_pair(world.answers, i);
+            PairEvent &pair = world.events.pairs[i];
+            if (pair.user_data_a == 7 || pair.user_data_b == 7) pair.rejected = true;
         }
         update::narrowphase(world);
     } while (world.events.woken > 0);
-    // after the last narrowphase, write one answer per contacts_added entry, then one per contacts_persisted entry
-    for (uint32_t i = 0; i < world.answers.contact_override.length; i++) {
-        events::override_contact(world.answers, world.events, i).settings.combined_restitution = 0.0f;
+    // after the last narrowphase, change the contacts it added or kept
+    for (uint32_t i = 0; i < world.events.contacts_added.length; i++) {
+        events::change_contact(world.events.contacts_added[i]).combined_restitution = 0.0f;
+    }
+    for (uint32_t i = 0; i < world.events.contacts_persisted.length; i++) {
+        events::change_contact(world.events.contacts_persisted[i]).combined_restitution = 0.0f;
     }
     update::solve(world);
     update::step_end(world);
 }
 ```
 
-- After `find_pairs`, `events.pairs` holds the pairs of bodies whose bounds overlap. `events::reject_pair` drops a pair
+- After `find_pairs`, `events.pairs` holds the pairs of bodies whose bounds overlap. Set a pair's `rejected` to drop it
   before the narrowphase.
 - After `narrowphase`, `events.contacts_added` and `events.contacts_persisted` hold its contacts, each with its manifold
-  and combined material. `events::override_contact` changes how a contact is solved, or rejects it.
+  and combined material. Set a contact's `rejected` to drop it before the solve. `events::change_contact` returns its
+  settings to change how it is solved.
+- A rejected contact is not recorded in contact pairs.
 - After `narrowphase`, `events.woken` counts the bodies its contacts woke. While it is above zero, find their pairs and
   run the narrowphase again.
 

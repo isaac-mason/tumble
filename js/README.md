@@ -624,12 +624,12 @@ destroyWorld(world);
 
 ## Events
 
-A listener receives a step's events and answers them during the step. The wasm never calls into JS. Instead,
-`updateWorld` runs the step in phases and calls your hooks between them. A step with no hooks is a single call into the
-wasm.
+A listener receives a step's events during the step, and can reject or change them. The wasm never calls into JS.
+Instead, `updateWorld` runs the step in phases and calls your hooks between them. A step with no hooks is a single call
+into the wasm.
 
 ```ts
-// the listener hears the step's events and answers them while it runs
+// the listener hears the step's events, and can reject or change them, while it runs
 const listener: Listener = {
     // called for two bodies whose bounds overlap, before the narrowphase. return false and they do not collide this step.
     // this is the cheapest place to filter a pair. here a player's parts pass through each other

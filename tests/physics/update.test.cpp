@@ -54,20 +54,19 @@ Shape *make_mesh(const float *positions, uint32_t num_positions, const uint32_t 
 void step_rejecting_pairs(World &world) {
     update::step_begin(world, WORLD_TEST_DELTA_TIME);
     update::find_pairs(world);
-    for (uint32_t i = 0; i < world.answers.pair_reject.length; i++) world.answers.pair_reject[i] = ~0u;
+    for (uint32_t i = 0; i < world.events.pairs.length; i++) world.events.pairs[i].rejected = true;
     update::narrowphase(world);
     update::solve(world);
     update::step_end(world);
 }
 
-/** the step with the caller answering every contact with `answer` between the narrowphase and the solve */
-void step_answering_contacts(World &world, void (*answer)(ContactOverride &out, const ContactEvent &event)) {
+/** the step with the caller passing every contact to `change` between the narrowphase and the solve */
+void step_changing_contacts(World &world, void (*change)(ContactEvent &contact)) {
     update::step_begin(world, WORLD_TEST_DELTA_TIME);
     update::find_pairs(world);
     update::narrowphase(world);
-    for (uint32_t i = 0; i < world.answers.contact_override.length; i++) {
-        answer(world.answers.contact_override[i], events::contact_event(world.events, i));
-    }
+    for (uint32_t i = 0; i < world.events.contacts_added.length; i++) change(world.events.contacts_added[i]);
+    for (uint32_t i = 0; i < world.events.contacts_persisted.length; i++) change(world.events.contacts_persisted[i]);
     update::solve(world);
     update::step_end(world);
 }
@@ -567,7 +566,7 @@ void test_update_box_on_tessellated_mesh_prunes_to_quad(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-// the answers the caller writes between the phases
+// the caller's rejections and changes between the phases
 
 namespace {
 
@@ -588,12 +587,11 @@ void check_rejected_pair_never_contacts(TestCtx &ctx, WorldScene &scene) {
     update::step_begin(*scene.world, WORLD_TEST_DELTA_TIME);
     update::find_pairs(*scene.world);
     CHECK(ctx, scene.world->events.pairs.length == 1);
-    CHECK(ctx, scene.world->answers.pair_reject.length == 1 && scene.world->answers.pair_reject[0] == 0);
-    events::reject_pair(scene.world->answers, 0);
+    CHECK(ctx, !scene.world->events.pairs[0].rejected);
+    scene.world->events.pairs[0].rejected = true;
     update::narrowphase(*scene.world);
     CHECK(ctx, scene.world->events.contacts_added.length == 0);
     CHECK(ctx, scene.world->contact_constraints.count == 0);
-    CHECK(ctx, scene.world->answers.contact_override.length == 0);
     update::solve(*scene.world);
     update::step_end(*scene.world);
 
@@ -644,23 +642,16 @@ void test_update_pair_reject_drops_existing_contacts(TestCtx &ctx) {
 
 namespace {
 
-void reject_contact(ContactOverride &out, const ContactEvent &) {
-    out.written = true;
-    out.reject = true;
-}
-
-void conveyor_contact(ContactOverride &out, const ContactEvent &event) {
-    out.written = true;
-    out.reject = false;
-    out.settings = event.settings;
-    out.settings.combined_friction = 1.0f;
+void conveyor_contact(ContactEvent &contact) {
+    ContactSettings &settings = events::change_contact(contact);
+    settings.combined_friction = 1.0f;
     // body 2's surface relative to body 1's: the floor (made first, so body a) moving +x at 2 m/s gives -2
-    out.settings.relative_linear_surface_velocity = {-2.0f, 0.0f, 0.0f};
+    settings.relative_linear_surface_velocity = {-2.0f, 0.0f, 0.0f};
 }
 
 }  // namespace
 
-void test_update_contact_override_reject_falls_through_floor(TestCtx &ctx) {
+void test_update_contact_reject_falls_through_floor(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     add_floor(scene);
     RigidBody *box_body = add_unit_box(scene, {0.0f, 0.5f, 0.0f});
@@ -671,9 +662,9 @@ void test_update_contact_override_reject_falls_through_floor(TestCtx &ctx) {
     CHECK_NEAR(ctx, box_body->position.y, 0.5f, 0.01f);
 
     for (uint32_t i = 0; i < 60; i++) {
-        step_answering_contacts(*scene.world, [](ContactOverride &out, const ContactEvent &event) {
+        step_changing_contacts(*scene.world, [](ContactEvent &contact) {
             // only the first box's contacts (body index 1; the floor is 0, the control 2)
-            if (event.body_index_a == 1 || event.body_index_b == 1) reject_contact(out, event);
+            if (contact.body_index_a == 1 || contact.body_index_b == 1) contact.rejected = true;
         });
     }
     // fell freely through the floor, while the control box still rests on it
@@ -682,7 +673,7 @@ void test_update_contact_override_reject_falls_through_floor(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-void test_update_contact_override_conveyor_moves_resting_box(TestCtx &ctx) {
+void test_update_contact_change_conveyor_moves_resting_box(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     add_floor(scene);
     RigidBody *box_body = add_unit_box(scene, {0.0f, 0.5f, 0.0f});
@@ -691,7 +682,7 @@ void test_update_contact_override_conveyor_moves_resting_box(TestCtx &ctx) {
     for (uint32_t i = 0; i < 10; i++) step_world(*scene.world);
     CHECK(ctx, scalar::abs(box_body->motion_properties.linear_velocity.x) < 1e-3f);
 
-    for (uint32_t i = 0; i < 60; i++) step_answering_contacts(*scene.world, conveyor_contact);
+    for (uint32_t i = 0; i < 60; i++) step_changing_contacts(*scene.world, conveyor_contact);
     // carried along with the belt's surface, still resting on it
     CHECK_NEAR(ctx, box_body->motion_properties.linear_velocity.x, 2.0f, 0.02f);
     CHECK(ctx, box_body->position.x > 1.0f);
@@ -700,7 +691,7 @@ void test_update_contact_override_conveyor_moves_resting_box(TestCtx &ctx) {
     release_world_scene(scene);
 }
 
-void test_update_answers_sized_per_phase_and_cleared_at_begin(TestCtx &ctx) {
+void test_update_events_start_unrejected_and_cleared_at_begin(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     add_floor(scene);
     add_unit_box(scene, {0.0f, 0.5f, 0.0f});
@@ -710,14 +701,14 @@ void test_update_answers_sized_per_phase_and_cleared_at_begin(TestCtx &ctx) {
     World &world = *scene.world;
     update::step_begin(world, WORLD_TEST_DELTA_TIME);
     CHECK(ctx, world.events.pairs.length == 0 && world.events.contacts_added.length == 0 && world.events.contacts_persisted.length == 0);
-    CHECK(ctx, world.answers.pair_reject.length == 0 && world.answers.contact_override.length == 0);
     update::find_pairs(world);
     CHECK(ctx, world.events.pairs.length == 2);
-    CHECK(ctx, world.answers.pair_reject.length == 1 && world.answers.pair_reject[0] == 0);
+    CHECK(ctx, !world.events.pairs[0].rejected && !world.events.pairs[1].rejected);
     update::narrowphase(world);
     CHECK(ctx, world.events.contacts_persisted.length == 2);
-    CHECK(ctx, world.answers.contact_override.length == 2);
-    CHECK(ctx, !world.answers.contact_override[0].written && !world.answers.contact_override[1].written);
+    for (uint32_t i = 0; i < world.events.contacts_persisted.length; i++) {
+        CHECK(ctx, !world.events.contacts_persisted[i].rejected && !world.events.contacts_persisted[i].settings_changed);
+    }
     // each event names the step's bodies, lower id first
     for (uint32_t i = 0; i < world.events.contacts_persisted.length; i++) {
         const ContactEvent &event = world.events.contacts_persisted[i];
@@ -876,7 +867,12 @@ uint32_t step_world_counting_rounds(TestCtx &ctx, World &world) {
             CHECK(ctx, contact_i != contact_j);
         }
     }
-    CHECK(ctx, world.answers.contact_override.length == total && world.answers.pair_reject.length == (world.events.pairs.length + 31) / 32);
+    // the events every round appended start with nothing rejected or changed
+    for (uint32_t i = 0; i < world.events.pairs.length; i++) CHECK(ctx, !world.events.pairs[i].rejected);
+    for (uint32_t i = 0; i < total; i++) {
+        const ContactEvent &event = i < added ? world.events.contacts_added[i] : world.events.contacts_persisted[i - added];
+        CHECK(ctx, !event.rejected && !event.settings_changed);
+    }
 
     update::solve(world);
     update::step_end(world);

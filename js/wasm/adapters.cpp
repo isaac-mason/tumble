@@ -170,6 +170,34 @@ bool read_contact_removed(ContactRemovedEvent &out, const tumble::World *world, 
     return true;
 }
 
+bool reject_pair(tumble::World *world, uint32_t index) {
+    if (index >= world->events.pairs.length) return false;
+    world->events.pairs[index].rejected = true;
+    return true;
+}
+
+static bool reject_contact(collections::Array<tumble::ContactEvent> &contacts, uint32_t index) {
+    if (index >= contacts.length) return false;
+    contacts[index].rejected = true;
+    return true;
+}
+
+bool reject_contact_added(tumble::World *world, uint32_t index) { return reject_contact(world->events.contacts_added, index); }
+bool reject_contact_persisted(tumble::World *world, uint32_t index) { return reject_contact(world->events.contacts_persisted, index); }
+
+static bool change_contact(collections::Array<tumble::ContactEvent> &contacts, uint32_t index, const ContactSettings &settings) {
+    if (index >= contacts.length) return false;
+    tumble::events::change_contact(contacts[index]) = settings;
+    return true;
+}
+
+bool change_contact_added(tumble::World *world, uint32_t index, const ContactSettings &settings) {
+    return change_contact(world->events.contacts_added, index, settings);
+}
+bool change_contact_persisted(tumble::World *world, uint32_t index, const ContactSettings &settings) {
+    return change_contact(world->events.contacts_persisted, index, settings);
+}
+
 }  // namespace events
 
 namespace activation {
@@ -228,28 +256,6 @@ uint32_t read(tumble::World *world) {
 const uint32_t *rows(const tumble::World *world) { return reinterpret_cast<const uint32_t *>(state_of(world)->rows.data); }
 
 }  // namespace active_bodies
-
-namespace answers {
-
-bool reject_pair(tumble::World *world, uint32_t index) {
-    if (index >= world->events.pairs.length) return false;
-    tumble::events::reject_pair(world->answers, index);
-    return true;
-}
-
-bool override_contact(tumble::World *world, uint32_t index, const ContactSettings &settings) {
-    if (index >= world->answers.contact_override.length) return false;
-    tumble::events::override_contact(world->answers, world->events, index).settings = settings;
-    return true;
-}
-
-bool reject_contact(tumble::World *world, uint32_t index) {
-    if (index >= world->answers.contact_override.length) return false;
-    tumble::events::override_contact(world->answers, world->events, index).reject = true;
-    return true;
-}
-
-}  // namespace answers
 
 namespace rigid_body {
 

@@ -87,7 +87,7 @@ const contactEvent: ContactEvent = {
     ],
 };
 const removedEvent: ContactRemovedEvent = { bodyA: 0, bodyB: 0, subShapeA: 0, subShapeB: 0 };
-/** the settings a hook changes, and what they were, to answer only a change */
+/** the settings a hook changes, and what they were, so only a real change goes to the step */
 const settings = Low.ContactSettings.create();
 const settingsBefore = Low.ContactSettings.create();
 
@@ -154,8 +154,13 @@ function fail(error: unknown): void {
     failure = error;
 }
 
-/** contact `index` (the added, then the persisted) through a settings hook, answered when it changed them */
-function answerSettings(world: World, index: number, hook: (contact: ContactEvent, settings: ContactSettings) => void): void {
+/** the contact just read through a settings hook, changed in the step when the hook changed them */
+function changeSettings(
+    world: World,
+    persisted: boolean,
+    index: number,
+    hook: (contact: ContactEvent, settings: ContactSettings) => void,
+): void {
     copySettings(settings, contact.settings);
     copySettings(settingsBefore, contact.settings);
     try {
@@ -164,12 +169,15 @@ function answerSettings(world: World, index: number, hook: (contact: ContactEven
         fail(error);
         return;
     }
-    if (!sameSettings(settings, settingsBefore)) Low.Answers.overrideContact(world, index, settings);
+    if (sameSettings(settings, settingsBefore)) return;
+    if (persisted) Low.Events.changeContactPersisted(world, index, settings);
+    else Low.Events.changeContactAdded(world, index, settings);
 }
 
-/** the contact just read, contact `index` (the added, then the persisted), through the validate hook and a settings hook */
-function answerContact(
+/** the contact just read, at `index` of the added or the persisted, through the validate hook and a settings hook */
+function handleContact(
     world: World,
+    persisted: boolean,
     index: number,
     validate: Listener['onContactValidate'],
     hook: ((contact: ContactEvent, settings: ContactSettings) => void) | undefined,
@@ -183,11 +191,12 @@ function answerContact(
             fail(error);
         }
         if (!keep) {
-            Low.Answers.rejectContact(world, index);
+            if (persisted) Low.Events.rejectContactPersisted(world, index);
+            else Low.Events.rejectContactAdded(world, index);
             return;
         }
     }
-    if (hook !== undefined && !failed) answerSettings(world, index, hook);
+    if (hook !== undefined && !failed) changeSettings(world, persisted, index, hook);
 }
 
 /** a step, its hooks run between its phases */
@@ -217,7 +226,7 @@ export function stepWith(world: World, listener: Listener | undefined, deltaTime
                     } catch (error) {
                         fail(error);
                     }
-                    if (!collide) Low.Answers.rejectPair(world, pairsRead);
+                    if (!collide) Low.Events.rejectPair(world, pairsRead);
                 }
             }
             Low.World.narrowphase(world);
@@ -227,14 +236,14 @@ export function stepWith(world: World, listener: Listener | undefined, deltaTime
         if (onContactValidate !== undefined || onContactAdded !== undefined) {
             for (let i = 0; i < added && !failed; i++) {
                 Low.Events.readContactAdded(contact, world, i);
-                answerContact(world, i, onContactValidate, onContactAdded);
+                handleContact(world, false, i, onContactValidate, onContactAdded);
             }
         }
         if (onContactValidate !== undefined || onContactPersisted !== undefined) {
             const persisted = Low.Events.contactsPersisted(world);
             for (let i = 0; i < persisted && !failed; i++) {
                 Low.Events.readContactPersisted(contact, world, i);
-                answerContact(world, added + i, onContactValidate, onContactPersisted);
+                handleContact(world, true, i, onContactValidate, onContactPersisted);
             }
         }
         Low.World.solve(world);

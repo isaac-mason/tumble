@@ -122,6 +122,8 @@ static ContactPair::Side side_of(const RigidBody &body, SubShapeId sub_shape_id)
 }
 
 static void record_world_contact(World &world, const ContactEvent &event) {
+    // the caller rejected it, so nothing touched
+    if (event.rejected) return;
     const RigidBody &body_a = *world.bodies.pool[event.body_index_a];
     const RigidBody &body_b = *world.bodies.pool[event.body_index_b];
     if (!body_a.observes_contacts && !body_b.observes_contacts) return;

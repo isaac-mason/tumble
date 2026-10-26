@@ -232,9 +232,9 @@ Use meshes for static bodies. A mesh is hollow. It has no volume, no inside and 
 
 ## Events
 
-A listener receives a step's events and answers them during the step. The wasm never calls into JS. Instead,
-`updateWorld` runs the step in phases and calls your hooks between them. A step with no hooks is a single call into the
-wasm.
+A listener receives a step's events during the step, and can reject or change them. The wasm never calls into JS.
+Instead, `updateWorld` runs the step in phases and calls your hooks between them. A step with no hooks is a single call
+into the wasm.
 
 <Snippet source="../js/docs/events.ts" select="listener" />
 

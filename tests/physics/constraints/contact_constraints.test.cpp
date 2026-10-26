@@ -57,18 +57,16 @@ BoxOnGround make_box_on_ground(ContactScene &scene) {
     return out;
 }
 
-ContactSettings default_override() {
+ContactSettings default_contact_settings() {
     ContactSettings settings = ContactSettings();
     return settings;
 }
 
-/** answers sized to the events, the first contact event answered with `settings` */
-void answer_first(ContactScene &scene, const ContactSettings &settings, bool reject = false) {
-    events::reset_contact_answers(scene.world->answers, scene.world->events, 0);
-    ContactOverride &answer = scene.world->answers.contact_override[0];
-    answer.written = true;
-    answer.reject = reject;
-    answer.settings = settings;
+/** the first contact event, added or else persisted, changed to `settings` */
+void change_first(ContactScene &scene, const ContactSettings &settings) {
+    WorldEvents &events = scene.world->events;
+    ContactEvent &first = events.contacts_added.length > 0 ? events.contacts_added[0] : events.contacts_persisted[0];
+    events::change_contact(first) = settings;
 }
 
 /** 64 bit fnv-1a over the little endian bytes of six u32 words, a byte at a time */
@@ -83,9 +81,9 @@ uint64_t fnv1a_64(const uint32_t (&words)[4]) {
     return hash;
 }
 
-void apply_answers(ContactScene &scene) {
-    contact_constraints::apply_contact_overrides(scene.world->contact_constraints, scene.world->contacts, scene.world->bodies, scene.world->events, scene.world->answers,
-                                                 scene.world->settings, CONTACT_SCENE_DELTA_TIME);
+void apply_changes(ContactScene &scene) {
+    contact_constraints::apply_contact_event_changes(scene.world->contact_constraints, scene.world->contacts, scene.world->bodies,
+                                                     scene.world->events, scene.world->settings, CONTACT_SCENE_DELTA_TIME);
 }
 
 }  // namespace
@@ -460,7 +458,7 @@ void test_contact_constraints_from_cache_keeps_the_materials(TestCtx &ctx) {
     release_contact_scene(scene);
 }
 
-void test_contact_constraints_override_conveyor(TestCtx &ctx) {
+void test_contact_constraints_change_conveyor(TestCtx &ctx) {
     ContactScene scene = make_contact_scene();
     RigidBody *belt = add_ground(scene);
     RigidBody *ball = add_ball(scene);
@@ -472,11 +470,11 @@ void test_contact_constraints_override_conveyor(TestCtx &ctx) {
     CHECK(ctx, add_contact(scene, belt, ball, ball_manifold()));
     CHECK(ctx, !contact_constraint_part::is_active(scene.world->contact_constraints.pool[0].friction_constraint_1));
 
-    ContactSettings settings = default_override();
+    ContactSettings settings = default_contact_settings();
     settings.combined_friction = 1.0f;
     settings.relative_linear_surface_velocity = {-2.0f, 0.0f, 0.0f};
-    answer_first(scene, settings);
-    apply_answers(scene);
+    change_first(scene, settings);
+    apply_changes(scene);
     CHECK(ctx, scene.world->contact_constraints.count == 1);
     CHECK_NEAR(ctx, scene.world->contact_constraints.pool[0].friction, 1.0f, 0.0f);
     CHECK(ctx, contact_constraint_part::is_active(scene.world->contact_constraints.pool[0].friction_constraint_1));
@@ -492,7 +490,7 @@ void test_contact_constraints_override_conveyor(TestCtx &ctx) {
     release_contact_scene(scene);
 }
 
-void test_contact_constraints_override_restitution_and_mass_scale(TestCtx &ctx) {
+void test_contact_constraints_change_restitution_and_mass_scale(TestCtx &ctx) {
     ContactScene scene = make_contact_scene();
     RigidBody *ground = add_ground(scene);
     RigidBody *ball = add_ball(scene);
@@ -501,10 +499,10 @@ void test_contact_constraints_override_restitution_and_mass_scale(TestCtx &ctx) 
     begin_contact_step(scene);
     ball->motion_properties.linear_velocity = {0.0f, -5.0f, 0.0f};
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
-    ContactSettings settings = default_override();
+    ContactSettings settings = default_contact_settings();
     settings.combined_restitution = 0.5f;
-    answer_first(scene, settings);
-    apply_answers(scene);
+    change_first(scene, settings);
+    apply_changes(scene);
     solve_contact_velocities(scene, 10);
     CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.y, 0.5f * (5.0f - 9.81f * CONTACT_SCENE_DELTA_TIME), 1e-4f);
 
@@ -512,10 +510,10 @@ void test_contact_constraints_override_restitution_and_mass_scale(TestCtx &ctx) 
     begin_contact_step(scene);
     ball->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
-    settings = default_override();
+    settings = default_contact_settings();
     settings.inv_mass_scale_2 = 0.5f;
-    answer_first(scene, settings);
-    apply_answers(scene);
+    change_first(scene, settings);
+    apply_changes(scene);
     CHECK_NEAR(ctx, scene.world->contact_constraints.pool[0].inv_mass_b, 0.5f * ball->motion_properties.inv_mass, 1e-12f);
     solve_contact_velocities(scene, 10);
     CHECK_NEAR(ctx, scene.world->contact_constraints.pool[0].contact_points[0].normal_constraint.total_lambda, 2.0f * ball_mass(ball), 0.05f);
@@ -523,16 +521,16 @@ void test_contact_constraints_override_restitution_and_mass_scale(TestCtx &ctx) 
     // an inverse mass scale of 0 on the only dynamic body leaves no constraint
     begin_contact_step(scene);
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
-    settings = default_override();
+    settings = default_contact_settings();
     settings.inv_mass_scale_2 = 0.0f;
-    answer_first(scene, settings);
-    apply_answers(scene);
+    change_first(scene, settings);
+    apply_changes(scene);
     CHECK(ctx, scene.world->contact_constraints.count == 0);
 
     release_contact_scene(scene);
 }
 
-void test_contact_constraints_override_reject_drops_and_zeroes_the_cache(TestCtx &ctx) {
+void test_contact_constraints_reject_drops_and_zeroes_the_cache(TestCtx &ctx) {
     ContactScene scene = make_contact_scene();
     RigidBody *ground = add_ground(scene);
     RigidBody *ball = add_ball(scene);
@@ -558,13 +556,9 @@ void test_contact_constraints_override_reject_drops_and_zeroes_the_cache(TestCtx
     const int32_t kept_contact = scene.world->contact_constraints.pool[1].contact_index;
     CHECK(ctx, scene.world->contact_constraints.pool[0].contact_points[0].normal_constraint.total_lambda > 0.0f);
 
-    // answers: contacts_added first (the other ball, untouched), then contacts_persisted (the ball, rejected)
-    events::reset_contact_answers(scene.world->answers, scene.world->events, 0);
-    ContactOverride &answer = scene.world->answers.contact_override[1];
-    answer.written = true;
-    answer.reject = true;
-    answer.settings = default_override();
-    apply_answers(scene);
+    // the other ball's contact was added, untouched. the ball's persisted, rejected
+    scene.world->events.contacts_persisted[0].rejected = true;
+    apply_changes(scene);
 
     CHECK(ctx, scene.world->contact_constraints.count == 1);
     CHECK(ctx, scene.world->contact_constraints.pool[0].contact_index == kept_contact);
@@ -577,13 +571,13 @@ void test_contact_constraints_override_reject_drops_and_zeroes_the_cache(TestCtx
     CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.y, -1.0f, 0.0f);
     CHECK_NEAR(ctx, other->motion_properties.linear_velocity.y, 0.0f, 1e-5f);
 
-    // a sensor answer drops the constraint likewise
+    // changed to a sensor, it drops the constraint likewise
     begin_contact_step(scene);
     CHECK(ctx, add_contact(scene, ground, other, other_manifold));
-    ContactSettings sensor = default_override();
+    ContactSettings sensor = default_contact_settings();
     sensor.is_sensor = true;
-    answer_first(scene, sensor);
-    apply_answers(scene);
+    change_first(scene, sensor);
+    apply_changes(scene);
     CHECK(ctx, scene.world->contact_constraints.count == 0);
 
     release_contact_scene(scene);
@@ -642,13 +636,13 @@ void test_contact_constraints_dynamic_body_without_mass_makes_a_constraint(TestC
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
     CHECK(ctx, scene.world->contact_constraints.count == 1);
 
-    // and an answer that scales the dynamic body's inverse mass to 0 drops it
-    answer_first(scene, [] {
-        ContactSettings settings = default_override();
+    // and a change that scales the dynamic body's inverse mass to 0 drops it
+    change_first(scene, [] {
+        ContactSettings settings = default_contact_settings();
         settings.inv_mass_scale_2 = 0.0f;
         return settings;
     }());
-    apply_answers(scene);
+    apply_changes(scene);
     CHECK(ctx, scene.world->contact_constraints.count == 0);
 
     release_contact_scene(scene);

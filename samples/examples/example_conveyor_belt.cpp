@@ -87,6 +87,16 @@ static void move_surfaces(ContactSettings &settings, const RigidBody *a, const R
     }
 }
 
+/** a contact with a belt on either side, given the belt's surface velocity */
+static void move_belt_contact(World &world, ContactEvent &contact) {
+    const Belt *belt_a = belt_of(contact.body_id_a);
+    const Belt *belt_b = belt_of(contact.body_id_b);
+    if (belt_a == nullptr && belt_b == nullptr) return;
+    const RigidBody *a = rigid_body::get(world, contact.body_id_a);
+    const RigidBody *b = rigid_body::get(world, contact.body_id_b);
+    move_surfaces(events::change_contact(contact), a, b, belt_a, belt_b);
+}
+
 /** the step's phases, the belts' contacts given their surface velocities between the narrowphase and the solve */
 static void step_world(App &app, float delta_time) {
     World &world = *app.world;
@@ -95,15 +105,8 @@ static void step_world(App &app, float delta_time) {
         update::find_pairs(world);
         update::narrowphase(world);
     } while (world.events.woken > 0);
-    for (uint32_t i = 0; i < world.answers.contact_override.length; i++) {
-        const ContactEvent &contact = events::contact_event(world.events, i);
-        const Belt *belt_a = belt_of(contact.body_id_a);
-        const Belt *belt_b = belt_of(contact.body_id_b);
-        if (belt_a == nullptr && belt_b == nullptr) continue;
-        const RigidBody *a = rigid_body::get(world, contact.body_id_a);
-        const RigidBody *b = rigid_body::get(world, contact.body_id_b);
-        move_surfaces(events::override_contact(world.answers, world.events, i).settings, a, b, belt_a, belt_b);
-    }
+    for (uint32_t i = 0; i < world.events.contacts_added.length; i++) move_belt_contact(world, world.events.contacts_added[i]);
+    for (uint32_t i = 0; i < world.events.contacts_persisted.length; i++) move_belt_contact(world, world.events.contacts_persisted[i]);
     update::solve(world);
     update::step_end(world);
 }

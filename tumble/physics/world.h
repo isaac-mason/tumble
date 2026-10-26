@@ -35,7 +35,6 @@ struct World {
     Islands islands;
     CCD ccd;
     WorldEvents events;
-    WorldAnswers answers;
     /** the step in flight, set by update::step_begin */
     float delta_time;
     /** the step before's, for the warm start ratio */
@@ -56,8 +55,8 @@ void destroy(World *world);
 void set_materials(World &world, const WorldMaterial *materials, uint32_t count);
 
 /**
- * one step answering nothing: update.h's phases in order, finding pairs again while the narrowphase wakes bodies.
- * a caller that rejects pairs or overrides contacts runs the phases itself
+ * one step that rejects and changes nothing: update.h's phases in order, finding pairs again while the narrowphase wakes
+ * bodies. a caller that rejects pairs or changes contacts runs the phases itself
  */
 void step(World &world, float delta_time);
 

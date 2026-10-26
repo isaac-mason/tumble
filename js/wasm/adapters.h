@@ -196,19 +196,18 @@ bool read_contact_persisted(ContactEvent &out, const tumble::World *world, uint3
 uint32_t contacts_removed(const tumble::World *world);
 bool read_contact_removed(ContactRemovedEvent &out, const tumble::World *world, uint32_t index);
 
-}  // namespace events
+// the caller's say over an event, by the index it was read at. false past the count
 
-// answers to this step's events, by the index the reader took
-namespace answers {
-
-/** no narrowphase for pairs entry `index`, and its contacts go; false past the count */
+/** no narrowphase for the pair, and its contacts go */
 bool reject_pair(tumble::World *world, uint32_t index);
-/** contact event `index` (added, then persisted) solved with these settings; false past the count */
-bool override_contact(tumble::World *world, uint32_t index, const tumble::ContactSettings &settings);
-/** contact event `index` dropped before the solve */
-bool reject_contact(tumble::World *world, uint32_t index);
+/** the contact dropped before the solve */
+bool reject_contact_added(tumble::World *world, uint32_t index);
+bool reject_contact_persisted(tumble::World *world, uint32_t index);
+/** the contact solved with these settings */
+bool change_contact_added(tumble::World *world, uint32_t index, const tumble::ContactSettings &settings);
+bool change_contact_persisted(tumble::World *world, uint32_t index, const tumble::ContactSettings &settings);
 
-}  // namespace answers
+}  // namespace events
 
 /** RigidBodySettings as js gives it: the mass properties inline, used when has_mass_properties, for the pointer */
 struct BodySettings {

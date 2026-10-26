@@ -149,6 +149,11 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::events::read_contact_persisted), names("out", "world", "index"));
     bind::fn(b, BIND(adapters::events::contacts_removed), names("world"));
     bind::fn(b, BIND(adapters::events::read_contact_removed), names("out", "world", "index"));
+    bind::fn(b, BIND(adapters::events::reject_pair), names("world", "index"));
+    bind::fn(b, BIND(adapters::events::reject_contact_added), names("world", "index"));
+    bind::fn(b, BIND(adapters::events::reject_contact_persisted), names("world", "index"));
+    bind::fn(b, BIND(adapters::events::change_contact_added), names("world", "index", "settings"));
+    bind::fn(b, BIND(adapters::events::change_contact_persisted), names("world", "index", "settings"));
 
     VALUE_AS(adapters::ActivationEvent, "ActivationEvent")
         .field(FIELD(adapters::ActivationEvent, body))
@@ -169,9 +174,6 @@ TUMBLE_BINDINGS {
     bind::constant(b, "ACTIVE_BODY_ROW_CENTER_OF_MASS_POSITION", offsetof(adapters::ActiveBodyRow, center_of_mass_position));
     bind::constant(b, "ACTIVE_BODY_ROW_LINEAR_VELOCITY", offsetof(adapters::ActiveBodyRow, linear_velocity));
     bind::constant(b, "ACTIVE_BODY_ROW_ANGULAR_VELOCITY", offsetof(adapters::ActiveBodyRow, angular_velocity));
-    bind::fn(b, BIND(adapters::answers::reject_pair), names("world", "index"));
-    bind::fn(b, BIND(adapters::answers::override_contact), names("world", "index", "settings"));
-    bind::fn(b, BIND(adapters::answers::reject_contact), names("world", "index"));
 
     bind::enumeration<uint32_t>(b, "MotionType")
         .value("STATIC", MotionType::STATIC, "never moves.")

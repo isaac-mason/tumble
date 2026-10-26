@@ -99,7 +99,7 @@ ContactPairs create();
 
 /** a step's bookkeeping begins: last step's removed pairs freed, their handles reusable */
 void begin(World &world);
-/** the world's contact events from these indices of contacts_added and contacts_persisted on */
+/** the world's contact events from these indices of contacts_added and contacts_persisted on, but the rejected */
 void record_world_contacts(World &world, uint32_t first_added, uint32_t first_persisted);
 /**
  * the character's collisions from its last move or refresh, its inner body as side a (sub shape empty), the normal from

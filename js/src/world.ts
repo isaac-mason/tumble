@@ -91,7 +91,7 @@ export function destroyWorld(world: World): void {
     Low.World.destroy(world);
 }
 
-/** one step of deltaTime seconds; the listener hears its events and answers them as it runs */
+/** one step of deltaTime seconds; the listener hears its events and can reject or change them as it runs */
 export function updateWorld(world: World, listener: Listener | undefined, deltaTime: number): void {
     stepWith(world, listener, deltaTime);
 }

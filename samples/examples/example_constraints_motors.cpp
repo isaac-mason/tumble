@@ -162,9 +162,9 @@ static void step_world(App &app, float delta_time) {
     do {
         update::find_pairs(world);
         for (uint32_t i = 0; i < world.events.pairs.length; i++) {
-            const PairEvent &pair = world.events.pairs[i];
+            PairEvent &pair = world.events.pairs[i];
             if (rigid_body::bodies_share_constraint(world.bodies.pool[pair.body_index_a], world.bodies.pool[pair.body_index_b])) {
-                events::reject_pair(world.answers, i);
+                pair.rejected = true;
             }
         }
         update::narrowphase(world);

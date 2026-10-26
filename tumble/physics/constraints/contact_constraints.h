@@ -100,22 +100,22 @@ bool add_contact_constraint_from_cache(ContactConstraints &contact_constraints, 
                                        RigidBody &body_b, Contacts::Contact &contact, const WorldSettings &settings,
                                        WorldEvents &events, float delta_time, uint32_t step_stamp);
 /**
- * rebuilds a constraint's friction, restitution, masses and surface velocities from the caller's answer, before the solve,
+ * rebuilds a constraint's friction, restitution, masses and surface velocities from changed settings, before the solve,
  * keeping its warm start impulses; friction the build left off starts from the contact's cached friction impulses. the settings must still make a constraint (not a sensor, some dynamic mass); the normal bias is
  * rebuilt for the new restitution, which is why it takes the world settings and the step's delta time.
  */
-void apply_contact_override(ContactConstraints &contact_constraints, uint32_t constraint_index, Contacts &contacts,
+void apply_contact_settings(ContactConstraints &contact_constraints, uint32_t constraint_index, Contacts &contacts,
                             Bodies &bodies, const ContactSettings &settings, const WorldSettings &world_settings,
                             float delta_time);
 /**
- * every written contact_override, before the solve: by its event's contact, a reject, a sensor or no dynamic mass left (no
- * dynamic body with a nonzero inverse mass scale) drops the contact's constraint and zeroes the impulses its contact caches
- * for the next step; any other answer goes through apply_contact_override. a contact that made no constraint cannot gain
- * one: a sensor cannot become a body by override. the dropped constraints are compacted out, keeping order.
+ * every contact event the caller rejected or changed, before the solve: a rejected contact, or changed settings that make
+ * a sensor or leave no dynamic mass (no dynamic body with a nonzero inverse mass scale), drops the contact's constraint and
+ * zeroes the impulses its contact caches for the next step. other changed settings go through apply_contact_settings. a
+ * contact that made no constraint cannot gain one: a sensor cannot become a body by a change. the dropped constraints are
+ * compacted out, keeping order.
  */
-void apply_contact_overrides(ContactConstraints &contact_constraints, Contacts &contacts, Bodies &bodies,
-                             const WorldEvents &events, const WorldAnswers &answers,
-                             const WorldSettings &world_settings, float delta_time);
+void apply_contact_event_changes(ContactConstraints &contact_constraints, Contacts &contacts, Bodies &bodies,
+                                 const WorldEvents &events, const WorldSettings &world_settings, float delta_time);
 
 /** an island's contact constraints, in their solve order */
 void warm_start_velocity_constraints(ContactConstraints &contact_constraints, Bodies &bodies, const collections::Array<uint32_t> &constraint_indices,

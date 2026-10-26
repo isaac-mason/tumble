@@ -54,7 +54,7 @@ const other = (contact: ContactEvent, of: number): number | null =>
     contact.bodyA === of ? contact.bodyB : contact.bodyB === of ? contact.bodyA : null;
 
 /* SNIPPET_START: listener */
-// the listener hears the step's events and answers them while it runs
+// the listener hears the step's events, and can reject or change them, while it runs
 const listener: Listener = {
     // called for two bodies whose bounds overlap, before the narrowphase. return false and they do not collide this step.
     // this is the cheapest place to filter a pair. here a player's parts pass through each other

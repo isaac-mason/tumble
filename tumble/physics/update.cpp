@@ -67,14 +67,12 @@ static void acceleration_integration_update(World &world, float delta_time) {
 void step_begin(World &world, float delta_time) {
     world.delta_time = delta_time;
 
-    // every event buffer and answer starts the step empty
+    // every event buffer starts the step empty
     world.events.pairs.length = 0;
     world.events.contacts_added.length = 0;
     world.events.contacts_persisted.length = 0;
     world.events.contacts_removed.length = 0;
     world.events.woken = 0;
-    world.answers.pair_reject.length = 0;
-    world.answers.contact_override.length = 0;
 
     // a step of no time only brings the broadphase up to date, as jolt's: no collision, no events, the contacts and the
     // queued removals kept for the next step and the forces added for it left to it
@@ -110,7 +108,6 @@ void step_begin(World &world, float delta_time) {
 void find_pairs(World &world) {
     if (world.delta_time <= 0.0f) return;
     const float speculative_contact_distance = world.settings.narrowphase.speculative_contact_distance;
-    const uint32_t first_pair = world.events.pairs.length;
     if (!world.pairs.swept) {
         pairs::find_colliding_pairs(world.pairs, world.contacts, world.broadphase, world.settings.layers, world.bodies,
                                     speculative_contact_distance, world.events);
@@ -119,9 +116,6 @@ void find_pairs(World &world) {
         pairs::find_woken_body_pairs(world.pairs, world.broadphase, world.settings.layers, world.bodies, speculative_contact_distance,
                                      world.events);
     }
-
-    // a reject bit per pair it added, for the caller to set
-    events::reset_pair_answers(world.answers, world.events, first_pair);
 }
 
 /** the narrowphase collectors' shared state: the body pair and where its constraints go */
@@ -368,14 +362,13 @@ void narrowphase(World &world) {
     const bool use_body_pair_cache = world.settings.narrowphase.use_body_pair_contact_cache;
     const collections::Array<Pairs::CollidingPair> &colliding_pairs = world.pairs.colliding_pairs;
     const uint32_t colliding_pair_count = colliding_pairs.length;
-    const uint32_t first_override = world.events.contacts_added.length + world.events.contacts_persisted.length;
 
     // a later call this step picks up where the last stopped, at the pairs find_pairs added since
     for (uint32_t i = world.pairs.narrowphase_index; i < colliding_pair_count; i++) {
         const int32_t pair_record = colliding_pairs[i].pair_record;
 
         // the caller rejected the pair: no contacts, and the ones it had are gone
-        if (events::pair_rejected(world.answers, i)) {
+        if (world.events.pairs[i].rejected) {
             if (world.pairs.first_contact[(uint32_t)pair_record] != contacts::INVALID_CONTACT_KEY) {
                 contacts::destroy_pair_chain(world.contacts, world.pairs, pair_record, world.events, false);
             }
@@ -428,9 +421,6 @@ void narrowphase(World &world) {
     // the bodies its contacts woke: the next find_pairs brings their pairs
     const uint32_t active_body_count = world.bodies.active_body_count;
     world.events.woken = world.pairs.swept && active_body_count > world.pairs.active_read_index ? active_body_count - world.pairs.active_read_index : 0;
-
-    // an override per contact event it added, for the caller to write
-    events::reset_contact_answers(world.answers, world.events, first_override);
 }
 
 /**
@@ -681,7 +671,7 @@ static void on_ccd_contact_added(World &world, RigidBody &body_a, RigidBody &bod
     }
     contact->last_processed_frame = world.contacts.frame_stamp;
 
-    // the ccd contact as an added or persisted event, after the caller answered this step's overrides
+    // the ccd contact as an added or persisted event, found after the caller's say over this step's contacts
     ContactEvent event;
     event.contact_index = contact->contact_index;
     event.body_index_a = ordered_a->index;
@@ -709,6 +699,8 @@ static void on_ccd_contact_added(World &world, RigidBody &body_a, RigidBody &bod
         }
     }
     event.settings = contact_settings;
+    event.rejected = false;
+    event.settings_changed = false;
     (persisted ? world.events.contacts_persisted : world.events.contacts_added).push(event);
 }
 
@@ -933,9 +925,9 @@ void solve(World &world) {
     const float delta_time = world.delta_time;
     if (delta_time <= 0.0f) return;
 
-    // the caller's answers to this step's contacts: a reject drops the constraint, anything else rebuilds it from the settings
-    contact_constraints::apply_contact_overrides(world.contact_constraints, world.contacts, world.bodies, world.events, world.answers,
-                                                 world.settings, delta_time);
+    // the caller's say over this step's contacts: a rejected one drops its constraint, a changed one rebuilds it from its settings
+    contact_constraints::apply_contact_event_changes(world.contact_constraints, world.contacts, world.bodies, world.events,
+                                                     world.settings, delta_time);
 
     wake_bodies_in_user_constraints(world);
 

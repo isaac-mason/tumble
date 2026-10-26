@@ -262,7 +262,7 @@ static void emit_colliding_pair(Pairs &pairs, const RigidBody &more_active, cons
     }
     pairs.colliding_pairs.push({more_active.index, less_active.index, record});
 
-    events.pairs.push({sorted_a->index, sorted_b->index, sorted_a->id, sorted_b->id, sorted_a->user_data, sorted_b->user_data, record});
+    events.pairs.push({sorted_a->index, sorted_b->index, sorted_a->id, sorted_b->id, sorted_a->user_data, sorted_b->user_data, record, false});
 }
 
 /** the pairs of one body woken after the sweep */

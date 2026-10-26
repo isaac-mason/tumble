@@ -389,6 +389,8 @@ static void append_contact_event(WorldEvents &events, bool persisted, int32_t co
                                  uint32_t num_points, const Float3 *points_a, const Float3 *points_b, const ContactSettings &settings) {
     ContactEvent event;
     event.settings = settings;
+    event.rejected = false;
+    event.settings_changed = false;
     event.contact_index = contact_index;
     event.body_index_a = body_a.index;
     event.body_index_b = body_b.index;
@@ -488,7 +490,7 @@ bool add_contact_constraint(ContactConstraints &contact_constraints, Contacts &c
     const int32_t material_id_b = shapes::get_shape_material(body_b.shape, contact_manifold.sub_shape_id_b);
     const ContactSettings contact_settings = make_contact_settings(contact_constraints, body_a, material_id_a, body_b, material_id_b);
 
-    // the event the caller may answer through contact_override before the solve
+    // the event the caller may reject or change before the solve
     if (persisted) write.flags |= Contacts::CachedManifoldFlags::MANIFOLD_FLAG_CONTACT_PERSISTED;
     append_contact_event(events, persisted, contact->contact_index, body_a, body_b, contact_manifold.sub_shape_id_a,
                          contact_manifold.sub_shape_id_b, material_id_a, material_id_b,
@@ -662,7 +664,7 @@ bool add_contact_constraint_from_cache(ContactConstraints &contact_constraints, 
     return false;
 }
 
-void apply_contact_override(ContactConstraints &contact_constraints, uint32_t constraint_index, Contacts &contacts,
+void apply_contact_settings(ContactConstraints &contact_constraints, uint32_t constraint_index, Contacts &contacts,
                             Bodies &bodies, const ContactSettings &settings, const WorldSettings &world_settings,
                             float delta_time) {
     TUMBLE_ASSERT(constraint_index < contact_constraints.count);
@@ -701,16 +703,17 @@ void apply_contact_override(ContactConstraints &contact_constraints, uint32_t co
                                             friction_1, friction_2, angular_friction);
 }
 
-void apply_contact_overrides(ContactConstraints &contact_constraints, Contacts &contacts, Bodies &bodies,
-                             const WorldEvents &events, const WorldAnswers &answers,
-                             const WorldSettings &world_settings, float delta_time) {
+void apply_contact_event_changes(ContactConstraints &contact_constraints, Contacts &contacts, Bodies &bodies,
+                                 const WorldEvents &events, const WorldSettings &world_settings, float delta_time) {
     const uint32_t num_added = events.contacts_added.length;
-    uint32_t num_answers = answers.contact_override.length;
-    if (num_answers > num_added + events.contacts_persisted.length) num_answers = num_added + events.contacts_persisted.length;
+    const uint32_t num_events = num_added + events.contacts_persisted.length;
 
-    bool any_written = false;
-    for (uint32_t i = 0; i < num_answers && !any_written; i++) any_written = answers.contact_override[i].written;
-    if (!any_written || contact_constraints.count == 0) return;
+    bool any_changed = false;
+    for (uint32_t i = 0; i < num_events && !any_changed; i++) {
+        const ContactEvent &event = i < num_added ? events.contacts_added[i] : events.contacts_persisted[i - num_added];
+        any_changed = event.rejected || event.settings_changed;
+    }
+    if (!any_changed || contact_constraints.count == 0) return;
 
     // contact index to the constraint built from it, -1 for none
     collections::Array<int32_t> constraint_of_contact = {};
@@ -726,18 +729,17 @@ void apply_contact_overrides(ContactConstraints &contact_constraints, Contacts &
     }
 
     bool any_dropped = false;
-    for (uint32_t i = 0; i < num_answers; i++) {
-        const ContactOverride &answer = answers.contact_override[i];
-        if (!answer.written) continue;
+    for (uint32_t i = 0; i < num_events; i++) {
         const ContactEvent &event = i < num_added ? events.contacts_added[i] : events.contacts_persisted[i - num_added];
+        if (!event.rejected && !event.settings_changed) continue;
         const int32_t constraint_index = constraint_of_contact[(uint32_t)event.contact_index];
         if (constraint_index < 0) continue;
 
         const ContactConstraints::Constraint &constraint = contact_constraints.pool[(uint32_t)constraint_index];
         const RigidBody &body_a = *bodies.pool[constraint.body_index_a];
         const RigidBody &body_b = *bodies.pool[constraint.body_index_b];
-        const ContactSettings &settings = answer.settings;
-        const bool keeps = !answer.reject && !settings.is_sensor && has_dynamic_mass(body_a, body_b, settings);
+        const ContactSettings &settings = event.settings;
+        const bool keeps = !event.rejected && !settings.is_sensor && has_dynamic_mass(body_a, body_b, settings);
         if (!keeps) {
             // nothing solves it, so nothing it caches may warm start the next step
             Contacts::CachedManifold &write = contacts::get_write_manifold(contacts.contacts[(uint32_t)event.contact_index], contacts);
@@ -747,7 +749,7 @@ void apply_contact_overrides(ContactConstraints &contact_constraints, Contacts &
             any_dropped = true;
             continue;
         }
-        apply_contact_override(contact_constraints, (uint32_t)constraint_index, contacts, bodies, settings, world_settings, delta_time);
+        apply_contact_settings(contact_constraints, (uint32_t)constraint_index, contacts, bodies, settings, world_settings, delta_time);
     }
 
     if (any_dropped) {

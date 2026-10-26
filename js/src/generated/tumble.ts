@@ -7,7 +7,7 @@
 import type { Instance } from '../module.js';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0xecbb7d76;
+export const SCHEMA_HASH = 0x6dc71a4e;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 368;
 
@@ -6196,6 +6196,35 @@ export const Events = {
         ContactRemovedEvent.read(out, scratch + 0);
         return r !== 0;
     },
+
+    rejectPair(world: World, index: number): boolean {
+        const r = wasm.exports.tumble_events_reject_pair(world, index);
+        return r !== 0;
+    },
+
+    rejectContactAdded(world: World, index: number): boolean {
+        const r = wasm.exports.tumble_events_reject_contact_added(world, index);
+        return r !== 0;
+    },
+
+    rejectContactPersisted(world: World, index: number): boolean {
+        const r = wasm.exports.tumble_events_reject_contact_persisted(world, index);
+        return r !== 0;
+    },
+
+    changeContactAdded(world: World, index: number, settings: ContactSettings): boolean {
+        const scratch = wasm.scratch;
+        ContactSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_events_change_contact_added(world, index, scratch + 0);
+        return r !== 0;
+    },
+
+    changeContactPersisted(world: World, index: number, settings: ContactSettings): boolean {
+        const scratch = wasm.scratch;
+        ContactSettings.write(scratch + 0, settings);
+        const r = wasm.exports.tumble_events_change_contact_persisted(world, index, scratch + 0);
+        return r !== 0;
+    },
 };
 
 export const Activation = {
@@ -6231,25 +6260,6 @@ export const ActiveBodies = {
     rows(world: World): Pointer<'u32'> {
         const r = wasm.exports.tumble_active_bodies_rows(world);
         return r as Pointer<'u32'>;
-    },
-};
-
-export const Answers = {
-    rejectPair(world: World, index: number): boolean {
-        const r = wasm.exports.tumble_answers_reject_pair(world, index);
-        return r !== 0;
-    },
-
-    overrideContact(world: World, index: number, settings: ContactSettings): boolean {
-        const scratch = wasm.scratch;
-        ContactSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_answers_override_contact(world, index, scratch + 0);
-        return r !== 0;
-    },
-
-    rejectContact(world: World, index: number): boolean {
-        const r = wasm.exports.tumble_answers_reject_contact(world, index);
-        return r !== 0;
     },
 };
 
@@ -8158,15 +8168,17 @@ export type WasmExports = {
     tumble_events_read_contact_persisted(out: number, world: number, index: number): number;
     tumble_events_contacts_removed(world: number): number;
     tumble_events_read_contact_removed(out: number, world: number, index: number): number;
+    tumble_events_reject_pair(world: number, index: number): number;
+    tumble_events_reject_contact_added(world: number, index: number): number;
+    tumble_events_reject_contact_persisted(world: number, index: number): number;
+    tumble_events_change_contact_added(world: number, index: number, settings: number): number;
+    tumble_events_change_contact_persisted(world: number, index: number, settings: number): number;
     tumble_activation_events(world: number): number;
     tumble_activation_read_event(out: number, world: number, index: number): number;
     tumble_activation_clear(world: number): void;
     tumble_active_bodies_count(world: number): number;
     tumble_active_bodies_read(world: number): number;
     tumble_active_bodies_rows(world: number): number;
-    tumble_answers_reject_pair(world: number, index: number): number;
-    tumble_answers_override_contact(world: number, index: number, settings: number): number;
-    tumble_answers_reject_contact(world: number, index: number): number;
     tumble_rigid_body_default_settings(out: number): void;
     tumble_rigid_body_create(world: number, settings: number): number;
     tumble_rigid_body_remove(world: number, body: number): number;

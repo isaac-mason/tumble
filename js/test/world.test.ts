@@ -50,7 +50,7 @@ describe('world settings', () => {
 });
 
 describe('the step', () => {
-    test('a listener answers: a rejected pair passes through, a contact with no restitution does not bounce', async () => {
+    test('a listener rejects and changes: a rejected pair passes through, a contact with no restitution does not bounce', async () => {
         const scene = await makeScene();
         const { world } = scene;
         const ball = sphere.create({ radius: 0.5 });

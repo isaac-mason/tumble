@@ -29,22 +29,25 @@ WorldSettings make_settings(ObjectLayers &out) {
 /* SNIPPET_END: layers */
 
 /* SNIPPET_START: phases */
-// world::step runs these phases and answers nothing. between phases, the world's events say what a phase found, and
-// its answers say what to do about it. here pairs with a body whose user data is 7 are rejected, so that body passes
-// through everything. no contact bounces
-void step_with_answers(World &world, float delta_time) {
+// world::step runs these phases and changes nothing. between phases, the world's events say what a phase found, and you
+// can reject or change them. here pairs with a body whose user data is 7 are rejected, so that body passes through
+// everything. no contact bounces
+void step_with_changes(World &world, float delta_time) {
     update::step_begin(world, delta_time);
     do {
         update::find_pairs(world);
         for (uint32_t i = 0; i < world.events.pairs.length; i++) {
-            const PairEvent &pair = world.events.pairs[i];
-            if (pair.user_data_a == 7 || pair.user_data_b == 7) events::reject_pair(world.answers, i);
+            PairEvent &pair = world.events.pairs[i];
+            if (pair.user_data_a == 7 || pair.user_data_b == 7) pair.rejected = true;
         }
         update::narrowphase(world);
     } while (world.events.woken > 0);
-    // after the last narrowphase, write one answer per contacts_added entry, then one per contacts_persisted entry
-    for (uint32_t i = 0; i < world.answers.contact_override.length; i++) {
-        events::override_contact(world.answers, world.events, i).settings.combined_restitution = 0.0f;
+    // after the last narrowphase, change the contacts it added or kept
+    for (uint32_t i = 0; i < world.events.contacts_added.length; i++) {
+        events::change_contact(world.events.contacts_added[i]).combined_restitution = 0.0f;
+    }
+    for (uint32_t i = 0; i < world.events.contacts_persisted.length; i++) {
+        events::change_contact(world.events.contacts_persisted[i]).combined_restitution = 0.0f;
     }
     update::solve(world);
     update::step_end(world);
@@ -114,7 +117,7 @@ int main() {
 
     // the ghost passes through everything, and nothing bounces
     for (int i = 0; i < 120; i++) {
-        step_with_answers(*world, step_time);
+        step_with_changes(*world, step_time);
         if (i == 60) print_events(*world);
     }
 

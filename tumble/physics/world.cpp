@@ -26,7 +26,6 @@ World *create(const WorldSettings &settings) {
     world->islands = islands::create();
     world->ccd = ccd::create();
     world->events = events::create_events();
-    world->answers = events::create_answers();
     world->delta_time = 0.0f;
     world->previous_time_step = 0.0f;
     return world;

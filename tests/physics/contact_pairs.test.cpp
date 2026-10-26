@@ -167,6 +167,28 @@ void test_contact_pairs_only_a_pair_a_side_observes_is_recorded(TestCtx &ctx) {
     release_scene(s);
 }
 
+void test_contact_pairs_a_rejected_contact_is_not_recorded(TestCtx &ctx) {
+    // a box on the ground whose contacts the caller rejects: no pair. not rejected the next step: the pair, added
+    GroundScene s = make_scene(ctx);
+    RigidBody *box = add_box(s, 0.4f, {0.5f, 1.39f, 0.5f}, 7);
+    World &world = *s.scene.world;
+    contact_pairs::begin(world);
+    update::step_begin(world, WORLD_TEST_DELTA_TIME);
+    update::find_pairs(world);
+    update::narrowphase(world);
+    CHECK(ctx, world.events.contacts_added.length > 0);
+    for (uint32_t i = 0; i < world.events.contacts_added.length; i++) world.events.contacts_added[i].rejected = true;
+    contact_pairs::record_world_contacts(world, 0, 0);
+    update::solve(world);
+    update::step_end(world);
+    contact_pairs::end(world);
+    CHECK(ctx, world.contact_pairs.active.length == 0);
+
+    step(world);
+    CHECK(ctx, count_pairs(world.contact_pairs, *box, *s.ground) == 1 && active_pair(world.contact_pairs, 0).added);
+    release_scene(s);
+}
+
 void test_contact_pairs_a_body_made_again_is_a_new_pair(TestCtx &ctx) {
     // pairs are keyed by body id: a box removed and made again in its place is a new body, so its old pair is removed
     // and the new one added, even with the same user data
