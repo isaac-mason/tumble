@@ -2,7 +2,7 @@
 
 # tumble
 
-tumble is a 3D physics engine in C++, built for games and simulations. It also runs in the browser as
+tumble is a 3D physics engine in C++, built for games and simulations. It comes with JavaScript bindings,
 [tumble.js](https://github.com/isaac-mason/tumble/tree/main/js#readme).
 
 **Features**
