@@ -1,14 +1,32 @@
-# tumble for C++
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/isaac-mason/tumble/release.yml?style=for-the-badge)
 
-tumble is a 3D rigid body physics engine. It is written in C++20 with no dependencies. It uses no C++ standard library,
-no exceptions and no RTTI. The same sources build to WebAssembly for the JS package, with exactly the same results as
-the native build.
+# tumble
 
-Every code block here comes from a program in `docs/cpp/`. The tests build and run each program, and each one checks
-what it shows.
+tumble is a 3D physics engine in C++, built for games and simulations. It also runs in the browser as
+[tumble.js](https://github.com/isaac-mason/tumble/tree/main/js#readme).
 
-For JavaScript, [tumble.js](https://github.com/isaac-mason/tumble/tree/main/js#readme) is this library compiled to
-WebAssembly. It has its own guide.
+**Features**
+
+- rigid bodies, with sleeping, sensors and continuous collision detection
+- spheres, boxes, capsules, cylinders, convex hulls, triangle meshes, planes and compounds, plus your own shape types
+- constraints with motors and springs: hinge, slider, distance, point, fixed, cone, swing-twist and six-dof
+- a character controller that walks up slopes and stairs, slides along walls and rides moving bodies
+- ray, point, overlap, sweep and bounds queries, with collision filtering
+- a step you can run phase by phase, reading and answering its contacts in between
+- contact pairs that track only the contacts you care about
+- deterministic: the same steps give the same results natively and in WebAssembly, with or without SIMD
+- C++20 with no dependencies: no standard library, no exceptions and no RTTI
+- all memory through one allocator that you can replace
+- the whole API from one include, `tumble/tumble.h`
+
+**Examples**
+
+- [Samples](https://isaac-mason.github.io/tumble/samples/), the C++ samples built for the web
+- [tumble.js examples](https://isaac-mason.github.io/tumble/)
+
+**Documentation**
+
+This README is the guide. Every code block comes from a program in `docs/cpp/`, and the tests build and run each one.
 
 <TOC />
 

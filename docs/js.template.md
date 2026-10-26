@@ -1,25 +1,42 @@
-# tumble for JavaScript
+[![Version](https://img.shields.io/npm/v/tumble.js?style=for-the-badge)](https://www.npmjs.com/package/tumble.js)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/isaac-mason/tumble/release.yml?style=for-the-badge)
 
-tumble is a 3D rigid body physics engine. The JS package is the C++ library compiled to WebAssembly, with a TypeScript
-API. It gives the same results as the native library.
+```bash
+> npm install tumble.js
+```
 
-Every code block here comes from a program in `js/docs/`. The tests run each program, and each one checks what it shows.
+# tumble.js
 
-The C++ library and its guide are at [github.com/isaac-mason/tumble](https://github.com/isaac-mason/tumble#readme).
+tumble.js is a 3D physics engine for JavaScript, built for games, simulations and creative websites. It runs in
+WebAssembly, with a TypeScript API.
+
+**Features**
+
+- rigid bodies, with sleeping, sensors and continuous collision detection
+- spheres, boxes, capsules, cylinders, convex hulls, triangle meshes, planes and compounds
+- constraints with motors and springs: hinge, slider, distance, point, fixed, cone, swing-twist and six-dof
+- a character controller that walks up slopes and stairs, slides along walls and rides moving bodies
+- ray, point, overlap and sweep queries, with collision filtering
+- hooks that read and change contacts during a step
+- contact pairs that track only the contacts you care about
+- deterministic: the same steps give the same results in the browser, in Node and in the native library
+- getters fill arrays you keep, so reading state allocates nothing
+- works with three.js, babylon.js, playcanvas or your own engine
+
+**Examples**
+
+- [Falling shapes](https://isaac-mason.github.io/tumble/example-falling-shapes.html)
+- [Character](https://isaac-mason.github.io/tumble/example-character.html)
+- [Debug drawing](https://isaac-mason.github.io/tumble/example-debug-drawing.html)
+
+**Documentation**
+
+This README is the guide. Every code block comes from a program in `js/docs/`, and the tests run each one.
+
+tumble is also a C++ library, with its own guide at
+[github.com/isaac-mason/tumble](https://github.com/isaac-mason/tumble#readme).
 
 <TOC />
-
-## Getting tumble
-
-The package is `tumble.js`. It holds ES modules, their types, and `tumble.wasm`.
-
-Load the wasm once, before anything else, with `await init()`. With no options, `init` loads the wasm from next to the
-package's modules. This works in Node and in bundlers that copy the file. You can also pass the wasm as a URL, as bytes
-or as a compiled `WebAssembly.Module`. This example passes bytes:
-
-<Snippet source="../js/docs/memory.ts" select="init" />
-
-The package exports the wasm as `tumble.js/tumble.wasm`. With Vite, import it with `?url` and pass the URL to `init`.
 
 ## Quick start
 
@@ -28,6 +45,18 @@ This creates a world and a floor, then drops a box and a ball onto it:
 <Snippet source="../js/docs/quick_start.ts" select="quick-start" />
 
 The rest of this guide leaves out the imports and the world setup.
+
+## Loading the wasm
+
+The package holds ES modules, their types, and `tumble.wasm`.
+
+Load the wasm once, before anything else, with `await init()`. With no options, `init` loads the wasm from next to the
+package's modules. This works in Node and in bundlers that copy the file. You can also pass the wasm as a URL, as bytes
+or as a compiled `WebAssembly.Module`. This example passes bytes:
+
+<Snippet source="../js/docs/memory.ts" select="init" />
+
+The package exports the wasm as `tumble.js/tumble.wasm`. With Vite, import it with `?url` and pass the URL to `init`.
 
 ## Conventions
 
@@ -46,17 +75,6 @@ The rest of this guide leaves out the imports and the world setup.
   example, `motorSettings: { maxTorqueLimit: 100 }` keeps the motor's default spring.
 - The simulation uses 32-bit floats. Values you read back are float32 values.
 - Units are metres, kilograms, seconds and radians.
-
-## From crashcat
-
-The names match crashcat's, so most crashcat code reads the same. These are the differences:
-
-- A body is an id, not an object. You read its state with getters, such as `rigidBody.getPosition(out, world, body)`,
-  and change it with setters. `getActiveBodies` lists the bodies that moved in a step.
-- The world and everything in it live in the wasm. You free them yourself with `destroyWorld`, `releaseShape`,
-  `filter.destroy` and `kcc.release`.
-- A shape changes in place with its type's `update`. Then pass it to `rigidBody.setShape` for each body that uses it.
-  There is no `updateShape`, and `body.shape` is not writable.
 
 ## Memory and errors
 
@@ -413,3 +431,14 @@ that the JS package matches the native library's hash of a simulated pile.
 To get the same results, create bodies and constraints and step in the same order, with the same values. A number
 becomes a float32 when it crosses into the wasm. So a value computed in JS, with 64-bit floats, may round differently
 from the same sum computed in C++.
+
+## From crashcat
+
+The names match crashcat's, so most crashcat code reads the same. These are the differences:
+
+- A body is an id, not an object. You read its state with getters, such as `rigidBody.getPosition(out, world, body)`,
+  and change it with setters. `getActiveBodies` lists the bodies that moved in a step.
+- The world and everything in it live in the wasm. You free them yourself with `destroyWorld`, `releaseShape`,
+  `filter.destroy` and `kcc.release`.
+- A shape changes in place with its type's `update`. Then pass it to `rigidBody.setShape` for each body that uses it.
+  There is no `updateShape`, and `body.shape` is not writable.
