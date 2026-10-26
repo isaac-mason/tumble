@@ -34,16 +34,16 @@ int main() {
     World *world = make_world();
 
     /* SNIPPET_START: plane */
-    // an infinite ground: point . normal + constant = 0, the normal its front
+    // an infinite ground. the plane is point . normal + constant = 0, and the normal points out of its front
     Ref<Shape> ground = plane::create({.plane = {{0.0f, 1.0f, 0.0f}, 0.0f}});
     rigid_body::create(*world, {.shape = ground, .object_layer = not_moving, .motion_type = MotionType::STATIC});
     /* SNIPPET_END: plane */
 
     /* SNIPPET_START: convex */
-    // the convex primitives, centred on their origin; a body takes its mass from their volume and density
+    // the convex primitives, centred on their origin. a body takes its mass from their volume and density
     Ref<Shape> ball = sphere::create({.radius = 0.5f});
     Ref<Shape> crate = box::create({.half_extents = {0.5f, 0.25f, 0.5f}, .density = 500.0f});
-    // y is the long axis of a capsule and a cylinder; a capsule's radius is its convex radius
+    // y is the long axis of a capsule and a cylinder. a capsule's radius is its convex radius
     Ref<Shape> pill = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.25f});
     Ref<Shape> can = cylinder::create({.half_height = 0.4f, .radius = 0.3f});
     /* SNIPPET_END: convex */
@@ -55,7 +55,7 @@ int main() {
     /* HIDE_END */
 
     /* SNIPPET_START: convex-hull */
-    // any point cloud: the shape builds its hull, and any number of bodies can share the shape
+    // any point cloud. the shape builds its hull, and any number of bodies can share the shape
     const float points[] = {
         -0.5f, 0.0f, -0.5f, 0.5f, 0.0f, -0.5f, 0.5f, 0.0f, 0.5f, -0.5f, 0.0f, 0.5f, 0.0f, 0.8f, 0.0f, 0.1f, 0.2f, 0.1f,
     };
@@ -71,8 +71,8 @@ int main() {
     /* HIDE_END */
 
     /* SNIPPET_START: triangle-mesh */
-    // static geometry from triangles, counter clockwise seen from the front; the shape builds its bvh and finds the
-    // edges a sliding body must not catch on
+    // static geometry from triangles, counter clockwise seen from the front. the shape builds its bvh and finds the edges
+    // a sliding body must not catch on
     const float ramp_positions[] = {-2.0f, 0.0f, -2.0f, 2.0f, 0.0f, -2.0f, 2.0f, 1.0f, 2.0f, -2.0f, 1.0f, 2.0f};
     const uint32_t ramp_indices[] = {0, 2, 1, 0, 3, 2};
     Ref<Shape> ramp =
@@ -96,7 +96,7 @@ int main() {
     /* HIDE_END */
 
     /* SNIPPET_START: compound */
-    // several shapes as one body, each at its own pose; the shapes are borrowed and outlive the compound
+    // several shapes as one body, each at its own pose. the compound holds its shapes
     const CompoundShapeSettings::Child dumbbell_parts[] = {
         {.position = {-0.6f, 0.0f, 0.0f}, .quaternion = {0.0f, 0.0f, 0.0f, 1.0f}, .shape = ball},
         {.position = {0.6f, 0.0f, 0.0f}, .quaternion = {0.0f, 0.0f, 0.0f, 1.0f}, .shape = ball},
@@ -104,7 +104,7 @@ int main() {
     };
     Ref<Shape> dumbbell = compound::create({.children = dumbbell_parts, .num_children = 3});
 
-    // a static compound is built once into a bvh: for many children that never change
+    // a static compound is built once into a bvh. use it for many children that never change
     CompoundShapeSettings::Child fence_posts[16];
     for (uint32_t i = 0; i < 16; i++) fence_posts[i] = {.position = {(float)i, 0.4f, 0.0f}, .quaternion = {0.0f, 0.0f, 0.0f, 1.0f}, .shape = can};
     Ref<Shape> fence = static_compound::create({.children = fence_posts, .num_children = 16});
@@ -118,7 +118,7 @@ int main() {
     /* HIDE_END */
 
     /* SNIPPET_START: decorators */
-    // wrappers over a shape they borrow: moved and turned within the body, scaled, or with the centre of mass moved
+    // wrappers hold a shape and change it. they move and turn it within the body, scale it, or move its centre of mass
     Ref<Shape> raised = transformed::create({.shape = crate, .position = {0.0f, 1.0f, 0.0f}, .quaternion = {0.0f, 0.0f, 0.0f, 1.0f}});
     Ref<Shape> big_ball = scaled::create({.shape = ball, .scale = {2.0f, 2.0f, 2.0f}});
     // a low centre of mass keeps a tall box upright
@@ -132,14 +132,14 @@ int main() {
     /* HIDE_END */
 
     /* SNIPPET_START: empty */
-    // a body with no geometry: a point for constraints to hold, or one waiting for its shape
+    // a body with no geometry. use it as a point for constraints to hold, or for a body waiting for its shape
     Ref<Shape> nothing = empty::create();
     rigid_body::create(*world, {.shape = nothing, .object_layer = moving, .motion_type = MotionType::STATIC});
     /* SNIPPET_END: empty */
 
     /* SNIPPET_START: freeing */
-    // a shape is freed when the last Ref to it lets go: the world lets go of its bodies' shapes, a wrapper of the shape
-    // it wraps, and the Refs here as they leave scope
+    // a shape is freed when the last Ref to it lets go. the world lets go of its bodies' shapes, a wrapper lets go of
+    // the shape it wraps, and the Refs here let go as they leave scope
     world::destroy(world);
     /* SNIPPET_END: freeing */
     /* HIDE_START */

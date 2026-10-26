@@ -5,8 +5,8 @@
 using namespace tumble;
 
 /* SNIPPET_START: layers */
-// object layers say what collides with what; each maps to a broadphase layer, a tree of its own, so a query or the
-// pair search walks only the trees whose layers can collide
+// object layers decide what collides with what. each one maps to a broadphase layer, which has its own tree. a query
+// or the pair search only walks trees whose layers can collide
 struct ObjectLayers {
     uint32_t moving;
     uint32_t not_moving;
@@ -29,9 +29,9 @@ WorldSettings make_settings(ObjectLayers &out) {
 /* SNIPPET_END: layers */
 
 /* SNIPPET_START: phases */
-// world::step is these phases, answering nothing. between them the world's events say what a phase found, and its
-// answers say what to do about it: here pairs with a body whose user data is 7 are rejected, so it passes through
-// everything, and no contact bounces
+// world::step runs these phases and answers nothing. between phases, the world's events say what a phase found, and
+// its answers say what to do about it. here pairs with a body whose user data is 7 are rejected, so that body passes
+// through everything. no contact bounces
 void step_with_answers(World &world, float delta_time) {
     update::step_begin(world, delta_time);
     do {
@@ -42,7 +42,7 @@ void step_with_answers(World &world, float delta_time) {
         }
         update::narrowphase(world);
     } while (world.events.woken > 0);
-    // after the last narrowphase: one answer per contacts_added entry, then per contacts_persisted entry
+    // after the last narrowphase, write one answer per contacts_added entry, then one per contacts_persisted entry
     for (uint32_t i = 0; i < world.answers.contact_override.length; i++) {
         events::override_contact(world.answers, world.events, i).settings.combined_restitution = 0.0f;
     }
@@ -52,7 +52,8 @@ void step_with_answers(World &world, float delta_time) {
 /* SNIPPET_END: phases */
 
 /* SNIPPET_START: events */
-// after a step: the contacts it found and kept, the ones it lost, and the bodies still active, which the next step moves
+// after a step, the events hold the contacts it found, kept and lost, and the bodies still active. the next step moves
+// those bodies
 void print_events(const World &world) {
     for (uint32_t i = 0; i < world.events.contacts_added.length; i++) {
         const ContactEvent &contact = world.events.contacts_added[i];
@@ -74,7 +75,7 @@ int main() {
     settings.solver.velocity_iterations = 8;
     settings.sleeping.time_before_sleep = 1.0f;
     World *world = world::create(settings);
-    // a second world from the same settings is a world of its own
+    // a second world from the same settings is independent
     World *preview = world::create(settings);
     /* SNIPPET_END: settings */
 
@@ -89,7 +90,7 @@ int main() {
                                                                 .position = {2.0f, 0.5f, 0.0f}});
 
     /* SNIPPET_START: fixed-step */
-    // whatever the frame time, the world advances in steps of 1/60 s; a long frame catches up a few steps at most
+    // whatever the frame time, the world advances in steps of 1/60 s. a long frame catches up a few steps at most
     const float step_time = 1.0f / 60.0f;
     float accumulator = 0.0f;
     const float frame_times[] = {0.016f, 0.017f, 0.033f, 0.2f};
@@ -104,8 +105,8 @@ int main() {
     /* SNIPPET_END: fixed-step */
 
     /* SNIPPET_START: activation */
-    // told as a body joins or leaves the active list, whatever moved it. a recorder is a listener that keeps what it hears,
-    // so it can be handed on at a point of your choosing, here after the steps
+    // the listener hears each body join or leave the active list, whatever moved it. a recorder is a listener that keeps
+    // what it hears, so you can hand it on later, here after the steps
     BodyActivationRecorder recorder;
     body_activation::init_recorder(recorder);
     world::set_body_activation_listener(*world, &recorder.listener);
@@ -118,7 +119,7 @@ int main() {
     }
 
     /* SNIPPET_START: activation-flush */
-    // the bodies the steps put to sleep, and woke, in the order it happened
+    // the bodies the steps put to sleep and woke, in order
     BodyActivationListener print = {
         [](BodyActivationListener &, BodyId body, uint64_t) { printf("%u woke\n", body_id::index(body)); },
         [](BodyActivationListener &, BodyId body, uint64_t) { printf("%u slept\n", body_id::index(body)); },

@@ -5,8 +5,8 @@
 using namespace tumble;
 
 /* SNIPPET_START: frame */
-// a frame of contact pairs: begin, record what moved (a world step's contact events, a character's move), end. a pair
-// is added the frame it starts, persisted while it lasts, and removed the frame after it was last recorded
+// a contact pairs frame. begin it, record each world step's contact events and each character move, then end it. a
+// pair is added in the frame it starts, persisted while it lasts, and removed in the frame after it was last recorded
 void frame(World &world, float frame_time, int steps) {
     contact_pairs::begin(world);
     for (int i = 0; i < steps; i++) {
@@ -46,7 +46,7 @@ int main() {
                                 .position = {0.0f, -0.5f, 0.0f}});
 
     /* SNIPPET_START: observe */
-    // only the pairs a body observing contacts is a side of are kept: the few a game reacts to, not every contact
+    // only pairs that include a body observing contacts are kept. these are the few a game reacts to
     RigidBody *ball = rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving,
                                                                .motion_type = MotionType::DYNAMIC, .position = {0.0f, 2.0f, 0.0f},
                                                                .restitution = 0.6f, .observes_contacts = true});

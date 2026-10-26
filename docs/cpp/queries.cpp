@@ -29,7 +29,7 @@ int main() {
 
     {
         /* SNIPPET_START: cast-ray */
-        // down from above the crate, 10 m: the closest hit, its point and the surface normal there
+        // a 10 m ray down from above the crate. it finds the closest hit, its point and the surface normal there
         Filter filter = filter::create(world->settings.layers);
         CastRayCollector collector = cast_ray::create_collector(CollectorKind::CLOSEST);
         const Rayf ray = {vec3f::make(0.0f, 5.0f, 0.0f), vec3f::make(0.0f, -1.0f, 0.0f), 10.0f};
@@ -56,14 +56,14 @@ int main() {
         if (all.hits.length != 2 || all.hits[0].body_id_b != crate->id || all.hits[1].body_id_b != ground->id) return 1;
         /* HIDE_END */
 
-        // the collectors and the filter own memory
+        // the collectors and the filter own memory, and free it when they leave scope
         /* SNIPPET_END: cast-ray */
     }
 
     {
         Filter filter = filter::create(world->settings.layers);
         /* SNIPPET_START: collide-point */
-        // which bodies hold this point
+        // the bodies that contain this point
         CollidePointCollector inside = collide_point::create_collector(CollectorKind::ALL);
         query::collide_point(*world, inside, collide_point::default_settings(), vec3f::make(0.2f, 0.5f, 0.1f), filter);
         /* SNIPPET_END: collide-point */
@@ -74,7 +74,7 @@ int main() {
 
     {
         /* SNIPPET_START: collide-shape */
-        // everything a 2 m sphere at the crate's corner overlaps, and how deep: an explosion's reach
+        // everything a 2 m sphere at the crate's corner overlaps, and how deep, such as an explosion's reach
         Ref<Shape> blast = sphere::create({.radius = 2.0f});
         Filter filter = filter::create(world->settings.layers);
         CollideShapeCollector overlaps = collide_shape::create_collector(CollectorKind::ALL);
@@ -89,7 +89,7 @@ int main() {
         /* HIDE_END */
 
         /* SNIPPET_START: cast-shape */
-        // the sphere swept along a path: where it first touches, for a projectile with a size
+        // the sphere swept along a path. it finds where it first touches something, for a projectile with a size
         Filter only_moving = filter::create(world->settings.layers);
         filter::disable_object_layer(only_moving, world->settings.layers, not_moving);
         CastShapeCollector sweep = cast_shape::create_collector(CollectorKind::CLOSEST);
@@ -107,12 +107,12 @@ int main() {
 
     {
         /* SNIPPET_START: broadphase */
-        // the bodies whose bounds a 1 m box around the origin overlaps, their shapes not tested
+        // the bodies whose bounds overlap a 1 m box around the origin. their shapes are not tested
         Filter filter = filter::create(world->settings.layers);
         BodyCollector near_origin = broadphase_query::create_body_collector(CollectorKind::ALL);
         broadphase_query::collide_aabb(*world, near_origin, aabox::make(vec3f::splat(-0.5f), vec3f::splat(0.5f)), filter);
 
-        // a sphere and a turned box, likewise
+        // the same with a sphere and a rotated box
         broadphase_query::reset(near_origin);
         broadphase_query::collide_sphere(*world, near_origin, vec3f::make(0.0f, 3.0f, 0.0f), 2.1f, filter);
         const Quatf turn = quatf::set_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.7f);
@@ -120,7 +120,7 @@ int main() {
         BodyCollector in_turned = broadphase_query::create_body_collector(CollectorKind::ALL);
         broadphase_query::collide_oriented_box(*world, in_turned, turned, filter);
 
-        // a box swept down from above: the first body whose bounds it enters, and where
+        // a box swept down from above. it finds the first body whose bounds it enters, and where
         BodyCastCollector first = broadphase_query::create_body_cast_collector(CollectorKind::CLOSEST);
         const AABox falling = aabox::make(vec3f::make(-0.1f, 4.9f, -0.1f), vec3f::make(0.1f, 5.1f, 0.1f));
         broadphase_query::cast_aabb(*world, first, falling, vec3f::make(0.0f, -10.0f, 0.0f), filter);
@@ -135,8 +135,8 @@ int main() {
 
     {
         /* SNIPPET_START: filters */
-        // a filter starts with every layer, then narrows: by object or broadphase layer, by group and mask, and by a
-        // function of the body
+        // a filter starts with every layer enabled. you can narrow it by object or broadphase layer, by group and mask, and
+        // by a function of the body
         Filter filter = filter::create(world->settings.layers);
         filter::disable_object_layer(filter, world->settings.layers, moving);
         filter.body_filter = not_this_body;
@@ -144,7 +144,7 @@ int main() {
         CastRayCollector collector = cast_ray::create_collector(CollectorKind::ANY);
         query::cast_ray(*world, collector, cast_ray::default_settings(), {vec3f::make(0.0f, 5.0f, 0.0f), vec3f::make(0.0f, -1.0f, 0.0f), 10.0f},
                         filter);
-        // the crate's layer is off and the ground is filtered out: nothing hit
+        // the crate's layer is off and the ground is filtered out, so nothing is hit
         /* SNIPPET_END: filters */
         /* HIDE_START */
         if (collector.has_hit) return 1;

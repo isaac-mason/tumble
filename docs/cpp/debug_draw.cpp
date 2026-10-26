@@ -13,7 +13,7 @@ void upload_line_vertices(const float *vertices, uint32_t vertex_count) {
 }
 
 /* SNIPPET_START: read */
-// line_count lines of two vertices each, a vertex x y z r g b: a vertex array as it stands
+// line_count lines of two vertices each. each vertex is x y z r g b, ready to use as a vertex array
 void draw_lines(const DebugDraw &buffers) { upload_line_vertices(buffers.lines.data, buffers.line_count * 2); }
 /* SNIPPET_END: read */
 
@@ -35,7 +35,7 @@ int main() {
     world::step(*world, 1.0f / 60.0f);
 
     /* SNIPPET_START: draw */
-    // buffers that grow as they are drawn into and keep their memory when cleared, for a frame's worth each frame
+    // the buffers grow as you draw into them, and keep their memory when cleared. clear and redraw them each frame
     DebugDraw buffers;
     debug::clear(buffers);
     // the bodies, coloured by motion type, with their velocities
@@ -43,7 +43,7 @@ int main() {
     // each contact's points and normal, and the constraints' anchors and axes
     debug::contacts(buffers, *world);
     debug::joints(buffers, *world, {});
-    // a shape anywhere: a preview of where something would go
+    // a shape at any pose, such as a preview of where something would go
     debug::shape(buffers, ball_shape, vec3f::make(3.0f, 0.5f, 0.0f), quatf::identity(), {.color = {0.0f, 1.0f, 0.0f}});
     draw_lines(buffers);
     printf("%u lines\n", buffers.line_count);

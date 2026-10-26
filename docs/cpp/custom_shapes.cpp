@@ -5,7 +5,7 @@
 using namespace tumble;
 
 /* SNIPPET_START: data */
-// an ellipsoid: a convex shape tumble does not have, in user slot 1. its struct derives from Shape, as the built-ins' do
+// an ellipsoid, a convex shape tumble does not have, in user slot 1. its struct derives from Shape, like the built-ins
 constexpr ShapeType SHAPE_ELLIPSOID = ShapeType::USER_1;
 
 struct EllipsoidShape : Shape {
@@ -16,8 +16,8 @@ struct EllipsoidShape : Shape {
 /* SNIPPET_END: data */
 
 /* SNIPPET_START: support */
-// gjk and epa see a convex shape only through its support: the farthest point in a direction. for radii r and a local
-// direction d it is r^2 d / |r d|, per component
+// gjk and epa see a convex shape only through its support, which is the farthest point in a direction. for radii r and
+// a local direction d, it is r^2 d / |r d|, per component
 Vec3f ellipsoid_support(Support &support, Vec3f direction) {
     const Vec3f local = support::to_local_direction(support, direction);
     const EllipsoidShape &ellipsoid = *static_cast<const EllipsoidShape *>(support.user.data);
@@ -28,7 +28,7 @@ Vec3f ellipsoid_support(Support &support, Vec3f direction) {
     return support::to_caller_space(support, support::add_radius_along(point, local, support.add_radius));
 }
 
-// no rounding, so both modes give the whole shape
+// the shape has no rounding, so both modes give the whole shape
 void ellipsoid_set_support(Support &out, const Shape *shape, SupportFunctionMode, Vec3f scale) {
     out.get_support = ellipsoid_support;
     out.has_transform = false;
@@ -55,7 +55,7 @@ void ellipsoid_surface_normal(SurfaceNormalResult &io, const Shape *shape, SubSh
     io.normal = vec3f::squared_length(gradient) > 0.0f ? vec3f::normalize(gradient) : vec3f::axis_y();
 }
 
-// curved: no face to build a manifold from, so contacts are single points
+// the surface is curved, so there is no face to build a manifold from. contacts are single points
 void ellipsoid_supporting_face(SupportingFaceResult &io, Vec3f, const Shape *, SubShapeId) {
     io.face.num_vertices = 0;
 }
@@ -69,7 +69,7 @@ float ellipsoid_inner_radius(const Shape *shape) {
 
 void ellipsoid_collide_point(CollidePointCollector &collector, const CollidePointSettings &, Vec3f point,
                              const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
-    // into the shape's space, then inside when the scaled coordinates are within the unit sphere
+    // move the point into the shape's space. it is inside when the scaled coordinates fall within the unit sphere
     const Vec3f local = vec3f::transform_quat(vec3f::subtract(point, vec3f::load(transform.position)), quatf::conjugate(quatf::load(transform.quaternion)));
     const Vec3f radii = vec3f::multiply(vec3f::load(shapes::as<EllipsoidShape>(shape).radii), vec3f::abs(vec3f::load(transform.scale)));
     if (vec3f::squared_length(vec3f::divide(local, radii)) > 1.0f) return;
@@ -112,11 +112,11 @@ ShapeDef ellipsoid_def() {
     def.get_supporting_face = ellipsoid_supporting_face;
     def.get_material = ellipsoid_material;
     def.get_inner_radius = ellipsoid_inner_radius;
-    // a convex type's rays go through its support
+    // rays against a convex type use its support
     def.cast_ray = convex::cast_ray_vs_convex;
     def.collide_point = ellipsoid_collide_point;
     def.draw = ellipsoid_draw;
-    // define_shape fills what a def leaves out with the defaults
+    // define_shape fills in the defaults for anything the def leaves out
     return shapes::define_shape(def);
 }
 
@@ -137,8 +137,8 @@ Shape *create_ellipsoid(Float3 radii, float density) {
 
 int main() {
     /* SNIPPET_START: register */
-    // the type beside the built-ins: it collides with every convex type, mesh and plane, in compounds and under
-    // wrappers. a pair of its own (an ellipsoid against a mesh by a faster rule, say) goes in after, over the generic one
+    // register the type next to the built-ins. it then collides with every convex type, mesh and plane, in compounds and
+    // inside wrappers. to replace a generic pair function, such as ellipsoid against mesh, set your own afterwards
     const ShapeDef def = ellipsoid_def();
     dispatch::init(&def, 1);
     /* SNIPPET_END: register */
@@ -154,7 +154,7 @@ int main() {
                                 .position = {0.0f, -0.5f, 0.0f}});
 
     /* SNIPPET_START: use */
-    // an egg, 0.3 m wide and 0.5 m tall, dropped on its side: it rolls to lie on its long axis
+    // an egg, 0.3 m wide and 0.5 m tall, dropped on its side. it rolls to rest on its long axis
     Ref<Shape> egg_shape = create_ellipsoid({0.3f, 0.5f, 0.3f}, 1000.0f);
     RigidBody *body = rigid_body::create(*world, {.shape = egg_shape, .object_layer = moving,
                                                               .motion_type = MotionType::DYNAMIC, .position = {0.0f, 2.0f, 0.0f},

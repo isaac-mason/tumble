@@ -31,8 +31,8 @@ int main() {
     Ref<Shape> ball_shape = sphere::create({.radius = 0.45f});
 
     /* SNIPPET_START: replay */
-    // the same scene, made in the same order and stepped by the same steps, is the same to the last bit: in another
-    // world, another run, another machine, or the browser
+    // the same scene, built in the same order and stepped the same way, gives exactly the same result. this holds in
+    // another world, another run, another machine, or the browser
     World *first = make_pile(ground_shape, ball_shape);
     World *second = make_pile(ground_shape, ball_shape);
     for (int i = 0; i < 300; i++) {

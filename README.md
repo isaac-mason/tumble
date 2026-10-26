@@ -2,14 +2,15 @@
 
 # tumble for C++
 
-tumble is a 3D rigid body physics engine. It is C++20 with no dependencies: no C++ standard library, no exceptions, no
-RTTI. The same sources build to WebAssembly for the JS package, and simulate the same bits there as natively.
+tumble is a 3D rigid body physics engine. It is written in C++20 with no dependencies. It uses no C++ standard library,
+no exceptions and no RTTI. The same sources build to WebAssembly for the JS package, with exactly the same results as
+the native build.
 
-Every code block here is part of a program in `docs/cpp/` that the tests build and run, and each program checks what
-it shows.
+Every code block here comes from a program in `docs/cpp/`. The tests build and run each program, and each one checks
+what it shows.
 
 For JavaScript, [tumble.js](https://github.com/isaac-mason/tumble/tree/main/js#readme) is this library compiled to
-WebAssembly, with its own guide.
+WebAssembly. It has its own guide.
 
 - [Getting tumble](#getting-tumble)
   - [CMake](#cmake)
@@ -81,8 +82,8 @@ WebAssembly, with its own guide.
 
 ### CMake
 
-tumble's `CMakeLists.txt` makes the `tumble` library and its alias `tumble::tumble`. Fetch it, or add a checkout (a git
-submodule, say) with `add_subdirectory(path/to/tumble)`, then link the target:
+tumble's `CMakeLists.txt` defines the `tumble` library and its alias `tumble::tumble`. Fetch it with `FetchContent`, or
+add a checkout such as a git submodule with `add_subdirectory(path/to/tumble)`. Then link the target:
 
 ```cmake
 cmake_minimum_required(VERSION 3.20)
@@ -96,19 +97,19 @@ add_executable(game main.cpp)
 target_link_libraries(game PRIVATE tumble::tumble)
 ```
 
-The tests build only when tumble is the top-level project. Its options:
+The tests only build when tumble is the top-level project. It has two options:
 
-- `TUMBLE_DEBUG`: checks the library's asserts.
-- `TUMBLE_NO_SIMD`: the scalar backend where SIMD is available. Both backends compute the same bits.
+- `TUMBLE_DEBUG` enables the library's asserts.
+- `TUMBLE_NO_SIMD` uses the scalar backend where SIMD is available. Both backends give the same results.
 
 ### Without CMake
 
-Compile every `.cpp` under `tumble/` with the repository root on the include path (headers are included as
-`"tumble/physics/world.h"`), as C++20, with `-ffp-contract=off` (MSVC: `/fp:precise`) and without fast math.
+Compile every `.cpp` under `tumble/` as C++20, with the repository root on the include path. Headers are included as
+`"tumble/physics/world.h"`. Use `-ffp-contract=off`, or `/fp:precise` on MSVC, and do not use fast math.
 
 ## Quick start
 
-A world, a floor, and a box and a ball dropped onto it:
+This creates a world and a floor, then drops a box and a ball onto it:
 
 ```cpp
 #include <stdio.h>
@@ -118,10 +119,10 @@ A world, a floor, and a box and a ball dropped onto it:
 using namespace tumble;
 
 int main() {
-    // the shape types' functions and every pair of them, once before anything collides
+    // register the shape types and their pair functions, once before anything collides
     dispatch::init();
 
-    // two object layers: things that move, and things that do not, each in a broadphase tree of its own
+    // two object layers, one for what moves and one for what does not. each has its own broadphase tree
     WorldSettings settings = world_settings::create();
     const uint32_t broadphase_moving = world_settings::add_broadphase_layer(settings);
     const uint32_t broadphase_not_moving = world_settings::add_broadphase_layer(settings);
@@ -133,7 +134,7 @@ int main() {
     // the world copies the settings
     World *world = world::create(settings);
 
-    // a static floor, its top at y = 0, and a box and a ball dropped onto it
+    // a static floor with its top at y = 0, and a box and a ball dropped onto it
     Ref<Shape> floor_shape = box::create({.half_extents = {20.0f, 0.5f, 20.0f}});
     Ref<Shape> box_shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
     Ref<Shape> ball_shape = sphere::create({.radius = 0.5f});
@@ -148,7 +149,7 @@ int main() {
     for (int i = 0; i < 120; i++) world::step(*world, 1.0f / 60.0f);
     printf("box at y %.2f, ball at y %.2f\n", box->position.y, ball->position.y);
 
-    // the world frees its bodies; the shapes are yours, freed once nothing uses them
+    // the world frees its bodies. your shapes are freed once nothing uses them
     world::destroy(world);
     ball_shape = nullptr;
     box_shape = nullptr;
@@ -157,60 +158,62 @@ int main() {
 }
 ```
 
-`dispatch::init()` registers the shape types and the collision function for every pair of them. Call it once, before
-making any shape (a shape is freed through its type's def), and again only to change the shape types (see
-[Custom shapes](#custom-shapes)).
+`dispatch::init()` registers the shape types and the collision function for each pair of them. Call it once, before you
+make any shape. Call it again only to change the shape types (see [Custom shapes](#custom-shapes)).
 
-The rest of this guide leaves out the includes, `using namespace tumble;` and the world's setup.
+The rest of this guide leaves out the includes, `using namespace tumble;` and the world setup.
 
 ## Conventions
 
-- Everything is in `namespace tumble`. Its types are directly in it (`RigidBody`, `Shape`, `BoxShapeSettings`), and a
-  type that is part of another is nested in it (`KCC::ContactEvent`, `ConvexHullShape::BuildResult`). Its functions
-  and constants are in a namespace per subject, named after its header: `rigid_body::create` is in
-  `tumble/physics/body/rigid_body.h`.
-- Enums are scoped: `MotionType::DYNAMIC`, `ShapeType::BOX`.
-- A call that changes a world takes the world first: `rigid_body::set_position(world, body, ...)`.
-- Settings structs hold storage types (`Float3`, `Float4`, plain floats) and work with designated initializers, which
-  C++20 requires in declaration order. Function arguments take the register types (`Vec3f`, `Quatf`), made with
-  `vec3f::make`, `quatf::set_axis_angle` and friends, loaded from storage with `vec3f::load`.
+- Everything is in `namespace tumble`.
+- Types are directly in `tumble`, such as `RigidBody`, `Shape` and `BoxShapeSettings`. A type that is part of another
+  is nested in it, such as `KCC::ContactEvent` and `ConvexHullShape::BuildResult`.
+- Functions and constants are in a namespace per subject, named after its header. For example, `rigid_body::create` is
+  in `tumble/physics/body/rigid_body.h`.
+- Enums are scoped, such as `MotionType::DYNAMIC` and `ShapeType::BOX`.
+- A function that changes a world takes the world first: `rigid_body::set_position(world, body, ...)`.
+- Settings structs hold storage types: `Float3`, `Float4` and plain floats. They work with designated initializers,
+  which C++20 requires in declaration order.
+- Functions take register types such as `Vec3f` and `Quatf`. Make them with functions like `vec3f::make` and
+  `quatf::set_axis_angle`, or load them from storage with `vec3f::load`.
 - Units are metres, kilograms, seconds and radians.
-- Values free what they hold as they go out of scope: settings, filters, collectors and debug draws. A world is made
-  by `world::create` and freed by `world::destroy`, its bodies and constraints with it. Shapes and characters are
-  counted, as Jolt's are: hold one in a `Ref<Shape>` or `Ref<KCC>`, and the last `Ref` to let go frees
-  it.
+- Values free their memory when they go out of scope. This covers settings, filters, collectors and debug draws.
+- `world::create` makes a world and `world::destroy` frees it, with its bodies and constraints.
+- Shapes and characters are reference counted. Hold one in a `Ref<Shape>` or `Ref<KCC>`. The last `Ref` to let go
+  frees it.
 
 ### Public API
 
-`tumble/tumble.h` includes the whole API, as the quick start does; or include only the headers you use. These are
-tumble's API. The rest are its internals, which change without notice, and nothing in them is needed to use tumble:
+`tumble/tumble.h` includes the whole API, as the quick start does. You can also include only the headers you use.
 
-- **The world:** `world.h`, `world_settings.h`, `layers.h`, `filter.h`, `update.h` (the phases of a step you answer
-  between), `events.h`, `contact_pairs.h` and `debug.h`.
+These headers are tumble's API. The rest are internals. They can change without notice, and you never need them:
+
+- **The world:** `world.h`, `world_settings.h`, `layers.h`, `filter.h`, `update.h`, `events.h`, `contact_pairs.h` and
+  `debug.h`. `update.h` has the phases of a step, which you can answer between.
 - **Bodies:** `body/rigid_body.h`, `body/body_id.h`, `body/motion_type.h`, `body/dof.h`, `body/mass_properties.h` and
-  `body/sub_shape.h`. A body's fields are yours to read; change them through `rigid_body`'s calls, which keep the
-  broadphase, the pairs and the sleep state in step.
-- **Shapes:** each shape's header under `shapes/`, `shapes/dispatch.h`, and the builders and data in `shapes/utils/`:
-  `convex_hull_builder.h`, `triangle_mesh_builder.h` and `triangle_mesh_data.h`.
-- **Queries:** `query.h`, `broadphase_query.h`, and the collectors, settings and hits in `collision/collector.h`,
+  `body/sub_shape.h`. You can read a body's fields. Change them only through `rigid_body` functions, which keep the
+  broadphase, the pairs and the sleep state up to date.
+- **Shapes:** each shape's header under `shapes/`, and `shapes/dispatch.h`. The builders and data in `shapes/utils/`
+  are `convex_hull_builder.h`, `triangle_mesh_builder.h` and `triangle_mesh_data.h`.
+- **Queries:** `query.h` and `broadphase_query.h`. The collectors, settings and hits are in `collision/collector.h`,
   `collision/cast_ray_vs_shape.h`, `collision/cast_shape_vs_shape.h`, `collision/collide_point_vs_shape.h` and
-  `collision/collide_shape_vs_shape.h`; also `collision/estimate_collision_response.h`.
-- **Constraints:** each constraint's header under `constraints/`, `constraints/constraint_id.h`,
+  `collision/collide_shape_vs_shape.h`. Also `collision/estimate_collision_response.h`.
+- **Constraints:** each constraint's header under `constraints/`, plus `constraints/constraint_id.h`,
   `constraints/contact_settings.h`, `constraints/constraint_part/motor_settings.h` and
-  `constraints/constraint_part/spring_settings.h`. `WorldMaterial` is what `world::set_materials`
-  takes; the rest of `contact_constraints.h` is internal.
-- **Characters:** `character/kcc.h`, `character/kcc_policy.h`, and `character/character_constraints.h` for a
-  controller of your own.
-- **Custom shapes:** `shapes/shapes.h` (`ShapeDef`, `allocate`, the collide and cast tables), `shapes/convex.h`,
-  `collision/narrowphase.h` to collide or cast the shapes inside yours, `collision/support.h` for a convex type's
-  support, and `utils/face.h`.
+  `constraints/constraint_part/spring_settings.h`. `world::set_materials` takes `WorldMaterial` from
+  `contact_constraints.h`. The rest of that header is internal.
+- **Characters:** `character/kcc.h` and `character/kcc_policy.h`. Add `character/character_constraints.h` to write
+  your own controller.
+- **Custom shapes:** `shapes/shapes.h` has `ShapeDef`, `allocate`, and the collide and cast tables. Also
+  `shapes/convex.h`, `collision/narrowphase.h` to collide or cast the shapes inside yours, `collision/support.h` for a
+  convex type's support, and `utils/face.h`.
 - **Maths and memory:** `tumble/math/`, `util/alloc.h`, `util/error.h`, `util/collections.h` and `util/ref.h`.
 
 ## Memory
 
-tumble takes all its memory through one allocator. A hosted build starts with aligned `malloc` and `free`. Set your own
-before anything allocates. Every block comes back with the size it was asked for, so your allocator needs no headers of
-its own:
+tumble gets all its memory from one allocator. A hosted build starts with aligned `malloc` and `free`. Set your own
+before anything allocates. tumble passes the size back when it frees a block, so your allocator does not need to store
+it:
 
 ```cpp
 /** a bump allocator over a block of its own: frees count what came back, but nothing is reused */
@@ -234,11 +237,11 @@ static Arena arena;
 ```
 
 ```cpp
-// before anything allocates: every block tumble takes from here on comes from the arena
+// set the allocator before anything allocates. from here on, every block tumble takes comes from the arena
 util::set_allocator({arena_allocate, arena_free, &arena});
 ```
 
-`util::allocated_bytes` and `util::allocated_blocks` count what tumble holds:
+`util::allocated_bytes` and `util::allocated_blocks` count the memory tumble holds:
 
 ```cpp
 WorldSettings settings = world_settings::create();
@@ -247,32 +250,32 @@ World *world = world::create(settings);
 printf("a world holds %zu bytes in %zu blocks\n", util::allocated_bytes(), util::allocated_blocks());
 
 world::destroy(world);
-// the settings are a value: their layer tables are held until they leave scope
+// the settings are a value. they hold their layer tables until they leave scope
 printf("after destroy: %zu bytes, the settings' own\n", util::allocated_bytes());
 ```
 
 ### Errors
 
-Running out of memory stops the program, as Emscripten's `ABORTING_MALLOC` does: when the allocator returns null, tumble
-sets `ERROR_OUT_OF_MEMORY` in the error word and traps. In a browser the wasm instance is then done, and the error word
-says why. Nothing else in tumble fails for want of memory, so nothing checks for it.
+Running out of memory stops the program. When the allocator returns null, tumble sets `Error::OUT_OF_MEMORY` in the
+error word and traps. In a browser, the wasm instance cannot be used after that, and the error word says why. Nothing
+else in tumble can fail for lack of memory, so nothing checks for it.
 
-The error word holds what is left: a pool at its most (`Error::QUOTA`, from `rigid_body::create` and the constraint
-creates, which return an invalid id or null). The first error stands until `util::error_clear()`.
+The only other error is a full pool. `rigid_body::create` and the constraint `create` functions then set
+`Error::QUOTA` and return null or an invalid id. The first error stays set until you call `util::error_clear()`.
 
 ## The world
 
-A world holds bodies, constraints and the simulation's state. Several worlds can live side by side.
+A world holds bodies, constraints and the simulation state. You can run several worlds at once.
 
 ### Layers
 
 Object layers decide what collides with what. Each object layer belongs to a broadphase layer, and each broadphase
-layer is a tree of its own: a query or the pair search visits only the trees whose layers can collide. Keep moving and
-static bodies in separate broadphase layers.
+layer has its own tree. A query or the pair search only visits trees whose layers can collide. Put moving and static
+bodies in separate broadphase layers.
 
 ```cpp
-// object layers say what collides with what; each maps to a broadphase layer, a tree of its own, so a query or the
-// pair search walks only the trees whose layers can collide
+// object layers decide what collides with what. each one maps to a broadphase layer, which has its own tree. a query
+// or the pair search only walks trees whose layers can collide
 struct ObjectLayers {
     uint32_t moving;
     uint32_t not_moving;
@@ -296,9 +299,8 @@ WorldSettings make_settings(ObjectLayers &out) {
 
 ### Settings
 
-`WorldSettings` holds the layers, gravity, and the solver, narrowphase, sleeping and CCD settings, with
-defaults that suit most games. `world::create` copies them, so they can go as soon as it returns, or make another
-world:
+`WorldSettings` holds the layers, gravity, and the solver, narrowphase, sleeping and CCD settings. The defaults suit
+most games. `world::create` copies the settings, so you can free them right after, or use them for another world:
 
 ```cpp
 ObjectLayers layers;
@@ -307,17 +309,17 @@ settings.gravity = {0.0f, -20.0f, 0.0f};
 settings.solver.velocity_iterations = 8;
 settings.sleeping.time_before_sleep = 1.0f;
 World *world = world::create(settings);
-// a second world from the same settings is a world of its own
+// a second world from the same settings is independent
 World *preview = world::create(settings);
 ```
 
 ### Stepping
 
-`world::step(world, delta_time)` advances the world one step. Step by a fixed time and catch up a few steps when a frame
-runs long, so the simulation does not depend on the frame rate:
+`world::step(world, delta_time)` advances the world by one step. Step by a fixed time, and catch up a few steps when a
+frame runs long. Then the simulation does not depend on the frame rate:
 
 ```cpp
-// whatever the frame time, the world advances in steps of 1/60 s; a long frame catches up a few steps at most
+// whatever the frame time, the world advances in steps of 1/60 s. a long frame catches up a few steps at most
 const float step_time = 1.0f / 60.0f;
 float accumulator = 0.0f;
 const float frame_times[] = {0.016f, 0.017f, 0.033f, 0.2f};
@@ -331,19 +333,19 @@ for (float frame_time : frame_times) {
 }
 ```
 
-Bodies resting on others sink up to `settings.solver.penetration_slop` (2 cm) into them: the solver allows it to keep
+A resting body can sink into the body below by up to `settings.solver.penetration_slop`, which is 2 cm. This keeps
 stacks from jittering.
 
 ### Events and answers
 
-There are no callbacks. A step is a series of phases. Between phases you read what the last phase found from
-`world.events` and write your answers to `world.answers`, which the next phase reads. `world::step` runs the phases and
-answers nothing. Run them yourself to answer:
+There are no callbacks. A step runs in phases. Between two phases, you read what the last phase found in
+`world.events`, and write your answers to `world.answers`. The next phase reads them. `world::step` runs all the phases
+and answers nothing. To answer, run the phases yourself:
 
 ```cpp
-// world::step is these phases, answering nothing. between them the world's events say what a phase found, and its
-// answers say what to do about it: here pairs with a body whose user data is 7 are rejected, so it passes through
-// everything, and no contact bounces
+// world::step runs these phases and answers nothing. between phases, the world's events say what a phase found, and
+// its answers say what to do about it. here pairs with a body whose user data is 7 are rejected, so that body passes
+// through everything. no contact bounces
 void step_with_answers(World &world, float delta_time) {
     update::step_begin(world, delta_time);
     do {
@@ -354,7 +356,7 @@ void step_with_answers(World &world, float delta_time) {
         }
         update::narrowphase(world);
     } while (world.events.woken > 0);
-    // after the last narrowphase: one answer per contacts_added entry, then per contacts_persisted entry
+    // after the last narrowphase, write one answer per contacts_added entry, then one per contacts_persisted entry
     for (uint32_t i = 0; i < world.answers.contact_override.length; i++) {
         events::override_contact(world.answers, world.events, i).settings.combined_restitution = 0.0f;
     }
@@ -363,17 +365,18 @@ void step_with_answers(World &world, float delta_time) {
 }
 ```
 
-- `events.pairs`, after `find_pairs`: the pairs of bodies whose bounds overlap. `events::reject_pair` drops one before
-  the narrowphase.
-- `events.contacts_added` and `events.contacts_persisted`, after `narrowphase`: the contacts it made, each with its
-  manifold and the combined material. `events::override_contact` changes how one is solved, or rejects it.
-- `events.woken`, after `narrowphase`: the bodies its contacts woke. While it is above zero, find their pairs and run
-  the narrowphase again.
+- After `find_pairs`, `events.pairs` holds the pairs of bodies whose bounds overlap. `events::reject_pair` drops a pair
+  before the narrowphase.
+- After `narrowphase`, `events.contacts_added` and `events.contacts_persisted` hold its contacts, each with its manifold
+  and combined material. `events::override_contact` changes how a contact is solved, or rejects it.
+- After `narrowphase`, `events.woken` counts the bodies its contacts woke. While it is above zero, find their pairs and
+  run the narrowphase again.
 
-After a step, the events say what it did:
+After a step, the events describe what it did:
 
 ```cpp
-// after a step: the contacts it found and kept, the ones it lost, and the bodies still active, which the next step moves
+// after a step, the events hold the contacts it found, kept and lost, and the bodies still active. the next step moves
+// those bodies
 void print_events(const World &world) {
     for (uint32_t i = 0; i < world.events.contacts_added.length; i++) {
         const ContactEvent &contact = world.events.contacts_added[i];
@@ -385,26 +388,28 @@ void print_events(const World &world) {
 }
 ```
 
-`contacts_removed` also holds the contacts of bodies removed since the step before, so a removal's events come with the
+`contacts_removed` also holds the contacts of bodies removed since the last step. So a removal's events arrive with the
 next step.
 
 ### Active bodies
 
-The active list is the dynamic and kinematic bodies awake: `world::get_num_active_bodies` and `world::get_active_bodies`
-(body indices into `bodies.pool`, valid until the list next changes). After a step it names every body the step moved,
-but those it put to sleep. An activation listener hears each body join or leave it, from the step or from a call such as
-`rigid_body::wake`, as it happens:
+The active list holds the dynamic and kinematic bodies that are awake. Read it with `world::get_num_active_bodies` and
+`world::get_active_bodies`. Entries are indices into `bodies.pool`, valid until the list next changes. After a step, the
+list names every body the step moved, except those it put to sleep.
+
+An activation listener hears each body join or leave the list. It hears changes from the step, and from calls such as
+`rigid_body::wake`, as they happen:
 
 ```cpp
-// told as a body joins or leaves the active list, whatever moved it. a recorder is a listener that keeps what it hears,
-// so it can be handed on at a point of your choosing, here after the steps
+// the listener hears each body join or leave the active list, whatever moved it. a recorder is a listener that keeps
+// what it hears, so you can hand it on later, here after the steps
 BodyActivationRecorder recorder;
 body_activation::init_recorder(recorder);
 world::set_body_activation_listener(*world, &recorder.listener);
 ```
 
 ```cpp
-// the bodies the steps put to sleep, and woke, in the order it happened
+// the bodies the steps put to sleep and woke, in order
 BodyActivationListener print = {
     [](BodyActivationListener &, BodyId body, uint64_t) { printf("%u woke\n", body_id::index(body)); },
     [](BodyActivationListener &, BodyId body, uint64_t) { printf("%u slept\n", body_id::index(body)); },
@@ -419,66 +424,66 @@ world::set_body_activation_listener(*world, nullptr);
 ### Creating and removing
 
 ```cpp
-// a body is in the world from create, found by the next step; the shape is borrowed and outlives it
+// a body joins the world at create, and the next step finds it. the body holds its shape
 RigidBody *crate = rigid_body::create(*world, {.shape = box_shape,
                                                            .object_layer = moving,
                                                            .motion_type = MotionType::DYNAMIC,
                                                            .position = {0.0f, 2.0f, 0.0f},
                                                            .friction = 0.6f});
 
-// its id names it for as long as it lives; get resolves an id to the body, or null once it is gone
+// its id names it while it exists. get returns the body for an id, or null once it is gone
 const BodyId id = crate->id;
 rigid_body::get(*world, id);
 
-// out of the world: its contacts' removal events come with the next step, its constraints go with it
+// remove takes the body out of the world, with its constraints. its contacts' removal events come with the next step
 rigid_body::remove(*world, crate);
 ```
 
-A body pointer stays valid while the body lives. Its id outlives it safely: `rigid_body::get` returns null for a removed
-body's id, even once its slot is reused.
+A body pointer stays valid while the body exists. Its id is safe to keep after that. `rigid_body::get` returns null for
+a removed body's id, even after its slot is reused.
 
 ### Motion types
 
 ```cpp
-// static bodies never move; kinematic ones move by their velocity and push dynamic ones aside; dynamic ones are
-// moved by gravity, forces and contacts
+// a static body never moves. a kinematic body moves by its velocity and pushes dynamic bodies aside. a dynamic body
+// is moved by gravity, forces and contacts
 RigidBody *platform = rigid_body::create(*world, {.shape = box_shape, .object_layer = moving,
                                                               .motion_type = MotionType::KINEMATIC, .position = {4.0f, 1.0f, 0.0f}});
-// and a body can change what it is: `wake` wakes one that keeps moving
+// a body can change its motion type. `wake` wakes a body that keeps moving
 rigid_body::set_motion_type(*world, platform, MotionType::DYNAMIC, true);
 ```
 
 ### Position and rotation
 
 ```cpp
-// a teleport: the broadphase and the pairs follow, and `wake` wakes a sleeping body
+// this teleports the body. the broadphase and the pairs update, and `wake` wakes a sleeping body
 rigid_body::set_position(*world, body, vec3f::make(0.0f, 3.0f, 0.0f), true);
 rigid_body::set_quaternion(*world, body, quatf::set_axis_angle(vec3f::axis_y(), 0.5f), true);
 rigid_body::set_transform(*world, body, vec3f::make(0.0f, 0.5f, 0.0f), quatf::identity(), true);
 
-// the body's own fields read its pose: position is the shape's origin, center_of_mass_position its centre of mass
+// read the pose from the body's fields. position is the shape's origin. center_of_mass_position is its centre of mass
 printf("at %.2f %.2f %.2f\n", body->position.x, body->position.y, body->position.z);
 ```
 
-Teleporting a body skips the simulation in between: nothing it passes through stops it. Move a kinematic body by
-velocity instead (see [Kinematic bodies](#kinematic-bodies)).
+Setting a position teleports the body and skips the simulation in between. Nothing it passes through stops it. To move
+a kinematic body, set its velocity instead (see [Kinematic bodies](#kinematic-bodies)).
 
 ### Velocity
 
 ```cpp
-// metres and radians per second, world space; setting either wakes the body
+// in metres and radians per second, in world space. setting either wakes the body
 rigid_body::set_linear_velocity(*world, body, vec3f::make(2.0f, 0.0f, 0.0f));
 rigid_body::set_angular_velocity(*world, body, vec3f::make(0.0f, 1.0f, 0.0f));
 rigid_body::add_linear_velocity(*world, body, vec3f::make(0.0f, 1.0f, 0.0f));
 
-// the velocity of any point on it, from the body's linear and angular velocity
+// the velocity of any point on the body, from its linear and angular velocity
 const Vec3f corner_velocity = rigid_body::get_velocity_at_point(body, vec3f::make(0.5f, 1.0f, 0.5f));
 ```
 
 ### Forces and impulses
 
 ```cpp
-// a force acts over the next step and is then cleared; an impulse changes the velocity at once
+// a force acts over the next step, then is cleared. an impulse changes the velocity at once
 rigid_body::add_force(*world, body, vec3f::make(0.0f, 2000.0f, 0.0f), true);
 rigid_body::add_torque(*world, body, vec3f::make(0.0f, 10.0f, 0.0f), true);
 rigid_body::add_force_at_position(*world, body, vec3f::make(100.0f, 0.0f, 0.0f), vec3f::make(0.0f, 1.0f, 0.0f), true);
@@ -491,8 +496,8 @@ Forces and impulses only move dynamic bodies.
 ### Mass
 
 ```cpp
-// from the shape's density by default (1000 kg/m3: the unit box weighs 1000 kg). `mass` keeps the shape's
-// inertia scaled to a mass of your own; mass_properties_override gives both outright
+// the mass comes from the shape's density by default, which is 1000 kg/m3. so the unit box weighs 1000 kg. `mass`
+// scales the shape's inertia to a mass you choose. mass_properties_override sets both directly
 RigidBody *light = rigid_body::create(*world, {.shape = box_shape, .object_layer = moving,
                                                            .motion_type = MotionType::DYNAMIC, .position = {3.0f, 0.5f, 3.0f},
                                                            .mass = 10.0f});
@@ -503,13 +508,13 @@ RigidBody *given = rigid_body::create(*world, {.shape = box_shape, .object_layer
                                                            .mass_properties_override = &hollow});
 ```
 
-A triangle mesh has no volume to take a mass from: a dynamic body with one needs `mass_properties_override`.
+A triangle mesh has no volume, so it has no mass. A dynamic body with a mesh shape needs `mass_properties_override`.
 
 ### Damping, limits and degrees of freedom
 
 ```cpp
-// damping slows a body a little every step; the velocities are clamped to these limits; gravity_factor scales
-// gravity for this body alone (0 floats); allowed_degrees_of_freedom locks axes: this one only slides in x and y
+// damping slows a body a little every step. the limits clamp its velocities. gravity_factor scales gravity for this
+// body alone, and 0 makes it float. allowed_degrees_of_freedom locks axes. this body only slides in x and y
 RigidBody *puck = rigid_body::create(*world, {.shape = box_shape,
                                                           .object_layer = moving,
                                                           .motion_type = MotionType::DYNAMIC,
@@ -525,8 +530,8 @@ rigid_body::set_linear_velocity(*world, puck, vec3f::make(30.0f, 0.0f, 5.0f));
 ### Sleeping
 
 ```cpp
-// a body that has barely moved for a while sleeps, costing nothing until something touches or wakes it.
-// allow_sleeping = false keeps it awake; sleep and wake do it by hand
+// a body that has barely moved for a while sleeps. it costs nothing until something touches or wakes it. set
+// allow_sleeping to false to keep it awake. sleep and wake do it by hand
 rigid_body::sleep(*world, body);
 rigid_body::wake(*world, body);
 ```
@@ -534,7 +539,8 @@ rigid_body::wake(*world, body);
 ### Kinematic bodies
 
 ```cpp
-// a kinematic body follows a path by velocities: move_kinematic sets the ones that reach the target in a step
+// a kinematic body follows a path by its velocities. move_kinematic sets the velocities that reach the target in one
+// step
 RigidBody *lift = rigid_body::create(*world, {.shape = box_shape, .object_layer = moving,
                                                           .motion_type = MotionType::KINEMATIC, .position = {-6.0f, 0.5f, 0.0f}});
 for (int i = 1; i <= 60; i++) {
@@ -544,13 +550,13 @@ for (int i = 1; i <= 60; i++) {
 }
 ```
 
-`move_kinematic` wakes the body, so a lift that waited at rest moves when told.
+`move_kinematic` wakes the body, so a lift waiting at rest starts moving.
 
 ### Continuous collision detection
 
 ```cpp
-// a small fast body can pass through a thin one between two steps; linear casting sweeps it, at a cost, so it
-// stops at what it would hit
+// a small fast body can pass through a thin one between two steps. linear casting sweeps it, so it stops at what it
+// would hit. this costs more
 Ref<Shape> pellet_shape = sphere::create({.radius = 0.05f});
 RigidBody *pellet = rigid_body::create(*world, {.shape = pellet_shape,
                                                             .object_layer = moving,
@@ -563,7 +569,7 @@ rigid_body::set_linear_velocity(*world, pellet, vec3f::make(0.0f, -200.0f, 0.0f)
 ### User data
 
 ```cpp
-// a value of yours, carried into every event the body is in: an entity id, an index, a pointer
+// your own value for the body, such as an entity id, an index or a pointer. every event with the body carries it
 RigidBody *tagged = rigid_body::create(*world, {.shape = box_shape, .object_layer = moving,
                                                             .motion_type = MotionType::DYNAMIC, .user_data = 42,
                                                             .position = {0.0f, 0.5f, 6.0f}});
@@ -573,13 +579,14 @@ tagged->user_data = 43;
 ### Collision groups and masks
 
 ```cpp
-// inside one object layer, finer filtering: a pair collides when each body's mask has a bit of the other's groups
+// groups and masks filter within one object layer. two bodies collide when each one's mask has a bit of the other's
+// groups
 constexpr uint32_t PLAYERS = 1u << 0;
 constexpr uint32_t PROJECTILES = 1u << 1;
 RigidBody *player = rigid_body::create(*world, {.shape = box_shape, .object_layer = moving,
                                                             .motion_type = MotionType::DYNAMIC, .position = {-10.0f, 0.5f, 0.0f},
                                                             .collision_groups = PLAYERS, .collision_mask = ~PROJECTILES});
-// a player's own shots pass through it
+// the player's own shots pass through the player
 RigidBody *shot = rigid_body::create(*world, {.shape = box_shape, .object_layer = moving,
                                                           .motion_type = MotionType::DYNAMIC, .position = {-10.0f, 3.0f, 0.0f},
                                                           .collision_groups = PROJECTILES, .collision_mask = ~PLAYERS});
@@ -588,7 +595,7 @@ RigidBody *shot = rigid_body::create(*world, {.shape = box_shape, .object_layer 
 ### Materials
 
 ```cpp
-// friction and restitution meet in a contact through each body's combine mode; the more restrictive mode wins
+// each body's combine mode decides how friction and restitution combine in a contact. the more restrictive mode wins
 RigidBody *ball = rigid_body::create(*world, {.shape = box_shape,
                                                           .object_layer = moving,
                                                           .motion_type = MotionType::DYNAMIC,
@@ -598,14 +605,16 @@ RigidBody *ball = rigid_body::create(*world, {.shape = box_shape,
                                                           .restitution_combine_mode = MaterialCombineMode::MAX});
 ```
 
-`world::set_materials` gives the world a table of surfaces. A shape's or a triangle's `material_id` picks a surface,
-which then stands in for the body's friction and restitution on that side of a contact. A query's hit names the part it
-met by sub shape id: `rigid_body::get_material(body, hit.sub_shape_id)` is that part's material id.
+`world::set_materials` gives the world a table of materials. A shape's or a triangle's `material_id` picks one. On that
+side of a contact, the material replaces the body's friction and restitution.
+
+A query hit names the part it hit with a sub shape id. `rigid_body::get_material(body, hit.sub_shape_id)` returns that
+part's material id.
 
 ### Sensors
 
 ```cpp
-// a sensor reports its contacts and pushes nothing: a trigger volume
+// a sensor reports its contacts but pushes nothing. use it as a trigger volume
 RigidBody *trigger = rigid_body::create(*world, {.shape = box_shape, .object_layer = moving,
                                                              .motion_type = MotionType::KINEMATIC, .position = {14.0f, 0.5f, 0.0f},
                                                              .sensor = true});
@@ -614,11 +623,11 @@ RigidBody *trigger = rigid_body::create(*world, {.shape = box_shape, .object_lay
 ### Changing a body's shape
 
 ```cpp
-// a new shape: mass and bounds follow, and the constraints keep their anchors where they were on the body
+// a new shape updates the mass and bounds. constraints keep their anchors where they were on the body
 Ref<Shape> bigger = box::create({.half_extents = {1.0f, 1.0f, 1.0f}});
 rigid_body::set_shape(*world, body, bigger, true);
 
-// a shape changed in place: each body using it takes it again
+// after changing a shape in place, pass it to set_shape for each body that uses it
 shapes::as<BoxShape>(bigger).half_extents = {1.0f, 2.0f, 1.0f};
 box::update(bigger);
 rigid_body::set_shape(*world, body, bigger, true);
@@ -627,34 +636,37 @@ rigid_body::set_shape(*world, body, bigger, true);
 ### Changing a body's layer
 
 ```cpp
-// into another object layer: the body moves to that layer's broadphase tree and finds its pairs again
+// moving a body to another object layer moves it to that layer's broadphase tree. then it finds its pairs again
 rigid_body::set_object_layer(*world, body, not_moving);
 ```
 
 ## Shapes
 
-Shapes are created by each type's `create` and shared by any number of bodies. Whatever holds a shape holds a
-`Ref<Shape>` to it (a body, a character, a shape built over it, and your code), and the last to let go frees it;
-a function that only reads a shape takes a plain `Shape *`. Each body's pose places its shape: a shape's own
-geometry is centred on its origin.
+Each shape type has a `create` function. Any number of bodies can share a shape.
+
+Shapes are reference counted. Anything that holds a shape holds a `Ref<Shape>` to it. This includes bodies,
+characters, shapes built from it, and your code. The last holder to let go frees it. A function that only reads a shape
+takes a plain `Shape *`.
+
+A shape's geometry is centred on its origin. The body's pose places it in the world.
 
 ### Convex shapes
 
 ```cpp
-// the convex primitives, centred on their origin; a body takes its mass from their volume and density
+// the convex primitives, centred on their origin. a body takes its mass from their volume and density
 Ref<Shape> ball = sphere::create({.radius = 0.5f});
 Ref<Shape> crate = box::create({.half_extents = {0.5f, 0.25f, 0.5f}, .density = 500.0f});
-// y is the long axis of a capsule and a cylinder; a capsule's radius is its convex radius
+// y is the long axis of a capsule and a cylinder. a capsule's radius is its convex radius
 Ref<Shape> pill = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.25f});
 Ref<Shape> can = cylinder::create({.half_height = 0.4f, .radius = 0.3f});
 ```
 
-A box's and a cylinder's `convex_radius` rounds their edges a little, which makes collisions faster and steadier.
+A box's or a cylinder's `convex_radius` rounds its edges a little. This makes collisions faster and steadier.
 
 ### Convex hulls
 
 ```cpp
-// any point cloud: the shape builds its hull, and any number of bodies can share the shape
+// any point cloud. the shape builds its hull, and any number of bodies can share the shape
 const float points[] = {
     -0.5f, 0.0f, -0.5f, 0.5f, 0.0f, -0.5f, 0.5f, 0.0f, 0.5f, -0.5f, 0.0f, 0.5f, 0.0f, 0.8f, 0.0f, 0.1f, 0.2f, 0.1f,
 };
@@ -667,7 +679,7 @@ Ref<Shape> heavy_pyramid = convex_hull::create({.positions = points, .num_positi
 ### Planes
 
 ```cpp
-// an infinite ground: point . normal + constant = 0, the normal its front
+// an infinite ground. the plane is point . normal + constant = 0, and the normal points out of its front
 Ref<Shape> ground = plane::create({.plane = {{0.0f, 1.0f, 0.0f}, 0.0f}});
 rigid_body::create(*world, {.shape = ground, .object_layer = not_moving, .motion_type = MotionType::STATIC});
 ```
@@ -675,8 +687,8 @@ rigid_body::create(*world, {.shape = ground, .object_layer = not_moving, .motion
 ### Triangle meshes
 
 ```cpp
-// static geometry from triangles, counter clockwise seen from the front; the shape builds its bvh and finds the
-// edges a sliding body must not catch on
+// static geometry from triangles, counter clockwise seen from the front. the shape builds its bvh and finds the edges
+// a sliding body must not catch on
 const float ramp_positions[] = {-2.0f, 0.0f, -2.0f, 2.0f, 0.0f, -2.0f, 2.0f, 1.0f, 2.0f, -2.0f, 1.0f, 2.0f};
 const uint32_t ramp_indices[] = {0, 2, 1, 0, 3, 2};
 Ref<Shape> ramp =
@@ -685,12 +697,12 @@ rigid_body::create(*world, {.shape = ramp, .object_layer = not_moving, .motion_t
                             .position = {20.0f, 0.0f, 0.0f}});
 ```
 
-Meshes are for static bodies: they are hollow, with no volume, no inside and no mass.
+Use meshes for static bodies. A mesh is hollow. It has no volume, no inside and no mass.
 
 ### Compounds
 
 ```cpp
-// several shapes as one body, each at its own pose; the shapes are borrowed and outlive the compound
+// several shapes as one body, each at its own pose. the compound holds its shapes
 const CompoundShapeSettings::Child dumbbell_parts[] = {
     {.position = {-0.6f, 0.0f, 0.0f}, .quaternion = {0.0f, 0.0f, 0.0f, 1.0f}, .shape = ball},
     {.position = {0.6f, 0.0f, 0.0f}, .quaternion = {0.0f, 0.0f, 0.0f, 1.0f}, .shape = ball},
@@ -698,7 +710,7 @@ const CompoundShapeSettings::Child dumbbell_parts[] = {
 };
 Ref<Shape> dumbbell = compound::create({.children = dumbbell_parts, .num_children = 3});
 
-// a static compound is built once into a bvh: for many children that never change
+// a static compound is built once into a bvh. use it for many children that never change
 CompoundShapeSettings::Child fence_posts[16];
 for (uint32_t i = 0; i < 16; i++) fence_posts[i] = {.position = {(float)i, 0.4f, 0.0f}, .quaternion = {0.0f, 0.0f, 0.0f, 1.0f}, .shape = can};
 Ref<Shape> fence = static_compound::create({.children = fence_posts, .num_children = 16});
@@ -709,7 +721,7 @@ rigid_body::create(*world, {.shape = fence, .object_layer = not_moving, .motion_
 ### Decorators
 
 ```cpp
-// wrappers over a shape they borrow: moved and turned within the body, scaled, or with the centre of mass moved
+// wrappers hold a shape and change it. they move and turn it within the body, scale it, or move its centre of mass
 Ref<Shape> raised = transformed::create({.shape = crate, .position = {0.0f, 1.0f, 0.0f}, .quaternion = {0.0f, 0.0f, 0.0f, 1.0f}});
 Ref<Shape> big_ball = scaled::create({.shape = ball, .scale = {2.0f, 2.0f, 2.0f}});
 // a low centre of mass keeps a tall box upright
@@ -719,7 +731,7 @@ Ref<Shape> ballasted = offset_center_of_mass::create({.shape = crate, .offset = 
 ### Empty
 
 ```cpp
-// a body with no geometry: a point for constraints to hold, or one waiting for its shape
+// a body with no geometry. use it as a point for constraints to hold, or for a body waiting for its shape
 Ref<Shape> nothing = empty::create();
 rigid_body::create(*world, {.shape = nothing, .object_layer = moving, .motion_type = MotionType::STATIC});
 ```
@@ -727,27 +739,28 @@ rigid_body::create(*world, {.shape = nothing, .object_layer = moving, .motion_ty
 ### Freeing shapes
 
 ```cpp
-// a shape is freed when the last Ref to it lets go: the world lets go of its bodies' shapes, a wrapper of the shape
-// it wraps, and the Refs here as they leave scope
+// a shape is freed when the last Ref to it lets go. the world lets go of its bodies' shapes, a wrapper lets go of
+// the shape it wraps, and the Refs here let go as they leave scope
 world::destroy(world);
 ```
 
 ## Contact pairs
 
-Events report every contact of every step. Contact pairs keep the few you care about, between frames: each pair of body
-parts in contact, with a stable handle while the pair lasts, added, persisted or removed each frame. A frame can span
-several world steps and the characters' moves between them.
+Events report every contact in every step. Contact pairs track only the contacts you care about, across frames.
+
+Each pair is two body parts in contact. It has a stable handle while the contact lasts, and is marked added, persisted
+or removed each frame. A frame can cover several world steps and the character moves between them.
 
 ```cpp
-// only the pairs a body observing contacts is a side of are kept: the few a game reacts to, not every contact
+// only pairs that include a body observing contacts are kept. these are the few a game reacts to
 RigidBody *ball = rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving,
                                                            .motion_type = MotionType::DYNAMIC, .position = {0.0f, 2.0f, 0.0f},
                                                            .restitution = 0.6f, .observes_contacts = true});
 ```
 
 ```cpp
-// a frame of contact pairs: begin, record what moved (a world step's contact events, a character's move), end. a pair
-// is added the frame it starts, persisted while it lasts, and removed the frame after it was last recorded
+// a contact pairs frame. begin it, record each world step's contact events and each character move, then end it. a
+// pair is added in the frame it starts, persisted while it lasts, and removed in the frame after it was last recorded
 void frame(World &world, float frame_time, int steps) {
     contact_pairs::begin(world);
     for (int i = 0; i < steps; i++) {
@@ -773,22 +786,22 @@ void print_pairs(const World &world) {
 }
 ```
 
-A removed pair's handle is reused after the next frame begins.
+A removed pair's handle can be reused once the next frame begins.
 
 ## Queries
 
-Each query walks the broadphase under a filter and runs against every body it reaches, reporting to a collector:
+A query searches the broadphase under a filter and tests every body it reaches. It reports hits to a collector:
 
-- `CollectorKind::CLOSEST`: the nearest hit.
-- `CollectorKind::ANY`: the first hit found, then stops.
-- `CollectorKind::ALL`: every hit; `sort` orders them nearest first.
-- `CollectorKind::CUSTOM`: your `custom_add_hit` and `custom_add_miss`, with a `context`. Lowering
-  `early_out_fraction` lets shapes skip what cannot beat it, and `force_early_out` stops the query.
+- `CollectorKind::CLOSEST` keeps the nearest hit.
+- `CollectorKind::ANY` keeps the first hit found, then stops.
+- `CollectorKind::ALL` keeps every hit. `sort` orders them nearest first.
+- `CollectorKind::CUSTOM` calls your `custom_add_hit` and `custom_add_miss`, with a `context`. Lower
+  `early_out_fraction` to let shapes skip hits that cannot beat it. Set `force_early_out` to stop the query.
 
 ### Rays
 
 ```cpp
-// down from above the crate, 10 m: the closest hit, its point and the surface normal there
+// a 10 m ray down from above the crate. it finds the closest hit, its point and the surface normal there
 Filter filter = filter::create(world->settings.layers);
 CastRayCollector collector = cast_ray::create_collector(CollectorKind::CLOSEST);
 const Rayf ray = {vec3f::make(0.0f, 5.0f, 0.0f), vec3f::make(0.0f, -1.0f, 0.0f), 10.0f};
@@ -806,13 +819,13 @@ query::cast_ray(*world, all, cast_ray::default_settings(), ray, filter);
 cast_ray::sort(all);
 printf("%u hits\n", all.hits.length);
 
-// the collectors and the filter own memory
+// the collectors and the filter own memory, and free it when they leave scope
 ```
 
 ### Points
 
 ```cpp
-// which bodies hold this point
+// the bodies that contain this point
 CollidePointCollector inside = collide_point::create_collector(CollectorKind::ALL);
 query::collide_point(*world, inside, collide_point::default_settings(), vec3f::make(0.2f, 0.5f, 0.1f), filter);
 ```
@@ -820,7 +833,7 @@ query::collide_point(*world, inside, collide_point::default_settings(), vec3f::m
 ### Overlaps
 
 ```cpp
-// everything a 2 m sphere at the crate's corner overlaps, and how deep: an explosion's reach
+// everything a 2 m sphere at the crate's corner overlaps, and how deep, such as an explosion's reach
 Ref<Shape> blast = sphere::create({.radius = 2.0f});
 Filter filter = filter::create(world->settings.layers);
 CollideShapeCollector overlaps = collide_shape::create_collector(CollectorKind::ALL);
@@ -834,7 +847,7 @@ for (uint32_t i = 0; i < overlaps.hits.length; i++) {
 ### Sweeps
 
 ```cpp
-// the sphere swept along a path: where it first touches, for a projectile with a size
+// the sphere swept along a path. it finds where it first touches something, for a projectile with a size
 Filter only_moving = filter::create(world->settings.layers);
 filter::disable_object_layer(only_moving, world->settings.layers, not_moving);
 CastShapeCollector sweep = cast_shape::create_collector(CollectorKind::CLOSEST);
@@ -846,18 +859,21 @@ if (const CastShapeHit *hit = cast_shape::hit(sweep)) printf("stops after %.2f m
 
 ### Bounds only
 
-`broadphase_query` finds bodies by their bounds alone, without testing their shapes, as Jolt's `BroadPhaseQuery`: a
-box, a sphere, a point or an oriented box for the bodies it overlaps, and a ray or a moving box for the bodies it enters
-and where. They take the same filter. The overlaps' collector takes `CollectorKind::ALL`, `::ANY` or `::CUSTOM`, as
-an overlap has no nearest; the casts' takes `CollectorKind::CLOSEST` too.
+`broadphase_query` finds bodies by their bounds alone, without testing their shapes.
+
+- A box, a sphere, a point or an oriented box finds the bodies it overlaps.
+- A ray or a moving box finds the bodies it enters, and where.
+
+They take the same filter. An overlap has no nearest hit, so the overlap queries take `CollectorKind::ALL`, `ANY` or
+`CUSTOM`. The casts also take `CollectorKind::CLOSEST`.
 
 ```cpp
-// the bodies whose bounds a 1 m box around the origin overlaps, their shapes not tested
+// the bodies whose bounds overlap a 1 m box around the origin. their shapes are not tested
 Filter filter = filter::create(world->settings.layers);
 BodyCollector near_origin = broadphase_query::create_body_collector(CollectorKind::ALL);
 broadphase_query::collide_aabb(*world, near_origin, aabox::make(vec3f::splat(-0.5f), vec3f::splat(0.5f)), filter);
 
-// a sphere and a turned box, likewise
+// the same with a sphere and a rotated box
 broadphase_query::reset(near_origin);
 broadphase_query::collide_sphere(*world, near_origin, vec3f::make(0.0f, 3.0f, 0.0f), 2.1f, filter);
 const Quatf turn = quatf::set_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.7f);
@@ -865,7 +881,7 @@ const OrientedBox turned = {mat4f::from_rotation_translation(turn, vec3f::make(0
 BodyCollector in_turned = broadphase_query::create_body_collector(CollectorKind::ALL);
 broadphase_query::collide_oriented_box(*world, in_turned, turned, filter);
 
-// a box swept down from above: the first body whose bounds it enters, and where
+// a box swept down from above. it finds the first body whose bounds it enters, and where
 BodyCastCollector first = broadphase_query::create_body_cast_collector(CollectorKind::CLOSEST);
 const AABox falling = aabox::make(vec3f::make(-0.1f, 4.9f, -0.1f), vec3f::make(0.1f, 5.1f, 0.1f));
 broadphase_query::cast_aabb(*world, first, falling, vec3f::make(0.0f, -10.0f, 0.0f), filter);
@@ -875,8 +891,8 @@ if (const BodyCastHit *hit = broadphase_query::hit(first)) printf("bounds entere
 ### Filters
 
 ```cpp
-// a filter starts with every layer, then narrows: by object or broadphase layer, by group and mask, and by a
-// function of the body
+// a filter starts with every layer enabled. you can narrow it by object or broadphase layer, by group and mask, and
+// by a function of the body
 Filter filter = filter::create(world->settings.layers);
 filter::disable_object_layer(filter, world->settings.layers, moving);
 filter.body_filter = not_this_body;
@@ -884,7 +900,7 @@ filter.body_filter_context = ground;
 CastRayCollector collector = cast_ray::create_collector(CollectorKind::ANY);
 query::cast_ray(*world, collector, cast_ray::default_settings(), {vec3f::make(0.0f, 5.0f, 0.0f), vec3f::make(0.0f, -1.0f, 0.0f), 10.0f},
                 filter);
-// the crate's layer is off and the ground is filtered out: nothing hit
+// the crate's layer is off and the ground is filtered out, so nothing is hit
 ```
 
 ```cpp
@@ -895,18 +911,21 @@ bool not_this_body(const RigidBody *body, void *context) { return body != static
 ## Constraints
 
 A constraint holds two bodies relative to each other. `<type>_constraint::create(world, body_a, body_b, settings)`
-returns its id. `get(world, id)` returns its record for changing it (limits, motors), valid until the next create of
-that type, so get it again rather than keeping it. A constraint goes with either of its bodies, or with
-`constraints::remove(world, id)`, whatever its type.
+returns its id.
 
-Points and axes are in world space by default. With `.space = ConstraintSpace::LOCAL` they are relative to each body.
-The two sides of a constraint are always `_a` and `_b`, as its bodies are.
+`get(world, id)` returns the constraint's record, so you can change its limits and motors. The record is valid until
+the next create of that type. Get it again each time instead of keeping it.
+
+Removing either body removes the constraint. You can also remove any constraint with `constraints::remove(world, id)`.
+
+Points and axes are in world space by default. With `.space = ConstraintSpace::LOCAL`, they are relative to each body.
+The two sides of a constraint are named `_a` and `_b`, like its bodies.
 
 ### Hinge
 
 ```cpp
-// a door on a hinge along y at its left edge, opening a quarter turn at most, driven open by its motor. a motor's
-// torque is unbounded unless limited, and an unbounded motor driving into a limit pushes past it: give it a limit
+// a door hinged along y at its left edge. it opens a quarter turn at most, and its motor drives it open. a motor's
+// torque is unbounded unless you limit it. an unbounded motor pushes past the hinge limit, so this one has a limit
 RigidBody *frame = rigid_body::create(*world, {.shape = nothing, .object_layer = not_moving,
                                                            .motion_type = MotionType::STATIC, .position = {0.0f, 1.0f, 0.0f}});
 RigidBody *door = rigid_body::create(*world, {.shape = door_shape, .object_layer = moving,
@@ -922,21 +941,21 @@ const ConstraintId hinge_id = hinge_constraint::create(*world, frame, door,
                                                                        .limits_max = 0.5f * scalar::PI,
                                                                        .motor_settings = {.min_torque_limit = -100.0f, .max_torque_limit = 100.0f}});
 
-// the id names it; get gives its record, which changes it, until the next create of a hinge
+// the id names the constraint. get returns its record for changes, valid until the next hinge create
 HingeConstraint *hinge = hinge_constraint::get(*world, hinge_id);
 hinge_constraint::set_motor_state(*hinge, MotorState::VELOCITY);
 hinge_constraint::set_target_angular_velocity(*hinge, 2.0f);
 ```
 
 ```cpp
-// gone, or with either body: a stale id resolves to nothing
+// remove it, or remove either body. after that, the id resolves to nothing
 constraints::remove(*world, hinge_id);
 ```
 
 ### Point
 
 ```cpp
-// a pendulum: a ball held 2 m below a point it swings about. a static body with an empty shape is a fixed anchor
+// a pendulum. the ball hangs 2 m below the point it swings about. a static body with an empty shape is the anchor
 RigidBody *anchor = rigid_body::create(*world, {.shape = nothing, .object_layer = not_moving,
                                                             .motion_type = MotionType::STATIC, .position = {10.0f, 5.0f, 0.0f}});
 RigidBody *bob = rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving,
@@ -947,7 +966,7 @@ point_constraint::create(*world, anchor, bob, {.point_a = {10.0f, 5.0f, 0.0f}, .
 ### Distance
 
 ```cpp
-// a bungee: no further than 3 m, pulled back by a spring; min and max of -1 keep the distance it starts at
+// a bungee. a spring pulls it back past 3 m. a min or max of -1 keeps the starting distance
 RigidBody *jumper = rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving,
                                                             .motion_type = MotionType::DYNAMIC, .position = {14.0f, 5.0f, 0.0f}});
 distance_constraint::create(*world, anchor, jumper,
@@ -961,8 +980,8 @@ distance_constraint::create(*world, anchor, jumper,
 ### Slider
 
 ```cpp
-// a lift: a platform that slides along y only, its position motor holding it 2 m up the rail. a position motor
-// drives through a spring, which a load sags: this one is stiff enough (10 Hz) to sag by millimetres
+// a lift. the platform slides along y only, and its position motor holds it 2 m up the rail. a position motor drives
+// through a spring, so a load makes it sag. at 10 Hz this spring sags by only millimetres
 RigidBody *rail = rigid_body::create(*world, {.shape = nothing, .object_layer = not_moving,
                                                           .motion_type = MotionType::STATIC, .position = {20.0f, 0.0f, 0.0f}});
 RigidBody *platform = rigid_body::create(*world, {.shape = block_shape, .object_layer = moving,
@@ -984,7 +1003,7 @@ slider_constraint::set_target_position(*lift, 2.0f);
 ### Fixed
 
 ```cpp
-// a weld: two bodies held as they are, moving as one
+// a weld. the two bodies keep their relative pose and move as one
 RigidBody *left = rigid_body::create(*world, {.shape = block_shape, .object_layer = moving,
                                                           .motion_type = MotionType::DYNAMIC, .position = {30.0f, 3.0f, 0.0f}});
 RigidBody *right = rigid_body::create(*world, {.shape = block_shape, .object_layer = moving,
@@ -995,8 +1014,8 @@ fixed_constraint::create(*world, left, right, {.auto_detect_point = true});
 ### Swing-twist and cone
 
 ```cpp
-// a shoulder: the arm swings within a 45 degree cone about the shoulder's twist axis (x here), twisting up to 30
-// degrees either way. a cone constraint is the same without the twist limits
+// a shoulder. the arm swings within a 45 degree cone around the twist axis, here x. it twists up to 30 degrees either
+// way. a cone constraint is the same without the twist limits
 RigidBody *torso = rigid_body::create(*world, {.shape = nothing, .object_layer = not_moving,
                                                            .motion_type = MotionType::STATIC, .position = {40.0f, 3.0f, 0.0f}});
 RigidBody *arm = rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving,
@@ -1026,7 +1045,8 @@ cone_constraint::create(*world, cone_anchor, cone_arm,
 ### Six degrees of freedom
 
 ```cpp
-// every axis its own: here free to slide along x within a metre either way and to turn about y, the rest locked
+// each axis has its own setting. here the body slides along x up to a metre either way and turns about y. the other
+// axes are locked
 RigidBody *base = rigid_body::create(*world, {.shape = nothing, .object_layer = not_moving,
                                                           .motion_type = MotionType::STATIC, .position = {50.0f, 3.0f, 0.0f}});
 RigidBody *cart = rigid_body::create(*world, {.shape = block_shape, .object_layer = moving,
@@ -1045,20 +1065,27 @@ rigid_body::set_linear_velocity(*world, cart, vec3f::make(5.0f, 0.0f, 0.0f));
 
 ### Motors and springs
 
-A motor drives a hinge, slider, swing-twist or six-dof axis. `MotorState::VELOCITY` drives to a target velocity;
-`POSITION` drives to a target position through the motor's spring. A motor's torque and force are unbounded unless
-limited by its `MotorSettings`. Limit one that drives into a limit, or it pushes past the limit. A spring's
-`frequency_or_stiffness` above 0 makes a limit or a distance soft.
+A motor drives a hinge, slider, swing-twist or six-dof axis.
+
+- `MotorState::VELOCITY` drives to a target velocity.
+- `MotorState::POSITION` drives to a target position, using the motor's spring.
+
+A motor's torque and force are unbounded unless its `MotorSettings` limit them. Set a limit on a motor that drives
+against a constraint limit. Otherwise it pushes past the constraint limit.
+
+A spring with `frequency_or_stiffness` above 0 makes a limit or a distance soft.
 
 ## Character controller
 
-`kcc` moves a character through the world by sweeps: it walks up slopes and stairs, slides along walls, sticks to the
-floor going down, and stands on moving bodies. It is not a rigid body. Its optional inner body, a kinematic body that
-follows it, is its presence in the world for bodies, queries and contact pairs.
+`kcc` moves a character through the world with sweeps. It walks up slopes and stairs, slides along walls, sticks to the
+floor going down, and stands on moving bodies.
+
+A character is not a rigid body. It can have an optional inner body. This is a kinematic body that follows the
+character, so other bodies, queries and contact pairs can see it.
 
 ```cpp
-// a capsule standing on its feet: the character's position is its feet, the capsule raised 0.8 m to stand on them.
-// the inner body is its presence in the world, which rigid bodies and queries see and contact pairs name it by
+// a capsule standing on its feet. the character's position is at its feet, so the capsule is raised 0.8 m. the inner
+// body represents the character in the world. rigid bodies and queries see it, and contact pairs use it
 Ref<Shape> standing_capsule = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
 Ref<Shape> standing = transformed::create({.shape = standing_capsule, .position = {0.0f, 0.8f, 0.0f}});
 KCCSettings character_settings;
@@ -1070,14 +1097,14 @@ character_settings.observes_contacts = true;
 Ref<KCC> character = kcc::create(character_settings, vec3f::make(0.0f, 0.0f, 0.0f), quatf::identity());
 kcc::add(*world, *character);
 
-// what the character collides with: everything its layer does
+// the character collides with everything its layer collides with
 Filter filter = filter::create(world->settings.layers);
 filter::set_from_layer(filter, world->settings.layers, moving, 0xffffffffu, 0xffffffffu);
 ```
 
 ```cpp
-// a frame of a game: the velocity from the ground's when standing, else falling on, plus the input; then the
-// character moves (sliding along walls, up stairs, sticking to floors going down), then the world steps
+// one game frame. the velocity starts from the ground's when standing, or keeps falling when not, and adds the input.
+// then the character moves. it slides along walls, climbs stairs and sticks to floors going down. then the world steps
 KCCUpdateSettings update_settings;
 for (int frame = 0; frame < 180; frame++) {
     const Vec3f input = vec3f::make(3.0f, 0.0f, 0.0f);
@@ -1093,32 +1120,37 @@ printf("at x %.2f y %.2f, %s\n", vec3f::x(character->position), vec3f::y(charact
        character->ground.state == KCC::GroundState::ON_GROUND ? "on the ground" : "not on the ground");
 ```
 
-`character.ground` says what it stands on: its `state` (`ON_GROUND`, `ON_STEEP_GROUND`, `NOT_SUPPORTED`, `IN_AIR`), its
-`body_id`, the `normal` and the ground's `velocity`.
+`character.ground` describes what the character stands on. Its `state` is one of `KCC::GroundState::ON_GROUND`,
+`ON_STEEP_GROUND`, `NOT_SUPPORTED` and `IN_AIR`. It also has a `body_id`, a `normal`, and the ground's `velocity`.
 
 ### Changing shape
 
 ```cpp
-// a shorter shape, on the same feet, where it fits: refused, false, if it would sink deeper than the given depth
+// a shorter shape on the same feet. set_shape returns false and keeps the old shape if the new one would sink deeper
+// than the given depth
 Ref<Shape> crouching_capsule = capsule::create({.half_height_of_cylinder = 0.2f, .radius = 0.3f});
 Ref<Shape> crouching = transformed::create({.shape = crouching_capsule, .position = {0.0f, 0.5f, 0.0f}});
 const bool crouched = kcc::set_shape(*world, *character, crouching, filter, &listener, 0.01f);
 if (crouched) kcc_policy::set(policy, crate->id, {.can_receive_impulses = false});
 ```
 
-Give every shape the character's feet as its origin, and swap them freely.
+Put the origin of every shape at the character's feet. Then you can swap shapes freely.
 
 ### Listeners and policies
 
-How the character treats the bodies it meets is a `KCC::Listener`'s: crashcat's and Jolt's callbacks, each
-optional. `on_adjust_body_velocity` changes a body's velocity as the character sees it (a conveyor's belt),
-`on_contact_validate` lets the character pass through a contact, `on_contact_added` and `on_contact_persisted` set a
-contact's push settings, `on_contact_solve` changes the character's velocity against a contact, and
-`on_contact_removed` reports a contact gone. Pass the listener to each call, or null for none.
+A `KCC::Listener` sets how the character treats the bodies it meets. Each of its callbacks is optional:
+
+- `on_adjust_body_velocity` changes a body's velocity as the character sees it, such as a conveyor belt.
+- `on_contact_validate` lets the character pass through a contact.
+- `on_contact_added` and `on_contact_persisted` set a contact's push settings.
+- `on_contact_solve` changes the character's velocity against a contact.
+- `on_contact_removed` reports a contact that ended.
+
+Pass the listener to each call, or null for none.
 
 ```cpp
-// the hooks themselves, as crashcat's and Jolt's: a listener's callbacks, each optional, called as the character meets
-// bodies. here Jolt's sample's rule for standing still: on a still, walkable surface, the character does not slide
+// a listener's callbacks run as the character meets bodies. each one is optional. this one keeps the character from
+// sliding on a still, walkable surface
 KCC::Listener standing_still = {};
 standing_still.on_contact_solve = [](const KCC &self, const RigidBody &, SubShapeId, Vec3f, Vec3f contact_normal,
                                      Vec3f contact_velocity, Vec3f, Vec3f &io_new_character_velocity, void *) {
@@ -1128,29 +1160,33 @@ standing_still.on_contact_solve = [](const KCC &self, const RigidBody &, SubShap
 };
 ```
 
-A policy is per body data that `kcc_policy::listener` makes into a listener:
+A policy is per body data. `kcc_policy::listener` turns a policy into a listener:
 
 ```cpp
-// how characters treat the bodies they meet, by body, the rest taking the policy's defaults; one policy serves any
-// number of characters. here the crate may be pushed (until the character crouches, below)
+// a policy sets how characters treat each body. bodies without their own entry use the defaults. one policy can serve
+// any number of characters. here the crate can be pushed, until the character crouches below
 KCC::Policy policy = kcc_policy::create();
 kcc_policy::set(policy, crate->id, {.can_receive_impulses = true});
-// the character asks a listener: this one reads the policy, changes to it taking effect at once
+// the character asks a listener. this one reads the policy, so changes to the policy apply at once
 const KCC::Listener listener = kcc_policy::listener(policy);
 ```
 
-A body's policy: `ignore` passes through it, `can_push_character` false blocks without moving the character,
-`can_receive_impulses` false keeps the character from pushing it, `slide_on_walkable` false stops the character on a
-still, walkable surface of it, and `surface_linear_velocity` and `surface_angular_velocity` move the character as a
-conveyor's belt would. The JS package's characters take policies: a listener's callbacks would have to call from the
-wasm into JS.
+A policy sets how a character treats each body:
+
+- `ignore`: the character passes through the body.
+- `can_push_character = false`: the body blocks the character but does not move it.
+- `can_receive_impulses = false`: the character does not push the body.
+- `slide_on_walkable = false`: the character does not slide on a still, walkable surface of the body.
+- `surface_linear_velocity` and `surface_angular_velocity`: the body moves the character like a conveyor belt.
+
+The JS package's characters use policies only. A listener's callbacks would have to call from the wasm into JS.
 
 ### Your own loop
 
 ```cpp
-// update is the whole move in one call; the toolkit is its phases, for a loop of your own that edits the contacts
-// between collide and solve. here a one-way platform overhead, jumped up through: from below, its contacts and the
-// sweep's hit on it are passed over
+// update does the whole move in one call. the toolkit splits it into phases, so your own loop can edit the contacts
+// between collide and solve. here the character jumps up through a one-way platform. from below, the loop discards the
+// platform's contacts and the sweep's hit on it
 Ref<Shape> platform_shape = box::create({.half_extents = {1.5f, 0.1f, 1.5f}});
 RigidBody *platform = rigid_body::create(*world, {.shape = platform_shape, .object_layer = not_moving,
                                                               .motion_type = MotionType::STATIC,
@@ -1181,7 +1217,7 @@ for (int frame = 0; frame < 90; frame++) {
     }
     kcc::set_position(*world, *character, position);
     kcc::update_ground(*world, *character, delta_time, false, &listener);
-    // landed, coming down
+    // it lands on the platform on the way down
     if (character->ground.state == KCC::GroundState::ON_GROUND && vec3f::y(character->linear_velocity) <= 0.0f) {
         character->linear_velocity = vec3f::make(0.0f, 0.0f, 0.0f);
     }
@@ -1189,16 +1225,21 @@ for (int frame = 0; frame < 90; frame++) {
 }
 ```
 
-`collide`, `solve` and `cast` are a move's phases, as `move` runs them each collision iteration. Between `collide` and
-`solve` a contact's `was_discarded` and `linear_velocity` are yours: the solve, the sweep and the ground pass over a
-discarded one. `update` is the same phases with contact tracking (`begin_contact_tracking`, `end_contact_tracking`),
-`cancel_velocity_towards_steep_slopes` before, and `stick_to_floor` and `walk_stairs` after.
+`collide`, `solve` and `cast` are the phases of a move. `move` runs them once per collision iteration.
+
+Between `collide` and `solve`, you can set a contact's `was_discarded` and `linear_velocity`. The solve, the sweep and
+the ground check skip discarded contacts.
+
+`update` runs the same phases, plus a few more:
+
+- Contact tracking, with `begin_contact_tracking` and `end_contact_tracking`.
+- `cancel_velocity_towards_steep_slopes` before the move.
+- `stick_to_floor` and `walk_stairs` after it.
 
 ### Contacts
 
 ```cpp
-// what the character met in its last update (or refresh_contacts, or set_shape): each contact added or persisted as
-// it was first touched, and each gone by the end
+// the contacts from the last update, refresh_contacts or set_shape. each one is added, persisted or removed
 uint32_t touching = 0;
 for (uint32_t i = 0; i < character->contact_events.length; i++) {
     const KCC::ContactEvent &event = character->contact_events[i];
@@ -1208,7 +1249,7 @@ printf("touching %u bodies\n", touching);
 ```
 
 ```cpp
-// its contacts as data, through its inner body, in a contact pairs frame
+// read the character's contacts as data, through its inner body, in a contact pairs frame
 contact_pairs::begin(*world);
 kcc::refresh_contacts(*world, *character, filter, &listener);
 contact_pairs::record_character_contacts(*world, *character);
@@ -1216,21 +1257,26 @@ contact_pairs::end(*world);
 ```
 
 ```cpp
-// the last Ref to let go takes the inner body out of the world, then frees the character; kcc::remove takes the
-// body out sooner, keeping the character
+// when the last Ref lets go, the inner body leaves the world and the character is freed. kcc::remove takes the body
+// out sooner and keeps the character
 character = nullptr;
 ```
 
 ## Custom shapes
 
-A shape type of your own takes one of eight user slots, `ShapeType::USER_1` to `SHAPE_USER_8`. Its def gives its
-functions, and `dispatch::init` puts it beside the built-ins. Its shapes are a struct of yours deriving from
-`Shape`, as every built-in's is (`BoxShape`, `SphereShape`): `shapes::allocate<T>` makes one,
-`shapes::as<T>` reads a shape as it, and `shapes::release<T>` frees it, from the def's `destroy`, which runs when the
-last `Ref` to a shape of the type lets go. This one is an ellipsoid:
+A shape type of your own takes one of eight user slots, from `ShapeType::USER_1` to `ShapeType::USER_8`. Its def lists
+its functions, and `dispatch::init` adds it next to the built-in types.
+
+Its shapes are a struct of yours that derives from `Shape`, like every built-in shape such as `BoxShape`.
+
+- `shapes::allocate<T>` makes one.
+- `shapes::as<T>` reads a shape as your type.
+- `shapes::release<T>` frees one. Call it from the def's `destroy`, which runs when the last `Ref` to the shape lets go.
+
+This example is an ellipsoid:
 
 ```cpp
-// an ellipsoid: a convex shape tumble does not have, in user slot 1. its struct derives from Shape, as the built-ins' do
+// an ellipsoid, a convex shape tumble does not have, in user slot 1. its struct derives from Shape, like the built-ins
 constexpr ShapeType SHAPE_ELLIPSOID = ShapeType::USER_1;
 
 struct EllipsoidShape : Shape {
@@ -1240,11 +1286,11 @@ struct EllipsoidShape : Shape {
 };
 ```
 
-A convex type gives a support: gjk and epa need nothing else to collide it with every other convex shape.
+A convex type only needs a support function. With it, gjk and epa collide the type with every other convex shape.
 
 ```cpp
-// gjk and epa see a convex shape only through its support: the farthest point in a direction. for radii r and a local
-// direction d it is r^2 d / |r d|, per component
+// gjk and epa see a convex shape only through its support, which is the farthest point in a direction. for radii r and
+// a local direction d, it is r^2 d / |r d|, per component
 Vec3f ellipsoid_support(Support &support, Vec3f direction) {
     const Vec3f local = support::to_local_direction(support, direction);
     const EllipsoidShape &ellipsoid = *static_cast<const EllipsoidShape *>(support.user.data);
@@ -1255,7 +1301,7 @@ Vec3f ellipsoid_support(Support &support, Vec3f direction) {
     return support::to_caller_space(support, support::add_radius_along(point, local, support.add_radius));
 }
 
-// no rounding, so both modes give the whole shape
+// the shape has no rounding, so both modes give the whole shape
 void ellipsoid_set_support(Support &out, const Shape *shape, SupportFunctionMode, Vec3f scale) {
     out.get_support = ellipsoid_support;
     out.has_transform = false;
@@ -1282,7 +1328,7 @@ void ellipsoid_surface_normal(SurfaceNormalResult &io, const Shape *shape, SubSh
     io.normal = vec3f::squared_length(gradient) > 0.0f ? vec3f::normalize(gradient) : vec3f::axis_y();
 }
 
-// curved: no face to build a manifold from, so contacts are single points
+// the surface is curved, so there is no face to build a manifold from. contacts are single points
 void ellipsoid_supporting_face(SupportingFaceResult &io, Vec3f, const Shape *, SubShapeId) {
     io.face.num_vertices = 0;
 }
@@ -1296,7 +1342,7 @@ float ellipsoid_inner_radius(const Shape *shape) {
 
 void ellipsoid_collide_point(CollidePointCollector &collector, const CollidePointSettings &, Vec3f point,
                              const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
-    // into the shape's space, then inside when the scaled coordinates are within the unit sphere
+    // move the point into the shape's space. it is inside when the scaled coordinates fall within the unit sphere
     const Vec3f local = vec3f::transform_quat(vec3f::subtract(point, vec3f::load(transform.position)), quatf::conjugate(quatf::load(transform.quaternion)));
     const Vec3f radii = vec3f::multiply(vec3f::load(shapes::as<EllipsoidShape>(shape).radii), vec3f::abs(vec3f::load(transform.scale)));
     if (vec3f::squared_length(vec3f::divide(local, radii)) > 1.0f) return;
@@ -1339,11 +1385,11 @@ ShapeDef ellipsoid_def() {
     def.get_supporting_face = ellipsoid_supporting_face;
     def.get_material = ellipsoid_material;
     def.get_inner_radius = ellipsoid_inner_radius;
-    // a convex type's rays go through its support
+    // rays against a convex type use its support
     def.cast_ray = convex::cast_ray_vs_convex;
     def.collide_point = ellipsoid_collide_point;
     def.draw = ellipsoid_draw;
-    // define_shape fills what a def leaves out with the defaults
+    // define_shape fills in the defaults for anything the def leaves out
     return shapes::define_shape(def);
 }
 
@@ -1362,14 +1408,14 @@ Shape *create_ellipsoid(Float3 radii, float density) {
 ```
 
 ```cpp
-// the type beside the built-ins: it collides with every convex type, mesh and plane, in compounds and under
-// wrappers. a pair of its own (an ellipsoid against a mesh by a faster rule, say) goes in after, over the generic one
+// register the type next to the built-ins. it then collides with every convex type, mesh and plane, in compounds and
+// inside wrappers. to replace a generic pair function, such as ellipsoid against mesh, set your own afterwards
 const ShapeDef def = ellipsoid_def();
 dispatch::init(&def, 1);
 ```
 
 ```cpp
-// an egg, 0.3 m wide and 0.5 m tall, dropped on its side: it rolls to lie on its long axis
+// an egg, 0.3 m wide and 0.5 m tall, dropped on its side. it rolls to rest on its long axis
 Ref<Shape> egg_shape = create_ellipsoid({0.3f, 0.5f, 0.3f}, 1000.0f);
 RigidBody *body = rigid_body::create(*world, {.shape = egg_shape, .object_layer = moving,
                                                           .motion_type = MotionType::DYNAMIC, .position = {0.0f, 2.0f, 0.0f},
@@ -1378,21 +1424,21 @@ for (int i = 0; i < 300; i++) world::step(*world, 1.0f / 60.0f);
 printf("the egg rests at y %.2f\n", body->position.y);
 ```
 
-A type that is not convex leaves `set_support` null and gives its own pairs with `shapes::set_collide_shape_fn` and
-`shapes::set_cast_shape_fn` after `dispatch::init`.
+A type that is not convex leaves `set_support` null. It sets its own pair functions with `shapes::set_collide_shape_fn`
+and `shapes::set_cast_shape_fn`, after `dispatch::init`.
 
-A contact's material is its shape's `get_material` for the contact's sub shape id, as in Jolt; hits carry none, and
-`rigid_body::get_material` gives a hit's. So a type made of parts with materials of their own, such as cells of a grid,
-answers by sub shape id there.
+A contact's material comes from its shape's `get_material`, for the contact's sub shape id. Hits carry no material.
+`rigid_body::get_material` returns a hit's material. So a type made of parts with their own materials, such as the
+cells of a grid, picks the material by sub shape id.
 
-A type whose sub shape ids name state you keep between steps, such as a pool of hits you clear before each step, sets
-`skips_pair_cache`. A pair that barely moved normally reuses last step's contacts, which would name state you have
-since cleared. With it set, the type's pairs always collide anew.
+Some types use sub shape ids that name state you keep between steps, such as a pool of hits you clear each step. Such a
+type sets `skips_pair_cache`. Normally, a pair that barely moved reuses the last step's contacts, which would name state
+you have cleared. With the flag set, the type's pairs always collide again.
 
 ## Debug drawing
 
 ```cpp
-// buffers that grow as they are drawn into and keep their memory when cleared, for a frame's worth each frame
+// the buffers grow as you draw into them, and keep their memory when cleared. clear and redraw them each frame
 DebugDraw buffers;
 debug::clear(buffers);
 // the bodies, coloured by motion type, with their velocities
@@ -1400,25 +1446,25 @@ debug::bodies(buffers, *world, {.color_mode = DebugDraw::BodyColorMode::MOTION_T
 // each contact's points and normal, and the constraints' anchors and axes
 debug::contacts(buffers, *world);
 debug::joints(buffers, *world, {});
-// a shape anywhere: a preview of where something would go
+// a shape at any pose, such as a preview of where something would go
 debug::shape(buffers, ball_shape, vec3f::make(3.0f, 0.5f, 0.0f), quatf::identity(), {.color = {0.0f, 1.0f, 0.0f}});
 draw_lines(buffers);
 printf("%u lines\n", buffers.line_count);
 ```
 
 ```cpp
-// line_count lines of two vertices each, a vertex x y z r g b: a vertex array as it stands
+// line_count lines of two vertices each. each vertex is x y z r g b, ready to use as a vertex array
 void draw_lines(const DebugDraw &buffers) { upload_line_vertices(buffers.lines.data, buffers.line_count * 2); }
 ```
 
-`debug::character_contacts` draws a character's contacts. A custom shape draws through its def's `draw`, with
-`debug::line`, or as its bounds without one.
+`debug::character_contacts` draws a character's contacts. A custom shape draws through its def's `draw` using
+`debug::line`. Without a `draw`, it draws as its bounds.
 
 ## Determinism
 
 ```cpp
-// the same scene, made in the same order and stepped by the same steps, is the same to the last bit: in another
-// world, another run, another machine, or the browser
+// the same scene, built in the same order and stepped the same way, gives exactly the same result. this holds in
+// another world, another run, another machine, or the browser
 World *first = make_pile(ground_shape, ball_shape);
 World *second = make_pile(ground_shape, ball_shape);
 for (int i = 0; i < 300; i++) {
@@ -1434,11 +1480,14 @@ for (uint32_t i = 0; i < first->bodies.pool.length; i++) {
 printf("%s\n", same ? "bit for bit the same" : "they differ");
 ```
 
-tumble uses no fused multiply-add, no fast math and none of the platform's math library: its trigonometry is its own.
-So the same steps give the same bits natively and in WebAssembly, with SIMD and without; its tests hold every build to
-one digest of a simulated pile. To keep them:
+tumble uses no fused multiply-add, no fast math and no platform math library. Its trigonometry is its own. So the same
+steps give exactly the same results natively and in WebAssembly, with SIMD and without. The tests check every build
+against one hash of a simulated pile.
 
-- Build tumble with its own flags, as its CMake does: `-ffp-contract=off` (MSVC: `/fp:precise`), no fast math.
-- Build your code that calls tumble's math headers with `-ffp-contract=off` too. The math is inline, so it is compiled
-  with your flags.
-- Create bodies and constraints, and step, in the same order with the same values.
+To keep results the same:
+
+- Build tumble with its own flags, as its CMake does. That means `-ffp-contract=off`, or `/fp:precise` on MSVC, and no
+  fast math.
+- Build your own code that calls tumble's math headers with `-ffp-contract=off` too. The math is inline, so your flags
+  compile it.
+- Create bodies and constraints and step in the same order, with the same values.

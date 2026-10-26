@@ -27,8 +27,8 @@ int main() {
                                                                .position = {2.0f, 0.4f, 3.0f}});
 
     /* SNIPPET_START: create */
-    // a capsule standing on its feet: the character's position is its feet, the capsule raised 0.8 m to stand on them.
-    // the inner body is its presence in the world, which rigid bodies and queries see and contact pairs name it by
+    // a capsule standing on its feet. the character's position is at its feet, so the capsule is raised 0.8 m. the inner
+    // body represents the character in the world. rigid bodies and queries see it, and contact pairs use it
     Ref<Shape> standing_capsule = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
     Ref<Shape> standing = transformed::create({.shape = standing_capsule, .position = {0.0f, 0.8f, 0.0f}});
     KCCSettings character_settings;
@@ -40,25 +40,25 @@ int main() {
     Ref<KCC> character = kcc::create(character_settings, vec3f::make(0.0f, 0.0f, 0.0f), quatf::identity());
     kcc::add(*world, *character);
 
-    // what the character collides with: everything its layer does
+    // the character collides with everything its layer collides with
     Filter filter = filter::create(world->settings.layers);
     filter::set_from_layer(filter, world->settings.layers, moving, 0xffffffffu, 0xffffffffu);
     /* SNIPPET_END: create */
 
     /* SNIPPET_START: policy */
-    // how characters treat the bodies they meet, by body, the rest taking the policy's defaults; one policy serves any
-    // number of characters. here the crate may be pushed (until the character crouches, below)
+    // a policy sets how characters treat each body. bodies without their own entry use the defaults. one policy can serve
+    // any number of characters. here the crate can be pushed, until the character crouches below
     KCC::Policy policy = kcc_policy::create();
     kcc_policy::set(policy, crate->id, {.can_receive_impulses = true});
-    // the character asks a listener: this one reads the policy, changes to it taking effect at once
+    // the character asks a listener. this one reads the policy, so changes to the policy apply at once
     const KCC::Listener listener = kcc_policy::listener(policy);
     /* SNIPPET_END: policy */
 
     const float delta_time = 1.0f / 60.0f;
     const Vec3f gravity = vec3f::load(world->settings.gravity);
     /* SNIPPET_START: update */
-    // a frame of a game: the velocity from the ground's when standing, else falling on, plus the input; then the
-    // character moves (sliding along walls, up stairs, sticking to floors going down), then the world steps
+    // one game frame. the velocity starts from the ground's when standing, or keeps falling when not, and adds the input.
+    // then the character moves. it slides along walls, climbs stairs and sticks to floors going down. then the world steps
     KCCUpdateSettings update_settings;
     for (int frame = 0; frame < 180; frame++) {
         const Vec3f input = vec3f::make(3.0f, 0.0f, 0.0f);
@@ -79,7 +79,8 @@ int main() {
     /* HIDE_END */
 
     /* SNIPPET_START: crouch */
-    // a shorter shape, on the same feet, where it fits: refused, false, if it would sink deeper than the given depth
+    // a shorter shape on the same feet. set_shape returns false and keeps the old shape if the new one would sink deeper
+    // than the given depth
     Ref<Shape> crouching_capsule = capsule::create({.half_height_of_cylinder = 0.2f, .radius = 0.3f});
     Ref<Shape> crouching = transformed::create({.shape = crouching_capsule, .position = {0.0f, 0.5f, 0.0f}});
     const bool crouched = kcc::set_shape(*world, *character, crouching, filter, &listener, 0.01f);
@@ -90,8 +91,7 @@ int main() {
     /* HIDE_END */
 
     /* SNIPPET_START: events */
-    // what the character met in its last update (or refresh_contacts, or set_shape): each contact added or persisted as
-    // it was first touched, and each gone by the end
+    // the contacts from the last update, refresh_contacts or set_shape. each one is added, persisted or removed
     uint32_t touching = 0;
     for (uint32_t i = 0; i < character->contact_events.length; i++) {
         const KCC::ContactEvent &event = character->contact_events[i];
@@ -104,7 +104,7 @@ int main() {
     /* HIDE_END */
 
     /* SNIPPET_START: contacts */
-    // its contacts as data, through its inner body, in a contact pairs frame
+    // read the character's contacts as data, through its inner body, in a contact pairs frame
     contact_pairs::begin(*world);
     kcc::refresh_contacts(*world, *character, filter, &listener);
     contact_pairs::record_character_contacts(*world, *character);
@@ -120,9 +120,9 @@ int main() {
     const float under_x = vec3f::x(character->position);
     /* HIDE_END */
     /* SNIPPET_START: toolkit */
-    // update is the whole move in one call; the toolkit is its phases, for a loop of your own that edits the contacts
-    // between collide and solve. here a one-way platform overhead, jumped up through: from below, its contacts and the
-    // sweep's hit on it are passed over
+    // update does the whole move in one call. the toolkit splits it into phases, so your own loop can edit the contacts
+    // between collide and solve. here the character jumps up through a one-way platform. from below, the loop discards the
+    // platform's contacts and the sweep's hit on it
     Ref<Shape> platform_shape = box::create({.half_extents = {1.5f, 0.1f, 1.5f}});
     RigidBody *platform = rigid_body::create(*world, {.shape = platform_shape, .object_layer = not_moving,
                                                                   .motion_type = MotionType::STATIC,
@@ -153,7 +153,7 @@ int main() {
         }
         kcc::set_position(*world, *character, position);
         kcc::update_ground(*world, *character, delta_time, false, &listener);
-        // landed, coming down
+        // it lands on the platform on the way down
         if (character->ground.state == KCC::GroundState::ON_GROUND && vec3f::y(character->linear_velocity) <= 0.0f) {
             character->linear_velocity = vec3f::make(0.0f, 0.0f, 0.0f);
         }
@@ -175,8 +175,8 @@ int main() {
     kcc::set_shape(*world, *character, standing, filter, nullptr, FLT_MAX);
     /* HIDE_END */
     /* SNIPPET_START: listener */
-    // the hooks themselves, as crashcat's and Jolt's: a listener's callbacks, each optional, called as the character meets
-    // bodies. here Jolt's sample's rule for standing still: on a still, walkable surface, the character does not slide
+    // a listener's callbacks run as the character meets bodies. each one is optional. this one keeps the character from
+    // sliding on a still, walkable surface
     KCC::Listener standing_still = {};
     standing_still.on_contact_solve = [](const KCC &self, const RigidBody &, SubShapeId, Vec3f, Vec3f contact_normal,
                                          Vec3f contact_velocity, Vec3f, Vec3f &io_new_character_velocity, void *) {
@@ -208,8 +208,8 @@ int main() {
     /* HIDE_END */
 
     /* SNIPPET_START: remove */
-    // the last Ref to let go takes the inner body out of the world, then frees the character; kcc::remove takes the
-    // body out sooner, keeping the character
+    // when the last Ref lets go, the inner body leaves the world and the character is freed. kcc::remove takes the body
+    // out sooner and keeps the character
     character = nullptr;
     /* SNIPPET_END: remove */
 

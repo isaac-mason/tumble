@@ -24,8 +24,8 @@ int main() {
 
     {
         /* SNIPPET_START: hinge */
-        // a door on a hinge along y at its left edge, opening a quarter turn at most, driven open by its motor. a motor's
-        // torque is unbounded unless limited, and an unbounded motor driving into a limit pushes past it: give it a limit
+        // a door hinged along y at its left edge. it opens a quarter turn at most, and its motor drives it open. a motor's
+        // torque is unbounded unless you limit it. an unbounded motor pushes past the hinge limit, so this one has a limit
         RigidBody *frame = rigid_body::create(*world, {.shape = nothing, .object_layer = not_moving,
                                                                    .motion_type = MotionType::STATIC, .position = {0.0f, 1.0f, 0.0f}});
         RigidBody *door = rigid_body::create(*world, {.shape = door_shape, .object_layer = moving,
@@ -41,7 +41,7 @@ int main() {
                                                                                .limits_max = 0.5f * scalar::PI,
                                                                                .motor_settings = {.min_torque_limit = -100.0f, .max_torque_limit = 100.0f}});
 
-        // the id names it; get gives its record, which changes it, until the next create of a hinge
+        // the id names the constraint. get returns its record for changes, valid until the next hinge create
         HingeConstraint *hinge = hinge_constraint::get(*world, hinge_id);
         hinge_constraint::set_motor_state(*hinge, MotorState::VELOCITY);
         hinge_constraint::set_target_angular_velocity(*hinge, 2.0f);
@@ -52,7 +52,7 @@ int main() {
         /* HIDE_END */
 
         /* SNIPPET_START: remove */
-        // gone, or with either body: a stale id resolves to nothing
+        // remove it, or remove either body. after that, the id resolves to nothing
         constraints::remove(*world, hinge_id);
         /* SNIPPET_END: remove */
         /* HIDE_START */
@@ -64,7 +64,7 @@ int main() {
 
     {
         /* SNIPPET_START: point */
-        // a pendulum: a ball held 2 m below a point it swings about. a static body with an empty shape is a fixed anchor
+        // a pendulum. the ball hangs 2 m below the point it swings about. a static body with an empty shape is the anchor
         RigidBody *anchor = rigid_body::create(*world, {.shape = nothing, .object_layer = not_moving,
                                                                     .motion_type = MotionType::STATIC, .position = {10.0f, 5.0f, 0.0f}});
         RigidBody *bob = rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving,
@@ -78,7 +78,7 @@ int main() {
         /* HIDE_END */
 
         /* SNIPPET_START: distance */
-        // a bungee: no further than 3 m, pulled back by a spring; min and max of -1 keep the distance it starts at
+        // a bungee. a spring pulls it back past 3 m. a min or max of -1 keeps the starting distance
         RigidBody *jumper = rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving,
                                                                     .motion_type = MotionType::DYNAMIC, .position = {14.0f, 5.0f, 0.0f}});
         distance_constraint::create(*world, anchor, jumper,
@@ -97,8 +97,8 @@ int main() {
 
     {
         /* SNIPPET_START: slider */
-        // a lift: a platform that slides along y only, its position motor holding it 2 m up the rail. a position motor
-        // drives through a spring, which a load sags: this one is stiff enough (10 Hz) to sag by millimetres
+        // a lift. the platform slides along y only, and its position motor holds it 2 m up the rail. a position motor drives
+        // through a spring, so a load makes it sag. at 10 Hz this spring sags by only millimetres
         RigidBody *rail = rigid_body::create(*world, {.shape = nothing, .object_layer = not_moving,
                                                                   .motion_type = MotionType::STATIC, .position = {20.0f, 0.0f, 0.0f}});
         RigidBody *platform = rigid_body::create(*world, {.shape = block_shape, .object_layer = moving,
@@ -125,7 +125,7 @@ int main() {
 
     {
         /* SNIPPET_START: fixed */
-        // a weld: two bodies held as they are, moving as one
+        // a weld. the two bodies keep their relative pose and move as one
         RigidBody *left = rigid_body::create(*world, {.shape = block_shape, .object_layer = moving,
                                                                   .motion_type = MotionType::DYNAMIC, .position = {30.0f, 3.0f, 0.0f}});
         RigidBody *right = rigid_body::create(*world, {.shape = block_shape, .object_layer = moving,
@@ -141,8 +141,8 @@ int main() {
 
     {
         /* SNIPPET_START: ragdoll */
-        // a shoulder: the arm swings within a 45 degree cone about the shoulder's twist axis (x here), twisting up to 30
-        // degrees either way. a cone constraint is the same without the twist limits
+        // a shoulder. the arm swings within a 45 degree cone around the twist axis, here x. it twists up to 30 degrees either
+        // way. a cone constraint is the same without the twist limits
         RigidBody *torso = rigid_body::create(*world, {.shape = nothing, .object_layer = not_moving,
                                                                    .motion_type = MotionType::STATIC, .position = {40.0f, 3.0f, 0.0f}});
         RigidBody *arm = rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving,
@@ -187,7 +187,8 @@ int main() {
 
     {
         /* SNIPPET_START: six-dof */
-        // every axis its own: here free to slide along x within a metre either way and to turn about y, the rest locked
+        // each axis has its own setting. here the body slides along x up to a metre either way and turns about y. the other
+        // axes are locked
         RigidBody *base = rigid_body::create(*world, {.shape = nothing, .object_layer = not_moving,
                                                                   .motion_type = MotionType::STATIC, .position = {50.0f, 3.0f, 0.0f}});
         RigidBody *cart = rigid_body::create(*world, {.shape = block_shape, .object_layer = moving,
