@@ -1,7 +1,7 @@
 # every push to main: the tests, then the site on github pages and the js package on npm. the package publishes its
 # package.json version when npm does not have it yet, else a canary of the commit. "canary": true in js/package.json
 # makes every push a canary until it is removed
-name: main
+name: release
 
 on:
     push:
