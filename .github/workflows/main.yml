@@ -1,0 +1,238 @@
+# every push to main: the tests, then the site on github pages and the js package on npm. the package publishes its
+# package.json version when npm does not have it yet, else a canary of the commit. "canary": true in js/package.json
+# makes every push a canary until it is removed
+name: main
+
+on:
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        timeout-minutes: 45
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+              with:
+                  version: 10.30.3
+
+            - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version: 24
+                  package-manager-cache: false
+
+            - name: tools
+              run: sudo apt-get install -y ninja-build zstd
+
+            # clang, as the library is built and tested locally
+            - name: native tests
+              env:
+                  CC: clang
+                  CXX: clang++
+              run: |
+                  cmake --preset release
+                  cmake --build --preset release
+                  ctest --preset release -j 4
+
+            - uses: actions/cache@v4
+              with:
+                  path: ~/.cache/tumble/wasm-toolchain
+                  key: wasm-toolchain-${{ hashFiles('js/wasm/toolchain/scripts/toolchain-pins.sh') }}
+
+            - name: wasm toolchain
+              run: sh js/wasm/toolchain/scripts/fetch-toolchain.sh
+
+            - name: wasm tests, both simd backends
+              run: sh js/wasm/toolchain/build-test.sh
+
+            # the build is deterministic, so the committed tumble.wasm and bindings must be what the sources give
+            - name: wasm build matches what is committed
+              run: |
+                  sh js/wasm/toolchain/build.sh
+                  git diff --exit-code -- js/dist/tumble.wasm js/src/generated js/wasm/generated || {
+                      echo "the committed tumble.wasm or bindings are not what the sources build: rebuild and commit them" >&2
+                      exit 1
+                  }
+
+            - name: js package
+              working-directory: js
+              run: |
+                  pnpm install --frozen-lockfile
+                  pnpm run typecheck
+                  pnpm run build
+                  pnpm test
+
+    pages:
+        needs: test
+        runs-on: ubuntu-latest
+        permissions:
+            pages: write
+            id-token: write
+        concurrency:
+            group: pages
+            cancel-in-progress: true
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+              with:
+                  version: 10.30.3
+
+            - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version: 24
+                  package-manager-cache: false
+
+            # the package the js examples import, built over the committed dist/tumble.wasm
+            - name: js package
+              working-directory: js
+              run: |
+                  pnpm install --frozen-lockfile
+                  pnpm run build
+
+            - name: js examples
+              working-directory: js/examples
+              run: |
+                  npm ci --no-audit --no-fund
+                  npm run build
+
+            - uses: mymindstorm/setup-emsdk@v14
+              with:
+                  version: 6.0.9
+
+            - name: samples
+              run: |
+                  sudo apt-get install -y ninja-build
+                  cmake --preset samples-web
+                  cmake --build --preset samples-web
+
+            - name: site
+              run: |
+                  mkdir -p site/samples
+                  cp -r js/examples/dist/. site/
+                  cp build/samples/web/samples/tumble_samples.js build/samples/web/samples/tumble_samples.wasm build/samples/web/samples/tumble_samples.data site/samples/
+                  cp build/samples/web/samples/tumble_samples.html site/samples/index.html
+
+            - uses: actions/upload-pages-artifact@v3
+              with:
+                  path: site
+
+            - id: deployment
+              uses: actions/deploy-pages@v4
+
+    publish:
+        needs: test
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        permissions:
+            contents: write
+            id-token: write
+        # one publish at a time; never cancel one in flight
+        concurrency:
+            group: publish
+            cancel-in-progress: false
+        defaults:
+            run:
+                working-directory: js
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+              with:
+                  version: 10.30.3
+
+            - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version: 24
+                  registry-url: https://registry.npmjs.org
+                  package-manager-cache: false
+
+            - name: build
+              run: |
+                  pnpm install --frozen-lockfile
+                  pnpm run build
+
+            - name: release mode
+              id: mode
+              shell: bash
+              run: |
+                  name="$(node -p "require('./package.json').name")"
+                  version="$(node -p "require('./package.json').version")"
+
+                  if [ "$(node -p "require('./package.json').canary === true")" = true ]; then
+                      # package.json's "canary": true keeps every push a canary, whatever the version
+                      mode=canary
+                  elif npm view "${name}@${version}" version >/dev/null 2>&1; then
+                      # the version in package.json is already on npm, so this is a canary
+                      mode=canary
+                  else
+                      mode=release
+                  fi
+
+                  # a prerelease version (1.0.0-rc.1) goes to the next tag, so latest stays the last stable release
+                  case "${version}" in
+                      *-*) tag=next ;;
+                      *) tag=latest ;;
+                  esac
+
+                  {
+                      echo "name=${name}"
+                      echo "version=${version}"
+                      echo "mode=${mode}"
+                      echo "tag=${tag}"
+                  } >> "${GITHUB_OUTPUT}"
+
+            - name: canary version
+              id: canary
+              if: steps.mode.outputs.mode == 'canary'
+              shell: bash
+              run: |
+                  # canaries publish from 0.0.0 so they satisfy no range and the canary tag is the only way to install one;
+                  # the date leads the sha so canaries sort chronologically
+                  canary_version="0.0.0-canary-$(date -u +%Y%m%d)-${GITHUB_SHA::8}"
+                  npm version "${canary_version}" --no-git-tag-version
+                  echo "version=${canary_version}" >> "${GITHUB_OUTPUT}"
+
+            - name: publish canary
+              if: steps.mode.outputs.mode == 'canary'
+              run: npm publish --tag canary --access public
+
+            - name: publish release
+              if: steps.mode.outputs.mode == 'release'
+              run: npm publish --tag ${{ steps.mode.outputs.tag }} --access public
+
+            - name: github release
+              if: steps.mode.outputs.mode == 'release'
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  release="${{ steps.mode.outputs.name }}@${{ steps.mode.outputs.version }}"
+                  if [ "${{ steps.mode.outputs.tag }}" = latest ]; then flags=--latest; else flags=--prerelease; fi
+                  gh release create "${release}" --target "${GITHUB_SHA}" --title "${release}" --generate-notes ${flags}
+
+            - name: summary
+              shell: bash
+              run: |
+                  case "${{ steps.mode.outputs.mode }}" in
+                      canary)
+                          echo "Published ${{ steps.mode.outputs.name }}@${{ steps.canary.outputs.version }} with the canary tag." >> "${GITHUB_STEP_SUMMARY}"
+                          ;;
+                      release)
+                          echo "Published ${{ steps.mode.outputs.name }}@${{ steps.mode.outputs.version }} with the ${{ steps.mode.outputs.tag }} tag." >> "${GITHUB_STEP_SUMMARY}"
+                          ;;
+                  esac

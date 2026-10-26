@@ -1,0 +1,8 @@
+{
+    "name": "tumble-samples",
+    "private": true,
+    "type": "module",
+    "devDependencies": {
+        "playwright": "1.61.1"
+    }
+}

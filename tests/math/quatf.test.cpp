@@ -1,0 +1,93 @@
+#include "math/storage/quatf.h"
+#include "test.h"
+#include "test_math.h"
+
+static bool near4(const Float4 &q, float x, float y, float z, float w, float eps = 1e-6f) {
+    return scalar::abs(q.x - x) <= eps && scalar::abs(q.y - y) <= eps && scalar::abs(q.z - z) <= eps && scalar::abs(q.w - w) <= eps;
+}
+
+void test_quatf(TestCtx &ctx) {
+    const float h = 0.70710678f;
+    const Float3 X = vec3f::from_values(1.0f, 0.0f, 0.0f);
+    const Float3 Y = vec3f::from_values(0.0f, 1.0f, 0.0f);
+    const Float3 Z = vec3f::from_values(0.0f, 0.0f, 1.0f);
+    const Float4 identity = {0.0f, 0.0f, 0.0f, 1.0f};
+    Float4 out;
+    Float4 q;
+    Float3 v;
+
+    // 90 degrees about z
+    quatf::set_axis_angle(q, Z, scalar::PI * 0.5f);
+    CHECK(ctx, near4(q, 0.0f, 0.0f, h, h));
+
+    // two quarter turns about z make a half turn, and the product is not commutative
+    quatf::multiply(out, q, q);
+    CHECK(ctx, near4(out, 0.0f, 0.0f, 1.0f, 0.0f, 1e-6f));
+    Float4 qx;
+    quatf::set_axis_angle(qx, X, scalar::PI * 0.5f);
+    Float4 ab;
+    Float4 ba;
+    quatf::multiply(ab, q, qx);
+    quatf::multiply(ba, qx, q);
+    CHECK(ctx, !near4(ab, ba.x, ba.y, ba.z, ba.w));
+    CHECK(ctx, near4(ab, q.x * qx.w + q.w * qx.x + q.y * qx.z - q.z * qx.y, q.y * qx.w + q.w * qx.y + q.z * qx.x - q.x * qx.z,
+                     q.z * qx.w + q.w * qx.z + q.x * qx.y - q.y * qx.x, q.w * qx.w - q.x * qx.x - q.y * qx.y - q.z * qx.z));
+    quatf::multiply(out, q, identity);
+    CHECK(ctx, near4(out, q.x, q.y, q.z, q.w));
+    // the product rotates vectors as the composition does: x -> y (by q) then y -> z (by qx)
+    vec3f::transform_quat(v, X, ba);
+    CHECK(ctx, near3(v, 0.0f, 0.0f, 1.0f, 1e-6f));
+
+    quatf::invert(out, q);
+    quatf::multiply(ab, q, out);
+    CHECK(ctx, near4(ab, 0.0f, 0.0f, 0.0f, 1.0f, 1e-6f));
+    const Float4 zero = {0.0f, 0.0f, 0.0f, 0.0f};
+    CHECK(ctx, near4(quatf::invert(out, zero), 0.0f, 0.0f, 0.0f, 0.0f));
+    CHECK(ctx, near4(quatf::conjugate(out, q), -q.x, -q.y, -q.z, q.w));
+
+    // from_mat3 on a 90 degree z rotation (column-major) gives q; the trace-negative branch too
+    const Mat3f rz = {{0, 1, 0, -1, 0, 0, 0, 0, 1}};
+    CHECK(ctx, near4(quatf::from_mat3(out, rz), 0.0f, 0.0f, h, h, 1e-6f));
+    const Mat3f rz180 = {{-1, 0, 0, 0, -1, 0, 0, 0, 1}};
+    quatf::from_mat3(out, rz180);
+    CHECK(ctx, near4(out, 0.0f, 0.0f, 1.0f, 0.0f, 1e-6f) || near4(out, 0.0f, 0.0f, -1.0f, 0.0f, 1e-6f));
+    const Float4x4 rz4 = {{0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1, 0, 5, 6, 7, 1}};
+    CHECK(ctx, near4(quatf::from_mat4(out, rz4), 0.0f, 0.0f, h, h, 1e-6f));
+
+    // a single-axis euler angle is the axis rotation in every order
+    for (int order = 0; order < 6; order++) {
+        quatf::from_euler(out, Eulerf{0.0f, 0.0f, scalar::PI * 0.5f, (EulerOrder)order});
+        CHECK(ctx, near4(out, 0.0f, 0.0f, h, h, 1e-6f));
+    }
+    // xyz applies x then y then z (intrinsic)
+    Float4 ex;
+    Float4 ey;
+    Float4 ez;
+    quatf::set_axis_angle(ex, X, 0.3f);
+    quatf::set_axis_angle(ey, Y, 0.5f);
+    quatf::set_axis_angle(ez, Z, 0.7f);
+    quatf::multiply(ab, ex, ey);
+    quatf::multiply(ab, ab, ez);
+    quatf::from_euler(out, Eulerf{0.3f, 0.5f, 0.7f, EulerOrder::XYZ});
+    CHECK(ctx, near4(out, ab.x, ab.y, ab.z, ab.w, 1e-6f));
+
+    CHECK(ctx, near4(quatf::scale(out, q, 2.0f), 0.0f, 0.0f, 2.0f * h, 2.0f * h));
+    CHECK_NEAR(ctx, quatf::dot(q, q), 1.0f, 1e-6f);
+    const Float4 long_w = {0.0f, 0.0f, 0.0f, 2.0f};
+    CHECK(ctx, near4(quatf::normalize(out, long_w), 0.0f, 0.0f, 0.0f, 1.0f));
+}
+
+void test_quatf_get_angular_velocity(TestCtx &ctx) {
+    // a turn of 1e-4 rad: its w rounds to 1, so an angle from w would be 0; the small angle path still finds it
+    const Vec3f small = quatf::get_angular_velocity(quatf::set_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 1e-4f), 0.5f);
+    CHECK_NEAR(ctx, vec3f::y(small), 2e-4f, 1e-8f);
+    CHECK(ctx, vec3f::x(small) == 0.0f && vec3f::z(small) == 0.0f);
+
+    // a big turn, and the same turn with w negative: the short way round either way
+    const Vec3f axis = vec3f::normalize(vec3f::make(1.0f, 2.0f, -2.0f));
+    const Quatf turn = quatf::set_axis_angle(axis, 2.0f);
+    const Vec3f big = quatf::get_angular_velocity(turn, 0.25f);
+    CHECK(ctx, near3(big, vec3f::x(axis) * 8.0f, vec3f::y(axis) * 8.0f, vec3f::z(axis) * 8.0f, 1e-4f));
+    const Vec3f flipped = quatf::get_angular_velocity(quatf::scale(turn, -1.0f), 0.25f);
+    CHECK(ctx, near3(flipped, vec3f::x(big), vec3f::y(big), vec3f::z(big), 1e-6f));
+}

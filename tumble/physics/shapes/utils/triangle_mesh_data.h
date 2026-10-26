@@ -1,0 +1,125 @@
+#pragma once
+
+#include <stdint.h>
+
+#include "tumble/config.h"
+#include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
+#include "tumble/physics/shapes/triangle_mesh.h"
+#include "tumble/physics/shapes/utils/bvh.h"
+
+TUMBLE_NAMESPACE_BEGIN
+
+// one allocation: the header, then each array 16-aligned at the address the header holds. positions are 3 f32 per
+// vertex, deduplicated; triangles TRIANGLE_STRIDE words each, in bvh order; triangle_aabbs 6 f32 each [min_x, min_y,
+// min_z, max_x, max_y, max_z]; nodes bvh::NODE_STRIDE words each, pre-order, the root at 0
+
+namespace triangle_mesh_data {
+
+/** triangle buffer stride, in 32-bit words */
+constexpr uint32_t TRIANGLE_STRIDE = 8;
+
+// offsets within each triangle's stride
+constexpr uint32_t OFFSET_INDEX_A = 0;
+constexpr uint32_t OFFSET_INDEX_B = 1;
+constexpr uint32_t OFFSET_INDEX_C = 2;
+constexpr uint32_t OFFSET_NORMAL_X = 3;
+constexpr uint32_t OFFSET_NORMAL_Y = 4;
+constexpr uint32_t OFFSET_NORMAL_Z = 5;
+constexpr uint32_t OFFSET_ACTIVE_EDGES = 6;
+constexpr uint32_t OFFSET_MATERIAL_ID = 7;
+
+}  // namespace triangle_mesh_data
+
+/** one triangle's stride of the interleaved triangle buffer */
+struct TriangleMeshShape::Triangle {
+    /** vertex indices into positions */
+    uint32_t index_a;
+    uint32_t index_b;
+    uint32_t index_c;
+    /** unit, from the counter clockwise winding a, b, c */
+    Float3 normal;
+    /** bit 0 = edge AB, bit 1 = edge BC, bit 2 = edge CA */
+    uint32_t active_edges;
+    /** -1 for no material */
+    int32_t material_id;
+};
+
+namespace triangle_mesh_data {
+
+static_assert(sizeof(TriangleMeshShape::Triangle) == TRIANGLE_STRIDE * 4);
+static_assert(__builtin_offsetof(TriangleMeshShape::Triangle, index_a) == OFFSET_INDEX_A * 4);
+static_assert(__builtin_offsetof(TriangleMeshShape::Triangle, index_b) == OFFSET_INDEX_B * 4);
+static_assert(__builtin_offsetof(TriangleMeshShape::Triangle, index_c) == OFFSET_INDEX_C * 4);
+static_assert(__builtin_offsetof(TriangleMeshShape::Triangle, normal) == OFFSET_NORMAL_X * 4);
+static_assert(__builtin_offsetof(TriangleMeshShape::Triangle, active_edges) == OFFSET_ACTIVE_EDGES * 4);
+static_assert(__builtin_offsetof(TriangleMeshShape::Triangle, material_id) == OFFSET_MATERIAL_ID * 4);
+
+}  // namespace triangle_mesh_data
+
+/** a built triangle mesh: one allocation from create, shareable between shapes. */
+struct TriangleMeshShape::Data {
+    uint32_t vertex_count;
+    uint32_t triangle_count;
+    uint32_t node_count;
+    /** deduplicated vertex positions, 3 floats per vertex */
+    float *positions;
+    TriangleMeshShape::Triangle *triangles;
+    /**
+     * per-triangle mesh-local aabbs, 6 floats per triangle. derived at build time (after the bvh
+     * build finalizes triangle order) so cast queries read them instead of recomputing from the
+     * vertex indices per query.
+     */
+    float *triangle_aabbs;
+    /** the bvh over the triangles; none when there are no triangles */
+    BvhNode *nodes;
+};
+
+namespace triangle_mesh_data {
+
+/** the bytes create allocates for a mesh of these counts, header included. */
+uint32_t byte_size(uint32_t vertex_count, uint32_t triangle_count, uint32_t node_count);
+
+/** a zeroed mesh with room for the counts */
+TriangleMeshShape::Data *create(uint32_t vertex_count, uint32_t triangle_count, uint32_t node_count);
+
+void destroy(TriangleMeshShape::Data *data);
+
+/** get triangle vertex indices */
+void get_triangle_indices(uint32_t out[3], const TriangleMeshShape::Data &data, uint32_t tri_idx);
+
+/** get triangle vertex positions */
+void get_triangle_vertices(Vec3f &out_a, Vec3f &out_b, Vec3f &out_c, const TriangleMeshShape::Data &data, uint32_t tri_idx);
+
+/** get triangle normal */
+inline Vec3f get_triangle_normal(const TriangleMeshShape::Data &data, uint32_t tri_idx) { return vec3f::load(data.triangles[tri_idx].normal); }
+
+/** set triangle normal */
+inline void set_triangle_normal(TriangleMeshShape::Data &data, uint32_t tri_idx, Vec3f normal) { vec3f::store(data.triangles[tri_idx].normal, normal); }
+
+/** get active edges bitmask (bit 0 = edge AB, bit 1 = edge BC, bit 2 = edge CA) */
+inline uint32_t get_active_edges(const TriangleMeshShape::Data &data, uint32_t tri_idx) { return data.triangles[tri_idx].active_edges; }
+
+/** set active edges */
+inline void set_active_edges(TriangleMeshShape::Data &data, uint32_t tri_idx, uint32_t active_edges) {
+    data.triangles[tri_idx].active_edges = active_edges;
+}
+
+/** get material id */
+inline int32_t get_material_id(const TriangleMeshShape::Data &data, uint32_t tri_idx) { return data.triangles[tri_idx].material_id; }
+
+/** fill data.triangle_aabbs from the (final, post-bvh-build) triangles */
+void precompute_triangle_aabbs(TriangleMeshShape::Data &data);
+
+/** calculate triangle aabb from vertices */
+Box3f &calculate_triangle_aabb(Box3f &out, const TriangleMeshShape::Data &data, uint32_t tri_idx);
+
+/** calculate triangle centroid from vertices */
+Vec3f calculate_triangle_centroid(const TriangleMeshShape::Data &data, uint32_t tri_idx);
+
+/** swap two triangles */
+void swap_triangles(TriangleMeshShape::Data &data, uint32_t index_a, uint32_t index_b);
+
+}  // namespace triangle_mesh_data
+
+TUMBLE_NAMESPACE_END

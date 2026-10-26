@@ -1,0 +1,117 @@
+#pragma once
+
+#include <stdint.h>
+#include "tumble/config.h"
+#include "tumble/math/simd.h"
+
+TUMBLE_NAMESPACE_BEGIN
+
+struct Vec2f {
+    float x, y;
+};
+
+struct Float3 {
+    float x, y, z;
+};
+
+struct Float4 {
+    float x, y, z, w;
+};
+
+/** lane 3 holds a copy of z, so a whole-register divide or sqrt makes nothing in it that z does not. */
+struct Vec3f {
+    V128 v;
+    // not an aggregate, so `{0, 1, 0}` is an error rather than lanes made from integers
+    Vec3f() = default;
+    constexpr Vec3f(V128 value) : v(value) {}
+};
+
+struct Vec4f {
+    V128 v;
+    Vec4f() = default;
+    constexpr Vec4f(V128 value) : v(value) {}
+};
+
+/** x, y, z, w in lanes 0..3. */
+struct Quatf {
+    V128 v;
+    Quatf() = default;
+    constexpr Quatf(V128 value) : v(value) {}
+};
+
+/** columns */
+struct Mat4f {
+    V128 c[4];
+};
+
+/** empty is +inf min, -inf max */
+struct AABox {
+    Vec3f min, max;
+};
+
+/** a box turned and moved by `orientation` (rotation and translation, no scale), `half_extents` along its own axes */
+struct OrientedBox {
+    Mat4f orientation;
+    Vec3f half_extents;
+};
+
+/** normal . x + constant = 0 */
+struct Plane {
+    Vec3f normal;
+    float constant;
+};
+
+enum class EulerOrder : uint8_t {
+    XYZ = 0,
+    XZY = 1,
+    YXZ = 2,
+    YZX = 3,
+    ZXY = 4,
+    ZYX = 5,
+};
+
+/** radians */
+struct Eulerf {
+    float x, y, z;
+    EulerOrder order;
+};
+
+struct Mat2f {
+    float m[4];
+};
+
+struct Mat3f {
+    float m[9];
+};
+
+/** column-major */
+struct Float4x4 {
+    float m[16];
+};
+
+struct Box3f {
+    Float3 min, max;
+};
+
+struct Plane3f {
+    Float3 normal;
+    float constant;
+};
+
+struct Spheref {
+    Float3 center;
+    float radius;
+};
+
+struct Transformf {
+    Float3 position;
+    Float4 quaternion;
+    Float3 scale;
+};
+
+static_assert(sizeof(Float3) == 12, "Float3 is three packed floats");
+static_assert(sizeof(Float4) == 16, "Float4 loads as one lane");
+static_assert(sizeof(Float4x4) == 64, "Float4x4 is four lanes");
+static_assert(alignof(Vec3f) == 16 && alignof(Mat4f) == 16, "register types are whole lanes");
+
+TUMBLE_NAMESPACE_END

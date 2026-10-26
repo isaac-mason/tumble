@@ -1,0 +1,512 @@
+# tumble for C++
+
+tumble is a 3D rigid body physics engine. It is C++20 with no dependencies: no C++ standard library, no exceptions, no
+RTTI. The same sources build to WebAssembly for the JS package, and simulate the same bits there as natively.
+
+Every code block here is part of a program in `docs/cpp/` that the tests build and run, and each program checks what
+it shows.
+
+For JavaScript, [tumble.js](https://github.com/isaac-mason/tumble/tree/main/js#readme) is this library compiled to
+WebAssembly, with its own guide.
+
+<TOC />
+
+## Getting tumble
+
+### CMake
+
+tumble's `CMakeLists.txt` makes the `tumble` library and its alias `tumble::tumble`. Fetch it, or add a checkout (a git
+submodule, say) with `add_subdirectory(path/to/tumble)`, then link the target:
+
+<Snippet source="./cmake/fetch_content/CMakeLists.txt" select="fetch-content" />
+
+The tests build only when tumble is the top-level project. Its options:
+
+- `TUMBLE_DEBUG`: checks the library's asserts.
+- `TUMBLE_NO_SIMD`: the scalar backend where SIMD is available. Both backends compute the same bits.
+
+### Without CMake
+
+Compile every `.cpp` under `tumble/` with the repository root on the include path (headers are included as
+`"tumble/physics/world.h"`), as C++20, with `-ffp-contract=off` (MSVC: `/fp:precise`) and without fast math.
+
+## Quick start
+
+A world, a floor, and a box and a ball dropped onto it:
+
+<Snippet source="./cpp/quick_start.cpp" select="quick-start" />
+
+`dispatch::init()` registers the shape types and the collision function for every pair of them. Call it once, before
+making any shape (a shape is freed through its type's def), and again only to change the shape types (see
+[Custom shapes](#custom-shapes)).
+
+The rest of this guide leaves out the includes, `using namespace tumble;` and the world's setup.
+
+## Conventions
+
+- Everything is in `namespace tumble`. Its types are directly in it (`RigidBody`, `Shape`, `BoxShapeSettings`), and a
+  type that is part of another is nested in it (`KCC::ContactEvent`, `ConvexHullShape::BuildResult`). Its functions
+  and constants are in a namespace per subject, named after its header: `rigid_body::create` is in
+  `tumble/physics/body/rigid_body.h`.
+- Enums are scoped: `MotionType::DYNAMIC`, `ShapeType::BOX`.
+- A call that changes a world takes the world first: `rigid_body::set_position(world, body, ...)`.
+- Settings structs hold storage types (`Float3`, `Float4`, plain floats) and work with designated initializers, which
+  C++20 requires in declaration order. Function arguments take the register types (`Vec3f`, `Quatf`), made with
+  `vec3f::make`, `quatf::set_axis_angle` and friends, loaded from storage with `vec3f::load`.
+- Units are metres, kilograms, seconds and radians.
+- Values free what they hold as they go out of scope: settings, filters, collectors and debug draws. A world is made
+  by `world::create` and freed by `world::destroy`, its bodies and constraints with it. Shapes and characters are
+  counted, as Jolt's are: hold one in a `Ref<Shape>` or `Ref<KCC>`, and the last `Ref` to let go frees
+  it.
+
+### Public API
+
+`tumble/tumble.h` includes the whole API, as the quick start does; or include only the headers you use. These are
+tumble's API. The rest are its internals, which change without notice, and nothing in them is needed to use tumble:
+
+- **The world:** `world.h`, `world_settings.h`, `layers.h`, `filter.h`, `update.h` (the phases of a step you answer
+  between), `events.h`, `contact_pairs.h` and `debug.h`.
+- **Bodies:** `body/rigid_body.h`, `body/body_id.h`, `body/motion_type.h`, `body/dof.h`, `body/mass_properties.h` and
+  `body/sub_shape.h`. A body's fields are yours to read; change them through `rigid_body`'s calls, which keep the
+  broadphase, the pairs and the sleep state in step.
+- **Shapes:** each shape's header under `shapes/`, `shapes/dispatch.h`, and the builders and data in `shapes/utils/`:
+  `convex_hull_builder.h`, `triangle_mesh_builder.h` and `triangle_mesh_data.h`.
+- **Queries:** `query.h`, `broadphase_query.h`, and the collectors, settings and hits in `collision/collector.h`,
+  `collision/cast_ray_vs_shape.h`, `collision/cast_shape_vs_shape.h`, `collision/collide_point_vs_shape.h` and
+  `collision/collide_shape_vs_shape.h`; also `collision/estimate_collision_response.h`.
+- **Constraints:** each constraint's header under `constraints/`, `constraints/constraint_id.h`,
+  `constraints/contact_settings.h`, `constraints/constraint_part/motor_settings.h` and
+  `constraints/constraint_part/spring_settings.h`. `WorldMaterial` is what `world::set_materials`
+  takes; the rest of `contact_constraints.h` is internal.
+- **Characters:** `character/kcc.h`, `character/kcc_policy.h`, and `character/character_constraints.h` for a
+  controller of your own.
+- **Custom shapes:** `shapes/shapes.h` (`ShapeDef`, `allocate`, the collide and cast tables), `shapes/convex.h`,
+  `collision/narrowphase.h` to collide or cast the shapes inside yours, `collision/support.h` for a convex type's
+  support, and `utils/face.h`.
+- **Maths and memory:** `tumble/math/`, `util/alloc.h`, `util/error.h`, `util/collections.h` and `util/ref.h`.
+
+## Memory
+
+tumble takes all its memory through one allocator. A hosted build starts with aligned `malloc` and `free`. Set your own
+before anything allocates. Every block comes back with the size it was asked for, so your allocator needs no headers of
+its own:
+
+<Snippet source="./cpp/memory.cpp" select="arena" />
+
+<Snippet source="./cpp/memory.cpp" select="set-allocator" />
+
+`util::allocated_bytes` and `util::allocated_blocks` count what tumble holds:
+
+<Snippet source="./cpp/memory.cpp" select="allocated" />
+
+### Errors
+
+Running out of memory stops the program, as Emscripten's `ABORTING_MALLOC` does: when the allocator returns null, tumble
+sets `ERROR_OUT_OF_MEMORY` in the error word and traps. In a browser the wasm instance is then done, and the error word
+says why. Nothing else in tumble fails for want of memory, so nothing checks for it.
+
+The error word holds what is left: a pool at its most (`Error::QUOTA`, from `rigid_body::create` and the constraint
+creates, which return an invalid id or null). The first error stands until `util::error_clear()`.
+
+## The world
+
+A world holds bodies, constraints and the simulation's state. Several worlds can live side by side.
+
+### Layers
+
+Object layers decide what collides with what. Each object layer belongs to a broadphase layer, and each broadphase
+layer is a tree of its own: a query or the pair search visits only the trees whose layers can collide. Keep moving and
+static bodies in separate broadphase layers.
+
+<Snippet source="./cpp/world.cpp" select="layers" />
+
+### Settings
+
+`WorldSettings` holds the layers, gravity, and the solver, narrowphase, sleeping and CCD settings, with
+defaults that suit most games. `world::create` copies them, so they can go as soon as it returns, or make another
+world:
+
+<Snippet source="./cpp/world.cpp" select="settings" />
+
+### Stepping
+
+`world::step(world, delta_time)` advances the world one step. Step by a fixed time and catch up a few steps when a frame
+runs long, so the simulation does not depend on the frame rate:
+
+<Snippet source="./cpp/world.cpp" select="fixed-step" />
+
+Bodies resting on others sink up to `settings.solver.penetration_slop` (2 cm) into them: the solver allows it to keep
+stacks from jittering.
+
+### Events and answers
+
+There are no callbacks. A step is a series of phases. Between phases you read what the last phase found from
+`world.events` and write your answers to `world.answers`, which the next phase reads. `world::step` runs the phases and
+answers nothing. Run them yourself to answer:
+
+<Snippet source="./cpp/world.cpp" select="phases" />
+
+- `events.pairs`, after `find_pairs`: the pairs of bodies whose bounds overlap. `events::reject_pair` drops one before
+  the narrowphase.
+- `events.contacts_added` and `events.contacts_persisted`, after `narrowphase`: the contacts it made, each with its
+  manifold and the combined material. `events::override_contact` changes how one is solved, or rejects it.
+- `events.woken`, after `narrowphase`: the bodies its contacts woke. While it is above zero, find their pairs and run
+  the narrowphase again.
+
+After a step, the events say what it did:
+
+<Snippet source="./cpp/world.cpp" select="events" />
+
+`contacts_removed` also holds the contacts of bodies removed since the step before, so a removal's events come with the
+next step.
+
+### Active bodies
+
+The active list is the dynamic and kinematic bodies awake: `world::get_num_active_bodies` and `world::get_active_bodies`
+(body indices into `bodies.pool`, valid until the list next changes). After a step it names every body the step moved,
+but those it put to sleep. An activation listener hears each body join or leave it, from the step or from a call such as
+`rigid_body::wake`, as it happens:
+
+<Snippet source="./cpp/world.cpp" select="activation" />
+
+<Snippet source="./cpp/world.cpp" select="activation-flush" />
+
+## Rigid bodies
+
+### Creating and removing
+
+<Snippet source="./cpp/bodies.cpp" select="create" />
+
+A body pointer stays valid while the body lives. Its id outlives it safely: `rigid_body::get` returns null for a removed
+body's id, even once its slot is reused.
+
+### Motion types
+
+<Snippet source="./cpp/bodies.cpp" select="motion-types" />
+
+### Position and rotation
+
+<Snippet source="./cpp/bodies.cpp" select="transform" />
+
+Teleporting a body skips the simulation in between: nothing it passes through stops it. Move a kinematic body by
+velocity instead (see [Kinematic bodies](#kinematic-bodies)).
+
+### Velocity
+
+<Snippet source="./cpp/bodies.cpp" select="velocity" />
+
+### Forces and impulses
+
+<Snippet source="./cpp/bodies.cpp" select="forces" />
+
+Forces and impulses only move dynamic bodies.
+
+### Mass
+
+<Snippet source="./cpp/bodies.cpp" select="mass" />
+
+A triangle mesh has no volume to take a mass from: a dynamic body with one needs `mass_properties_override`.
+
+### Damping, limits and degrees of freedom
+
+<Snippet source="./cpp/bodies.cpp" select="tuning" />
+
+### Sleeping
+
+<Snippet source="./cpp/bodies.cpp" select="sleeping" />
+
+### Kinematic bodies
+
+<Snippet source="./cpp/bodies.cpp" select="kinematic" />
+
+`move_kinematic` wakes the body, so a lift that waited at rest moves when told.
+
+### Continuous collision detection
+
+<Snippet source="./cpp/bodies.cpp" select="ccd" />
+
+### User data
+
+<Snippet source="./cpp/bodies.cpp" select="user-data" />
+
+### Collision groups and masks
+
+<Snippet source="./cpp/bodies.cpp" select="groups" />
+
+### Materials
+
+<Snippet source="./cpp/bodies.cpp" select="materials" />
+
+`world::set_materials` gives the world a table of surfaces. A shape's or a triangle's `material_id` picks a surface,
+which then stands in for the body's friction and restitution on that side of a contact. A query's hit names the part it
+met by sub shape id: `rigid_body::get_material(body, hit.sub_shape_id)` is that part's material id.
+
+### Sensors
+
+<Snippet source="./cpp/bodies.cpp" select="sensors" />
+
+### Changing a body's shape
+
+<Snippet source="./cpp/bodies.cpp" select="shape" />
+
+### Changing a body's layer
+
+<Snippet source="./cpp/bodies.cpp" select="layer" />
+
+## Shapes
+
+Shapes are created by each type's `create` and shared by any number of bodies. Whatever holds a shape holds a
+`Ref<Shape>` to it (a body, a character, a shape built over it, and your code), and the last to let go frees it;
+a function that only reads a shape takes a plain `Shape *`. Each body's pose places its shape: a shape's own
+geometry is centred on its origin.
+
+### Convex shapes
+
+<Snippet source="./cpp/shapes.cpp" select="convex" />
+
+A box's and a cylinder's `convex_radius` rounds their edges a little, which makes collisions faster and steadier.
+
+### Convex hulls
+
+<Snippet source="./cpp/shapes.cpp" select="convex-hull" />
+
+### Planes
+
+<Snippet source="./cpp/shapes.cpp" select="plane" />
+
+### Triangle meshes
+
+<Snippet source="./cpp/shapes.cpp" select="triangle-mesh" />
+
+Meshes are for static bodies: they are hollow, with no volume, no inside and no mass.
+
+### Compounds
+
+<Snippet source="./cpp/shapes.cpp" select="compound" />
+
+### Decorators
+
+<Snippet source="./cpp/shapes.cpp" select="decorators" />
+
+### Empty
+
+<Snippet source="./cpp/shapes.cpp" select="empty" />
+
+### Freeing shapes
+
+<Snippet source="./cpp/shapes.cpp" select="freeing" />
+
+## Contact pairs
+
+Events report every contact of every step. Contact pairs keep the few you care about, between frames: each pair of body
+parts in contact, with a stable handle while the pair lasts, added, persisted or removed each frame. A frame can span
+several world steps and the characters' moves between them.
+
+<Snippet source="./cpp/contacts.cpp" select="observe" />
+
+<Snippet source="./cpp/contacts.cpp" select="frame" />
+
+<Snippet source="./cpp/contacts.cpp" select="read" />
+
+A removed pair's handle is reused after the next frame begins.
+
+## Queries
+
+Each query walks the broadphase under a filter and runs against every body it reaches, reporting to a collector:
+
+- `CollectorKind::CLOSEST`: the nearest hit.
+- `CollectorKind::ANY`: the first hit found, then stops.
+- `CollectorKind::ALL`: every hit; `sort` orders them nearest first.
+- `CollectorKind::CUSTOM`: your `custom_add_hit` and `custom_add_miss`, with a `context`. Lowering
+  `early_out_fraction` lets shapes skip what cannot beat it, and `force_early_out` stops the query.
+
+### Rays
+
+<Snippet source="./cpp/queries.cpp" select="cast-ray" />
+
+### Points
+
+<Snippet source="./cpp/queries.cpp" select="collide-point" />
+
+### Overlaps
+
+<Snippet source="./cpp/queries.cpp" select="collide-shape" />
+
+### Sweeps
+
+<Snippet source="./cpp/queries.cpp" select="cast-shape" />
+
+### Bounds only
+
+`broadphase_query` finds bodies by their bounds alone, without testing their shapes, as Jolt's `BroadPhaseQuery`: a
+box, a sphere, a point or an oriented box for the bodies it overlaps, and a ray or a moving box for the bodies it enters
+and where. They take the same filter. The overlaps' collector takes `CollectorKind::ALL`, `::ANY` or `::CUSTOM`, as
+an overlap has no nearest; the casts' takes `CollectorKind::CLOSEST` too.
+
+<Snippet source="./cpp/queries.cpp" select="broadphase" />
+
+### Filters
+
+<Snippet source="./cpp/queries.cpp" select="filters" />
+
+<Snippet source="./cpp/queries.cpp" select="body-filter" />
+
+## Constraints
+
+A constraint holds two bodies relative to each other. `<type>_constraint::create(world, body_a, body_b, settings)`
+returns its id. `get(world, id)` returns its record for changing it (limits, motors), valid until the next create of
+that type, so get it again rather than keeping it. A constraint goes with either of its bodies, or with
+`constraints::remove(world, id)`, whatever its type.
+
+Points and axes are in world space by default. With `.space = ConstraintSpace::LOCAL` they are relative to each body.
+The two sides of a constraint are always `_a` and `_b`, as its bodies are.
+
+### Hinge
+
+<Snippet source="./cpp/constraints.cpp" select="hinge" />
+
+<Snippet source="./cpp/constraints.cpp" select="remove" />
+
+### Point
+
+<Snippet source="./cpp/constraints.cpp" select="point" />
+
+### Distance
+
+<Snippet source="./cpp/constraints.cpp" select="distance" />
+
+### Slider
+
+<Snippet source="./cpp/constraints.cpp" select="slider" />
+
+### Fixed
+
+<Snippet source="./cpp/constraints.cpp" select="fixed" />
+
+### Swing-twist and cone
+
+<Snippet source="./cpp/constraints.cpp" select="ragdoll" />
+
+<Snippet source="./cpp/constraints.cpp" select="cone" />
+
+### Six degrees of freedom
+
+<Snippet source="./cpp/constraints.cpp" select="six-dof" />
+
+### Motors and springs
+
+A motor drives a hinge, slider, swing-twist or six-dof axis. `MotorState::VELOCITY` drives to a target velocity;
+`POSITION` drives to a target position through the motor's spring. A motor's torque and force are unbounded unless
+limited by its `MotorSettings`. Limit one that drives into a limit, or it pushes past the limit. A spring's
+`frequency_or_stiffness` above 0 makes a limit or a distance soft.
+
+## Character controller
+
+`kcc` moves a character through the world by sweeps: it walks up slopes and stairs, slides along walls, sticks to the
+floor going down, and stands on moving bodies. It is not a rigid body. Its optional inner body, a kinematic body that
+follows it, is its presence in the world for bodies, queries and contact pairs.
+
+<Snippet source="./cpp/character.cpp" select="create" />
+
+<Snippet source="./cpp/character.cpp" select="update" />
+
+`character.ground` says what it stands on: its `state` (`ON_GROUND`, `ON_STEEP_GROUND`, `NOT_SUPPORTED`, `IN_AIR`), its
+`body_id`, the `normal` and the ground's `velocity`.
+
+### Changing shape
+
+<Snippet source="./cpp/character.cpp" select="crouch" />
+
+Give every shape the character's feet as its origin, and swap them freely.
+
+### Listeners and policies
+
+How the character treats the bodies it meets is a `KCC::Listener`'s: crashcat's and Jolt's callbacks, each
+optional. `on_adjust_body_velocity` changes a body's velocity as the character sees it (a conveyor's belt),
+`on_contact_validate` lets the character pass through a contact, `on_contact_added` and `on_contact_persisted` set a
+contact's push settings, `on_contact_solve` changes the character's velocity against a contact, and
+`on_contact_removed` reports a contact gone. Pass the listener to each call, or null for none.
+
+<Snippet source="./cpp/character.cpp" select="listener" />
+
+A policy is per body data that `kcc_policy::listener` makes into a listener:
+
+<Snippet source="./cpp/character.cpp" select="policy" />
+
+A body's policy: `ignore` passes through it, `can_push_character` false blocks without moving the character,
+`can_receive_impulses` false keeps the character from pushing it, `slide_on_walkable` false stops the character on a
+still, walkable surface of it, and `surface_linear_velocity` and `surface_angular_velocity` move the character as a
+conveyor's belt would. The JS package's characters take policies: a listener's callbacks would have to call from the
+wasm into JS.
+
+### Your own loop
+
+<Snippet source="./cpp/character.cpp" select="toolkit" />
+
+`collide`, `solve` and `cast` are a move's phases, as `move` runs them each collision iteration. Between `collide` and
+`solve` a contact's `was_discarded` and `linear_velocity` are yours: the solve, the sweep and the ground pass over a
+discarded one. `update` is the same phases with contact tracking (`begin_contact_tracking`, `end_contact_tracking`),
+`cancel_velocity_towards_steep_slopes` before, and `stick_to_floor` and `walk_stairs` after.
+
+### Contacts
+
+<Snippet source="./cpp/character.cpp" select="events" />
+
+<Snippet source="./cpp/character.cpp" select="contacts" />
+
+<Snippet source="./cpp/character.cpp" select="remove" />
+
+## Custom shapes
+
+A shape type of your own takes one of eight user slots, `ShapeType::USER_1` to `SHAPE_USER_8`. Its def gives its
+functions, and `dispatch::init` puts it beside the built-ins. Its shapes are a struct of yours deriving from
+`Shape`, as every built-in's is (`BoxShape`, `SphereShape`): `shapes::allocate<T>` makes one,
+`shapes::as<T>` reads a shape as it, and `shapes::release<T>` frees it, from the def's `destroy`, which runs when the
+last `Ref` to a shape of the type lets go. This one is an ellipsoid:
+
+<Snippet source="./cpp/custom_shapes.cpp" select="data" />
+
+A convex type gives a support: gjk and epa need nothing else to collide it with every other convex shape.
+
+<Snippet source="./cpp/custom_shapes.cpp" select="support" />
+
+<Snippet source="./cpp/custom_shapes.cpp" select="functions" />
+
+<Snippet source="./cpp/custom_shapes.cpp" select="def" />
+
+<Snippet source="./cpp/custom_shapes.cpp" select="register" />
+
+<Snippet source="./cpp/custom_shapes.cpp" select="use" />
+
+A type that is not convex leaves `set_support` null and gives its own pairs with `shapes::set_collide_shape_fn` and
+`shapes::set_cast_shape_fn` after `dispatch::init`.
+
+A contact's material is its shape's `get_material` for the contact's sub shape id, as in Jolt; hits carry none, and
+`rigid_body::get_material` gives a hit's. So a type made of parts with materials of their own, such as cells of a grid,
+answers by sub shape id there.
+
+A type whose sub shape ids name state you keep between steps, such as a pool of hits you clear before each step, sets
+`skips_pair_cache`. A pair that barely moved normally reuses last step's contacts, which would name state you have
+since cleared. With it set, the type's pairs always collide anew.
+
+## Debug drawing
+
+<Snippet source="./cpp/debug_draw.cpp" select="draw" />
+
+<Snippet source="./cpp/debug_draw.cpp" select="read" />
+
+`debug::character_contacts` draws a character's contacts. A custom shape draws through its def's `draw`, with
+`debug::line`, or as its bounds without one.
+
+## Determinism
+
+<Snippet source="./cpp/determinism.cpp" select="replay" />
+
+tumble uses no fused multiply-add, no fast math and none of the platform's math library: its trigonometry is its own.
+So the same steps give the same bits natively and in WebAssembly, with SIMD and without; its tests hold every build to
+one digest of a simulated pile. To keep them:
+
+- Build tumble with its own flags, as its CMake does: `-ffp-contract=off` (MSVC: `/fp:precise`), no fast math.
+- Build your code that calls tumble's math headers with `-ffp-contract=off` too. The math is inline, so it is compiled
+  with your flags.
+- Create bodies and constraints, and step, in the same order with the same values.
