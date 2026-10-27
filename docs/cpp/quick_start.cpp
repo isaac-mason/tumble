@@ -9,7 +9,7 @@ int main() {
     // register the shape types and their pair functions, once before anything collides
     dispatch::init();
 
-    // two object layers, one for what moves and one for what does not. each has its own broadphase tree
+    // one object layer for what moves and one for what does not, each with its own broadphase tree
     WorldSettings settings = world_settings::create();
     const uint32_t broadphase_moving = world_settings::add_broadphase_layer(settings);
     const uint32_t broadphase_not_moving = world_settings::add_broadphase_layer(settings);
@@ -21,16 +21,31 @@ int main() {
     // the world copies the settings
     World *world = world::create(settings);
 
-    // a static floor with its top at y = 0, and a box and a ball dropped onto it
+    // a static floor with its top at y = 0
     Ref<Shape> floor_shape = box::create({.half_extents = {20.0f, 0.5f, 20.0f}});
+    rigid_body::create(*world, {
+        .shape = floor_shape,
+        .object_layer = not_moving,
+        .motion_type = MotionType::STATIC,
+        .position = {0.0f, -0.5f, 0.0f},
+    });
+
+    // a box and a ball, dropped onto it
     Ref<Shape> box_shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    RigidBody *box = rigid_body::create(*world, {
+        .shape = box_shape,
+        .object_layer = moving,
+        .motion_type = MotionType::DYNAMIC,
+        .position = {0.0f, 4.0f, 0.0f},
+    });
+
     Ref<Shape> ball_shape = sphere::create({.radius = 0.5f});
-    rigid_body::create(*world, {.shape = floor_shape, .object_layer = not_moving, .motion_type = MotionType::STATIC,
-                                .position = {0.0f, -0.5f, 0.0f}});
-    RigidBody *box = rigid_body::create(*world, {.shape = box_shape, .object_layer = moving,
-                                                              .motion_type = MotionType::DYNAMIC, .position = {0.0f, 4.0f, 0.0f}});
-    RigidBody *ball = rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving,
-                                                               .motion_type = MotionType::DYNAMIC, .position = {0.2f, 6.0f, 0.0f}});
+    RigidBody *ball = rigid_body::create(*world, {
+        .shape = ball_shape,
+        .object_layer = moving,
+        .motion_type = MotionType::DYNAMIC,
+        .position = {0.2f, 6.0f, 0.0f},
+    });
 
     // two seconds at 60 steps a second
     for (int i = 0; i < 120; i++) world::step(*world, 1.0f / 60.0f);

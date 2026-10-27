@@ -27,7 +27,8 @@ static Arena arena;
 
 int main() {
     /* SNIPPET_START: set-allocator */
-    // set the allocator before anything allocates. from here on, every block tumble takes comes from the arena
+    // set the allocator before anything allocates. from here on, every block tumble takes comes
+    // from the arena
     util::set_allocator({arena_allocate, arena_free, &arena});
     /* SNIPPET_END: set-allocator */
 
@@ -37,7 +38,8 @@ int main() {
     WorldSettings settings = world_settings::create();
     world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
     World *world = world::create(settings);
-    printf("a world holds %zu bytes in %zu blocks\n", util::allocated_bytes(), util::allocated_blocks());
+    printf("a world holds %zu bytes in %zu blocks\n",
+           util::allocated_bytes(), util::allocated_blocks());
 
     world::destroy(world);
     // the settings are a value. they hold their layer tables until they leave scope

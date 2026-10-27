@@ -24,24 +24,35 @@ int main() {
 
     {
         /* SNIPPET_START: hinge */
-        // a door hinged along y at its left edge. it opens a quarter turn at most, and its motor drives it open. a motor's
-        // torque is unbounded unless you limit it. an unbounded motor pushes past the hinge limit, so this one has a limit
-        RigidBody *frame = rigid_body::create(*world, {.shape = nothing, .object_layer = not_moving,
-                                                                   .motion_type = MotionType::STATIC, .position = {0.0f, 1.0f, 0.0f}});
-        RigidBody *door = rigid_body::create(*world, {.shape = door_shape, .object_layer = moving,
-                                                                  .motion_type = MotionType::DYNAMIC, .position = {0.5f, 1.0f, 0.0f}});
-        const ConstraintId hinge_id = hinge_constraint::create(*world, frame, door,
-                                                                              {.point_a = {0.0f, 1.0f, 0.0f},
-                                                                               .point_b = {0.0f, 1.0f, 0.0f},
-                                                                               .hinge_axis_a = {0.0f, 1.0f, 0.0f},
-                                                                               .hinge_axis_b = {0.0f, 1.0f, 0.0f},
-                                                                               .normal_axis_a = {1.0f, 0.0f, 0.0f},
-                                                                               .normal_axis_b = {1.0f, 0.0f, 0.0f},
-                                                                               .limits_min = 0.0f,
-                                                                               .limits_max = 0.5f * scalar::PI,
-                                                                               .motor_settings = {.min_torque_limit = -100.0f, .max_torque_limit = 100.0f}});
+        // a door hinged along y at its left edge. it opens a quarter turn at most, and its motor
+        // drives it open. a motor's torque is unbounded unless you limit it. an unbounded motor
+        // pushes past the hinge limit, so this one has a limit
+        RigidBody *frame = rigid_body::create(*world, {
+            .shape = nothing,
+            .object_layer = not_moving,
+            .motion_type = MotionType::STATIC,
+            .position = {0.0f, 1.0f, 0.0f},
+        });
+        RigidBody *door = rigid_body::create(*world, {
+            .shape = door_shape,
+            .object_layer = moving,
+            .motion_type = MotionType::DYNAMIC,
+            .position = {0.5f, 1.0f, 0.0f},
+        });
+        const ConstraintId hinge_id = hinge_constraint::create(*world, frame, door, {
+            .point_a = {0.0f, 1.0f, 0.0f},
+            .point_b = {0.0f, 1.0f, 0.0f},
+            .hinge_axis_a = {0.0f, 1.0f, 0.0f},
+            .hinge_axis_b = {0.0f, 1.0f, 0.0f},
+            .normal_axis_a = {1.0f, 0.0f, 0.0f},
+            .normal_axis_b = {1.0f, 0.0f, 0.0f},
+            .limits_min = 0.0f,
+            .limits_max = 0.5f * scalar::PI,
+            .motor_settings = {.min_torque_limit = -100.0f, .max_torque_limit = 100.0f},
+        });
 
-        // the id names the constraint. get returns its record for changes, valid until the next hinge create
+        // the id names the constraint. get returns its record for changes, valid until the next
+        // hinge create
         HingeConstraint *hinge = hinge_constraint::get(*world, hinge_id);
         hinge_constraint::set_motor_state(*hinge, MotorState::VELOCITY);
         hinge_constraint::set_target_angular_velocity(*hinge, 2.0f);
@@ -64,12 +75,24 @@ int main() {
 
     {
         /* SNIPPET_START: point */
-        // a pendulum. the ball hangs 2 m below the point it swings about. a static body with an empty shape is the anchor
-        RigidBody *anchor = rigid_body::create(*world, {.shape = nothing, .object_layer = not_moving,
-                                                                    .motion_type = MotionType::STATIC, .position = {10.0f, 5.0f, 0.0f}});
-        RigidBody *bob = rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving,
-                                                                 .motion_type = MotionType::DYNAMIC, .position = {12.0f, 5.0f, 0.0f}});
-        point_constraint::create(*world, anchor, bob, {.point_a = {10.0f, 5.0f, 0.0f}, .point_b = {10.0f, 5.0f, 0.0f}});
+        // a pendulum. the ball hangs 2 m below the point it swings about. a static body with an
+        // empty shape is the anchor
+        RigidBody *anchor = rigid_body::create(*world, {
+            .shape = nothing,
+            .object_layer = not_moving,
+            .motion_type = MotionType::STATIC,
+            .position = {10.0f, 5.0f, 0.0f},
+        });
+        RigidBody *bob = rigid_body::create(*world, {
+            .shape = ball_shape,
+            .object_layer = moving,
+            .motion_type = MotionType::DYNAMIC,
+            .position = {12.0f, 5.0f, 0.0f},
+        });
+        point_constraint::create(*world, anchor, bob, {
+            .point_a = {10.0f, 5.0f, 0.0f},
+            .point_b = {10.0f, 5.0f, 0.0f},
+        });
         /* SNIPPET_END: point */
         /* HIDE_START */
         steps(*world, 90);
@@ -79,14 +102,23 @@ int main() {
 
         /* SNIPPET_START: distance */
         // a bungee. a spring pulls it back past 3 m. a min or max of -1 keeps the starting distance
-        RigidBody *jumper = rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving,
-                                                                    .motion_type = MotionType::DYNAMIC, .position = {14.0f, 5.0f, 0.0f}});
-        distance_constraint::create(*world, anchor, jumper,
-                                    {.point_a = {10.0f, 5.0f, 0.0f},
-                                     .point_b = {14.0f, 5.0f, 0.0f},
-                                     .min_distance = 0.0f,
-                                     .max_distance = 3.0f,
-                                     .spring_settings = {.mode = SpringMode::FREQUENCY_AND_DAMPING, .frequency_or_stiffness = 2.0f, .damping = 0.5f}});
+        RigidBody *jumper = rigid_body::create(*world, {
+            .shape = ball_shape,
+            .object_layer = moving,
+            .motion_type = MotionType::DYNAMIC,
+            .position = {14.0f, 5.0f, 0.0f},
+        });
+        distance_constraint::create(*world, anchor, jumper, {
+            .point_a = {10.0f, 5.0f, 0.0f},
+            .point_b = {14.0f, 5.0f, 0.0f},
+            .min_distance = 0.0f,
+            .max_distance = 3.0f,
+            .spring_settings = {
+                .mode = SpringMode::FREQUENCY_AND_DAMPING,
+                .frequency_or_stiffness = 2.0f,
+                .damping = 0.5f,
+            },
+        });
         /* SNIPPET_END: distance */
         /* HIDE_START */
         steps(*world, 240);
@@ -97,21 +129,32 @@ int main() {
 
     {
         /* SNIPPET_START: slider */
-        // a lift. the platform slides along y only, and its position motor holds it 2 m up the rail. a position motor drives
-        // through a spring, so a load makes it sag. at 10 Hz this spring sags by only millimetres
-        RigidBody *rail = rigid_body::create(*world, {.shape = nothing, .object_layer = not_moving,
-                                                                  .motion_type = MotionType::STATIC, .position = {20.0f, 0.0f, 0.0f}});
-        RigidBody *platform = rigid_body::create(*world, {.shape = block_shape, .object_layer = moving,
-                                                                      .motion_type = MotionType::DYNAMIC, .position = {20.0f, 0.0f, 0.0f}});
-        const ConstraintId lift_id = slider_constraint::create(*world, rail, platform,
-                                                                              {.slider_axis_a = {0.0f, 1.0f, 0.0f},
-                                                                               .slider_axis_b = {0.0f, 1.0f, 0.0f},
-                                                                               .normal_axis_a = {1.0f, 0.0f, 0.0f},
-                                                                               .normal_axis_b = {1.0f, 0.0f, 0.0f},
-                                                                               .auto_detect_point = true,
-                                                                               .limits_min = 0.0f,
-                                                                               .limits_max = 5.0f,
-                                                                               .motor_settings = {.spring = {.frequency_or_stiffness = 10.0f, .damping = 1.0f}}});
+        // a lift. the platform slides along y only, and its position motor holds it 2 m up the
+        // rail. a position motor drives through a spring, so a load makes it sag. at 10 Hz this
+        // spring sags by only millimetres
+        RigidBody *rail = rigid_body::create(*world, {
+            .shape = nothing,
+            .object_layer = not_moving,
+            .motion_type = MotionType::STATIC,
+            .position = {20.0f, 0.0f, 0.0f},
+        });
+        RigidBody *platform = rigid_body::create(*world, {
+            .shape = block_shape,
+            .object_layer = moving,
+            .motion_type = MotionType::DYNAMIC,
+            .position = {20.0f, 0.0f, 0.0f},
+        });
+        const ConstraintId lift_id = slider_constraint::create(*world, rail, platform, {
+            .slider_axis_a = {0.0f, 1.0f, 0.0f},
+            .slider_axis_b = {0.0f, 1.0f, 0.0f},
+            .normal_axis_a = {1.0f, 0.0f, 0.0f},
+            .normal_axis_b = {1.0f, 0.0f, 0.0f},
+            .auto_detect_point = true,
+            .limits_min = 0.0f,
+            .limits_max = 5.0f,
+            .motor_settings = {.spring = {.frequency_or_stiffness = 10.0f, .damping = 1.0f}},
+        });
+
         SliderConstraint *lift = slider_constraint::get(*world, lift_id);
         slider_constraint::set_motor_state(*lift, MotorState::POSITION);
         slider_constraint::set_target_position(*lift, 2.0f);
@@ -126,10 +169,18 @@ int main() {
     {
         /* SNIPPET_START: fixed */
         // a weld. the two bodies keep their relative pose and move as one
-        RigidBody *left = rigid_body::create(*world, {.shape = block_shape, .object_layer = moving,
-                                                                  .motion_type = MotionType::DYNAMIC, .position = {30.0f, 3.0f, 0.0f}});
-        RigidBody *right = rigid_body::create(*world, {.shape = block_shape, .object_layer = moving,
-                                                                   .motion_type = MotionType::DYNAMIC, .position = {31.0f, 3.0f, 0.0f}});
+        RigidBody *left = rigid_body::create(*world, {
+            .shape = block_shape,
+            .object_layer = moving,
+            .motion_type = MotionType::DYNAMIC,
+            .position = {30.0f, 3.0f, 0.0f},
+        });
+        RigidBody *right = rigid_body::create(*world, {
+            .shape = block_shape,
+            .object_layer = moving,
+            .motion_type = MotionType::DYNAMIC,
+            .position = {31.0f, 3.0f, 0.0f},
+        });
         fixed_constraint::create(*world, left, right, {.auto_detect_point = true});
         /* SNIPPET_END: fixed */
         /* HIDE_START */
@@ -141,42 +192,60 @@ int main() {
 
     {
         /* SNIPPET_START: ragdoll */
-        // a shoulder. the arm swings within a 45 degree cone around the twist axis, here x. it twists up to 30 degrees either
-        // way. a cone constraint is the same without the twist limits
-        RigidBody *torso = rigid_body::create(*world, {.shape = nothing, .object_layer = not_moving,
-                                                                   .motion_type = MotionType::STATIC, .position = {40.0f, 3.0f, 0.0f}});
-        RigidBody *arm = rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving,
-                                                                 .motion_type = MotionType::DYNAMIC, .position = {40.5f, 3.0f, 0.0f}});
-        swing_twist_constraint::create(*world, torso, arm,
-                                       {.point_a = {40.0f, 3.0f, 0.0f},
-                                        .point_b = {40.0f, 3.0f, 0.0f},
-                                        .twist_axis_a = {1.0f, 0.0f, 0.0f},
-                                        .plane_axis_a = {0.0f, 0.0f, 1.0f},
-                                        .twist_axis_b = {1.0f, 0.0f, 0.0f},
-                                        .plane_axis_b = {0.0f, 0.0f, 1.0f},
-                                        .normal_half_cone_angle = 0.25f * scalar::PI,
-                                        .plane_half_cone_angle = 0.25f * scalar::PI,
-                                        .twist_min_angle = -scalar::PI / 6.0f,
-                                        .twist_max_angle = scalar::PI / 6.0f});
+        // a shoulder. the arm swings within a 45 degree cone around the twist axis, here x. it
+        // twists up to 30 degrees either way. a cone constraint is the same without the twist limits
+        RigidBody *torso = rigid_body::create(*world, {
+            .shape = nothing,
+            .object_layer = not_moving,
+            .motion_type = MotionType::STATIC,
+            .position = {40.0f, 3.0f, 0.0f},
+        });
+        RigidBody *arm = rigid_body::create(*world, {
+            .shape = ball_shape,
+            .object_layer = moving,
+            .motion_type = MotionType::DYNAMIC,
+            .position = {40.5f, 3.0f, 0.0f},
+        });
+        swing_twist_constraint::create(*world, torso, arm, {
+            .point_a = {40.0f, 3.0f, 0.0f},
+            .point_b = {40.0f, 3.0f, 0.0f},
+            .twist_axis_a = {1.0f, 0.0f, 0.0f},
+            .plane_axis_a = {0.0f, 0.0f, 1.0f},
+            .twist_axis_b = {1.0f, 0.0f, 0.0f},
+            .plane_axis_b = {0.0f, 0.0f, 1.0f},
+            .normal_half_cone_angle = 0.25f * scalar::PI,
+            .plane_half_cone_angle = 0.25f * scalar::PI,
+            .twist_min_angle = -scalar::PI / 6.0f,
+            .twist_max_angle = scalar::PI / 6.0f,
+        });
         /* SNIPPET_END: ragdoll */
         /* HIDE_START */
         steps(*world, 120);
         // gravity pulls the arm down until the cone stops it 45 degrees below the twist axis
         const float ax = arm->position.x - 40.0f, ay = arm->position.y - 3.0f;
         if (!near(scalar::atan2(-ay, ax), 0.25f * scalar::PI, 0.05f)) return 1;
-        RigidBody *cone_arm = rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving,
-                                                                      .motion_type = MotionType::DYNAMIC, .position = {40.5f, 6.0f, 0.0f}});
-        RigidBody *cone_anchor = rigid_body::create(*world, {.shape = nothing, .object_layer = not_moving,
-                                                                         .motion_type = MotionType::STATIC, .position = {40.0f, 6.0f, 0.0f}});
+        RigidBody *cone_arm = rigid_body::create(*world, {
+            .shape = ball_shape,
+            .object_layer = moving,
+            .motion_type = MotionType::DYNAMIC,
+            .position = {40.5f, 6.0f, 0.0f},
+        });
+        RigidBody *cone_anchor = rigid_body::create(*world, {
+            .shape = nothing,
+            .object_layer = not_moving,
+            .motion_type = MotionType::STATIC,
+            .position = {40.0f, 6.0f, 0.0f},
+        });
         /* HIDE_END */
 
         /* SNIPPET_START: cone */
-        cone_constraint::create(*world, cone_anchor, cone_arm,
-                                {.point_a = {40.0f, 6.0f, 0.0f},
-                                 .twist_axis_a = {1.0f, 0.0f, 0.0f},
-                                 .point_b = {40.0f, 6.0f, 0.0f},
-                                 .twist_axis_b = {1.0f, 0.0f, 0.0f},
-                                 .half_cone_angle = 0.25f * scalar::PI});
+        cone_constraint::create(*world, cone_anchor, cone_arm, {
+            .point_a = {40.0f, 6.0f, 0.0f},
+            .twist_axis_a = {1.0f, 0.0f, 0.0f},
+            .point_b = {40.0f, 6.0f, 0.0f},
+            .twist_axis_b = {1.0f, 0.0f, 0.0f},
+            .half_cone_angle = 0.25f * scalar::PI,
+        });
         /* SNIPPET_END: cone */
         /* HIDE_START */
         steps(*world, 120);
@@ -187,21 +256,34 @@ int main() {
 
     {
         /* SNIPPET_START: six-dof */
-        // each axis has its own setting. here the body slides along x up to a metre either way and turns about y. the other
-        // axes are locked
-        RigidBody *base = rigid_body::create(*world, {.shape = nothing, .object_layer = not_moving,
-                                                                  .motion_type = MotionType::STATIC, .position = {50.0f, 3.0f, 0.0f}});
-        RigidBody *cart = rigid_body::create(*world, {.shape = block_shape, .object_layer = moving,
-                                                                  .motion_type = MotionType::DYNAMIC, .position = {50.0f, 3.0f, 0.0f}});
+        // each axis has its own setting. here the body slides along x up to a metre either way and
+        // turns about y. the other axes are locked
+        RigidBody *base = rigid_body::create(*world, {
+            .shape = nothing,
+            .object_layer = not_moving,
+            .motion_type = MotionType::STATIC,
+            .position = {50.0f, 3.0f, 0.0f},
+        });
+        RigidBody *cart = rigid_body::create(*world, {
+            .shape = block_shape,
+            .object_layer = moving,
+            .motion_type = MotionType::DYNAMIC,
+            .position = {50.0f, 3.0f, 0.0f},
+        });
+
         SixDOFConstraintSettings rails;
         rails.point_a = {50.0f, 3.0f, 0.0f};
         rails.point_b = {50.0f, 3.0f, 0.0f};
-        for (uint32_t axis = 0; axis < SixDOFConstraint::Axis::NUM; axis++) rails.limit_min[axis] = rails.limit_max[axis] = 0.0f;
+        for (uint32_t axis = 0; axis < SixDOFConstraint::Axis::NUM; axis++) {
+            rails.limit_min[axis] = 0.0f;
+            rails.limit_max[axis] = 0.0f;
+        }
         rails.limit_min[SixDOFConstraint::Axis::TRANSLATION_X] = -1.0f;
         rails.limit_max[SixDOFConstraint::Axis::TRANSLATION_X] = 1.0f;
         rails.limit_min[SixDOFConstraint::Axis::ROTATION_Y] = -scalar::PI;
         rails.limit_max[SixDOFConstraint::Axis::ROTATION_Y] = scalar::PI;
         six_dof_constraint::create(*world, base, cart, rails);
+
         rigid_body::set_linear_velocity(*world, cart, vec3f::make(5.0f, 0.0f, 0.0f));
         /* SNIPPET_END: six-dof */
         /* HIDE_START */

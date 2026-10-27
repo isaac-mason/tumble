@@ -5,8 +5,9 @@
 using namespace tumble;
 
 /* SNIPPET_START: frame */
-// a contact pairs frame. begin it, record each world step's contact events and each character move, then end it. a
-// pair is added in the frame it starts, persisted while it lasts, and removed in the frame after it was last recorded
+// a contact pairs frame. begin it, record each world step's contact events and each character
+// move, then end it. a pair is added in the frame it starts, persisted while it lasts, and removed
+// in the frame after it was last recorded
 void frame(World &world, float frame_time, int steps) {
     contact_pairs::begin(world);
     for (int i = 0; i < steps; i++) {
@@ -22,12 +23,17 @@ void print_pairs(const World &world) {
     const ContactPairs &pairs = world.contact_pairs;
     for (uint32_t i = 0; i < pairs.active.length; i++) {
         const ContactPair &pair = pairs.pairs[pairs.active[i]];
-        printf("%s: body %u touches body %u at %.2f %.2f %.2f, %.2f m/s apart\n", pair.added ? "added" : "persisted",
-               body_id::index(pair.a.body_id), body_id::index(pair.b.body_id), pair.point.x, pair.point.y, pair.point.z, pair.relative_velocity.y);
+        const uint32_t a = body_id::index(pair.a.body_id);
+        const uint32_t b = body_id::index(pair.b.body_id);
+        printf("%s: body %u touches body %u\n", pair.added ? "added" : "persisted", a, b);
+        printf("  at %.2f %.2f %.2f\n", pair.point.x, pair.point.y, pair.point.z);
+        printf("  %.2f m/s apart\n", pair.relative_velocity.y);
     }
     for (uint32_t i = 0; i < pairs.removed.length; i++) {
         const ContactPair &pair = pairs.pairs[pairs.removed[i]];
-        printf("removed: body %u and body %u\n", body_id::index(pair.a.body_id), body_id::index(pair.b.body_id));
+        const uint32_t a = body_id::index(pair.a.body_id);
+        const uint32_t b = body_id::index(pair.b.body_id);
+        printf("removed: body %u and body %u\n", a, b);
     }
 }
 /* SNIPPET_END: read */
@@ -42,14 +48,23 @@ int main() {
     World *world = world::create(settings);
     Ref<Shape> ground_shape = box::create({.half_extents = {20.0f, 0.5f, 20.0f}});
     Ref<Shape> ball_shape = sphere::create({.radius = 0.5f});
-    rigid_body::create(*world, {.shape = ground_shape, .object_layer = not_moving, .motion_type = MotionType::STATIC,
-                                .position = {0.0f, -0.5f, 0.0f}});
+    rigid_body::create(*world, {
+        .shape = ground_shape,
+        .object_layer = not_moving,
+        .motion_type = MotionType::STATIC,
+        .position = {0.0f, -0.5f, 0.0f},
+    });
 
     /* SNIPPET_START: observe */
     // only pairs that include a body observing contacts are kept. these are the few a game reacts to
-    RigidBody *ball = rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving,
-                                                               .motion_type = MotionType::DYNAMIC, .position = {0.0f, 2.0f, 0.0f},
-                                                               .restitution = 0.6f, .observes_contacts = true});
+    RigidBody *ball = rigid_body::create(*world, {
+        .shape = ball_shape,
+        .object_layer = moving,
+        .motion_type = MotionType::DYNAMIC,
+        .position = {0.0f, 2.0f, 0.0f},
+        .restitution = 0.6f,
+        .observes_contacts = true,
+    });
     /* SNIPPET_END: observe */
 
     /* HIDE_START */

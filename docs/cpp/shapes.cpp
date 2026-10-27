@@ -19,8 +19,12 @@ static World *make_world() {
 
 /** drops a body of the shape from 3 m onto the ground and returns where it settles */
 static float rest_height(World &world, Shape *shape, float x) {
-    RigidBody *body = rigid_body::create(world, {.shape = shape, .object_layer = moving, .motion_type = MotionType::DYNAMIC,
-                                                             .position = {x, 3.0f, 0.0f}});
+    RigidBody *body = rigid_body::create(world, {
+        .shape = shape,
+        .object_layer = moving,
+        .motion_type = MotionType::DYNAMIC,
+        .position = {x, 3.0f, 0.0f},
+    });
     for (int i = 0; i < 180; i++) world::step(world, 1.0f / 60.0f);
     const float height = body->position.y;
     rigid_body::remove(world, body);
@@ -34,15 +38,22 @@ int main() {
     World *world = make_world();
 
     /* SNIPPET_START: plane */
-    // an infinite ground. the plane is point . normal + constant = 0, and the normal points out of its front
+    // an infinite ground. the plane is point . normal + constant = 0, and the normal points out of
+    // its front
     Ref<Shape> ground = plane::create({.plane = {{0.0f, 1.0f, 0.0f}, 0.0f}});
-    rigid_body::create(*world, {.shape = ground, .object_layer = not_moving, .motion_type = MotionType::STATIC});
+    rigid_body::create(*world, {
+        .shape = ground,
+        .object_layer = not_moving,
+        .motion_type = MotionType::STATIC,
+    });
     /* SNIPPET_END: plane */
 
     /* SNIPPET_START: convex */
-    // the convex primitives, centred on their origin. a body takes its mass from their volume and density
+    // the convex primitives, centred on their origin. a body takes its mass from their volume and
+    // density
     Ref<Shape> ball = sphere::create({.radius = 0.5f});
     Ref<Shape> crate = box::create({.half_extents = {0.5f, 0.25f, 0.5f}, .density = 500.0f});
+
     // y is the long axis of a capsule and a cylinder. a capsule's radius is its convex radius
     Ref<Shape> pill = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.25f});
     Ref<Shape> can = cylinder::create({.half_height = 0.4f, .radius = 0.3f});
@@ -57,12 +68,22 @@ int main() {
     /* SNIPPET_START: convex-hull */
     // any point cloud. the shape builds its hull, and any number of bodies can share the shape
     const float points[] = {
-        -0.5f, 0.0f, -0.5f, 0.5f, 0.0f, -0.5f, 0.5f, 0.0f, 0.5f, -0.5f, 0.0f, 0.5f, 0.0f, 0.8f, 0.0f, 0.1f, 0.2f, 0.1f,
+        -0.5f, 0.0f, -0.5f,
+        0.5f, 0.0f, -0.5f,
+        0.5f, 0.0f, 0.5f,
+        -0.5f, 0.0f, 0.5f,
+        0.0f, 0.8f, 0.0f,
+        0.1f, 0.2f, 0.1f,
     };
     ConvexHullShape::BuildResult result;
     Ref<Shape> pyramid = convex_hull::create({.positions = points, .num_positions = 6}, &result);
     if (pyramid == nullptr) printf("no hull: build result %u\n", (uint32_t)result);
-    Ref<Shape> heavy_pyramid = convex_hull::create({.positions = points, .num_positions = 6, .density = 4000.0f});
+
+    Ref<Shape> heavy_pyramid = convex_hull::create({
+        .positions = points,
+        .num_positions = 6,
+        .density = 4000.0f,
+    });
     /* SNIPPET_END: convex-hull */
     /* HIDE_START */
     // the interior point (0.1, 0.2, 0.1) is dropped: the hull is the five corners
@@ -71,20 +92,37 @@ int main() {
     /* HIDE_END */
 
     /* SNIPPET_START: triangle-mesh */
-    // static geometry from triangles, counter clockwise seen from the front. the shape builds its bvh and finds the edges
-    // a sliding body must not catch on
-    const float ramp_positions[] = {-2.0f, 0.0f, -2.0f, 2.0f, 0.0f, -2.0f, 2.0f, 1.0f, 2.0f, -2.0f, 1.0f, 2.0f};
+    // static geometry from triangles, counter clockwise seen from the front. the shape builds its
+    // bvh and finds the edges a sliding body must not catch on
+    const float ramp_positions[] = {
+        -2.0f, 0.0f, -2.0f,
+        2.0f, 0.0f, -2.0f,
+        2.0f, 1.0f, 2.0f,
+        -2.0f, 1.0f, 2.0f,
+    };
     const uint32_t ramp_indices[] = {0, 2, 1, 0, 3, 2};
-    Ref<Shape> ramp =
-        triangle_mesh::create({.positions = ramp_positions, .num_positions = 4, .indices = ramp_indices, .num_indices = 6});
-    rigid_body::create(*world, {.shape = ramp, .object_layer = not_moving, .motion_type = MotionType::STATIC,
-                                .position = {20.0f, 0.0f, 0.0f}});
+    Ref<Shape> ramp = triangle_mesh::create({
+        .positions = ramp_positions,
+        .num_positions = 4,
+        .indices = ramp_indices,
+        .num_indices = 6,
+    });
+    rigid_body::create(*world, {
+        .shape = ramp,
+        .object_layer = not_moving,
+        .motion_type = MotionType::STATIC,
+        .position = {20.0f, 0.0f, 0.0f},
+    });
     /* SNIPPET_END: triangle-mesh */
     /* HIDE_START */
     // a ball dropped on the ramp's high end stays above the ground until it has rolled off
     {
-        RigidBody *roller = rigid_body::create(*world, {.shape = ball, .object_layer = moving, .motion_type = MotionType::DYNAMIC,
-                                                                    .position = {20.0f, 3.0f, 1.5f}});
+        RigidBody *roller = rigid_body::create(*world, {
+            .shape = ball,
+            .object_layer = moving,
+            .motion_type = MotionType::DYNAMIC,
+            .position = {20.0f, 3.0f, 1.5f},
+        });
         float lowest_on_ramp = 10.0f;
         for (int i = 0; i < 30; i++) {
             world::step(*world, 1.0f / 60.0f);
@@ -97,19 +135,27 @@ int main() {
 
     /* SNIPPET_START: compound */
     // several shapes as one body, each at its own pose. the compound holds its shapes
+    const Float4 upright = {0.0f, 0.0f, 0.0f, 1.0f};
+    const Float4 on_its_side = {0.0f, 0.0f, 0.70710678f, 0.70710678f};
     const CompoundShapeSettings::Child dumbbell_parts[] = {
-        {.position = {-0.6f, 0.0f, 0.0f}, .quaternion = {0.0f, 0.0f, 0.0f, 1.0f}, .shape = ball},
-        {.position = {0.6f, 0.0f, 0.0f}, .quaternion = {0.0f, 0.0f, 0.0f, 1.0f}, .shape = ball},
-        {.position = {0.0f, 0.0f, 0.0f}, .quaternion = {0.0f, 0.0f, 0.70710678f, 0.70710678f}, .shape = pill},
+        {.position = {-0.6f, 0.0f, 0.0f}, .quaternion = upright, .shape = ball},
+        {.position = {0.6f, 0.0f, 0.0f}, .quaternion = upright, .shape = ball},
+        {.position = {0.0f, 0.0f, 0.0f}, .quaternion = on_its_side, .shape = pill},
     };
     Ref<Shape> dumbbell = compound::create({.children = dumbbell_parts, .num_children = 3});
 
     // a static compound is built once into a bvh. use it for many children that never change
     CompoundShapeSettings::Child fence_posts[16];
-    for (uint32_t i = 0; i < 16; i++) fence_posts[i] = {.position = {(float)i, 0.4f, 0.0f}, .quaternion = {0.0f, 0.0f, 0.0f, 1.0f}, .shape = can};
+    for (uint32_t i = 0; i < 16; i++) {
+        fence_posts[i] = {.position = {(float)i, 0.4f, 0.0f}, .quaternion = upright, .shape = can};
+    }
     Ref<Shape> fence = static_compound::create({.children = fence_posts, .num_children = 16});
-    rigid_body::create(*world, {.shape = fence, .object_layer = not_moving, .motion_type = MotionType::STATIC,
-                                .position = {-20.0f, 0.0f, 0.0f}});
+    rigid_body::create(*world, {
+        .shape = fence,
+        .object_layer = not_moving,
+        .motion_type = MotionType::STATIC,
+        .position = {-20.0f, 0.0f, 0.0f},
+    });
     /* SNIPPET_END: compound */
     /* HIDE_START */
     if (!near(rest_height(*world, dumbbell, 30.0f), 0.5f, 0.03f)) return 1;
@@ -118,11 +164,20 @@ int main() {
     /* HIDE_END */
 
     /* SNIPPET_START: decorators */
-    // wrappers hold a shape and change it. they move and turn it within the body, scale it, or move its centre of mass
-    Ref<Shape> raised = transformed::create({.shape = crate, .position = {0.0f, 1.0f, 0.0f}, .quaternion = {0.0f, 0.0f, 0.0f, 1.0f}});
+    // wrappers hold a shape and change it. they move and turn it within the body, scale it, or
+    // move its centre of mass
+    Ref<Shape> raised = transformed::create({
+        .shape = crate,
+        .position = {0.0f, 1.0f, 0.0f},
+        .quaternion = {0.0f, 0.0f, 0.0f, 1.0f},
+    });
     Ref<Shape> big_ball = scaled::create({.shape = ball, .scale = {2.0f, 2.0f, 2.0f}});
+
     // a low centre of mass keeps a tall box upright
-    Ref<Shape> ballasted = offset_center_of_mass::create({.shape = crate, .offset = {0.0f, -0.2f, 0.0f}});
+    Ref<Shape> ballasted = offset_center_of_mass::create({
+        .shape = crate,
+        .offset = {0.0f, -0.2f, 0.0f},
+    });
     /* SNIPPET_END: decorators */
     /* HIDE_START */
     if (!near(rest_height(*world, raised, 34.0f), -0.75f, 0.03f) || !near(rest_height(*world, big_ball, 38.0f), 1.0f, 0.03f) ||
@@ -132,14 +187,19 @@ int main() {
     /* HIDE_END */
 
     /* SNIPPET_START: empty */
-    // a body with no geometry. use it as a point for constraints to hold, or for a body waiting for its shape
+    // a body with no geometry. use it as a point for constraints to hold, or for a body waiting for
+    // its shape
     Ref<Shape> nothing = empty::create();
-    rigid_body::create(*world, {.shape = nothing, .object_layer = moving, .motion_type = MotionType::STATIC});
+    rigid_body::create(*world, {
+        .shape = nothing,
+        .object_layer = moving,
+        .motion_type = MotionType::STATIC,
+    });
     /* SNIPPET_END: empty */
 
     /* SNIPPET_START: freeing */
-    // a shape is freed when the last Ref to it lets go. the world lets go of its bodies' shapes, a wrapper lets go of
-    // the shape it wraps, and the Refs here let go as they leave scope
+    // a shape is freed when the last Ref to it lets go. the world lets go of its bodies' shapes, a
+    // wrapper lets go of the shape it wraps, and the Refs here let go as they leave scope
     world::destroy(world);
     /* SNIPPET_END: freeing */
     /* HIDE_START */

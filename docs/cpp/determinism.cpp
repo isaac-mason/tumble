@@ -15,12 +15,23 @@ static World *make_pile(Shape *ground_shape, Shape *ball_shape) {
     world_settings::enable_collision(settings, moving, moving);
     world_settings::enable_collision(settings, moving, not_moving);
     World *world = world::create(settings);
-    rigid_body::create(*world, {.shape = ground_shape, .object_layer = not_moving, .motion_type = MotionType::STATIC,
-                                .position = {0.0f, -0.5f, 0.0f}});
+    rigid_body::create(*world, {
+        .shape = ground_shape,
+        .object_layer = not_moving,
+        .motion_type = MotionType::STATIC,
+        .position = {0.0f, -0.5f, 0.0f},
+    });
     for (int i = 0; i < 20; i++) {
         // offsets exact in every float type, so js builds the same pile
-        rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving, .motion_type = MotionType::DYNAMIC,
-                                    .position = {0.0625f * (float)(i % 3), 0.625f + 1.125f * (float)i, 0.03125f * (float)(i % 4)}});
+        const float x = 0.0625f * (float)(i % 3);
+        const float y = 0.625f + 1.125f * (float)i;
+        const float z = 0.03125f * (float)(i % 4);
+        rigid_body::create(*world, {
+            .shape = ball_shape,
+            .object_layer = moving,
+            .motion_type = MotionType::DYNAMIC,
+            .position = {x, y, z},
+        });
     }
     return world;
 }
@@ -31,8 +42,8 @@ int main() {
     Ref<Shape> ball_shape = sphere::create({.radius = 0.45f});
 
     /* SNIPPET_START: replay */
-    // the same scene, built in the same order and stepped the same way, gives exactly the same result. this holds in
-    // another world, another run, another machine, or the browser
+    // the same scene, built in the same order and stepped the same way, gives exactly the same
+    // result. this holds in another world, another run, another machine, or the browser
     World *first = make_pile(ground_shape, ball_shape);
     World *second = make_pile(ground_shape, ball_shape);
     for (int i = 0; i < 300; i++) {
@@ -43,7 +54,8 @@ int main() {
     for (uint32_t i = 0; i < first->bodies.pool.length; i++) {
         const RigidBody &a = *first->bodies.pool[i];
         const RigidBody &b = *second->bodies.pool[i];
-        same = same && memcmp(&a.position, &b.position, sizeof(Float3)) == 0 && memcmp(&a.quaternion, &b.quaternion, sizeof(Float4)) == 0;
+        if (memcmp(&a.position, &b.position, sizeof(Float3)) != 0) same = false;
+        if (memcmp(&a.quaternion, &b.quaternion, sizeof(Float4)) != 0) same = false;
     }
     printf("%s\n", same ? "bit for bit the same" : "they differ");
     /* SNIPPET_END: replay */

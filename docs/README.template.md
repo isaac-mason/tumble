@@ -19,10 +19,18 @@ tumble is a 3D physics engine in C++, built for games and simulations. It comes 
 - all memory through one allocator that you can replace
 - the whole API from one include, `tumble/tumble.h`
 
-**Examples**
+**Single threaded**
 
-- [Samples](https://isaac-mason.github.io/tumble/samples/), the C++ samples built for the web
-- [tumble.js examples](https://isaac-mason.github.io/tumble/examples/)
+tumble runs on one thread for now. It mainly targets WebAssembly, for deployment to game portals. WebAssembly threads need SharedArrayBuffer, which many portals do not support. Multithreading may come in the future.
+
+**Samples**
+
+`samples/` is an app of the C++ samples below, each one file in [`samples/examples/`](./samples/examples). Try them in
+your browser at [isaac-mason.github.io/tumble/samples](https://isaac-mason.github.io/tumble/samples/). Each picture
+opens its sample there, and "source" opens its code. The app also builds natively with `samples/native.sh`. The
+[tumble.js examples](https://isaac-mason.github.io/tumble/examples/) show the JavaScript bindings.
+
+<Examples />
 
 **Documentation**
 
@@ -141,6 +149,8 @@ bodies in separate broadphase layers.
 
 <Snippet source="./cpp/world.cpp" select="layers" />
 
+<ExamplesTable ids="example_object_layer_filtering" />
+
 ### Settings
 
 `WorldSettings` holds the layers, gravity, and the solver, narrowphase, sleeping and CCD settings. The defaults suit
@@ -174,6 +184,10 @@ runs all the phases and changes nothing. To reject or change events, run the pha
 - A rejected contact is not recorded in contact pairs.
 - After `narrowphase`, `events.woken` counts the bodies its contacts woke. While it is above zero, find their pairs and
   run the narrowphase again.
+
+The conveyor belt sample changes its contacts' surface velocities between the phases:
+
+<ExamplesTable ids="example_conveyor_belt" />
 
 After a step, the events describe what it did:
 
@@ -225,15 +239,21 @@ a kinematic body, set its velocity instead (see [Kinematic bodies](#kinematic-bo
 
 Forces and impulses only move dynamic bodies.
 
+<ExamplesTable ids="example_add_impulse_at_position" />
+
 ### Mass
 
 <Snippet source="./cpp/bodies.cpp" select="mass" />
 
 A triangle mesh has no volume, so it has no mass. A dynamic body with a mesh shape needs `mass_properties_override`.
 
+<ExamplesTable ids="example_mass_properties" />
+
 ### Damping, limits and degrees of freedom
 
 <Snippet source="./cpp/bodies.cpp" select="tuning" />
+
+<ExamplesTable ids="example_linear_damping,example_angular_damping,example_gravity_factor" />
 
 ### Sleeping
 
@@ -245,9 +265,13 @@ A triangle mesh has no volume, so it has no mass. A dynamic body with a mesh sha
 
 `move_kinematic` wakes the body, so a lift waiting at rest starts moving.
 
+<ExamplesTable ids="example_kinematic_body" />
+
 ### Continuous collision detection
 
 <Snippet source="./cpp/bodies.cpp" select="ccd" />
+
+<ExamplesTable ids="example_continuous_collision_detection" />
 
 ### User data
 
@@ -256,6 +280,8 @@ A triangle mesh has no volume, so it has no mass. A dynamic body with a mesh sha
 ### Collision groups and masks
 
 <Snippet source="./cpp/bodies.cpp" select="groups" />
+
+<ExamplesTable ids="example_collision_filtering" />
 
 ### Materials
 
@@ -267,9 +293,13 @@ side of a contact, the material replaces the body's friction and restitution.
 A query hit names the part it hit with a sub shape id. `rigid_body::get_material(body, hit.sub_shape_id)` returns that
 part's material id.
 
+<ExamplesTable ids="example_friction,example_restitution" />
+
 ### Sensors
 
 <Snippet source="./cpp/bodies.cpp" select="sensors" />
+
+<ExamplesTable ids="example_sensor" />
 
 ### Changing a body's shape
 
@@ -289,6 +319,8 @@ takes a plain `Shape *`.
 
 A shape's geometry is centred on its origin. The body's pose places it in the world.
 
+<ExamplesTable ids="example_shapes,example_cube_heap,example_cluster" />
+
 ### Convex shapes
 
 <Snippet source="./cpp/shapes.cpp" select="convex" />
@@ -298,6 +330,8 @@ A box's or a cylinder's `convex_radius` rounds its edges a little. This makes co
 ### Convex hulls
 
 <Snippet source="./cpp/shapes.cpp" select="convex-hull" />
+
+<ExamplesTable ids="example_convex_hull_builder" />
 
 ### Planes
 
@@ -309,9 +343,13 @@ A box's or a cylinder's `convex_radius` rounds its edges a little. This makes co
 
 Use meshes for static bodies. A mesh is hollow. It has no volume, no inside and no mass.
 
+<ExamplesTable ids="example_triangle_mesh,example_voxel_triangle_mesh" />
+
 ### Compounds
 
 <Snippet source="./cpp/shapes.cpp" select="compound" />
+
+<ExamplesTable ids="example_static_compound_shapes" />
 
 ### Decorators
 
@@ -354,17 +392,25 @@ A query searches the broadphase under a filter and tests every body it reaches. 
 
 <Snippet source="./cpp/queries.cpp" select="cast-ray" />
 
+<ExamplesTable ids="example_cast_ray,example_pointer_raycast,example_raycast_vehicle" />
+
 ### Points
 
 <Snippet source="./cpp/queries.cpp" select="collide-point" />
+
+<ExamplesTable ids="example_collide_point" />
 
 ### Overlaps
 
 <Snippet source="./cpp/queries.cpp" select="collide-shape" />
 
+<ExamplesTable ids="example_collide_shape" />
+
 ### Sweeps
 
 <Snippet source="./cpp/queries.cpp" select="cast-shape" />
+
+<ExamplesTable ids="example_cast_shape" />
 
 ### Bounds only
 
@@ -397,6 +443,8 @@ Removing either body removes the constraint. You can also remove any constraint 
 Points and axes are in world space by default. With `.space = ConstraintSpace::LOCAL`, they are relative to each body.
 The two sides of a constraint are named `_a` and `_b`, like its bodies.
 
+<ExamplesTable ids="example_constraints" />
+
 ### Hinge
 
 <Snippet source="./cpp/constraints.cpp" select="hinge" />
@@ -423,6 +471,8 @@ The two sides of a constraint are named `_a` and `_b`, like its bodies.
 
 <Snippet source="./cpp/constraints.cpp" select="ragdoll" />
 
+<ExamplesTable ids="example_ragdoll" />
+
 <Snippet source="./cpp/constraints.cpp" select="cone" />
 
 ### Six degrees of freedom
@@ -441,6 +491,8 @@ against a constraint limit. Otherwise it pushes past the constraint limit.
 
 A spring with `frequency_or_stiffness` above 0 makes a limit or a distance soft.
 
+<ExamplesTable ids="example_constraint_motors,example_hinge_motor" />
+
 ## Character controller
 
 `kcc` moves a character through the world with sweeps. It walks up slopes and stairs, slides along walls, sticks to the
@@ -455,6 +507,8 @@ character, so other bodies, queries and contact pairs can see it.
 
 `character.ground` describes what the character stands on. Its `state` is one of `KCC::GroundState::ON_GROUND`,
 `ON_STEEP_GROUND`, `NOT_SUPPORTED` and `IN_AIR`. It also has a `body_id`, a `normal`, and the ground's `velocity`.
+
+<ExamplesTable ids="example_kinematic_character_controller,example_kcc_stress_test,example_floating_character_controller" />
 
 ### Changing shape
 
@@ -540,6 +594,10 @@ A convex type only needs a support function. With it, gjk and epa collide the ty
 
 <Snippet source="./cpp/custom_shapes.cpp" select="use" />
 
+The voxel sample is a custom shape over a grid of cells:
+
+<ExamplesTable ids="example_voxel_custom_shape" />
+
 A type that is not convex leaves `set_support` null. It sets its own pair functions with `shapes::set_collide_shape_fn`
 and `shapes::set_cast_shape_fn`, after `dispatch::init`.
 
@@ -559,6 +617,8 @@ you have cleared. With the flag set, the type's pairs always collide again.
 
 `debug::character_contacts` draws a character's contacts. A custom shape draws through its def's `draw` using
 `debug::line`. Without a `draw`, it draws as its bounds.
+
+<ExamplesTable ids="example_debug_renderer" />
 
 ## Determinism
 

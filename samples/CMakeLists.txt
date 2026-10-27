@@ -59,3 +59,17 @@ else()
         target_link_libraries(tumble_samples PRIVATE X11 Xi Xcursor GL dl m Threads::Threads)
     endif()
 endif()
+
+# every sample drawn offscreen to samples/screenshots, with no window: samples/screenshots.sh
+if(APPLE AND NOT EMSCRIPTEN)
+    set(TUMBLE_SAMPLES_SHARED_SOURCES ${TUMBLE_SAMPLES_SOURCES})
+    list(REMOVE_ITEM TUMBLE_SAMPLES_SHARED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/app/main.cpp ${CMAKE_CURRENT_SOURCE_DIR}/app/sokol.cpp)
+    add_executable(tumble_samples_screenshots ${TUMBLE_SAMPLES_SHARED_SOURCES} screenshots/main.cpp screenshots/sokol.cpp)
+    target_include_directories(tumble_samples_screenshots PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${sokol_SOURCE_DIR} ${sokol_SOURCE_DIR}/util ${cgltf_SOURCE_DIR})
+    target_link_libraries(tumble_samples_screenshots PRIVATE tumble::tumble tumble_samples_imgui
+        "-framework OpenGL" "-framework CoreGraphics" "-framework ImageIO" "-framework CoreFoundation")
+    target_compile_definitions(tumble_samples_screenshots PRIVATE SOKOL_GLCORE GL_SILENCE_DEPRECATION
+        TUMBLE_SAMPLES_ASSETS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets")
+    target_compile_options(tumble_samples_screenshots PRIVATE -Wall -Wextra -Wno-missing-field-initializers)
+    set_source_files_properties(screenshots/sokol.cpp TARGET_DIRECTORY tumble_samples_screenshots PROPERTIES COMPILE_OPTIONS "-w")
+endif()

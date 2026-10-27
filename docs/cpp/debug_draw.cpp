@@ -14,7 +14,9 @@ void upload_line_vertices(const float *vertices, uint32_t vertex_count) {
 
 /* SNIPPET_START: read */
 // line_count lines of two vertices each. each vertex is x y z r g b, ready to use as a vertex array
-void draw_lines(const DebugDraw &buffers) { upload_line_vertices(buffers.lines.data, buffers.line_count * 2); }
+void draw_lines(const DebugDraw &buffers) {
+    upload_line_vertices(buffers.lines.data, buffers.line_count * 2);
+}
 /* SNIPPET_END: read */
 
 int main() {
@@ -27,24 +29,41 @@ int main() {
     World *world = world::create(settings);
     Ref<Shape> ground_shape = box::create({.half_extents = {5.0f, 0.5f, 5.0f}});
     Ref<Shape> ball_shape = sphere::create({.radius = 0.5f});
-    RigidBody *ground = rigid_body::create(*world, {.shape = ground_shape, .object_layer = not_moving,
-                                                                 .motion_type = MotionType::STATIC, .position = {0.0f, -0.5f, 0.0f}});
-    RigidBody *ball = rigid_body::create(*world, {.shape = ball_shape, .object_layer = moving,
-                                                               .motion_type = MotionType::DYNAMIC, .position = {0.0f, 0.5f, 0.0f}});
+    RigidBody *ground = rigid_body::create(*world, {
+        .shape = ground_shape,
+        .object_layer = not_moving,
+        .motion_type = MotionType::STATIC,
+        .position = {0.0f, -0.5f, 0.0f},
+    });
+    RigidBody *ball = rigid_body::create(*world, {
+        .shape = ball_shape,
+        .object_layer = moving,
+        .motion_type = MotionType::DYNAMIC,
+        .position = {0.0f, 0.5f, 0.0f},
+    });
     point_constraint::create(*world, ground, ball, {.point_a = {0.0f, 1.0f, 0.0f}, .point_b = {0.0f, 1.0f, 0.0f}});
     world::step(*world, 1.0f / 60.0f);
 
     /* SNIPPET_START: draw */
-    // the buffers grow as you draw into them, and keep their memory when cleared. clear and redraw them each frame
+    // the buffers grow as you draw into them, and keep their memory when cleared. clear and redraw
+    // them each frame
     DebugDraw buffers;
     debug::clear(buffers);
+
     // the bodies, coloured by motion type, with their velocities
-    debug::bodies(buffers, *world, {.color_mode = DebugDraw::BodyColorMode::MOTION_TYPE, .show_linear_velocity = true});
+    debug::bodies(buffers, *world, {
+        .color_mode = DebugDraw::BodyColorMode::MOTION_TYPE,
+        .show_linear_velocity = true,
+    });
+
     // each contact's points and normal, and the constraints' anchors and axes
     debug::contacts(buffers, *world);
     debug::joints(buffers, *world, {});
+
     // a shape at any pose, such as a preview of where something would go
-    debug::shape(buffers, ball_shape, vec3f::make(3.0f, 0.5f, 0.0f), quatf::identity(), {.color = {0.0f, 1.0f, 0.0f}});
+    const Vec3f preview_position = vec3f::make(3.0f, 0.5f, 0.0f);
+    const Float3 green = {0.0f, 1.0f, 0.0f};
+    debug::shape(buffers, ball_shape, preview_position, quatf::identity(), {.color = green});
     draw_lines(buffers);
     printf("%u lines\n", buffers.line_count);
     /* HIDE_START */
