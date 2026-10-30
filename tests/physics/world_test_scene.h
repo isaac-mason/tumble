@@ -52,7 +52,7 @@ inline RigidBodySettings body_settings(Shape *shape, uint32_t object_layer, Moti
     settings.shape = shape;
     settings.object_layer = object_layer;
     settings.motion_type = motion_type;
-    settings.position = position;
+    settings.position = vec3f::load(position);
     return settings;
 }
 

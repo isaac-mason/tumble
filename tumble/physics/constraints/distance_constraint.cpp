@@ -73,25 +73,25 @@ ConstraintId create(World &world, RigidBody *body_a, RigidBody *body_b,
 
     if (settings.space == ConstraintSpace::WORLD) {
         // local = quat^-1 * (world point - center of mass position)
-        const Quatf inv_quat_a = quatf::conjugate(quatf::load(body_a->quaternion));
-        const Quatf inv_quat_b = quatf::conjugate(quatf::load(body_b->quaternion));
+        const Quatf inv_quat_a = quatf::conjugate(body_a->quaternion);
+        const Quatf inv_quat_b = quatf::conjugate(body_b->quaternion);
 
-        constraint.local_space_position1 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point_a), vec3f::load(body_a->center_of_mass_position)), inv_quat_a);
+        constraint.local_space_position1 = vec3f::transform_quat(vec3f::subtract(settings.point_a, body_a->center_of_mass_position), inv_quat_a);
 
-        constraint.local_space_position2 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point_b), vec3f::load(body_b->center_of_mass_position)), inv_quat_b);
+        constraint.local_space_position2 = vec3f::transform_quat(vec3f::subtract(settings.point_b, body_b->center_of_mass_position), inv_quat_b);
 
         // initial world positions for the distance
-        constraint.world_space_position1 = vec3f::load(settings.point_a);
-        constraint.world_space_position2 = vec3f::load(settings.point_b);
+        constraint.world_space_position1 = settings.point_a;
+        constraint.world_space_position2 = settings.point_b;
     } else {
-        constraint.local_space_position1 = vec3f::load(settings.point_a);
-        constraint.local_space_position2 = vec3f::load(settings.point_b);
+        constraint.local_space_position1 = settings.point_a;
+        constraint.local_space_position2 = settings.point_b;
 
         // world = center of mass position + rotation * local point
-        constraint.world_space_position1 = vec3f::add(vec3f::transform_quat(constraint.local_space_position1, quatf::load(body_a->quaternion)),
-                                                      vec3f::load(body_a->center_of_mass_position));
-        constraint.world_space_position2 = vec3f::add(vec3f::transform_quat(constraint.local_space_position2, quatf::load(body_b->quaternion)),
-                                                      vec3f::load(body_b->center_of_mass_position));
+        constraint.world_space_position1 = vec3f::add(vec3f::transform_quat(constraint.local_space_position1, body_a->quaternion),
+                                                      body_a->center_of_mass_position);
+        constraint.world_space_position2 = vec3f::add(vec3f::transform_quat(constraint.local_space_position2, body_b->quaternion),
+                                                      body_b->center_of_mass_position);
     }
 
     // the initial distance stands in for a limit given as negative
@@ -125,10 +125,10 @@ DistanceConstraint *get(World &world, ConstraintId id) {
 static void calculate_distance_constraint_properties(DistanceConstraint &constraint, RigidBody &body_a, RigidBody &body_b,
                                                      float delta_time, uint32_t step_stamp) {
     // world space positions (the bodies may have moved): center of mass position + rotation * local position
-    const Vec3f center_of_mass_a = vec3f::load(body_a.center_of_mass_position);
-    const Vec3f center_of_mass_b = vec3f::load(body_b.center_of_mass_position);
-    constraint.world_space_position1 = vec3f::add(vec3f::transform_quat(constraint.local_space_position1, quatf::load(body_a.quaternion)), center_of_mass_a);
-    constraint.world_space_position2 = vec3f::add(vec3f::transform_quat(constraint.local_space_position2, quatf::load(body_b.quaternion)), center_of_mass_b);
+    const Vec3f center_of_mass_a = body_a.center_of_mass_position;
+    const Vec3f center_of_mass_b = body_b.center_of_mass_position;
+    constraint.world_space_position1 = vec3f::add(vec3f::transform_quat(constraint.local_space_position1, body_a.quaternion), center_of_mass_a);
+    constraint.world_space_position2 = vec3f::add(vec3f::transform_quat(constraint.local_space_position2, body_b.quaternion), center_of_mass_b);
 
     // world space normal, from point 1 to point 2; kept from the last step when the points meet
     const Vec3f delta = vec3f::subtract(constraint.world_space_position2, constraint.world_space_position1);
@@ -146,9 +146,9 @@ static void calculate_distance_constraint_properties(DistanceConstraint &constra
 
     // the axis part reads an inverse inertia only for a dynamic body
     const Mat4f inv_inertia_a =
-        dynamic_a ? motion_properties::get_world_inverse_inertia(body_a.motion_properties, quatf::load(body_a.quaternion), step_stamp) : mat4f::zero();
+        dynamic_a ? motion_properties::get_world_inverse_inertia(body_a.motion_properties, body_a.quaternion, step_stamp) : mat4f::zero();
     const Mat4f inv_inertia_b =
-        dynamic_b ? motion_properties::get_world_inverse_inertia(body_b.motion_properties, quatf::load(body_b.quaternion), step_stamp) : mat4f::zero();
+        dynamic_b ? motion_properties::get_world_inverse_inertia(body_b.motion_properties, body_b.quaternion, step_stamp) : mat4f::zero();
 
     if (constraint.min_distance == constraint.max_distance) {
         // a single distance: impulses in both directions

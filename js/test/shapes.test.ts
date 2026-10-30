@@ -179,7 +179,7 @@ describe('triangle meshes', () => {
         let material = -2;
         const listener: Listener = {
             onContactAdded(contact) {
-                material = contact.bodyA === body ? contact.materialB : contact.materialA;
+                material = contact.bodyIdA === body ? contact.materialIdB : contact.materialIdA;
             },
         };
         for (let i = 0; i < 60; i++) updateWorld(world, listener, 1 / 60);

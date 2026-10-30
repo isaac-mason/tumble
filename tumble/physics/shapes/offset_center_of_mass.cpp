@@ -24,19 +24,15 @@ static void destroy(Shape *shape) {
     shapes::release<OffsetCenterOfMassShape>(shape);
 }
 
-static void compute_offset_center_of_mass_local_bounds(Box3f &out, const Shape *shape) {
-    // the geometry stays at the local origin: only the centre of mass moves, so the bounds are the inner shape's
-    out = shapes::as<OffsetCenterOfMassShape>(shape).shape->aabb;
-}
-
 static Vec3f compute_offset_center_of_mass_center_of_mass(const Shape *shape) {
     // add offset to inner shape's center of mass
-    return vec3f::add(vec3f::load(shapes::as<OffsetCenterOfMassShape>(shape).shape->center_of_mass), vec3f::load(shapes::as<OffsetCenterOfMassShape>(shape).offset));
+    return vec3f::add(shapes::as<OffsetCenterOfMassShape>(shape).shape->center_of_mass, shapes::as<OffsetCenterOfMassShape>(shape).offset);
 }
 
 void update(Shape *shape) {
-    compute_offset_center_of_mass_local_bounds(shape->aabb, shape);
-    vec3f::store(shape->center_of_mass, compute_offset_center_of_mass_center_of_mass(shape));
+    // the geometry stays at the local origin: only the centre of mass moves, so the bounds are the inner shape's
+    shape->aabb = shapes::as<OffsetCenterOfMassShape>(shape).shape->aabb;
+    shape->center_of_mass = compute_offset_center_of_mass_center_of_mass(shape);
     shape->volume = shapes::as<OffsetCenterOfMassShape>(shape).shape->volume;
 }
 
@@ -45,7 +41,7 @@ void compute_mass_properties(MassProperties &out, const Shape *shape) {
     shapes::compute_mass_properties(child_mass_properties, shapes::as<OffsetCenterOfMassShape>(shape).shape);
 
     // translate inertia by offset using the parallel axis theorem: from the inner shape's centre of mass to the new one
-    mass_properties::translate(out, child_mass_properties, vec3f::load(shapes::as<OffsetCenterOfMassShape>(shape).offset));
+    mass_properties::translate(out, child_mass_properties, shapes::as<OffsetCenterOfMassShape>(shape).offset);
 }
 
 void get_surface_normal(SurfaceNormalResult &io, const Shape *shape, SubShapeId sub_shape_id) {
@@ -82,7 +78,7 @@ void get_sub_shape_transformed_shape(GetSubShapeTransformedShapeResult &out, con
 
 void cast_ray_vs_offset_center_of_mass(CastRayCollector &collector, const CastRaySettings &settings,
                                        const Rayf &ray, const Shape *shape, const SubShapeIdBuilder &sub_shape_id,
-                                       const Transformf &transform) {
+                                       const Transform &transform) {
     // geometry doesn't move when the centre of mass changes: pass through
     const Shape *inner = shapes::as<OffsetCenterOfMassShape>(shape).shape;
     shapes::def_of(inner).cast_ray(collector, settings, ray, inner, sub_shape_id, transform);
@@ -92,7 +88,7 @@ void cast_ray_vs_offset_center_of_mass(CastRayCollector &collector, const CastRa
 
 void collide_point_vs_offset_center_of_mass(CollidePointCollector &collector, const CollidePointSettings &settings,
                                             Vec3f point, const Shape *shape, const SubShapeIdBuilder &sub_shape_id,
-                                            const Transformf &transform) {
+                                            const Transform &transform) {
     // geometry doesn't move when the centre of mass changes: pass through
     const Shape *inner = shapes::as<OffsetCenterOfMassShape>(shape).shape;
     shapes::def_of(inner).collide_point(collector, settings, point, inner, sub_shape_id, transform);
@@ -104,8 +100,8 @@ void collide_point_vs_offset_center_of_mass(CollidePointCollector &collector, co
 
 void collide_offset_center_of_mass_vs_shape(CollideShapeCollector &collector, const CollideShapeSettings &settings,
                                             const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a,
-                                            const Transformf &transform_a, const Shape *shape_b,
-                                            const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                                            const Transform &transform_a, const Shape *shape_b,
+                                            const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     // dispatch to inner shape vs shape b
     const Shape *inner = shapes::as<OffsetCenterOfMassShape>(shape_a).shape;
     const CollideShapeVsShapeFn fn = shapes::collide_fn(inner->type, shape_b->type);
@@ -116,8 +112,8 @@ void collide_offset_center_of_mass_vs_shape(CollideShapeCollector &collector, co
 
 void collide_shape_vs_offset_center_of_mass(CollideShapeCollector &collector, const CollideShapeSettings &settings,
                                             const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a,
-                                            const Transformf &transform_a, const Shape *shape_b,
-                                            const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                                            const Transform &transform_a, const Shape *shape_b,
+                                            const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     // dispatch to shape a vs inner shape
     const Shape *inner = shapes::as<OffsetCenterOfMassShape>(shape_b).shape;
     const CollideShapeVsShapeFn fn = shapes::collide_fn(shape_a->type, inner->type);
@@ -129,9 +125,9 @@ void collide_shape_vs_offset_center_of_mass(CollideShapeCollector &collector, co
 /* cast shape vs shape */
 
 void cast_offset_center_of_mass_vs_shape(CastShapeCollector &collector, const CastShapeSettings &settings,
-                                         const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
+                                         const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                                          Vec3f displacement_a, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                                         const Transformf &transform_b) {
+                                         const Transform &transform_b) {
     // cast inner shape vs shape b
     const Shape *inner = shapes::as<OffsetCenterOfMassShape>(shape_a).shape;
     const CastShapeVsShapeFn fn = shapes::cast_fn(inner->type, shape_b->type);
@@ -141,9 +137,9 @@ void cast_offset_center_of_mass_vs_shape(CastShapeCollector &collector, const Ca
 }
 
 void cast_shape_vs_offset_center_of_mass(CastShapeCollector &collector, const CastShapeSettings &settings,
-                                         const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
+                                         const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                                          Vec3f displacement_a, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                                         const Transformf &transform_b) {
+                                         const Transform &transform_b) {
     // cast shape a vs inner shape
     const Shape *inner = shapes::as<OffsetCenterOfMassShape>(shape_b).shape;
     const CastShapeVsShapeFn fn = shapes::cast_fn(shape_a->type, inner->type);

@@ -4,6 +4,7 @@
 
 #include "tumble/config.h"
 #include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
 #include "tumble/physics/body/rigid_body.h"
 #include "tumble/physics/shapes/shapes.h"
 #include "tumble/physics/world.h"
@@ -48,14 +49,14 @@ struct DebugDraw {
     struct BodyOptions {
         /** use `color` instead of the colour mode's */
         bool has_color = false;
-        Float3 color = {1.0f, 1.0f, 1.0f};
+        Vec3f color = vec3f::splat(1.0f);
         BodyColorMode color_mode = BodyColorMode::MOTION_TYPE;
         bool show_linear_velocity = false;
         bool show_angular_velocity = false;
     };
 
     struct ShapeOptions {
-        Float3 color = {1.0f, 1.0f, 1.0f};
+        Vec3f color = vec3f::splat(1.0f);
     };
 
     struct JointsOptions {

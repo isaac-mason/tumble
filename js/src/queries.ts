@@ -1,7 +1,7 @@
 import type { BodyId } from './body.js';
 import type { Filter } from './filter.js';
 import * as Low from './generated/tumble.js';
-import type { Quat, Vec3 } from './math.js';
+import { copyVec3, type Quat, type Vec3 } from './math.js';
 import type { Shape } from './shapes/shapes.js';
 import type { World } from './world.js';
 
@@ -12,12 +12,6 @@ export type CastShapeStatus = Low.CastShapeStatus;
 
 /** what a query given no filter hits: every layer, group and body */
 const EVERYTHING: Filter = { layers: 0 as Low.Filter, collisionGroups: 0xffffffff, collisionMask: 0xffffffff, bodyFilter: null };
-
-function copyVec3(out: Vec3, from: Vec3): void {
-    out[0] = from[0];
-    out[1] = from[1];
-    out[2] = from[2];
-}
 
 /** hits kept by an all collector: the array, and the objects behind it, reused across resets */
 class Pool<Hit> {
@@ -175,8 +169,9 @@ export function castRay(
         filter.collisionMask >>> 0,
     );
     Low.getWasm().check();
+    const hits = Low.Query.castRayHits();
     for (let i = 0; i < count && !rayDone(collector); i++) {
-        Low.Query.readCastRayHit(rayHit, i);
+        Low.CastRayHit.read(rayHit, hits + i * Low.CastRayHit.size);
         if (bodyFilter === null || bodyFilter(rayHit.bodyIdB)) collector.addHit(rayHit);
     }
 }
@@ -607,8 +602,9 @@ export function collidePoint(
         filter.collisionMask >>> 0,
     );
     Low.getWasm().check();
+    const hits = Low.Query.collidePointHits();
     for (let i = 0; i < count && !boundDone(collector); i++) {
-        Low.Query.readCollidePointHit(pointHit, i);
+        Low.CollidePointHit.read(pointHit, hits + i * Low.CollidePointHit.size);
         if (bodyFilter === null || bodyFilter(pointHit.bodyIdB)) collector.addHit(pointHit);
     }
 }

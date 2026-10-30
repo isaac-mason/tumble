@@ -27,6 +27,28 @@ inline Mat4f zero() { return {{v4f::zero(), v4f::zero(), v4f::zero(), v4f::zero(
 /** the first three lanes of column i */
 inline Vec3f axis(const Mat4f &m, int i) { return {vec3f::fix_w(m.c[i])}; }
 
+/** column i's first three lanes v, its fourth 0 (1 for column 3), as jolt's Mat44::SetColumn3 */
+inline void set_axis(Mat4f &out, int i, Vec3f v) {
+    float lanes[4];
+    v4f::store4(lanes, v.v);
+    lanes[3] = i == 3 ? 1.0f : 0.0f;
+    out.c[i] = v4f::load4(lanes);
+}
+
+/** the element at (row, column), as jolt's Mat44::operator() */
+inline float element(const Mat4f &m, int row, int column) {
+    float lanes[4];
+    v4f::store4(lanes, m.c[column]);
+    return lanes[row];
+}
+
+inline void set_element(Mat4f &out, int row, int column, float value) {
+    float lanes[4];
+    v4f::store4(lanes, out.c[column]);
+    lanes[row] = value;
+    out.c[column] = v4f::load4(lanes);
+}
+
 inline Mat4f transpose(const Mat4f &a) {
     const V128 t0 = v4f::shuffle2<0, 4, 1, 5>(a.c[0], a.c[1]);
     const V128 t1 = v4f::shuffle2<0, 4, 1, 5>(a.c[2], a.c[3]);

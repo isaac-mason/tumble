@@ -206,17 +206,17 @@ void inverted_add_miss(CastShapeCollector &c);
 }  // namespace cast_shape
 
 typedef void (*CastShapeFn)(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *shape_a,
-                       const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
-                       const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                       const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a, Vec3f displacement_a,
+                       const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 
 namespace cast_shape {
 
 /** `fn` with a and b swapped and b swept by the negated displacement, its hits swapped back: the handler for the reverse pair */
 template <CastShapeFn fn>
 void reversed_cast_shape_vs_shape(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *shape_a,
-                                  const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
+                                  const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                                   Vec3f displacement_a, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                                  const Transformf &transform_b) {
+                                  const Transform &transform_b) {
     CastShapeCollector inverted = create_collector(CollectorKind::CUSTOM);
     inverted.body_id_b = collector.body_id_b;
     inverted.early_out_fraction = collector.early_out_fraction;

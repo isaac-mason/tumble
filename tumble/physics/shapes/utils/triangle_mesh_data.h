@@ -112,7 +112,7 @@ inline int32_t get_material_id(const TriangleMeshShape::Data &data, uint32_t tri
 void precompute_triangle_aabbs(TriangleMeshShape::Data &data);
 
 /** calculate triangle aabb from vertices */
-Box3f &calculate_triangle_aabb(Box3f &out, const TriangleMeshShape::Data &data, uint32_t tri_idx);
+AABox calculate_triangle_aabb(const TriangleMeshShape::Data &data, uint32_t tri_idx);
 
 /** calculate triangle centroid from vertices */
 Vec3f calculate_triangle_centroid(const TriangleMeshShape::Data &data, uint32_t tri_idx);

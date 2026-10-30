@@ -79,17 +79,17 @@ struct SliderConstraint {
 
 struct SliderConstraintSettings {
     /** pivot point on body a */
-    Float3 point_a = {0.0f, 0.0f, 0.0f};
+    Vec3f point_a = vec3f::zero();
     /** pivot point on body b */
-    Float3 point_b = {0.0f, 0.0f, 0.0f};
+    Vec3f point_b = vec3f::zero();
     /** slider axis on body a, the direction of allowed movement (normalized on create) */
-    Float3 slider_axis_a = {1.0f, 0.0f, 0.0f};
+    Vec3f slider_axis_a = vec3f::axis_x();
     /** slider axis on body b (normalized on create) */
-    Float3 slider_axis_b = {1.0f, 0.0f, 0.0f};
+    Vec3f slider_axis_b = vec3f::axis_x();
     /** normal axis perpendicular to the slider on body a (normalized on create) */
-    Float3 normal_axis_a = {0.0f, 1.0f, 0.0f};
+    Vec3f normal_axis_a = vec3f::axis_y();
     /** normal axis perpendicular to the slider on body b (normalized on create) */
-    Float3 normal_axis_b = {0.0f, 1.0f, 0.0f};
+    Vec3f normal_axis_b = vec3f::axis_y();
     ConstraintSpace space = ConstraintSpace::WORLD;
     /** world space only: place the attachment point on the other body's center of mass when one body is static, else
      *  between the centers of mass, weighted towards the lighter body */

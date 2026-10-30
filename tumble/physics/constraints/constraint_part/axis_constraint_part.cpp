@@ -177,15 +177,15 @@ bool solve_velocity_constraint(AxisConstraintPart &part, RigidBody &body_a, Rigi
     Vec3f acc;
     if (moving_a) {
         if (moving_b) {
-            acc = vec3f::multiply(axis, vec3f::subtract(vec3f::load(mp_a.linear_velocity), vec3f::load(mp_b.linear_velocity)));
-            acc = vec3f::subtract(acc, vec3f::multiply(vec3f::load(part.r2_x_axis), vec3f::load(mp_b.angular_velocity)));
+            acc = vec3f::multiply(axis, vec3f::subtract(mp_a.linear_velocity, mp_b.linear_velocity));
+            acc = vec3f::subtract(acc, vec3f::multiply(vec3f::load(part.r2_x_axis), mp_b.angular_velocity));
         } else {
-            acc = vec3f::multiply(axis, vec3f::load(mp_a.linear_velocity));
+            acc = vec3f::multiply(axis, mp_a.linear_velocity);
         }
-        acc = vec3f::add(acc, vec3f::multiply(vec3f::load(part.r1_plus_u_x_axis), vec3f::load(mp_a.angular_velocity)));
+        acc = vec3f::add(acc, vec3f::multiply(vec3f::load(part.r1_plus_u_x_axis), mp_a.angular_velocity));
     } else if (moving_b) {
-        acc = vec3f::multiply(axis, vec3f::negate(vec3f::load(mp_b.linear_velocity)));
-        acc = vec3f::subtract(acc, vec3f::multiply(vec3f::load(part.r2_x_axis), vec3f::load(mp_b.angular_velocity)));
+        acc = vec3f::multiply(axis, vec3f::negate(mp_b.linear_velocity));
+        acc = vec3f::subtract(acc, vec3f::multiply(vec3f::load(part.r2_x_axis), mp_b.angular_velocity));
     } else {
         acc = vec3f::zero();
     }

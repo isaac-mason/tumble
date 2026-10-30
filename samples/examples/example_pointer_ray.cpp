@@ -49,9 +49,10 @@ static void init(App &app) {
     // the bodies float around the origin: no ground
     app.drawing.grid = false;
 
-    const float pyramid[] = {-0.8f, 0.0f, -0.8f, 0.8f, 0.0f, -0.8f, 0.8f, 0.0f, 0.8f, -0.8f, 0.0f, 0.8f, 0.0f, 1.2f, 0.0f};
+    const Vec3f pyramid[] = {vec3f::make(-0.8f, 0.0f, -0.8f), vec3f::make(0.8f, 0.0f, -0.8f), vec3f::make(0.8f, 0.0f, 0.8f), vec3f::make(-0.8f, 0.0f, 0.8f),
+                             vec3f::make(0.0f, 1.2f, 0.0f)};
     Shape *const kinds[] = {
-        app::keep(app, box::create({.half_extents = {0.8f, 0.8f, 0.8f}})),
+        app::keep(app, box::create({.half_extents = vec3f::splat(0.8f)})),
         app::keep(app, sphere::create({.radius = 0.8f})),
         app::keep(app, convex_hull::create({.positions = pyramid, .num_positions = 5})),
     };
@@ -75,8 +76,8 @@ static void init(App &app) {
         settings.shape = kinds[i % 3];
         settings.object_layer = state.layers.moving;
         settings.motion_type = MotionType::STATIC;
-        settings.position = position;
-        quatf::store(settings.quaternion, quatf::from_euler(euler));
+        settings.position = vec3f::load(position);
+        settings.quaternion = quatf::from_euler(euler);
         settings.restitution = 0.5f;
         settings.friction = 0.3f;
         orbiter.body = rigid_body::create(*app.world, settings);
@@ -100,7 +101,7 @@ static void step(App &app, float delta_time) {
         const float radius = orbiter.min_radius + (sinf(t) + 1.0f) * 0.5f * (orbiter.max_radius - orbiter.min_radius);
         const Vec3f position = vec3f::scale(vec3f::load(orbiter.radial_direction), radius);
 
-        Quatf quaternion = quatf::load(orbiter.body->quaternion);
+        Quatf quaternion = orbiter.body->quaternion;
         const Vec3f angular_velocity = vec3f::load(orbiter.angular_velocity);
         const float speed = vec3f::length(angular_velocity);
         if (speed > 1e-6f) {

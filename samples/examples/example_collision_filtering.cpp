@@ -16,22 +16,22 @@ static void init(App &app) {
     app.world = app::create_world(state.layers);
 
     RigidBodySettings ground;
-    ground.shape = app::keep(app, box::create({.half_extents = {5.0f, 0.1f, 5.0f}}));
+    ground.shape = app::keep(app, box::create({.half_extents = vec3f::make(5.0f, 0.1f, 5.0f)}));
     ground.object_layer = state.layers.not_moving;
     ground.motion_type = MotionType::STATIC;
     ground.friction = 0.5f;
     rigid_body::create(*app.world, ground);
 
-    Shape *platform_shape = app::keep(app, box::create({.half_extents = {1.0f, 0.1f, 1.0f}}));
+    Shape *platform_shape = app::keep(app, box::create({.half_extents = vec3f::make(1.0f, 0.1f, 1.0f)}));
     RigidBodySettings lower = ground;
     lower.shape = platform_shape;
-    lower.position = {0.0f, 1.0f, 0.0f};
+    lower.position = vec3f::make(0.0f, 1.0f, 0.0f);
     lower.collision_groups = GROUP_A;
     lower.collision_mask = GROUP_A;
     rigid_body::create(*app.world, lower);
 
     RigidBodySettings upper = lower;
-    upper.position = {0.0f, 2.0f, 0.0f};
+    upper.position = vec3f::make(0.0f, 2.0f, 0.0f);
     upper.collision_groups = GROUP_B;
     upper.collision_mask = GROUP_B;
     rigid_body::create(*app.world, upper);
@@ -43,7 +43,7 @@ static void init(App &app) {
     const float centre_x = shift * (float)(count / 2);
     const float centre_y = 2.5f;
     const float centre_z = shift * (float)(count / 2);
-    Shape *cube = app::keep(app, box::create({.half_extents = {half, half, half}}));
+    Shape *cube = app::keep(app, box::create({.half_extents = vec3f::splat(half)}));
     for (int j = 0; j < 4; j++) {
         for (int i = 0; i < count; i++) {
             for (int k = 0; k < count; k++) {
@@ -52,7 +52,7 @@ static void init(App &app) {
                 settings.shape = cube;
                 settings.object_layer = state.layers.moving;
                 settings.motion_type = MotionType::DYNAMIC;
-                settings.position = {(float)i * shift - centre_x, (float)j * shift + centre_y, (float)k * shift - centre_z};
+                settings.position = vec3f::make((float)i * shift - centre_x, (float)j * shift + centre_y, (float)k * shift - centre_z);
                 settings.collision_groups = group;
                 settings.collision_mask = group;
                 settings.friction = 1.0f;

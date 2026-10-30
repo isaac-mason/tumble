@@ -58,11 +58,7 @@ inline int32_t node_right(const BvhNode *nodes, int32_t node) { return nodes[nod
 /** get split axis (internal only): 0=x, 1=y, 2=z */
 inline int32_t node_split_axis(const BvhNode *nodes, int32_t node) { return nodes[node].axis_or_count; }
 
-/** copy bounds into out */
-inline Box3f &node_get_bounds(Box3f &out, const BvhNode *nodes, int32_t node) {
-    out = nodes[node].bounds;
-    return out;
-}
+inline AABox node_get_bounds(const BvhNode *nodes, int32_t node) { return aabox::load(nodes[node].bounds); }
 
 /** get center of node bounds */
 inline Vec3f node_get_center(const BvhNode *nodes, int32_t node) { return aabox::center(aabox::load(nodes[node].bounds)); }

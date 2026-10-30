@@ -17,10 +17,10 @@ namespace sleep {
 constexpr uint32_t INACTIVE_BODY_INDEX = 0xffffffffu;
 
 /** the centre of mass, and it plus the largest and the second largest bounding box axes */
-void get_sleep_test_points(Float3 out_points[3], const RigidBody *body);
+void get_sleep_test_points(Vec3f out_points[3], const RigidBody *body);
 
 /** centred on the points, radius 0 */
-void reset_sleep_test_spheres(MotionProperties &motion_properties, const Float3 points[3]);
+void reset_sleep_test_spheres(MotionProperties &motion_properties, const Vec3f points[3]);
 
 /** true if the body can sleep */
 bool update_sleep_state(RigidBody *body, float delta_time, float max_movement, float time_before_sleep);

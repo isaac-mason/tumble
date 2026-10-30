@@ -15,11 +15,11 @@ namespace motion_properties {
 MotionProperties create() {
     MotionProperties out;
 
-    out.linear_velocity = {0.0f, 0.0f, 0.0f};
-    out.angular_velocity = {0.0f, 0.0f, 0.0f};
+    out.linear_velocity = vec3f::zero();
+    out.angular_velocity = vec3f::zero();
 
-    out.inv_inertia_diagonal = {0.0f, 0.0f, 0.0f};
-    out.inertia_rotation = {0.0f, 0.0f, 0.0f, 1.0f};
+    out.inv_inertia_diagonal = vec3f::zero();
+    out.inertia_rotation = quatf::identity();
 
     out.force = {0.0f, 0.0f, 0.0f};
     out.torque = {0.0f, 0.0f, 0.0f};
@@ -40,7 +40,7 @@ MotionProperties create() {
     out.allow_sleeping = true;
     out.sleep_test_timer = 0.0f;
 
-    mat4f::store(out.world_inverse_inertia, mat4f::zero());
+    out.world_inverse_inertia = mat4f::zero();
     out.world_inverse_inertia_stamp = STEP_STAMP_NONE;
 
     return out;
@@ -64,7 +64,7 @@ void add_force_at_position(MotionProperties &motion_properties, Vec3f force, Vec
 void add_impulse(MotionProperties &motion_properties, Vec3f impulse) {
     if (motion_properties.inv_mass <= 0.0f) return;
     const Vec3f linear_delta = vec3f::scale(impulse, motion_properties.inv_mass);
-    vec3f::store(motion_properties.linear_velocity, vec3f::add(vec3f::load(motion_properties.linear_velocity), linear_delta));
+    motion_properties.linear_velocity = vec3f::add(motion_properties.linear_velocity, linear_delta);
     clamp_linear_velocity(motion_properties);
 }
 
@@ -72,7 +72,7 @@ void add_angular_impulse(MotionProperties &motion_properties, Vec3f impulse, Qua
     const uint32_t allowed_rotation_axis = (motion_properties.allowed_degrees_of_freedom >> 3) & 0b111;
     if (allowed_rotation_axis == 0) return;
     const Vec3f angular_delta = multiply_world_space_inverse_inertia_by_vector(motion_properties, quaternion, impulse);
-    vec3f::store(motion_properties.angular_velocity, vec3f::add(vec3f::load(motion_properties.angular_velocity), angular_delta));
+    motion_properties.angular_velocity = vec3f::add(motion_properties.angular_velocity, angular_delta);
     clamp_angular_velocity(motion_properties);
 }
 
@@ -80,7 +80,7 @@ void add_impulse_at_position(MotionProperties &motion_properties, Vec3f impulse,
                              Vec3f center_of_mass_position, Quatf quaternion) {
     if (motion_properties.inv_mass > 0.0f) {
         const Vec3f linear_delta = vec3f::scale(impulse, motion_properties.inv_mass);
-        vec3f::store(motion_properties.linear_velocity, vec3f::add(vec3f::load(motion_properties.linear_velocity), linear_delta));
+        motion_properties.linear_velocity = vec3f::add(motion_properties.linear_velocity, linear_delta);
         clamp_linear_velocity(motion_properties);
     }
 
@@ -90,7 +90,7 @@ void add_impulse_at_position(MotionProperties &motion_properties, Vec3f impulse,
     if (allowed_rotation_axis != 0) {
         const Vec3f torque = vec3f::cross(vec3f::subtract(world_position, center_of_mass_position), impulse);
         const Vec3f angular_delta = multiply_world_space_inverse_inertia_by_vector(motion_properties, quaternion, torque);
-        vec3f::store(motion_properties.angular_velocity, vec3f::add(vec3f::load(motion_properties.angular_velocity), angular_delta));
+        motion_properties.angular_velocity = vec3f::add(motion_properties.angular_velocity, angular_delta);
         clamp_angular_velocity(motion_properties);
     }
 }
@@ -297,46 +297,46 @@ void set_mass_properties(MotionProperties &motion_properties, uint32_t allowed_d
 
     if (allowed_rotation_axis == 0) {
         // no rotation possible
-        vec3f::store(motion_properties.inv_inertia_diagonal, vec3f::zero());
-        quatf::store(motion_properties.inertia_rotation, quatf::identity());
+        motion_properties.inv_inertia_diagonal = vec3f::zero();
+        motion_properties.inertia_rotation = quatf::identity();
     } else {
         Mat4f rotation;
         Vec3f diagonal;
 
-        if (decompose_principal_moments_of_inertia(mat4f::load(mass_properties.inertia), rotation, diagonal)) {
+        if (decompose_principal_moments_of_inertia(mass_properties.inertia, rotation, diagonal)) {
             // check if diagonal is near zero
             const float diagonal_length_sq = vec3f::squared_length(diagonal);
 
             if (diagonal_length_sq > EPSILON * EPSILON) {
                 // calculate reciprocal of diagonal elements
                 const float dx = vec3f::x(diagonal), dy = vec3f::y(diagonal), dz = vec3f::z(diagonal);
-                vec3f::store(motion_properties.inv_inertia_diagonal,
-                             vec3f::make(dx != 0.0f ? 1.0f / dx : 0.0f, dy != 0.0f ? 1.0f / dy : 0.0f, dz != 0.0f ? 1.0f / dz : 0.0f));
+                motion_properties.inv_inertia_diagonal =
+                    vec3f::make(dx != 0.0f ? 1.0f / dx : 0.0f, dy != 0.0f ? 1.0f / dy : 0.0f, dz != 0.0f ? 1.0f / dz : 0.0f);
 
                 // convert rotation matrix to quaternion
-                quatf::store(motion_properties.inertia_rotation, quatf::from_mat4(rotation));
+                motion_properties.inertia_rotation = quatf::from_mat4(rotation);
             } else {
                 // diagonal is near zero, fall back to sphere
                 const float sphere_inertia = 2.5f * motion_properties.inv_mass;
-                vec3f::store(motion_properties.inv_inertia_diagonal, vec3f::splat(sphere_inertia));
-                quatf::store(motion_properties.inertia_rotation, quatf::identity());
+                motion_properties.inv_inertia_diagonal = vec3f::splat(sphere_inertia);
+                motion_properties.inertia_rotation = quatf::identity();
             }
         } else {
             // failed! fall back to inertia tensor of sphere with radius 1.
             const float sphere_inertia = 2.5f * motion_properties.inv_mass;
-            vec3f::store(motion_properties.inv_inertia_diagonal, vec3f::splat(sphere_inertia));
-            quatf::store(motion_properties.inertia_rotation, quatf::identity());
+            motion_properties.inv_inertia_diagonal = vec3f::splat(sphere_inertia);
+            motion_properties.inertia_rotation = quatf::identity();
         }
     }
 
     // can't lock all axes, use a static body for this; it would divide by zero later
-    TUMBLE_ASSERT(motion_properties.inv_mass != 0.0f || vec3f::squared_length(vec3f::load(motion_properties.inv_inertia_diagonal)) != 0.0f);
+    TUMBLE_ASSERT(motion_properties.inv_mass != 0.0f || vec3f::squared_length(motion_properties.inv_inertia_diagonal) != 0.0f);
 }
 
 Mat4f get_inverse_inertia_for_rotation(const MotionProperties &motion_properties, const Mat4f &body_rotation) {
     // r = body_rotation * inertia_rotation, scaled column by column by the inverse inertia diagonal, then times r^T
-    const Mat4f rotation = mat4f::multiply3x3(body_rotation, mat4f::from_quat(quatf::load(motion_properties.inertia_rotation)));
-    const Mat4f scaled = mat4f::scale(rotation, vec3f::load(motion_properties.inv_inertia_diagonal));
+    const Mat4f rotation = mat4f::multiply3x3(body_rotation, mat4f::from_quat(motion_properties.inertia_rotation));
+    const Mat4f scaled = mat4f::scale(rotation, motion_properties.inv_inertia_diagonal);
     Mat4f out = mat4f::multiply3x3_right_transposed(scaled, rotation);
 
     // mask out DOFs that are not allowed: the locked axes' columns, then their rows
@@ -358,12 +358,12 @@ Mat4f get_world_inverse_inertia(MotionProperties &motion_properties, Quatf body_
 
     if (motion_properties.world_inverse_inertia_stamp != step_stamp) {
         const Mat4f inverse_inertia = get_inverse_inertia_for_rotation(motion_properties, mat4f::from_quat(body_quaternion));
-        mat4f::store(motion_properties.world_inverse_inertia, inverse_inertia);
+        motion_properties.world_inverse_inertia = inverse_inertia;
         motion_properties.world_inverse_inertia_stamp = step_stamp;
         return inverse_inertia;
     }
 
-    return mat4f::load(motion_properties.world_inverse_inertia);
+    return motion_properties.world_inverse_inertia;
 }
 
 Vec3f clamp_length(Vec3f velocity, float max_length) {
@@ -373,47 +373,45 @@ Vec3f clamp_length(Vec3f velocity, float max_length) {
 }
 
 void clamp_linear_velocity(MotionProperties &motion_properties) {
-    vec3f::store(motion_properties.linear_velocity, clamp_length(vec3f::load(motion_properties.linear_velocity), motion_properties.max_linear_velocity));
+    motion_properties.linear_velocity = clamp_length(motion_properties.linear_velocity, motion_properties.max_linear_velocity);
 }
 
 void clamp_angular_velocity(MotionProperties &motion_properties) {
-    vec3f::store(motion_properties.angular_velocity,
-                 clamp_length(vec3f::load(motion_properties.angular_velocity), motion_properties.max_angular_velocity));
+    motion_properties.angular_velocity = clamp_length(motion_properties.angular_velocity, motion_properties.max_angular_velocity);
 }
 
 void set_linear_velocity(MotionProperties &motion_properties, Vec3f velocity) {
-    vec3f::store(motion_properties.linear_velocity, clamp_length(velocity, motion_properties.max_linear_velocity));
+    motion_properties.linear_velocity = clamp_length(velocity, motion_properties.max_linear_velocity);
 }
 
 void set_angular_velocity(MotionProperties &motion_properties, Vec3f velocity) {
-    vec3f::store(motion_properties.angular_velocity, clamp_length(velocity, motion_properties.max_angular_velocity));
+    motion_properties.angular_velocity = clamp_length(velocity, motion_properties.max_angular_velocity);
 }
 
 void add_linear_velocity(MotionProperties &motion_properties, Vec3f velocity_delta) {
-    set_linear_velocity(motion_properties, vec3f::add(vec3f::load(motion_properties.linear_velocity), velocity_delta));
+    set_linear_velocity(motion_properties, vec3f::add(motion_properties.linear_velocity, velocity_delta));
 }
 
 void add_angular_velocity(MotionProperties &motion_properties, Vec3f velocity_delta) {
-    set_angular_velocity(motion_properties, vec3f::add(vec3f::load(motion_properties.angular_velocity), velocity_delta));
+    set_angular_velocity(motion_properties, vec3f::add(motion_properties.angular_velocity, velocity_delta));
 }
 
 void add_linear_velocity_step(MotionProperties &motion_properties, Vec3f linear_velocity_change) {
-    const Vec3f velocity = vec3f::add(vec3f::load(motion_properties.linear_velocity), linear_velocity_change);
-    vec3f::store(motion_properties.linear_velocity, apply_translation_dof_constraint(velocity, motion_properties.allowed_degrees_of_freedom));
+    const Vec3f velocity = vec3f::add(motion_properties.linear_velocity, linear_velocity_change);
+    motion_properties.linear_velocity = apply_translation_dof_constraint(velocity, motion_properties.allowed_degrees_of_freedom);
 }
 
 void sub_linear_velocity_step(MotionProperties &motion_properties, Vec3f linear_velocity_change) {
-    const Vec3f velocity = vec3f::subtract(vec3f::load(motion_properties.linear_velocity), linear_velocity_change);
-    vec3f::store(motion_properties.linear_velocity, apply_translation_dof_constraint(velocity, motion_properties.allowed_degrees_of_freedom));
+    const Vec3f velocity = vec3f::subtract(motion_properties.linear_velocity, linear_velocity_change);
+    motion_properties.linear_velocity = apply_translation_dof_constraint(velocity, motion_properties.allowed_degrees_of_freedom);
 }
 
 void add_angular_velocity_step(MotionProperties &motion_properties, Vec3f angular_velocity_change) {
-    vec3f::store(motion_properties.angular_velocity, vec3f::add(vec3f::load(motion_properties.angular_velocity), angular_velocity_change));
+    motion_properties.angular_velocity = vec3f::add(motion_properties.angular_velocity, angular_velocity_change);
 }
 
 void sub_angular_velocity_step(MotionProperties &motion_properties, Vec3f angular_velocity_change) {
-    vec3f::store(motion_properties.angular_velocity,
-                 vec3f::subtract(vec3f::load(motion_properties.angular_velocity), angular_velocity_change));
+    motion_properties.angular_velocity = vec3f::subtract(motion_properties.angular_velocity, angular_velocity_change);
 }
 
 void scale_to_mass(MotionProperties &motion_properties, float new_mass) {
@@ -423,8 +421,7 @@ void scale_to_mass(MotionProperties &motion_properties, float new_mass) {
 
     const float new_inv_mass = 1.0f / new_mass;
     // scale inverse inertia diagonal: I^-1 *= (new_inv_mass / old_inv_mass)
-    vec3f::store(motion_properties.inv_inertia_diagonal,
-                 vec3f::scale(vec3f::load(motion_properties.inv_inertia_diagonal), new_inv_mass / motion_properties.inv_mass));
+    motion_properties.inv_inertia_diagonal = vec3f::scale(motion_properties.inv_inertia_diagonal, new_inv_mass / motion_properties.inv_mass);
     motion_properties.inv_mass = new_inv_mass;
 }
 
@@ -434,12 +431,10 @@ void move_kinematic(MotionProperties &motion_properties, Vec3f delta_position, Q
 
     // calculate required linear velocity
     const uint32_t allowed_dofs = motion_properties.allowed_degrees_of_freedom;
-    vec3f::store(motion_properties.linear_velocity,
-                 apply_translation_dof_constraint(vec3f::scale(delta_position, 1.0f / delta_time), allowed_dofs));
+    motion_properties.linear_velocity = apply_translation_dof_constraint(vec3f::scale(delta_position, 1.0f / delta_time), allowed_dofs);
 
     // calculate required angular velocity
-    vec3f::store(motion_properties.angular_velocity,
-                 apply_rotation_dof_constraint(quatf::get_angular_velocity(delta_rotation, delta_time), allowed_dofs));
+    motion_properties.angular_velocity = apply_rotation_dof_constraint(quatf::get_angular_velocity(delta_rotation, delta_time), allowed_dofs);
 }
 
 /** v with the lanes of the axes not in `axes` (bit 0 x, 1 y, 2 z) set to +0 */
@@ -463,8 +458,8 @@ Vec3f multiply_world_space_inverse_inertia_by_vector(const MotionProperties &mot
     const Vec3f v = keep_axes(vector, allowed_rotation_axis);
 
     // into inertia space, scale by the inverse diagonal, back to world space
-    const Mat4f rotation = mat4f::from_quat(quatf::multiply(body_quaternion, quatf::load(motion_properties.inertia_rotation)));
-    const Vec3f local = vec3f::multiply(mat4f::multiply3x3_transposed_vec(rotation, v), vec3f::load(motion_properties.inv_inertia_diagonal));
+    const Mat4f rotation = mat4f::from_quat(quatf::multiply(body_quaternion, motion_properties.inertia_rotation));
+    const Vec3f local = vec3f::multiply(mat4f::multiply3x3_transposed_vec(rotation, v), motion_properties.inv_inertia_diagonal);
 
     // mask out rows of DOFs that are not allowed
     return keep_axes(mat4f::multiply3x3_vec(rotation, local), allowed_rotation_axis);
@@ -473,14 +468,14 @@ Vec3f multiply_world_space_inverse_inertia_by_vector(const MotionProperties &mot
 void apply_gyroscopic_force(MotionProperties &motion_properties, Quatf body_quaternion, float delta_time) {
     // calculate local space inertia tensor (a diagonal in local space); avoid dividing by zero, inertia in an axis
     // with no inverse inertia is zero
-    const Vec3f inv_inertia = vec3f::load(motion_properties.inv_inertia_diagonal);
+    const Vec3f inv_inertia = motion_properties.inv_inertia_diagonal;
     const V128 reciprocal = v4f::div(v4f::splat(1.0f), inv_inertia.v);
     const Vec3f local_inertia = {v4f::select(v4f::zero(), reciprocal, v4f::eq(inv_inertia.v, v4f::zero()))};
 
     // calculate local space angular momentum
-    const Quatf inertia_space_to_world_space = quatf::multiply(body_quaternion, quatf::load(motion_properties.inertia_rotation));
+    const Quatf inertia_space_to_world_space = quatf::multiply(body_quaternion, motion_properties.inertia_rotation);
     const Vec3f local_angular_velocity =
-        vec3f::transform_quat(vec3f::load(motion_properties.angular_velocity), quatf::conjugate(inertia_space_to_world_space));
+        vec3f::transform_quat(motion_properties.angular_velocity, quatf::conjugate(inertia_space_to_world_space));
     const Vec3f local_momentum = vec3f::multiply(local_inertia, local_angular_velocity);  // L = I w
 
     // the gyroscopic force applies a torque: T = -w x I w = -w x L
@@ -498,7 +493,7 @@ void apply_gyroscopic_force(MotionProperties &motion_properties, Quatf body_quat
 
     // convert back to world space angular velocity: w = I^-1 L
     const Vec3f new_local_angular_velocity = vec3f::multiply(inv_inertia, new_local_momentum);
-    vec3f::store(motion_properties.angular_velocity, vec3f::transform_quat(new_local_angular_velocity, inertia_space_to_world_space));
+    motion_properties.angular_velocity = vec3f::transform_quat(new_local_angular_velocity, inertia_space_to_world_space);
 }
 
 }  // namespace motion_properties

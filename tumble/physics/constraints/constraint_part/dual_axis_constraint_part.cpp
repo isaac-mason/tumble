@@ -31,7 +31,7 @@ void calculate_constraint_properties(DualAxisConstraintPart &part, RigidBody &bo
     if (body_a.motion_type == MotionType::DYNAMIC) {
         MotionProperties &mp_a = body_a.motion_properties;
 
-        const Mat4f inv_i_a = motion_properties::get_world_inverse_inertia(mp_a, quatf::load(body_a.quaternion), step_stamp);
+        const Mat4f inv_i_a = motion_properties::get_world_inverse_inertia(mp_a, body_a.quaternion, step_stamp);
 
         // I^-1 x (r x n) (3x3 only)
         const Vec3f inv_i_cross_n1 = mat4f::multiply3x3_vec(inv_i_a, part.r1_plus_u_x_n1);
@@ -50,7 +50,7 @@ void calculate_constraint_properties(DualAxisConstraintPart &part, RigidBody &bo
     if (body_b.motion_type == MotionType::DYNAMIC) {
         MotionProperties &mp_b = body_b.motion_properties;
 
-        const Mat4f inv_i_b = motion_properties::get_world_inverse_inertia(mp_b, quatf::load(body_b.quaternion), step_stamp);
+        const Mat4f inv_i_b = motion_properties::get_world_inverse_inertia(mp_b, body_b.quaternion, step_stamp);
 
         const Vec3f inv_i_cross_n1 = mat4f::multiply3x3_vec(inv_i_b, part.r2_x_n1);
         const Vec3f inv_i_cross_n2 = mat4f::multiply3x3_vec(inv_i_b, part.r2_x_n2);
@@ -134,28 +134,28 @@ bool solve_velocity_constraint(DualAxisConstraintPart &part, RigidBody &body_a, 
     Vec2f jv = {0.0f, 0.0f};
 
     if (moving_a && moving_b) {
-        const Vec3f va = vec3f::load(mp_a.linear_velocity);
-        const Vec3f vb = vec3f::load(mp_b.linear_velocity);
+        const Vec3f va = mp_a.linear_velocity;
+        const Vec3f vb = mp_b.linear_velocity;
         jv.x = vec3f::dot(n1, va) - vec3f::dot(n1, vb);
         jv.y = vec3f::dot(n2, va) - vec3f::dot(n2, vb);
     } else if (moving_a) {
-        const Vec3f va = vec3f::load(mp_a.linear_velocity);
+        const Vec3f va = mp_a.linear_velocity;
         jv.x = vec3f::dot(n1, va);
         jv.y = vec3f::dot(n2, va);
     } else if (moving_b) {
-        const Vec3f vb = vec3f::load(mp_b.linear_velocity);
+        const Vec3f vb = mp_b.linear_velocity;
         jv.x = -vec3f::dot(n1, vb);
         jv.y = -vec3f::dot(n2, vb);
     }
 
     // angular contribution
     if (moving_a) {
-        const Vec3f wa = vec3f::load(mp_a.angular_velocity);
+        const Vec3f wa = mp_a.angular_velocity;
         jv.x += vec3f::dot(part.r1_plus_u_x_n1, wa);
         jv.y += vec3f::dot(part.r1_plus_u_x_n2, wa);
     }
     if (moving_b) {
-        const Vec3f wb = vec3f::load(mp_b.angular_velocity);
+        const Vec3f wb = mp_b.angular_velocity;
         jv.x -= vec3f::dot(part.r2_x_n1, wb);
         jv.y -= vec3f::dot(part.r2_x_n2, wb);
     }

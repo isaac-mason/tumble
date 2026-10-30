@@ -100,22 +100,22 @@ ConstraintId create(World &world, RigidBody *body_a, RigidBody *body_b,
     constraint.base.body_index_b = body_b->index;
 
     // normalize axes
-    const Vec3f hinge_axis1 = vec3f::normalize(vec3f::load(settings.hinge_axis_a));
-    const Vec3f hinge_axis2 = vec3f::normalize(vec3f::load(settings.hinge_axis_b));
-    const Vec3f normal_axis1 = vec3f::normalize(vec3f::load(settings.normal_axis_a));
-    const Vec3f normal_axis2 = vec3f::normalize(vec3f::load(settings.normal_axis_b));
+    const Vec3f hinge_axis1 = vec3f::normalize(settings.hinge_axis_a);
+    const Vec3f hinge_axis2 = vec3f::normalize(settings.hinge_axis_b);
+    const Vec3f normal_axis1 = vec3f::normalize(settings.normal_axis_a);
+    const Vec3f normal_axis2 = vec3f::normalize(settings.normal_axis_b);
 
     // inverse of the initial rotation from body 1 to body 2 in body 1 space, from the axes as given
     const Quatf r0 = get_inv_initial_orientation_xz(normal_axis1, hinge_axis1, normal_axis2, hinge_axis2);
 
     if (settings.space == ConstraintSpace::WORLD) {
-        const Quatf inv_quat_a = quatf::conjugate(quatf::load(body_a->quaternion));
-        const Quatf inv_quat_b = quatf::conjugate(quatf::load(body_b->quaternion));
+        const Quatf inv_quat_a = quatf::conjugate(body_a->quaternion);
+        const Quatf inv_quat_b = quatf::conjugate(body_b->quaternion);
 
         // transform positions to local space
-        constraint.local_space_position1 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point_a), vec3f::load(body_a->center_of_mass_position)), inv_quat_a);
+        constraint.local_space_position1 = vec3f::transform_quat(vec3f::subtract(settings.point_a, body_a->center_of_mass_position), inv_quat_a);
 
-        constraint.local_space_position2 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point_b), vec3f::load(body_b->center_of_mass_position)), inv_quat_b);
+        constraint.local_space_position2 = vec3f::transform_quat(vec3f::subtract(settings.point_b, body_b->center_of_mass_position), inv_quat_b);
 
         // transform axes to local space
         constraint.local_space_hinge_axis1 = vec3f::transform_quat(hinge_axis1, inv_quat_a);
@@ -125,10 +125,10 @@ ConstraintId create(World &world, RigidBody *body_a, RigidBody *body_b,
 
         // the axes were given in world space, so r0^-1 = q20^-1 (c2 c1^-1) q10: at the initial orientations
         // diff = q2 * inv_initial_orientation * q1^-1 is then c2 c1^-1
-        constraint.inv_initial_orientation = quatf::multiply(quatf::multiply(inv_quat_b, r0), quatf::load(body_a->quaternion));
+        constraint.inv_initial_orientation = quatf::multiply(quatf::multiply(inv_quat_b, r0), body_a->quaternion);
     } else {
-        constraint.local_space_position1 = vec3f::load(settings.point_a);
-        constraint.local_space_position2 = vec3f::load(settings.point_b);
+        constraint.local_space_position1 = settings.point_a;
+        constraint.local_space_position2 = settings.point_b;
         constraint.local_space_hinge_axis1 = hinge_axis1;
         constraint.local_space_hinge_axis2 = hinge_axis2;
         constraint.local_space_normal_axis1 = normal_axis1;
@@ -191,12 +191,12 @@ static void calculate_a1_and_theta(HingeConstraint &constraint, const RigidBody 
         return;
     }
 
-    const Quatf rotation_a = quatf::load(body_a.quaternion);
+    const Quatf rotation_a = body_a.quaternion;
     constraint.world_space_hinge_axis1 = vec3f::transform_quat(constraint.local_space_hinge_axis1, rotation_a);
 
     // relative rotation in world space: diff = q2 * inv_initial_orientation * q1^-1
     const Quatf diff =
-        quatf::multiply(quatf::multiply(quatf::load(body_b.quaternion), constraint.inv_initial_orientation), quatf::conjugate(rotation_a));
+        quatf::multiply(quatf::multiply(body_b.quaternion, constraint.inv_initial_orientation), quatf::conjugate(rotation_a));
 
     // rotation angle about the hinge axis: 2 atan(dot(axis, xyz) / w); atan, not atan2, for the [-pi, pi] range
     const float axis_dot = vec3f::dot(constraint.world_space_hinge_axis1, quatf::xyz(diff));
@@ -282,11 +282,11 @@ void setup_velocity(HingeConstraint &constraint, Bodies &bodies, float delta_tim
     RigidBody &body_a = *bodies.pool[constraint.base.body_index_a];
     RigidBody &body_b = *bodies.pool[constraint.base.body_index_b];
 
-    const Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
+    const Mat4f rotation_a = mat4f::from_quat(body_a.quaternion);
+    const Mat4f rotation_b = mat4f::from_quat(body_b.quaternion);
 
-    const Vec3f world_hinge_axis1 = vec3f::transform_quat(constraint.local_space_hinge_axis1, quatf::load(body_a.quaternion));
-    const Vec3f world_hinge_axis2 = vec3f::transform_quat(constraint.local_space_hinge_axis2, quatf::load(body_b.quaternion));
+    const Vec3f world_hinge_axis1 = vec3f::transform_quat(constraint.local_space_hinge_axis1, body_a.quaternion);
+    const Vec3f world_hinge_axis2 = vec3f::transform_quat(constraint.local_space_hinge_axis2, body_b.quaternion);
 
     point_constraint_part::calculate_constraint_properties(constraint.point_constraint_part, body_a, rotation_a,
                                                            constraint.local_space_position1, body_b, rotation_b,
@@ -365,16 +365,16 @@ bool solve_position(HingeConstraint &constraint, Bodies &bodies, float delta_tim
 
     // the motor works on velocities only
 
-    const Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
+    const Mat4f rotation_a = mat4f::from_quat(body_a.quaternion);
+    const Mat4f rotation_b = mat4f::from_quat(body_b.quaternion);
     point_constraint_part::calculate_constraint_properties(constraint.point_constraint_part, body_a, rotation_a,
                                                            constraint.local_space_position1, body_b, rotation_b,
                                                            constraint.local_space_position2, motion_properties::STEP_STAMP_NONE);
     const bool pos = point_constraint_part::solve_position_constraint(constraint.point_constraint_part, body_a, body_b, baumgarte);
 
     // the bodies have moved: recalculate the axes
-    const Vec3f world_hinge_axis1 = vec3f::transform_quat(constraint.local_space_hinge_axis1, quatf::load(body_a.quaternion));
-    const Vec3f world_hinge_axis2 = vec3f::transform_quat(constraint.local_space_hinge_axis2, quatf::load(body_b.quaternion));
+    const Vec3f world_hinge_axis1 = vec3f::transform_quat(constraint.local_space_hinge_axis1, body_a.quaternion);
+    const Vec3f world_hinge_axis2 = vec3f::transform_quat(constraint.local_space_hinge_axis2, body_b.quaternion);
     hinge_rotation_constraint_part::calculate_constraint_properties(constraint.rotation_constraint_part, body_a, body_b,
                                                                     world_hinge_axis1, world_hinge_axis2,
                                                                     motion_properties::STEP_STAMP_NONE);

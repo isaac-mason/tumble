@@ -4,6 +4,7 @@
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
+#include "tumble/math/transform.h"
 #include "tumble/physics/body/rigid_body.h"
 #include "tumble/physics/broadphase/broadphase.h"
 #include "tumble/physics/collision/narrowphase.h"
@@ -14,13 +15,12 @@ namespace query {
 
 
 /** the body's pose as the narrowphase takes it: the shape origin, unscaled */
-static Transformf body_transform(const RigidBody &body) { return {body.position, body.quaternion, {1.0f, 1.0f, 1.0f}}; }
+static Transform body_transform(const RigidBody &body) { return transform::make(body.position, body.quaternion); }
 
 /** the shape's local bounds under the pose */
-static AABox shape_world_bounds(const Shape *shape, const Transformf &transform) {
-    const Mat4f matrix = mat4f::from_rotation_translation_scale(quatf::load(transform.quaternion), vec3f::load(transform.position),
-                                                                vec3f::load(transform.scale));
-    return aabox::transform_mat4(aabox::load(shape->aabb), matrix);
+static AABox shape_world_bounds(const Shape *shape, const Transform &transform) {
+    const Mat4f matrix = mat4f::from_rotation_translation_scale(transform.quaternion, transform.position, transform.scale);
+    return aabox::transform_mat4(shape->aabb, matrix);
 }
 
 struct CastRayVisit {
@@ -54,7 +54,7 @@ struct CastShapeVisit {
     CastShapeCollector *collector;
     const CastShapeSettings *settings;
     const Shape *shape;
-    Transformf transform;
+    Transform transform;
     Vec3f displacement;
 };
 
@@ -74,10 +74,9 @@ static void visit_cast_shape(BodyVisitor *visitor, RigidBody *body) {
 }
 
 void cast_shape(World &world, CastShapeCollector &collector, const CastShapeSettings &settings,
-                const Shape *shape, const Transformf &transform, Vec3f displacement, const Filter &filter) {
+                const Shape *shape, const Transform &transform, Vec3f displacement, const Filter &filter) {
     // the shape's bounds grown by the extra convex radius it is cast with
-    Box3f bounds;
-    aabox::store(bounds, aabox::expand_by_margin(shape_world_bounds(shape, transform), settings.extra_convex_radius));
+    const AABox bounds = aabox::expand_by_margin(shape_world_bounds(shape, transform), settings.extra_convex_radius);
 
     CastShapeVisit visit = {&collector, &settings, shape, transform, displacement};
     BodyVisitor visitor = body_visitor::create(visit_cast_shape, &visit);
@@ -89,7 +88,7 @@ struct CollideShapeVisit {
     CollideShapeCollector *collector;
     const CollideShapeSettings *settings;
     const Shape *shape;
-    Transformf transform;
+    Transform transform;
     bool internal_edge_removal;
 };
 
@@ -115,10 +114,9 @@ static void visit_collide_shape(BodyVisitor *visitor, RigidBody *body) {
 }
 
 static void collide_shape_walk(World &world, CollideShapeCollector &collector,
-                               const CollideShapeSettings &settings, const Shape *shape, const Transformf &transform,
+                               const CollideShapeSettings &settings, const Shape *shape, const Transform &transform,
                                const Filter &filter, bool internal_edge_removal) {
-    Box3f bounds;
-    aabox::store(bounds, aabox::expand_by_margin(shape_world_bounds(shape, transform), settings.max_separation_distance));
+    const AABox bounds = aabox::expand_by_margin(shape_world_bounds(shape, transform), settings.max_separation_distance);
 
     CollideShapeVisit visit = {&collector, &settings, shape, transform, internal_edge_removal};
     BodyVisitor visitor = body_visitor::create(visit_collide_shape, &visit);
@@ -126,13 +124,13 @@ static void collide_shape_walk(World &world, CollideShapeCollector &collector,
 }
 
 void collide_shape(World &world, CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                   const Shape *shape, const Transformf &transform, const Filter &filter) {
+                   const Shape *shape, const Transform &transform, const Filter &filter) {
     collide_shape_walk(world, collector, settings, shape, transform, filter, false);
 }
 
 void collide_shape_with_internal_edge_removal(World &world, CollideShapeCollector &collector,
                                               const CollideShapeSettings &settings, const Shape *shape,
-                                              const Transformf &transform, const Filter &filter) {
+                                              const Transform &transform, const Filter &filter) {
     collide_shape_walk(world, collector, settings, shape, transform, filter, true);
 }
 

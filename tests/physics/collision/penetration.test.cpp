@@ -372,11 +372,11 @@ void test_penetration_cast_shape_sweep(TestCtx &ctx) {
 /** box half extents 1 against box half extents 1 with centres 0.3 apart along x: 1.7 deep, through epa. */
 static bool deep_boxes_collide(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> a = box::create({.half_extents = {1, 1, 1}});
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
+    Ref<Shape> a = box::create({.half_extents = vec3f::splat(1.0f)});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
     const SubShapeIdBuilder no_sub_shape = {sub_shape::EMPTY_SUB_SHAPE_ID, 0};
-    const Transformf transform_a = {{0, 0, 0}, {0, 0, 0, 1}, {1, 1, 1}};
-    const Transformf transform_b = {{0.3f, 0, 0}, {0, 0, 0, 1}, {1, 1, 1}};
+    const Transform transform_a = pose({0, 0, 0});
+    const Transform transform_b = pose({0.3f, 0, 0});
 
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
     convex::collide_convex_vs_convex(collector, collide_shape::default_settings(), a, no_sub_shape, transform_a, b, no_sub_shape,

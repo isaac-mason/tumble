@@ -1,5 +1,6 @@
 #include "tumble/physics/debug.h"
 
+#include "tumble/math/plane3f.h"
 #include "tumble/physics/character/kcc.h"
 #include "tumble/physics/constraints/distance_constraint.h"
 #include "tumble/physics/constraints/hinge_constraint.h"
@@ -37,7 +38,6 @@ constexpr uint32_t QUAD_MESH_LINES = 2 * 3;
 // a cross is 3 lines
 constexpr uint32_t CROSS_LINES = 3;
 
-const float CUBE_POINTS[] = {-1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1, -1, -1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1};
 const float QUAD_POSITIONS[] = {-1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1};
 const uint32_t QUAD_INDICES[] = {0, 2, 1, 0, 3, 2};
 
@@ -50,7 +50,11 @@ Shape *make_quad_mesh() {
     return triangle_mesh::create(settings);
 }
 
-Shape *make_cube_hull() { return convex_hull::create({.positions = CUBE_POINTS, .num_positions = 8}); }
+Shape *make_cube_hull() {
+    const Vec3f corners[8] = {vec3f::make(-1, -1, -1), vec3f::make(1, -1, -1), vec3f::make(1, 1, -1), vec3f::make(-1, 1, -1),
+                              vec3f::make(-1, -1, 1),  vec3f::make(1, -1, 1),  vec3f::make(1, 1, 1),  vec3f::make(-1, 1, 1)};
+    return convex_hull::create({.positions = corners, .num_positions = 8});
+}
 
 Float3 vertex_position(const DebugDraw &buffers, uint32_t vertex) {
     const float *v = buffers.lines.data + vertex * debug::VERTEX_STRIDE;
@@ -89,7 +93,7 @@ void test_debug_buffers_start_empty_and_clear(TestCtx &ctx) {
     CHECK(ctx, buffers.line_count == 0 && buffers.lines.length == 0);
     CHECK(ctx, buffers.triangle_count == 0 && buffers.triangles.length == 0);
 
-    Shape *box_shape = box::create({.half_extents = {1.0f, 1.0f, 1.0f}});
+    Shape *box_shape = box::create({.half_extents = vec3f::splat(1.0f)});
     debug::shape(buffers, box_shape, vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY), {});
     CHECK(ctx, buffers.line_count == BOX_LINES);
     CHECK(ctx, buffers.lines.length == BOX_LINES * debug::LINE_STRIDE);
@@ -103,21 +107,21 @@ void test_debug_shape_line_counts_per_type(TestCtx &ctx) {
     DebugDraw buffers;
 
     Shape *sphere_shape = sphere::create({.radius = 0.5f});
-    Shape *box_shape = box::create({.half_extents = {1.0f, 2.0f, 3.0f}});
+    Shape *box_shape = box::create({.half_extents = vec3f::make(1.0f, 2.0f, 3.0f)});
     Shape *capsule_shape = capsule::create({.half_height_of_cylinder = 1.0f, .radius = 0.5f});
     Shape *cylinder_shape = cylinder::create({.half_height = 1.0f, .radius = 0.5f});
-    Shape *plane_shape = plane::create({.plane = {{0.0f, 1.0f, 0.0f}, 0.0f}, .half_extent = 10.0f});
+    Shape *plane_shape = plane::create({.plane = plane3f::make(vec3f::axis_y(), 0.0f), .half_extent = 10.0f});
     Shape *hull_shape = make_cube_hull();
     Shape *mesh_shape = make_quad_mesh();
     const CompoundShapeSettings::Child children[2] = {
-        {{2.0f, 0.0f, 0.0f}, IDENTITY, box_shape},
-        {{-2.0f, 0.0f, 0.0f}, IDENTITY, sphere_shape},
+        {vec3f::make(2.0f, 0.0f, 0.0f), quatf::identity(), box_shape},
+        {vec3f::make(-2.0f, 0.0f, 0.0f), quatf::identity(), sphere_shape},
     };
     Shape *compound_shape = compound::create({.children = children, .num_children = 2});
     Shape *static_compound_shape = static_compound::create({.children = children, .num_children = 2});
-    Shape *transformed_shape = transformed::create({.shape = box_shape, .position = {0.0f, 1.0f, 0.0f}});
-    Shape *scaled_shape = scaled::create({.shape = capsule_shape, .scale = {2.0f, 2.0f, 2.0f}});
-    Shape *offset_shape = offset_center_of_mass::create({.shape = cylinder_shape, .offset = {0.0f, 0.5f, 0.0f}});
+    Shape *transformed_shape = transformed::create({.shape = box_shape, .position = vec3f::make(0.0f, 1.0f, 0.0f)});
+    Shape *scaled_shape = scaled::create({.shape = capsule_shape, .scale = vec3f::splat(2.0f)});
+    Shape *offset_shape = offset_center_of_mass::create({.shape = cylinder_shape, .offset = vec3f::make(0.0f, 0.5f, 0.0f)});
     Shape *empty_shape = empty::create();
 
     CHECK(ctx, shapes::as<ConvexHullShape>(hull_shape).data->faces.length == 6);
@@ -141,12 +145,12 @@ void test_debug_shape_line_counts_per_type(TestCtx &ctx) {
 void test_debug_box_corners_under_pose(TestCtx &ctx) {
     dispatch::init();
     DebugDraw buffers;
-    Shape *box_shape = box::create({.half_extents = {1.0f, 2.0f, 3.0f}});
+    Shape *box_shape = box::create({.half_extents = vec3f::make(1.0f, 2.0f, 3.0f)});
 
     // a quarter turn about y maps local (x, y, z) to (z, y, -x)
     Float4 rotation = stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), scalar::PI * 0.5f);
     const Float3 position = {10.0f, 0.0f, 0.0f};
-    debug::shape(buffers, box_shape, vec3f::load(position), quatf::load(rotation), {.color = {0.25f, 0.5f, 0.75f}});
+    debug::shape(buffers, box_shape, vec3f::load(position), quatf::load(rotation), {.color = vec3f::make(0.25f, 0.5f, 0.75f)});
     CHECK(ctx, buffers.line_count == BOX_LINES);
     // the first edge runs from corner (-1, -2, -3) to (1, -2, -3)
     CHECK(ctx, near3(vertex_position(buffers, 0), 10.0f - 3.0f, -2.0f, 1.0f, 1e-5f));
@@ -191,40 +195,40 @@ void test_debug_round_shapes_lie_on_their_surface(TestCtx &ctx) {
 void test_debug_wrappers_carry_scale_and_offset(TestCtx &ctx) {
     dispatch::init();
     DebugDraw buffers;
-    Shape *unit_box = box::create({.half_extents = {1.0f, 1.0f, 1.0f}});
+    Shape *unit_box = box::create({.half_extents = vec3f::splat(1.0f)});
 
     // scaled: the box's corners at the scale
-    debug::shape(buffers, scaled::create({.shape = unit_box, .scale = {2.0f, 3.0f, 4.0f}}), vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY), {});
+    debug::shape(buffers, scaled::create({.shape = unit_box, .scale = vec3f::make(2.0f, 3.0f, 4.0f)}), vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY), {});
     CHECK(ctx, near3(max_abs_extent(buffers), 2.0f, 3.0f, 4.0f, 1e-5f));
 
     // transformed: moved by its offset
     debug::clear(buffers);
-    debug::shape(buffers, transformed::create({.shape = unit_box, .position = {0.0f, 5.0f, 0.0f}}), vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY), {});
+    debug::shape(buffers, transformed::create({.shape = unit_box, .position = vec3f::make(0.0f, 5.0f, 0.0f)}), vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY), {});
     CHECK(ctx, near3(vertex_position(buffers, 0), -1.0f, 4.0f, -1.0f, 1e-5f));
 
     // a child turned a quarter about z under a compound scaled (2, 1, 1): the child sees the scale in its own space
     // (1, 2, 1), so its (1, 0.5, 0.5) half extents become (1, 1, 0.5) turned, a 2 x 2 x 1 box in the compound
-    Float4 quarter_z = stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), scalar::PI * 0.5f);
-    const CompoundShapeSettings::Child child = {{0.0f, 0.0f, 0.0f}, quarter_z, box::create({.half_extents = {1.0f, 0.5f, 0.5f}})};
+    const Quatf quarter_z = axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), scalar::PI * 0.5f);
+    const CompoundShapeSettings::Child child = {vec3f::make(0.0f, 0.0f, 0.0f), quarter_z, box::create({.half_extents = vec3f::make(1.0f, 0.5f, 0.5f)})};
     Shape *compound_shape = compound::create({.children = &child, .num_children = 1});
     debug::clear(buffers);
-    debug::shape(buffers, scaled::create({.shape = compound_shape, .scale = {2.0f, 1.0f, 1.0f}}), vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY), {});
+    debug::shape(buffers, scaled::create({.shape = compound_shape, .scale = vec3f::make(2.0f, 1.0f, 1.0f)}), vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY), {});
     CHECK(ctx, near3(max_abs_extent(buffers), 1.0f, 1.0f, 0.5f, 1e-5f));
 
     // offset centre of mass: the geometry stays put
     debug::clear(buffers);
-    debug::shape(buffers, offset_center_of_mass::create({.shape = unit_box, .offset = {0.0f, 3.0f, 0.0f}}), vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY), {});
+    debug::shape(buffers, offset_center_of_mass::create({.shape = unit_box, .offset = vec3f::make(0.0f, 3.0f, 0.0f)}), vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY), {});
     CHECK(ctx, near3(max_abs_extent(buffers), 1.0f, 1.0f, 1.0f, 1e-5f));
 }
 
 void test_debug_bodies_one_of_each_shape(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     DebugDraw buffers;
-    Shape *box_shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Shape *box_shape = box::create({.half_extents = vec3f::splat(0.5f)});
     Shape *sphere_shape = sphere::create({.radius = 0.5f});
     const CompoundShapeSettings::Child children[2] = {
-        {{1.0f, 0.0f, 0.0f}, IDENTITY, box_shape},
-        {{-1.0f, 0.0f, 0.0f}, IDENTITY, sphere_shape},
+        {vec3f::make(1.0f, 0.0f, 0.0f), quatf::identity(), box_shape},
+        {vec3f::make(-1.0f, 0.0f, 0.0f), quatf::identity(), sphere_shape},
     };
 
     add_body(scene, plane::create({.half_extent = 50.0f}), MotionType::STATIC, {0.0f, 0.0f, 0.0f});
@@ -264,7 +268,7 @@ void test_debug_bodies_one_of_each_shape(TestCtx &ctx) {
 
     // body() with an explicit colour
     debug::clear(buffers);
-    debug::body(buffers, *kinematic, {.has_color = true, .color = {0.1f, 0.2f, 0.3f}});
+    debug::body(buffers, *kinematic, {.has_color = true, .color = vec3f::make(0.1f, 0.2f, 0.3f)});
     CHECK(ctx, buffers.line_count == BOX_LINES);
     CHECK(ctx, near3(vertex_color(buffers, 0), 0.1f, 0.2f, 0.3f, 0.0f));
 
@@ -274,7 +278,7 @@ void test_debug_bodies_one_of_each_shape(TestCtx &ctx) {
 void test_debug_body_colour_modes(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     DebugDraw buffers;
-    Shape *box_shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Shape *box_shape = box::create({.half_extents = vec3f::splat(0.5f)});
     RigidBody *ground = add_body(scene, box_shape, MotionType::STATIC, {0.0f, -5.0f, 0.0f});
     RigidBody *dynamic = add_body(scene, box_shape, MotionType::DYNAMIC, {0.0f, 5.0f, 0.0f});
 
@@ -310,7 +314,7 @@ void test_debug_body_colour_modes(TestCtx &ctx) {
 void test_debug_body_velocities(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     DebugDraw buffers;
-    RigidBody *body = add_body(scene, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}), MotionType::DYNAMIC, {0.0f, 5.0f, 0.0f});
+    RigidBody *body = add_body(scene, box::create({.half_extents = vec3f::splat(0.5f)}), MotionType::DYNAMIC, {0.0f, 5.0f, 0.0f});
     rigid_body::set_linear_velocity(*scene.world, body, vec3f::make(3.0f, 0.0f, 0.0f));
     rigid_body::set_angular_velocity(*scene.world, body, vec3f::make(0.0f, 8.0f, 0.0f));
 
@@ -337,8 +341,8 @@ void test_debug_body_velocities(TestCtx &ctx) {
 void test_debug_contacts_of_a_resting_box(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     DebugDraw buffers;
-    add_body(scene, box::create({.half_extents = {5.0f, 0.5f, 5.0f}}), MotionType::STATIC, {0.0f, -0.5f, 0.0f});
-    add_body(scene, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}), MotionType::DYNAMIC, {0.0f, 0.5f, 0.0f});
+    add_body(scene, box::create({.half_extents = vec3f::make(5.0f, 0.5f, 5.0f)}), MotionType::STATIC, {0.0f, -0.5f, 0.0f});
+    add_body(scene, box::create({.half_extents = vec3f::splat(0.5f)}), MotionType::DYNAMIC, {0.0f, 0.5f, 0.0f});
     for (uint32_t i = 0; i < 10; i++) step_world(*scene.world);
 
     CHECK(ctx, scene.world->contact_constraints.count == 1);
@@ -378,11 +382,11 @@ void test_debug_contacts_of_a_resting_box(TestCtx &ctx) {
 void test_debug_joints_hinge(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     DebugDraw buffers;
-    Shape *box_shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Shape *box_shape = box::create({.half_extents = vec3f::splat(0.5f)});
     RigidBody *a = add_body(scene, box_shape, MotionType::STATIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, box_shape, MotionType::DYNAMIC, {1.0f, 0.0f, 0.0f});
     HingeConstraintSettings settings;
-    settings.point_a = settings.point_b = {0.5f, 0.0f, 0.0f};
+    settings.point_a = settings.point_b = vec3f::make(0.5f, 0.0f, 0.0f);
     hinge_constraint::create(*scene.world, a, b, settings);
 
     // a's cross and hinge axis, b's cross and hinge axis, b's normal axis
@@ -425,18 +429,18 @@ void test_debug_joints_hinge(TestCtx &ctx) {
 void test_debug_joints_point_and_distance(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     DebugDraw buffers;
-    Shape *box_shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Shape *box_shape = box::create({.half_extents = vec3f::splat(0.5f)});
     RigidBody *a = add_body(scene, box_shape, MotionType::STATIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, box_shape, MotionType::DYNAMIC, {2.0f, 0.0f, 0.0f});
 
     // point: two crosses and the line between
-    point_constraint::create(*scene.world, a, b, {.point_a = {0.5f, 0.0f, 0.0f}, .point_b = {1.5f, 0.0f, 0.0f}});
+    point_constraint::create(*scene.world, a, b, {.point_a = vec3f::make(0.5f, 0.0f, 0.0f), .point_b = vec3f::make(1.5f, 0.0f, 0.0f)});
     debug::joints(buffers, *scene.world, {});
     CHECK(ctx, buffers.line_count == 2 * CROSS_LINES + 1);
 
     // distance with both limits: the line and two 16 segment circles
     distance_constraint::create(*scene.world, a, b,
-                                {.point_a = {0.5f, 0.0f, 0.0f}, .point_b = {1.5f, 0.0f, 0.0f}, .min_distance = 0.5f, .max_distance = 2.0f});
+                                {.point_a = vec3f::make(0.5f, 0.0f, 0.0f), .point_b = vec3f::make(1.5f, 0.0f, 0.0f), .min_distance = 0.5f, .max_distance = 2.0f});
     debug::clear(buffers);
     debug::joints(buffers, *scene.world, {});
     // the joints draw distance before point
@@ -458,7 +462,7 @@ void test_debug_joints_point_and_distance(TestCtx &ctx) {
 void test_debug_buffers_reused_without_growing(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     DebugDraw buffers;
-    add_body(scene, box::create({.half_extents = {5.0f, 0.5f, 5.0f}}), MotionType::STATIC, {0.0f, -0.5f, 0.0f});
+    add_body(scene, box::create({.half_extents = vec3f::make(5.0f, 0.5f, 5.0f)}), MotionType::STATIC, {0.0f, -0.5f, 0.0f});
     for (uint32_t i = 0; i < 8; i++) {
         add_body(scene, sphere::create({.radius = 0.5f}), MotionType::DYNAMIC, {(float)i * 1.5f - 6.0f, 0.5f, 0.0f});
     }
@@ -484,8 +488,8 @@ void test_debug_buffers_reused_without_growing(TestCtx &ctx) {
 void test_debug_contacts_draw_each_manifold_point_with_its_normal(TestCtx &ctx) {
     // a box resting on a static box: a cross and a normal per manifold point, every point on the top face
     WorldScene scene = make_world_scene(ctx);
-    add_body(scene, box::create({.half_extents = {4.0f, 0.5f, 4.0f}}), MotionType::STATIC, {0.0f, 0.0f, 0.0f});
-    add_body(scene, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}), MotionType::DYNAMIC, {0.0f, 0.99f, 0.0f});
+    add_body(scene, box::create({.half_extents = vec3f::make(4.0f, 0.5f, 4.0f)}), MotionType::STATIC, {0.0f, 0.0f, 0.0f});
+    add_body(scene, box::create({.half_extents = vec3f::splat(0.5f)}), MotionType::DYNAMIC, {0.0f, 0.99f, 0.0f});
     step_world(*scene.world);
     uint32_t points = 0;
     for (uint32_t i = 0; i < scene.world->contact_constraints.count; i++) points += scene.world->contact_constraints.pool[i].num_contact_points;
@@ -503,7 +507,7 @@ void test_debug_contacts_draw_each_manifold_point_with_its_normal(TestCtx &ctx) 
 
 void test_debug_character_contacts_cross_and_normal_per_contact(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
-    add_body(scene, box::create({.half_extents = {10.0f, 0.5f, 10.0f}}), MotionType::STATIC, {0.0f, -0.5f, 0.0f});
+    add_body(scene, box::create({.half_extents = vec3f::make(10.0f, 0.5f, 10.0f)}), MotionType::STATIC, {0.0f, -0.5f, 0.0f});
     KCCSettings settings;
     settings.shape = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
     Ref<KCC> character = kcc::create(settings, vec3f::make(0.0f, 0.8f, 0.0f), quatf::identity());

@@ -4,6 +4,7 @@
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
+#include "tumble/math/transform.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/collision/active_edges.h"
 #include "tumble/physics/collision/cast_utils.h"
@@ -59,12 +60,8 @@ static void destroy(Shape *shape) {
 
 void update(Shape *shape) {
     const TriangleMeshShape::Data &data = *shapes::as<TriangleMeshShape>(shape).data;
-    if (data.node_count > 0) {
-        bvh::node_get_bounds(shape->aabb, data.nodes, 0);
-    } else {
-        shape->aabb = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
-    }
-    shape->center_of_mass = {0.0f, 0.0f, 0.0f};
+    shape->aabb = data.node_count > 0 ? bvh::node_get_bounds(data.nodes, 0) : aabox::make(vec3f::zero(), vec3f::zero());
+    shape->center_of_mass = vec3f::zero();
     shape->volume = 0.0f;
 }
 
@@ -72,7 +69,7 @@ void compute_mass_properties(MassProperties &out, const Shape *) {
     // triangle meshes are static collision geometry by default.
     // mass properties should be overridden at the body level if needed.
     out.mass = 0.0f;
-    mat4f::store(out.inertia, mat4f::identity());
+    out.inertia = mat4f::identity();
 }
 
 void get_surface_normal(SurfaceNormalResult &io, const Shape *shape, SubShapeId sub_shape_id) {
@@ -121,7 +118,7 @@ void get_supporting_face(SupportingFaceResult &io, Vec3f, const Shape *shape, Su
 /* cast ray */
 
 void cast_ray_vs_triangle_mesh(CastRayCollector &collector, const CastRaySettings &settings, const Rayf &ray,
-                               const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
+                               const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform) {
     const TriangleMeshShape::Data &data = *shapes::as<TriangleMeshShape>(shape).data;
     const BvhNode *nodes = data.nodes;
 
@@ -134,14 +131,14 @@ void cast_ray_vs_triangle_mesh(CastRayCollector &collector, const CastRaySetting
     // direction by the scale. the bvh and the vertices are unscaled, so nothing is scaled per
     // triangle; the hit parameter t is unchanged by rescaling origin and direction together, so the
     // fraction needs no correction either
-    const Quatf inv_quat = quatf::conjugate(quatf::load(transform.quaternion));
+    const Quatf inv_quat = quatf::conjugate(transform.quaternion);
 
-    Vec3f ray_origin_local = vec3f::subtract(ray.origin, vec3f::load(transform.position));
+    Vec3f ray_origin_local = vec3f::subtract(ray.origin, transform.position);
     Vec3f ray_direction_local;
     ray_origin_local = vec3f::transform_quat(ray_origin_local, inv_quat);
     ray_direction_local = vec3f::transform_quat(ray.direction, inv_quat);
 
-    const Vec3f scale = vec3f::load(transform.scale);
+    const Vec3f scale = transform.scale;
     Rayf local_ray;
     local_ray.origin = vec3f::divide(ray_origin_local, scale);
     local_ray.direction = vec3f::divide(ray_direction_local, scale);
@@ -251,16 +248,16 @@ static void hit_count_add_hit(CastRayCollector &collector, const CastRayHit &hit
 
 void collide_point_vs_triangle_mesh(CollidePointCollector &collector, const CollidePointSettings &,
                                     Vec3f point, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                                    const Transformf &transform_b) {
+                                    const Transform &transform_b) {
     // transform point to mesh's local space: inverse rotation, then inverse scale
-    const Quatf inv_quat_b = quatf::conjugate(quatf::load(transform_b.quaternion));
-    Vec3f local_point = vec3f::subtract(point, vec3f::load(transform_b.position));
+    const Quatf inv_quat_b = quatf::conjugate(transform_b.quaternion);
+    Vec3f local_point = vec3f::subtract(point, transform_b.position);
     local_point = vec3f::transform_quat(local_point, inv_quat_b);
-    const Vec3f inv_scale = vec3f::inverse(vec3f::load(transform_b.scale));
+    const Vec3f inv_scale = vec3f::inverse(transform_b.scale);
     local_point = vec3f::multiply(local_point, inv_scale);
 
     // early exit if point is outside aabb (point is already in unscaled local space)
-    const AABox aabb = aabox::load(shape_b->aabb);
+    const AABox aabb = shape_b->aabb;
     if (!aabox::contains_point(aabb, local_point)) return;
 
     // construct ray from point in +y direction
@@ -282,7 +279,7 @@ void collide_point_vs_triangle_mesh(CollidePointCollector &collector, const Coll
     hit_counter.context = &context;
 
     // cast ray through mesh, counting all triangle intersections; the mesh is already in local space
-    const Transformf local_space = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}};
+    const Transform local_space = transform::identity();
     cast_ray_vs_triangle_mesh(hit_counter, cast_ray_settings, ray, shape_b, sub_shape_id_b, local_space);
 
     // apply odd-even rule (jordan curve theorem)
@@ -325,22 +322,22 @@ static Support cast_support_a;
 static Support cast_triangle_support;
 
 void cast_convex_vs_triangle_mesh(CastShapeCollector &collector, const CastShapeSettings &settings,
-                                  const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
+                                  const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                                   Vec3f displacement_a, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                                  const Transformf &transform_b) {
+                                  const Transform &transform_b) {
     const TriangleMeshShape::Data &data = *shapes::as<TriangleMeshShape>(shape_b).data;
     const BvhNode *nodes = data.nodes;
 
     // early out if there are no triangles
     if (data.node_count == 0) return;
 
-    const Vec3f scale_a = vec3f::load(transform_a.scale);
-    const Vec3f scale_b = vec3f::load(transform_b.scale);
+    const Vec3f scale_a = transform_a.scale;
+    const Vec3f scale_b = transform_b.scale;
 
     // transform a into b's local space (as cast_convex_vs_convex): rotation and translation only, a's
     // scale goes to its support
-    const Mat4f transform_a_mat = mat4f::from_rotation_translation(quatf::load(transform_a.quaternion), vec3f::load(transform_a.position));
-    const Mat4f target_transform = mat4f::from_rotation_translation(quatf::load(transform_b.quaternion), vec3f::load(transform_b.position));
+    const Mat4f transform_a_mat = mat4f::from_rotation_translation(transform_a.quaternion, transform_a.position);
+    const Mat4f target_transform = mat4f::from_rotation_translation(transform_b.quaternion, transform_b.position);
     Mat4f inv_target_transform, cast_transform;
     mat4f::invert(inv_target_transform, target_transform);
 
@@ -353,7 +350,7 @@ void cast_convex_vs_triangle_mesh(CastShapeCollector &collector, const CastShape
     // compute base aabb of shape a at t=0 in mesh local space, then into the unscaled space the bvh
     // is built in. the cast itself stays in scaled mesh space; the walk ray, half-extents and
     // displacement below are the unscaled-space copies
-    const AABox swept_aabb = divide_box_by_scale(aabox::transform_mat4(aabox::scale(aabox::load(shape_a->aabb), scale_a), cast_transform), scale_b);
+    const AABox swept_aabb = divide_box_by_scale(aabox::transform_mat4(aabox::scale(shape_a->aabb, scale_a), cast_transform), scale_b);
     const Vec3f walk_displacement = vec3f::divide(displacement_in_b, scale_b);
 
     // determine if we want to use the actual shape or a shrunken shape with convex radius
@@ -538,41 +535,41 @@ static Support collide_triangle_support;
 static PenetrationDepth collide_penetration_depth;
 
 void collide_convex_vs_triangle_mesh(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                                     const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                                     const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                                     const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                                     const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     const TriangleMeshShape::Data &data = *shapes::as<TriangleMeshShape>(shape_b).data;
     const BvhNode *nodes = data.nodes;
 
     if (data.node_count == 0) return;
 
-    const Vec3f scale_a = vec3f::load(transform_a.scale);
-    const Vec3f scale_b = vec3f::load(transform_b.scale);
+    const Vec3f scale_a = transform_a.scale;
+    const Vec3f scale_b = transform_b.scale;
 
     // transform b (mesh) into a's (convex) local space for triangle tests
-    const Quatf inverse_quat_a = quatf::conjugate(quatf::load(transform_a.quaternion));
-    const Quatf transform_2_to_1_quat = quatf::multiply(inverse_quat_a, quatf::load(transform_b.quaternion));
-    const Vec3f vector_ab = vec3f::subtract(vec3f::load(transform_b.position), vec3f::load(transform_a.position));
+    const Quatf inverse_quat_a = quatf::conjugate(transform_a.quaternion);
+    const Quatf transform_2_to_1_quat = quatf::multiply(inverse_quat_a, transform_b.quaternion);
+    const Vec3f vector_ab = vec3f::subtract(transform_b.position, transform_a.position);
     const Vec3f transform_2_to_1_pos = vec3f::transform_quat(vector_ab, inverse_quat_a);
 
     // transform a into b's space for the bvh query
-    const Quatf inverse_quat_b = quatf::conjugate(quatf::load(transform_b.quaternion));
-    const Quatf quat_a_in_b = quatf::multiply(inverse_quat_b, quatf::load(transform_a.quaternion));
-    const Vec3f position_difference = vec3f::subtract(vec3f::load(transform_a.position), vec3f::load(transform_b.position));
+    const Quatf inverse_quat_b = quatf::conjugate(transform_b.quaternion);
+    const Quatf quat_a_in_b = quatf::multiply(inverse_quat_b, transform_a.quaternion);
+    const Vec3f position_difference = vec3f::subtract(transform_a.position, transform_b.position);
     const Vec3f pos_a_in_b = vec3f::transform_quat(position_difference, inverse_quat_b);
 
     const Vec3f max_separation_extents = vec3f::splat(settings.max_separation_distance);
 
     // shape a's bounds in its own local space
-    const AABox bounds_of_1 = aabox::expand_by_extents(aabox::scale(aabox::load(shape_a->aabb), scale_a), max_separation_extents);
+    const AABox bounds_of_1 = aabox::expand_by_extents(aabox::scale(shape_a->aabb, scale_a), max_separation_extents);
 
     // shape a's bounds in shape b's space for bvh culling
     const Mat4f aabb_matrix = mat4f::from_rotation_translation_scale(quat_a_in_b, pos_a_in_b, scale_a);
-    AABox bounds_of_1_in_space_of_2 = aabox::expand_by_extents(aabox::transform_mat4(aabox::load(shape_a->aabb), aabb_matrix), max_separation_extents);
+    AABox bounds_of_1_in_space_of_2 = aabox::expand_by_extents(aabox::transform_mat4(shape_a->aabb, aabb_matrix), max_separation_extents);
     // the bvh is built in the mesh's unscaled local space
     bounds_of_1_in_space_of_2 = divide_box_by_scale(bounds_of_1_in_space_of_2, scale_b);
 
     // a to world (rotation + translation only, no scale)
-    const Mat4f a_to_world = mat4f::from_rotation_translation(quatf::load(transform_a.quaternion), vec3f::load(transform_a.position));
+    const Mat4f a_to_world = mat4f::from_rotation_translation(transform_a.quaternion, transform_a.position);
 
     // b to a with the mesh scale folded in (scale first, then rotation and translation), so each
     // vertex is one affine transform
@@ -760,25 +757,25 @@ void collide_convex_vs_triangle_mesh(CollideShapeCollector &collector, const Col
 /* collide sphere vs triangle mesh */
 
 void collide_sphere_vs_triangle_mesh(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                                     const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                                     const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                                     const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                                     const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     const TriangleMeshShape::Data &data = *shapes::as<TriangleMeshShape>(shape_b).data;
     const BvhNode *nodes = data.nodes;
 
     if (data.node_count == 0) return;
 
     // scaled sphere radius (assuming uniform scale)
-    const float sphere_radius = scalar::abs(transform_a.scale.x) * shapes::as<SphereShape>(shape_a).radius;
+    const float sphere_radius = scalar::abs(vec3f::x(transform_a.scale)) * shapes::as<SphereShape>(shape_a).radius;
     const float expanded_radius = sphere_radius + settings.max_separation_distance;
     const float max_separation_sq = expanded_radius * expanded_radius;
 
-    const Vec3f scale_b = vec3f::load(transform_b.scale);
+    const Vec3f scale_b = transform_b.scale;
 
     // the mesh's world transform, held for the whole triangle walk; its inverse rotation is the transpose
-    const Mat4f mesh_to_world = mat4f::from_rotation_translation(quatf::load(transform_b.quaternion), vec3f::load(transform_b.position));
+    const Mat4f mesh_to_world = mat4f::from_rotation_translation(transform_b.quaternion, transform_b.position);
 
     // sphere centre into mesh-local
-    const Vec3f center_offset = vec3f::subtract(vec3f::load(transform_a.position), vec3f::load(transform_b.position));
+    const Vec3f center_offset = vec3f::subtract(transform_a.position, transform_b.position);
     const Vec3f sphere_center_in_mesh = mat4f::multiply3x3_transposed_vec(mesh_to_world, center_offset);
 
     // detect inside-out scaling
@@ -989,18 +986,18 @@ static void cast_sphere_vs_triangle_mesh_add_hit(const CastSphereContext &contex
 }
 
 void cast_sphere_vs_triangle_mesh(CastShapeCollector &collector, const CastShapeSettings &settings,
-                                  const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
+                                  const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                                   Vec3f displacement_a, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                                  const Transformf &transform_b) {
+                                  const Transform &transform_b) {
     const TriangleMeshShape::Data &data = *shapes::as<TriangleMeshShape>(shape_b).data;
     const BvhNode *nodes = data.nodes;
 
     if (data.node_count == 0) return;
 
     // scaled sphere radius (assuming uniform scale)
-    const float sphere_radius = scalar::abs(transform_a.scale.x) * shapes::as<SphereShape>(shape_a).radius + settings.extra_convex_radius;
+    const float sphere_radius = scalar::abs(vec3f::x(transform_a.scale)) * shapes::as<SphereShape>(shape_a).radius + settings.extra_convex_radius;
 
-    const Vec3f scale_b = vec3f::load(transform_b.scale);
+    const Vec3f scale_b = transform_b.scale;
 
     CastSphereContext context;
     context.collector = &collector;
@@ -1011,10 +1008,10 @@ void cast_sphere_vs_triangle_mesh(CastShapeCollector &collector, const CastShape
     context.sub_shape_id_b = &sub_shape_id_b;
 
     // the mesh's world transform, held for the whole cast; its inverse rotation is the transpose
-    context.mesh_to_world = mat4f::from_rotation_translation(quatf::load(transform_b.quaternion), vec3f::load(transform_b.position));
+    context.mesh_to_world = mat4f::from_rotation_translation(transform_b.quaternion, transform_b.position);
 
     // sphere start and displacement into mesh-local
-    const Vec3f start_offset = vec3f::subtract(vec3f::load(transform_a.position), vec3f::load(transform_b.position));
+    const Vec3f start_offset = vec3f::subtract(transform_a.position, transform_b.position);
     context.start = mat4f::multiply3x3_transposed_vec(context.mesh_to_world, start_offset);
     const Vec3f start = context.start;
 

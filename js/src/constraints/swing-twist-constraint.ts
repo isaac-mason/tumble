@@ -1,6 +1,6 @@
 import type { BodyId } from '../body.js';
 import * as Low from '../generated/tumble.js';
-import { copied, type Quat, type Vec3 } from '../math.js';
+import type { Quat, Vec3 } from '../math.js';
 import { defaultsOf, type Given, over } from '../settings.js';
 import type { World } from '../world.js';
 import {
@@ -11,10 +11,8 @@ import {
     expectMotor,
     type MotorSettings,
     type MotorState,
-    quat,
     readMotor,
     type SwingType,
-    vec3,
     writeMotor,
 } from './common.js';
 
@@ -125,11 +123,11 @@ export function setTargetOrientationBS(world: World, constraint: ConstraintId, o
 
 /** the turn between the bodies, in constraint space */
 export function getRotationInConstraintSpace(out: Quat, world: World, constraint: ConstraintId): boolean {
-    return copied(out, quat, Low.SwingTwistConstraint.getRotationInConstraintSpace(quat, world, constraint));
+    return Low.SwingTwistConstraint.getRotationInConstraintSpace(out, world, constraint);
 }
 
 export function getTotalLambdaPosition(out: Vec3, world: World, constraint: ConstraintId): boolean {
-    return copied(out, vec3, Low.SwingTwistConstraint.getTotalLambdaPosition(vec3, world, constraint));
+    return Low.SwingTwistConstraint.getTotalLambdaPosition(out, world, constraint);
 }
 
 export function getTotalLambdaTwist(world: World, constraint: ConstraintId): number {
@@ -145,5 +143,5 @@ export function getTotalLambdaSwingZ(world: World, constraint: ConstraintId): nu
 }
 
 export function getTotalLambdaMotor(out: Vec3, world: World, constraint: ConstraintId): boolean {
-    return copied(out, vec3, Low.SwingTwistConstraint.getTotalLambdaMotor(vec3, world, constraint));
+    return Low.SwingTwistConstraint.getTotalLambdaMotor(out, world, constraint);
 }

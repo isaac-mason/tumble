@@ -29,16 +29,16 @@ static void init(App &app) {
     app.world = app::create_world(state.layers);
 
     RigidBodySettings floor;
-    floor.shape = app::keep(app, box::create({.half_extents = {50.0f, 0.5f, 300.0f}}));
+    floor.shape = app::keep(app, box::create({.half_extents = vec3f::make(50.0f, 0.5f, 300.0f)}));
     floor.object_layer = state.layers.not_moving;
     floor.motion_type = MotionType::STATIC;
-    floor.position = {0.0f, -0.5f, 0.0f};
+    floor.position = vec3f::make(0.0f, -0.5f, 0.0f);
     floor.restitution = 0.0f;
     floor.friction = 1.0f;
     rigid_body::create(*app.world, floor);
 
     Shape *ball = app::keep(app, sphere::create({.radius = 0.5f}));
-    Shape *block = app::keep(app, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}));
+    Shape *block = app::keep(app, box::create({.half_extents = vec3f::splat(0.5f)}));
     Shape *pill = app::keep(app, capsule::create({.half_height_of_cylinder = 0.3f, .radius = 0.5f}));
     for (int kind = 0; kind < KIND_COUNT; kind++) {
         for (int i = 0; i < ROW_COUNT; i++) {
@@ -46,9 +46,9 @@ static void init(App &app) {
             settings.shape = kind == 0 ? ball : kind == 1 ? block : pill;
             settings.object_layer = state.layers.moving;
             settings.motion_type = MotionType::DYNAMIC;
-            settings.position = {x_of(kind, i), START_HEIGHT, 0.0f};
+            settings.position = vec3f::make(x_of(kind, i), START_HEIGHT, 0.0f);
             if (kind == 1) settings.allowed_degrees_of_freedom = dof::DOF_TRANSLATION_ONLY;
-            if (kind == 2) settings.quaternion = {0.0f, 0.0f, scalar::sin(0.25f * scalar::PI), scalar::cos(0.25f * scalar::PI)};
+            if (kind == 2) settings.quaternion = quatf::make(0.0f, 0.0f, scalar::sin(0.25f * scalar::PI), scalar::cos(0.25f * scalar::PI));
             settings.restitution = 0.0f;
             settings.friction = friction_of(i);
             RigidBody *body = rigid_body::create(*app.world, settings);

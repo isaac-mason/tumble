@@ -126,9 +126,9 @@ QuadTree create() {
     return tree;
 }
 
-Box3f &bounds(Box3f &out, const QuadTree &tree) {
-    if (tree.num_bodies == 0) return aabox::store(out, aabox::empty());
-    return aabox::store(out, get_node_bounds(tree.nodes[tree.root_node]));
+AABox bounds(const QuadTree &tree) {
+    if (tree.num_bodies == 0) return aabox::empty();
+    return get_node_bounds(tree.nodes[tree.root_node]);
 }
 
 static AABox body_bounds(const QuadTree &tree, const RigidBody &body) {
@@ -137,7 +137,7 @@ static AABox body_bounds(const QuadTree &tree, const RigidBody &body) {
     return get_child_bounds(tree.nodes[node_index], child_index);
 }
 
-Box3f &read_body_bounds(Box3f &out, const QuadTree &tree, const RigidBody &body) { return aabox::store(out, body_bounds(tree, body)); }
+AABox read_body_bounds(const QuadTree &tree, const RigidBody &body) { return body_bounds(tree, body); }
 
 static void mark_node_and_parents_changed(QuadTree &tree, uint32_t node_index) {
     uint32_t index = node_index;
@@ -217,7 +217,7 @@ static void create_new_root(QuadTree &tree, RigidBody *body, const AABox &leaf_b
 }
 
 void add(QuadTree &tree, RigidBody *body) {
-    const AABox leaf_bounds = aabox::expand_by_margin(aabox::load(body->aabb), tree.expansion_margin);
+    const AABox leaf_bounds = aabox::expand_by_margin(body->aabb, tree.expansion_margin);
     tree.dirty = true;
     if (!try_insert_leaf(tree, tree.root_node, body, leaf_bounds)) create_new_root(tree, body, leaf_bounds);
 }
@@ -247,7 +247,7 @@ bool update(QuadTree &tree, const RigidBody *body) {
     QuadTree::Node &node = tree.nodes[node_index];
 
     // still inside its fat box
-    const AABox aabb = aabox::load(body->aabb);
+    const AABox aabb = body->aabb;
     if (aabox::contains(get_child_bounds(node, child_index), aabb)) return false;
 
     // the fat box is replaced, so the persistent pairs see where the body is now, then the ancestors widen to fit
@@ -685,10 +685,20 @@ static bool filter_body(const Filter &query_filter, const RigidBody *body) {
     return true;
 }
 
-void intersect_aabb_fat_leaves(const Bodies &bodies, QuadTree &tree, const Box3f &aabb, BodyVisitor &visitor) {
+/** a box's six bounds, each across all four lanes, for the node tests */
+struct SplatBox {
+    V128 min_x, min_y, min_z, max_x, max_y, max_z;
+};
+
+static SplatBox splat_box(const AABox &box) {
+    return {v4f::splat(vec3f::x(box.min)), v4f::splat(vec3f::y(box.min)), v4f::splat(vec3f::z(box.min)),
+            v4f::splat(vec3f::x(box.max)), v4f::splat(vec3f::y(box.max)), v4f::splat(vec3f::z(box.max))};
+}
+
+void intersect_aabb_fat_leaves(const Bodies &bodies, QuadTree &tree, const AABox &aabb, BodyVisitor &visitor) {
     if (tree.num_bodies == 0) return;
-    const V128 min_x = v4f::splat(aabb.min.x), min_y = v4f::splat(aabb.min.y), min_z = v4f::splat(aabb.min.z);
-    const V128 max_x = v4f::splat(aabb.max.x), max_y = v4f::splat(aabb.max.y), max_z = v4f::splat(aabb.max.z);
+    const SplatBox s = splat_box(aabb);
+    const V128 min_x = s.min_x, min_y = s.min_y, min_z = s.min_z, max_x = s.max_x, max_y = s.max_y, max_z = s.max_z;
     walk_tree(
         tree, bodies, [&](const QuadTree::Node &node) { return overlap4(node, min_x, min_y, min_z, max_x, max_y, max_z); },
         [&](RigidBody *body) {
@@ -697,17 +707,17 @@ void intersect_aabb_fat_leaves(const Bodies &bodies, QuadTree &tree, const Box3f
         });
 }
 
-void intersect_aabb(const Bodies &bodies, QuadTree &tree, const Box3f &aabb, const Filter &query_filter, BodyVisitor &visitor) {
+void intersect_aabb(const Bodies &bodies, QuadTree &tree, const AABox &aabb, const Filter &query_filter, BodyVisitor &visitor) {
     if (tree.num_bodies == 0) return;
-    const V128 min_x = v4f::splat(aabb.min.x), min_y = v4f::splat(aabb.min.y), min_z = v4f::splat(aabb.min.z);
-    const V128 max_x = v4f::splat(aabb.max.x), max_y = v4f::splat(aabb.max.y), max_z = v4f::splat(aabb.max.z);
-    const AABox query = aabox::load(aabb);
+    const SplatBox s = splat_box(aabb);
+    const V128 min_x = s.min_x, min_y = s.min_y, min_z = s.min_z, max_x = s.max_x, max_y = s.max_y, max_z = s.max_z;
+    const AABox &query = aabb;
     walk_tree(
         tree, bodies, [&](const QuadTree::Node &node) { return overlap4(node, min_x, min_y, min_z, max_x, max_y, max_z); },
         [&](RigidBody *body) {
             if (!filter_body(query_filter, body)) return true;
             // the fat box overlapped: the body's own box must too
-            if (!aabox::intersects(aabox::load(body->aabb), query)) return true;
+            if (!aabox::intersects(body->aabb, query)) return true;
             visitor.visit(&visitor, body);
             return !visitor.should_exit;
         });
@@ -720,7 +730,7 @@ void intersect_point(const Bodies &bodies, QuadTree &tree, Vec3f point, const Fi
         tree, bodies, [&](const QuadTree::Node &node) { return contains4(node, px, py, pz); },
         [&](RigidBody *body) {
             if (!filter_body(query_filter, body)) return true;
-            if (!aabox::contains_point(aabox::load(body->aabb), point)) return true;
+            if (!aabox::contains_point(body->aabb, point)) return true;
             visitor.visit(&visitor, body);
             return !visitor.should_exit;
         });
@@ -740,9 +750,8 @@ void intersect_sphere(const Bodies &bodies, QuadTree &tree, Vec3f center, float 
         [&](RigidBody *body) {
             if (!filter_body(query_filter, body)) return true;
             // the fat box was near enough: the body's own box must be too
-            const Box3f &box = body->aabb;
-            if ((sphere4(v4f::splat(box.min.x), v4f::splat(box.min.y), v4f::splat(box.min.z), v4f::splat(box.max.x), v4f::splat(box.max.y),
-                         v4f::splat(box.max.z), cx, cy, cz, radius_sq) &
+            const SplatBox box = splat_box(body->aabb);
+            if ((sphere4(box.min_x, box.min_y, box.min_z, box.max_x, box.max_y, box.max_z, cx, cy, cz, radius_sq) &
                  1u) == 0u) {
                 return true;
             }
@@ -763,9 +772,8 @@ void intersect_oriented_box(const Bodies &bodies, QuadTree &tree, const Oriented
         },
         [&](RigidBody *body) {
             if (!filter_body(query_filter, body)) return true;
-            const Box3f &own = body->aabb;
-            if ((oriented_box4(axes, v4f::splat(own.min.x), v4f::splat(own.min.y), v4f::splat(own.min.z), v4f::splat(own.max.x),
-                               v4f::splat(own.max.y), v4f::splat(own.max.z)) &
+            const SplatBox own = splat_box(body->aabb);
+            if ((oriented_box4(axes, own.min_x, own.min_y, own.min_z, own.max_x, own.max_y, own.max_z) &
                  1u) == 0u) {
                 return true;
             }
@@ -840,7 +848,7 @@ static void cast_walk(const Bodies &bodies, QuadTree &tree, const SlabRay &ray, 
         if (is_body(id)) {
             RigidBody *body = bodies.pool[id];
             const float entry = filter_body(query_filter, body)
-                                    ? slab_entry(ray, v4f::sub(v4f::load3(&body->aabb.min.x), expand), v4f::add(v4f::load3(&body->aabb.max.x), expand))
+                                    ? slab_entry(ray, v4f::sub(body->aabb.min.v, expand), v4f::add(body->aabb.max.v, expand))
                                     : scalar::INF;
             if (entry != scalar::INF) {
                 visitor.fraction = entry;
@@ -894,13 +902,13 @@ void cast_ray(const Bodies &bodies, QuadTree &tree, const Rayf &ray, const Filte
     cast_walk(bodies, tree, slab, v4f::zero(), query_filter, visitor);
 }
 
-void cast_aabb(const Bodies &bodies, QuadTree &tree, const Box3f &cast_bounds, Vec3f displacement, const Filter &query_filter,
+void cast_aabb(const Bodies &bodies, QuadTree &tree, const AABox &cast_bounds, Vec3f displacement, const Filter &query_filter,
                BodyVisitor &visitor) {
     if (tree.num_bodies == 0) return;
 
     // the box shrunk to its centre and every child grown by its half extents, then cast as a point
-    const V128 cast_min = v4f::load3(&cast_bounds.min.x);
-    const V128 cast_max = v4f::load3(&cast_bounds.max.x);
+    const V128 cast_min = cast_bounds.min.v;
+    const V128 cast_max = cast_bounds.max.v;
     const V128 origin = v4f::mul(v4f::add(cast_min, cast_max), v4f::splat(0.5f));
     const V128 half = v4f::mul(v4f::sub(cast_max, cast_min), v4f::splat(0.5f));
 

@@ -10,7 +10,7 @@
 #include "test_math.h"
 
 
-static float angle_about_z(const Float4 &q) { return 2.0f * scalar::atan2(q.z, q.w); }
+static float angle_about_z(Quatf q) { return 2.0f * scalar::atan2(quatf::z(q), quatf::w(q)); }
 
 static const Float3 AXIS_Z = {0.0f, 0.0f, 1.0f};
 
@@ -47,7 +47,7 @@ void test_angle_constraint_part_effective_mass(TestCtx &ctx) {
     CHECK(ctx, vec3f::exact_equals(part.inv_i2_axis, vec3f::zero()));
 
     // turned a quarter about x, body a's z inertia is its local y: K = 2
-    a.quaternion = stored_axis_angle(vec3f::axis_x(), scalar::PI * 0.5f);
+    a.quaternion = axis_angle(vec3f::axis_x(), scalar::PI * 0.5f);
     angle_constraint_part::calculate_constraint_properties(part, a, b, vec3f::load(AXIS_Z));
     CHECK_NEAR(ctx, part.effective_mass, 0.5f, 1e-6f);
 
@@ -107,8 +107,8 @@ void test_angle_constraint_part_velocity_removes_relative_spin(TestCtx &ctx) {
     // angular momentum about it (w_a / 3 + w_b / 6) and does not touch the other components
     RigidBody a = make_body(MotionType::DYNAMIC, 1.0f, {1.0f, 2.0f, 3.0f});
     RigidBody b = make_body(MotionType::DYNAMIC, 1.0f, {4.0f, 5.0f, 6.0f});
-    a.motion_properties.angular_velocity = {0.5f, -1.0f, 2.0f};
-    b.motion_properties.angular_velocity = {0.25f, 0.75f, -1.0f};
+    a.motion_properties.angular_velocity = vec3f::make(0.5f, -1.0f, 2.0f);
+    b.motion_properties.angular_velocity = vec3f::make(0.25f, 0.75f, -1.0f);
     const float momentum = 2.0f / 3.0f + -1.0f / 6.0f;
 
     AngleConstraintPart part = angle_constraint_part::create();
@@ -116,11 +116,11 @@ void test_angle_constraint_part_velocity_removes_relative_spin(TestCtx &ctx) {
     const bool applied = angle_constraint_part::solve_velocity_constraint(part, a, b, vec3f::load(AXIS_Z), -__FLT_MAX__, __FLT_MAX__);
     CHECK(ctx, applied);
 
-    const Float3 &wa = a.motion_properties.angular_velocity;
-    const Float3 &wb = b.motion_properties.angular_velocity;
-    CHECK_NEAR(ctx, wa.z - wb.z, 0.0f, 1e-6f);
-    CHECK_NEAR(ctx, wa.z / 3.0f + wb.z / 6.0f, momentum, 1e-6f);
-    CHECK(ctx, wa.x == 0.5f && wa.y == -1.0f && wb.x == 0.25f && wb.y == 0.75f);
+    const Vec3f wa = a.motion_properties.angular_velocity;
+    const Vec3f wb = b.motion_properties.angular_velocity;
+    CHECK_NEAR(ctx, vec3f::z(wa) - vec3f::z(wb), 0.0f, 1e-6f);
+    CHECK_NEAR(ctx, vec3f::z(wa) / 3.0f + vec3f::z(wb) / 6.0f, momentum, 1e-6f);
+    CHECK(ctx, vec3f::x(wa) == 0.5f && vec3f::y(wa) == -1.0f && vec3f::x(wb) == 0.25f && vec3f::y(wb) == 0.75f);
     // lambda = (w_a - w_b) / K = 3 / 9
     CHECK_NEAR(ctx, part.total_lambda, 1.0f / 3.0f, 1e-6f);
 }
@@ -133,21 +133,21 @@ void test_angle_constraint_part_velocity_clamps_impulse(TestCtx &ctx) {
     angle_constraint_part::calculate_constraint_properties(part, a, b, vec3f::load(AXIS_Z));
 
     // b spinning negatively about z wants a positive impulse: clamped away, nothing changes
-    b.motion_properties.angular_velocity = {0.0f, 0.0f, -1.0f};
+    b.motion_properties.angular_velocity = vec3f::make(0.0f, 0.0f, -1.0f);
     CHECK(ctx, !angle_constraint_part::solve_velocity_constraint(part, a, b, vec3f::load(AXIS_Z), -__FLT_MAX__, 0.0f));
-    CHECK(ctx, b.motion_properties.angular_velocity.z == -1.0f && part.total_lambda == 0.0f);
+    CHECK(ctx, vec3f::z(b.motion_properties.angular_velocity) == -1.0f && part.total_lambda == 0.0f);
 
     // spinning positively it takes a negative impulse and stops about z
-    b.motion_properties.angular_velocity = {0.0f, 0.0f, 1.0f};
+    b.motion_properties.angular_velocity = vec3f::make(0.0f, 0.0f, 1.0f);
     CHECK(ctx, angle_constraint_part::solve_velocity_constraint(part, a, b, vec3f::load(AXIS_Z), -__FLT_MAX__, 0.0f));
-    CHECK_NEAR(ctx, b.motion_properties.angular_velocity.z, 0.0f, 1e-6f);
+    CHECK_NEAR(ctx, vec3f::z(b.motion_properties.angular_velocity), 0.0f, 1e-6f);
     CHECK_NEAR(ctx, part.total_lambda, -0.5f, 1e-6f);
 
     // a bounded impulse stops partway: |lambda| <= 0.1 takes 0.1 * 2 off the spin
     angle_constraint_part::set_total_lambda(part, 0.0f);
-    b.motion_properties.angular_velocity = {0.0f, 0.0f, 1.0f};
+    b.motion_properties.angular_velocity = vec3f::make(0.0f, 0.0f, 1.0f);
     angle_constraint_part::solve_velocity_constraint(part, a, b, vec3f::load(AXIS_Z), -0.1f, 0.1f);
-    CHECK_NEAR(ctx, b.motion_properties.angular_velocity.z, 0.8f, 1e-6f);
+    CHECK_NEAR(ctx, vec3f::z(b.motion_properties.angular_velocity), 0.8f, 1e-6f);
     CHECK(ctx, part.total_lambda == -0.1f);
 
     // inactive solves nothing
@@ -165,13 +165,13 @@ void test_angle_constraint_part_warm_start(TestCtx &ctx) {
     // the impulse is scaled first, then applied: a loses 1 * 3, b gains 1 * 6 about z
     angle_constraint_part::warm_start(part, a, b, 0.5f);
     CHECK(ctx, part.total_lambda == 1.0f);
-    CHECK_NEAR(ctx, a.motion_properties.angular_velocity.z, -3.0f, 1e-6f);
-    CHECK_NEAR(ctx, b.motion_properties.angular_velocity.z, 6.0f, 1e-6f);
+    CHECK_NEAR(ctx, vec3f::z(a.motion_properties.angular_velocity), -3.0f, 1e-6f);
+    CHECK_NEAR(ctx, vec3f::z(b.motion_properties.angular_velocity), 6.0f, 1e-6f);
 
     // a zero ratio clears the impulse and applies nothing
     angle_constraint_part::warm_start(part, a, b, 0.0f);
     CHECK(ctx, part.total_lambda == 0.0f);
-    CHECK_NEAR(ctx, a.motion_properties.angular_velocity.z, -3.0f, 1e-6f);
+    CHECK_NEAR(ctx, vec3f::z(a.motion_properties.angular_velocity), -3.0f, 1e-6f);
 }
 
 void test_angle_constraint_part_position_corrects_angle(TestCtx &ctx) {
@@ -186,13 +186,13 @@ void test_angle_constraint_part_position_corrects_angle(TestCtx &ctx) {
     CHECK_NEAR(ctx, angle_about_z(a.quaternion), c / 3.0f, 1e-6f);
     CHECK_NEAR(ctx, angle_about_z(b.quaternion), -2.0f * c / 3.0f, 1e-6f);
     CHECK_NEAR(ctx, angle_about_z(b.quaternion) - angle_about_z(a.quaternion), -c, 1e-6f);
-    CHECK(ctx, a.quaternion.x == 0.0f && a.quaternion.y == 0.0f);
+    CHECK(ctx, quatf::x(a.quaternion) == 0.0f && quatf::y(a.quaternion) == 0.0f);
 
     // no error, or a soft constraint: no position step
-    const Float4 before = b.quaternion;
+    const Quatf before = b.quaternion;
     CHECK(ctx, !angle_constraint_part::solve_position_constraint(part, a, b, 0.0f, 1.0f));
     angle_constraint_part::calculate_constraint_properties_with_frequency_and_damping(part, 1.0f / 60.0f, a, b, vec3f::load(AXIS_Z), 0.0f, c,
                                                                                        2.0f, 1.0f);
     CHECK(ctx, !angle_constraint_part::solve_position_constraint(part, a, b, c, 1.0f));
-    CHECK(ctx, same_bits(quatf::load(b.quaternion), quatf::load(before)));
+    CHECK(ctx, same_bits(b.quaternion, before));
 }

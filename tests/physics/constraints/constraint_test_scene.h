@@ -39,8 +39,8 @@ inline RigidBody *add_body(ConstraintScene &scene, MotionType motion_type, const
     settings.shape = motion_type == MotionType::STATIC ? nullptr : sphere::create({.radius = 0.5f});
     settings.object_layer = scene.layer;
     settings.motion_type = motion_type;
-    settings.position = position;
-    settings.quaternion = quaternion;
+    settings.position = vec3f::load(position);
+    settings.quaternion = quatf::load(quaternion);
     settings.linear_damping = 0.0f;
     settings.angular_damping = 0.0f;
     return rigid_body::create(*scene.world, settings);
@@ -48,12 +48,12 @@ inline RigidBody *add_body(ConstraintScene &scene, MotionType motion_type, const
 
 /** turns the body by rotation, in world space: q = rotation * q */
 inline void rotate_body(RigidBody *body, Quatf rotation) {
-    quatf::store(body->quaternion, quatf::multiply(rotation, quatf::load(body->quaternion)));
+    body->quaternion = quatf::multiply(rotation, body->quaternion);
 }
 
 /** a world point on the body, given relative to its center of mass in body space */
 inline Vec3f world_point(const RigidBody *body, Vec3f local) {
-    return vec3f::add(vec3f::transform_quat(local, quatf::load(body->quaternion)), vec3f::load(body->center_of_mass_position));
+    return vec3f::add(vec3f::transform_quat(local, body->quaternion), body->center_of_mass_position);
 }
 
 /** one step: ten velocity iterations and two position iterations over scene.ids, gravity on dynamic bodies */
@@ -65,8 +65,8 @@ inline void step_constraint_scene(ConstraintScene &scene, float delta_time, Vec3
     for (uint32_t i = 0; i < bodies.pool.length; i++) {
         RigidBody *body = bodies.pool[i];
         if (body == nullptr || body->motion_type != MotionType::DYNAMIC) continue;
-        Float3 &velocity = body->motion_properties.linear_velocity;
-        vec3f::store(velocity, vec3f::scale_and_add(vec3f::load(velocity), gravity, delta_time));
+        Vec3f &velocity = body->motion_properties.linear_velocity;
+        velocity = vec3f::scale_and_add(velocity, gravity, delta_time);
     }
 
     constraints::update_sleeping(constraints, bodies);
@@ -79,8 +79,8 @@ inline void step_constraint_scene(ConstraintScene &scene, float delta_time, Vec3
     for (uint32_t i = 0; i < bodies.pool.length; i++) {
         RigidBody *body = bodies.pool[i];
         if (body == nullptr || body->motion_type == MotionType::STATIC) continue;
-        rigid_body_step::add_position_step(body, vec3f::scale(vec3f::load(body->motion_properties.linear_velocity), delta_time));
-        rigid_body_step::add_rotation_step(body, vec3f::scale(vec3f::load(body->motion_properties.angular_velocity), delta_time));
+        rigid_body_step::add_position_step(body, vec3f::scale(body->motion_properties.linear_velocity, delta_time));
+        rigid_body_step::add_rotation_step(body, vec3f::scale(body->motion_properties.angular_velocity, delta_time));
     }
 
     for (uint32_t i = 0; i < 2; i++) {

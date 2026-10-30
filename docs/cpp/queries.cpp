@@ -21,19 +21,19 @@ int main() {
     world_settings::enable_collision(settings, moving, moving);
     world_settings::enable_collision(settings, moving, not_moving);
     World *world = world::create(settings);
-    Ref<Shape> ground_shape = box::create({.half_extents = {20.0f, 0.5f, 20.0f}});
-    Ref<Shape> crate_shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> ground_shape = box::create({.half_extents = vec3f::make(20.0f, 0.5f, 20.0f)});
+    Ref<Shape> crate_shape = box::create({.half_extents = vec3f::splat(0.5f)});
     RigidBody *ground = rigid_body::create(*world, {
         .shape = ground_shape,
         .object_layer = not_moving,
         .motion_type = MotionType::STATIC,
-        .position = {0.0f, -0.5f, 0.0f},
+        .position = vec3f::make(0.0f, -0.5f, 0.0f),
     });
     RigidBody *crate = rigid_body::create(*world, {
         .shape = crate_shape,
         .object_layer = moving,
         .motion_type = MotionType::DYNAMIC,
-        .position = {0.0f, 0.5f, 0.0f},
+        .position = vec3f::make(0.0f, 0.5f, 0.0f),
     });
     world::step(*world, 1.0f / 60.0f);
 
@@ -93,11 +93,7 @@ int main() {
         Ref<Shape> blast = sphere::create({.radius = 2.0f});
         Filter filter = filter::create(world->settings.layers);
         CollideShapeCollector overlaps = collide_shape::create_collector(CollectorKind::ALL);
-        const Transformf at = {
-            .position = {1.0f, 1.0f, 0.0f},
-            .quaternion = {0.0f, 0.0f, 0.0f, 1.0f},
-            .scale = {1.0f, 1.0f, 1.0f},
-        };
+        const Transform at = transform::make(vec3f::make(1.0f, 1.0f, 0.0f), quatf::identity());
         query::collide_shape(*world, overlaps, collide_shape::default_settings(), blast, at, filter);
 
         for (uint32_t i = 0; i < overlaps.hits.length; i++) {
@@ -115,11 +111,8 @@ int main() {
         Filter only_moving = filter::create(world->settings.layers);
         filter::disable_object_layer(only_moving, world->settings.layers, not_moving);
         CastShapeCollector sweep = cast_shape::create_collector(CollectorKind::CLOSEST);
-        const Transformf start = {
-            .position = {-10.0f, 0.5f, 0.0f},
-            .quaternion = {0.0f, 0.0f, 0.0f, 1.0f},
-            .scale = {0.25f, 0.25f, 0.25f},
-        };
+        const Transform start =
+            transform::make(vec3f::make(-10.0f, 0.5f, 0.0f), quatf::identity(), vec3f::splat(0.25f));
         const Vec3f path = vec3f::make(20.0f, 0.0f, 0.0f);
         query::cast_shape(*world, sweep, cast_shape::default_settings(), blast, start, path, only_moving);
 

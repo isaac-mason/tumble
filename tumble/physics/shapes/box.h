@@ -11,13 +11,13 @@ TUMBLE_NAMESPACE_BEGIN
 
 struct BoxShape : Shape {
     static constexpr ShapeType TYPE = ShapeType::BOX;
-    Float3 half_extents;
+    Vec3f half_extents;
     float convex_radius;
     float density;
 };
 
 struct BoxShapeSettings {
-    Float3 half_extents;
+    Vec3f half_extents;
     float convex_radius = support::DEFAULT_CONVEX_RADIUS;
     float density = shapes::DEFAULT_SHAPE_DENSITY;
     int32_t material_id = -1;
@@ -44,17 +44,17 @@ void set_support(Support &out, const Shape *shape, SupportFunctionMode mode, Vec
  * to within floating point.
  */
 void collide_sphere_vs_box(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                           const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                           const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                           const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                           const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 /**
  * analytic ray vs box (slab test) against the sharp box of |scale| * half extents, the geometry the gjk ray casts against;
  * reports the entry behind treat_convex_as_solid, the exit when collide_with_backfaces_convex
  */
 void cast_ray_vs_box(CastRayCollector &collector, const CastRaySettings &settings, const Rayf &ray,
-                     const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform);
+                     const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform);
 void collide_point_vs_box(CollidePointCollector &collector, const CollidePointSettings &settings,
                           Vec3f point, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                          const Transformf &transform_b);
+                          const Transform &transform_b);
 
 ShapeDef def();
 

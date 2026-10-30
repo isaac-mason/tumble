@@ -206,10 +206,10 @@ static void voxels_supporting_face(SupportingFaceResult &io, Vec3f, const Shape 
 
 /** a dda walk from the ray's entry into the bounds, jumping over empty chunks whole */
 static bool cast_ray_dda(CastRayCollector &collector, const Rayf &ray, const Voxels &voxels,
-                         const SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
-    const Quatf inverse = quatf::conjugate(quatf::load(transform.quaternion));
-    const Vec3f scale = vec3f::abs(vec3f::load(transform.scale));
-    const Vec3f origin = vec3f::divide(vec3f::transform_quat(vec3f::subtract(ray.origin, vec3f::load(transform.position)), inverse), scale);
+                         const SubShapeIdBuilder &sub_shape_id, const Transform &transform) {
+    const Quatf inverse = quatf::conjugate(transform.quaternion);
+    const Vec3f scale = vec3f::abs(transform.scale);
+    const Vec3f origin = vec3f::divide(vec3f::transform_quat(vec3f::subtract(ray.origin, transform.position), inverse), scale);
     Vec3f direction = vec3f::divide(vec3f::transform_quat(ray.direction, inverse), scale);
     const float direction_length = vec3f::length(direction);
     if (direction_length < 1e-10f) return false;
@@ -317,15 +317,14 @@ static bool cast_ray_dda(CastRayCollector &collector, const Rayf &ray, const Vox
 }
 
 static void voxels_cast_ray(CastRayCollector &collector, const CastRaySettings &, const Rayf &ray,
-                            const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
+                            const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform) {
     if (!cast_ray_dda(collector, ray, voxels_of(shape), sub_shape_id, transform)) cast_ray::add_miss(collector);
 }
 
 static void voxels_collide_point(CollidePointCollector &collector, const CollidePointSettings &, Vec3f point,
-                                 const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
-    const Quatf inverse = quatf::conjugate(quatf::load(transform.quaternion));
-    const Vec3f local = vec3f::divide(vec3f::transform_quat(vec3f::subtract(point, vec3f::load(transform.position)), inverse),
-                                      vec3f::abs(vec3f::load(transform.scale)));
+                                 const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform) {
+    const Quatf inverse = quatf::conjugate(transform.quaternion);
+    const Vec3f local = vec3f::divide(vec3f::transform_quat(vec3f::subtract(point, transform.position), inverse), vec3f::abs(transform.scale));
     const float p[3] = {vec3f::x(local), vec3f::y(local), vec3f::z(local)};
     const int v[3] = {(int)floorf(p[0]), (int)floorf(p[1]), (int)floorf(p[2])};
     if (!get_voxel(voxels_of(shape), v[0], v[1], v[2])) {
@@ -345,18 +344,15 @@ static void voxels_collide_point(CollidePointCollector &collector, const Collide
 
 /** a convex shape against each filled voxel its bounds reach, each voxel a box */
 static void collide_voxels_vs_convex(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                                     const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                                     const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                                     const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                                     const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     const Voxels &voxels = voxels_of(shape_a);
-    const Quatf rotation_a = quatf::load(transform_a.quaternion);
-    const Vec3f position_a = vec3f::load(transform_a.position);
-    const Quatf inverse_a = quatf::conjugate(rotation_a);
-    const Vec3f position_b_in_a = vec3f::divide(vec3f::transform_quat(vec3f::subtract(vec3f::load(transform_b.position), position_a), inverse_a),
-                                                vec3f::abs(vec3f::load(transform_a.scale)));
-    const Quatf rotation_b_in_a = quatf::multiply(inverse_a, quatf::load(transform_b.quaternion));
-    const Vec3f scale_b = vec3f::load(transform_b.scale);
+    const Quatf inverse_a = quatf::conjugate(transform_a.quaternion);
+    const Vec3f position_b_in_a = vec3f::divide(vec3f::transform_quat(vec3f::subtract(transform_b.position, transform_a.position), inverse_a),
+                                                vec3f::abs(transform_a.scale));
+    const Quatf rotation_b_in_a = quatf::multiply(inverse_a, transform_b.quaternion);
     const AABox reach = aabox::expand_by_margin(
-        aabox::transform_mat4(aabox::load(shape_b->aabb), mat4f::from_rotation_translation_scale(rotation_b_in_a, position_b_in_a, scale_b)),
+        aabox::transform_mat4(shape_b->aabb, mat4f::from_rotation_translation_scale(rotation_b_in_a, position_b_in_a, transform_b.scale)),
         settings.max_separation_distance);
     const int min[3] = {(int)floorf(vec3f::x(reach.min)), (int)floorf(vec3f::y(reach.min)), (int)floorf(vec3f::z(reach.min))};
     const int max[3] = {(int)ceilf(vec3f::x(reach.max)), (int)ceilf(vec3f::y(reach.max)), (int)ceilf(vec3f::z(reach.max))};
@@ -368,10 +364,11 @@ static void collide_voxels_vs_convex(CollideShapeCollector &collector, const Col
                 const Vec3f b_from_centre = vec3f::subtract(position_b_in_a, centre);
                 // which face, by where b is from the voxel's centre: a guess, as the contact normal may differ a little
                 const VoxelFace face = face_from_normal(vec3f::x(b_from_centre), vec3f::y(b_from_centre), vec3f::z(b_from_centre));
-                const Mat4f box_in_world = mat4f::from_rotation_translation(rotation_a, vec3f::add(position_a, vec3f::transform_quat(centre, rotation_a)));
+                const Vec3f box_position = vec3f::add(transform_a.position, vec3f::transform_quat(centre, transform_a.quaternion));
+                const Mat4f box_in_world = mat4f::from_rotation_translation(transform_a.quaternion, box_position);
                 const Mat4f b_in_box = mat4f::from_rotation_translation(rotation_b_in_a, b_from_centre);
                 convex::collide_convex_vs_convex_local(collector, settings, state.voxel_box, with_face(sub_shape_id_a, face), shape_b,
-                                                       sub_shape_id_b.value, b_in_box, box_in_world, vec3f::make(1.0f, 1.0f, 1.0f), scale_b);
+                                                       sub_shape_id_b.value, b_in_box, box_in_world, vec3f::splat(1.0f), transform_b.scale);
                 if (collide_shape::should_early_out(collector)) return;
             }
         }
@@ -409,9 +406,9 @@ static Shape *create_voxel_shape(Voxels *voxels) {
     VoxelsShape *shape = shapes::allocate<VoxelsShape>();
     shape->voxels = voxels;
     const int *bounds = voxels->chunk_bounds;
-    shape->aabb = {{(float)(bounds[0] * CHUNK_SIZE), (float)(bounds[1] * CHUNK_SIZE), (float)(bounds[2] * CHUNK_SIZE)},
-                   {(float)(bounds[3] * CHUNK_SIZE), (float)(bounds[4] * CHUNK_SIZE), (float)(bounds[5] * CHUNK_SIZE)}};
-    shape->center_of_mass = {0.0f, 0.0f, 0.0f};
+    shape->aabb = aabox::make(vec3f::make((float)(bounds[0] * CHUNK_SIZE), (float)(bounds[1] * CHUNK_SIZE), (float)(bounds[2] * CHUNK_SIZE)),
+                              vec3f::make((float)(bounds[3] * CHUNK_SIZE), (float)(bounds[4] * CHUNK_SIZE), (float)(bounds[5] * CHUNK_SIZE)));
+    shape->center_of_mass = vec3f::zero();
     shape->volume = 0.0f;
     shape->material_id = -1;
     return shape;
@@ -609,8 +606,8 @@ static void edit(App &app, bool build) {
         }
     }
     const float reach = (float)(half + 1);
-    const Box3f around = {{(float)centre[0] - reach, (float)centre[1] - reach, (float)centre[2] - reach},
-                          {(float)centre[0] + reach, (float)centre[1] + reach, (float)centre[2] + reach}};
+    const Vec3f middle = vec3f::make((float)centre[0], (float)centre[1], (float)centre[2]);
+    const AABox around = aabox::make(vec3f::subtract(middle, vec3f::splat(reach)), vec3f::add(middle, vec3f::splat(reach)));
     BodyVisitor visitor = body_visitor::create(wake_body, app.world);
     broadphase::intersect_aabb(app.world->broadphase, app.world->bodies, around, state.everything, visitor);
 }
@@ -655,7 +652,7 @@ static void draw_brush(DrawList &list) {
 
 static void make_kinds(App &app) {
     state.kinds[0] = {app::keep(app, sphere::create({.radius = 0.5f})), hex(0xff6b6b)};
-    state.kinds[1] = {app::keep(app, box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.05f})), hex(0x4ecdc4)};
+    state.kinds[1] = {app::keep(app, box::create({.half_extents = vec3f::splat(0.5f), .convex_radius = 0.05f})), hex(0x4ecdc4)};
     state.kinds[2] = {app::keep(app, capsule::create({.half_height_of_cylinder = 1.0f, .radius = 1.0f})), hex(0xdfe6e9)};
 }
 
@@ -665,9 +662,11 @@ static RigidBody *spawn(App &app, float restitution) {
     settings.shape = kind.shape;
     settings.object_layer = state.layers.moving;
     settings.motion_type = MotionType::DYNAMIC;
-    settings.position = {seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA), SPAWN_HEIGHT, seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA)};
+    const float x = seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA);
+    const float z = seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA);
+    settings.position = vec3f::make(x, SPAWN_HEIGHT, z);
     const Float3 axis = {seeded::next(state.random) - 0.5f, seeded::next(state.random) - 0.5f, seeded::next(state.random) - 0.5f};
-    settings.quaternion = vec::quat_axis_angle(axis, seeded::next(state.random) * 2.0f * PI);
+    settings.quaternion = quatf::set_axis_angle(vec3f::normalize(vec3f::load(axis)), seeded::next(state.random) * 2.0f * PI);
     settings.restitution = restitution;
     settings.friction = 0.5f;
     RigidBody *body = rigid_body::create(*app.world, settings);
@@ -700,7 +699,7 @@ static void init(App &app) {
     make_terrain();
     // the example's own: app::keep frees built-in types alone
     state.voxel_shape = create_voxel_shape(&state.voxels);
-    state.voxel_box = app::keep(app, box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.05f}));
+    state.voxel_box = app::keep(app, box::create({.half_extents = vec3f::splat(0.5f), .convex_radius = 0.05f}));
     RigidBodySettings terrain;
     terrain.shape = state.voxel_shape;
     terrain.object_layer = state.layers.not_moving;

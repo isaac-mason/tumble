@@ -22,17 +22,17 @@ static const ShapeType ALL_TYPES[] = {ShapeType::SPHERE,     ShapeType::BOX,    
 static const SubShapeIdBuilder NO_SUB_SHAPE = {sub_shape::EMPTY_SUB_SHAPE_ID, 0};
 
 static void collide(CollideShapeCollector &collector, const CollideShapeSettings &settings, const Shape *a,
-                    const Transformf &transform_a, const Shape *b, const Transformf &transform_b) {
+                    const Transform &transform_a, const Shape *b, const Transform &transform_b) {
     collide_fn(a->type, b->type)(collector, settings, a, NO_SUB_SHAPE, transform_a, b, NO_SUB_SHAPE, transform_b);
 }
 
 static void ray(CastRayCollector &collector, const CastRaySettings &settings, const Float3 &origin, const Float3 &direction,
-                float length, const Shape *shape, const Transformf &transform) {
+                float length, const Shape *shape, const Transform &transform) {
     const Rayf r = {vec3f::load(origin), unit(vec3f::load(direction)), length};
     def_of(shape).cast_ray(collector, settings, r, shape, NO_SUB_SHAPE, transform);
 }
 
-static bool point_hits(const Float3 &point, const Shape *shape, const Transformf &transform) {
+static bool point_hits(const Float3 &point, const Shape *shape, const Transform &transform) {
     CollidePointCollector collector = collide_point::create_collector(CollectorKind::ALL);
     def_of(shape).collide_point(collector, collide_point::default_settings(), vec3f::load(point), shape, NO_SUB_SHAPE, transform);
     const bool hit = collector.hits.length == 1;
@@ -77,7 +77,7 @@ void test_dispatch_empty_has_no_pairs(TestCtx &ctx) {
 void test_dispatch_defs(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> b = box::create({.half_extents = {1, 2, 3}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::make(1, 2, 3)});
     Ref<Shape> c = capsule::create({.half_height_of_cylinder = 1.0f, .radius = 0.5f});
     Ref<Shape> y = cylinder::create({.half_height = 1.0f, .radius = 0.5f});
     Ref<Shape> e = empty::create();
@@ -116,8 +116,8 @@ void test_dispatch_defs(TestCtx &ctx) {
 }
 
 static void marker(CollideShapeCollector &, const CollideShapeSettings &, const Shape *,
-                   const SubShapeIdBuilder &, const Transformf &, const Shape *, const SubShapeIdBuilder &,
-                   const Transformf &) {}
+                   const SubShapeIdBuilder &, const Transform &, const Shape *, const SubShapeIdBuilder &,
+                   const Transform &) {}
 
 void test_dispatch_init_is_idempotent(TestCtx &ctx) {
     dispatch::init();
@@ -178,7 +178,7 @@ void test_dispatch_sphere_vs_sphere(TestCtx &ctx) {
 void test_dispatch_sphere_vs_box(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 0.5f, .material_id = 2});
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}, .material_id = 5});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f), .material_id = 5});
     CollideShapeSettings settings = collide_shape::default_settings();
     settings.collect_faces = true;
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
@@ -243,8 +243,8 @@ void test_dispatch_sphere_vs_box(TestCtx &ctx) {
 
 void test_dispatch_box_vs_box(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> a = box::create({.half_extents = {1, 1, 1}});
-    Ref<Shape> b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> a = box::create({.half_extents = vec3f::splat(1.0f)});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(0.5f)});
 
     // b 0.25 into a's +y face, past the convex radii so the cores overlap and epa runs, through the generic convex handler
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
@@ -262,11 +262,11 @@ void test_dispatch_box_vs_box(TestCtx &ctx) {
 void test_dispatch_cast_sphere_onto_box(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 0.5f});
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
 
     // down from y = 5 by 10: the sphere meets the +y face with its centre at 1.5, fraction 3.5 / 10
     CastShapeCollector collector = cast_shape::create_collector(CollectorKind::CLOSEST);
-    const Transformf from = pose({0.2f, 5, -0.3f});
+    const Transform from = pose({0.2f, 5, -0.3f});
     cast_fn(ShapeType::SPHERE, ShapeType::BOX)(collector, cast_shape::default_settings(), s, NO_SUB_SHAPE, from, vec3f::make(0, -10, 0), b, NO_SUB_SHAPE,
                                      pose({0, 0, 0}));
     CHECK(ctx, collector.has_hit);
@@ -280,7 +280,7 @@ void test_dispatch_cast_sphere_onto_box(TestCtx &ctx) {
 
 void test_dispatch_ray_vs_box(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> b = box::create({.half_extents = {1, 2, 3}, .material_id = 4});
+    Ref<Shape> b = box::create({.half_extents = vec3f::make(1, 2, 3), .material_id = 4});
     const CastRaySettings settings = cast_ray::default_settings();
     CastRayCollector collector = cast_ray::create_collector(CollectorKind::CLOSEST);
 
@@ -336,9 +336,9 @@ void test_dispatch_ray_vs_box(TestCtx &ctx) {
 
 void test_dispatch_ray_vs_box_back_faces(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> b = box::create({.half_extents = {1, 2, 3}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::make(1, 2, 3)});
     // scaled by 2 along x and moved: x from 8 to 12
-    const Transformf transform = pose({10, 0, 0}, {0, 0, 0, 1}, {2, 1, 1});
+    const Transform transform = pose({10, 0, 0}, {0, 0, 0, 1}, {2, 1, 1});
     CastRayCollector all = cast_ray::create_collector(CollectorKind::ALL);
 
     // solid with convex back faces: the entry at 3 of 10 from x = 5 and the exit, the far face x = 12, at 7 of 10
@@ -384,10 +384,10 @@ void test_dispatch_ray_vs_box_back_faces(TestCtx &ctx) {
 void test_dispatch_point_vs_sphere_and_box(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f, .material_id = 6});
-    Ref<Shape> b = box::create({.half_extents = {1, 2, 3}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::make(1, 2, 3)});
 
     // radius 1 scaled by 2 about (1, 2, 3)
-    const Transformf transform_s = pose({1, 2, 3}, stored_axis_angle(vec3f::make(1, 0, 0), 0.4f), {2, 2, 2});
+    const Transform transform_s = pose({1, 2, 3}, stored_axis_angle(vec3f::make(1, 0, 0), 0.4f), {2, 2, 2});
     const Vec3f out = unit(vec3f::make(1, 1, -1));
     CHECK(ctx, point_hits({1 + vec3f::x(out) * 1.9f, 2 + vec3f::y(out) * 1.9f, 3 + vec3f::z(out) * 1.9f}, s, transform_s));
     CHECK(ctx, !point_hits({1 + vec3f::x(out) * 2.1f, 2 + vec3f::y(out) * 2.1f, 3 + vec3f::z(out) * 2.1f}, s, transform_s));
@@ -396,7 +396,7 @@ void test_dispatch_point_vs_sphere_and_box(TestCtx &ctx) {
     CHECK(ctx, collector.hits.length == 1 && shapes::get_shape_material(s, collector.hits[0].sub_shape_id_b) == 6);
 
     // the box turned a quarter about y: its z extent 3 lies along x
-    const Transformf transform_b = pose({0, 0, 0}, stored_axis_angle(vec3f::make(0, 1, 0), scalar::PI * 0.5f));
+    const Transform transform_b = pose({0, 0, 0}, stored_axis_angle(vec3f::make(0, 1, 0), scalar::PI * 0.5f));
     CHECK(ctx, point_hits({2.9f, 1.9f, 0.9f}, b, transform_b));
     CHECK(ctx, !point_hits({0, 0, 1.1f}, b, transform_b));
     CHECK(ctx, !point_hits({0, 2.1f, 0}, b, transform_b));

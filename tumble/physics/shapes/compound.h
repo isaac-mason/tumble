@@ -3,6 +3,8 @@
 #include <stdint.h>
 
 #include "tumble/config.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/vec3f.h"
 #include "tumble/physics/shapes/shapes.h"
 #include "tumble/util/collections.h"
 
@@ -35,8 +37,8 @@ struct CompoundShapeSettings {
 
     /** a child as the settings give it; the compound holds the shape */
     struct Child {
-        Float3 position;
-        Float4 quaternion;
+        Vec3f position;
+        Quatf quaternion;
         Shape *shape;
     };
 
@@ -48,8 +50,14 @@ struct CompoundShapeSettings {
 
 namespace compound {
 
-/** the settings' child as the compound keeps it, holding its shape */
-inline CompoundShape::Child held_child(const CompoundShapeSettings::Child &child) { return {child.position, child.quaternion, child.shape}; }
+/** the settings' child as the compound keeps it, packed, holding its shape */
+inline CompoundShape::Child held_child(const CompoundShapeSettings::Child &child) {
+    CompoundShape::Child out;
+    vec3f::store(out.position, child.position);
+    quatf::store(out.quaternion, child.quaternion);
+    out.shape = child.shape;
+    return out;
+}
 
 }
 namespace compound {
@@ -61,7 +69,7 @@ void update(Shape *shape);
 /** the child list of a compound or a static compound */
 const collections::Array<CompoundShape::Child> &children_of(const Shape *shape);
 /** a child's world transform: the parent's scale applies to the child's position and passes on unchanged */
-void child_transform(Transformf &out, const Transformf &parent, const CompoundShape::Child &child);
+void child_transform(Transform &out, const Transform &parent, const CompoundShape::Child &child);
 
 /** the children's mass properties summed about the compound's centre of mass */
 void compute_mass_properties(MassProperties &out, const Shape *shape);
@@ -75,25 +83,25 @@ void get_leaf_shape(GetLeafShapeResult &out, const Shape *shape, SubShapeId sub_
 void get_sub_shape_transformed_shape(GetSubShapeTransformedShapeResult &out, const Shape *shape, SubShapeId sub_shape_id);
 
 void cast_ray_vs_compound(CastRayCollector &collector, const CastRaySettings &settings, const Rayf &ray,
-                          const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform);
+                          const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform);
 void collide_point_vs_compound(CollidePointCollector &collector, const CollidePointSettings &settings,
                                Vec3f point, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                               const Transformf &transform_b);
+                               const Transform &transform_b);
 
 /** each of a's children against b, through the collide table */
 void collide_compound_vs_shape(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                               const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                               const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                               const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                               const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 /** a against each of b's children, through the collide table */
 void collide_shape_vs_compound(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                               const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                               const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                               const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                               const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 void cast_compound_vs_shape(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *shape_a,
-                            const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
-                            const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                            const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a, Vec3f displacement_a,
+                            const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 void cast_shape_vs_compound(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *shape_a,
-                            const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
-                            const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                            const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a, Vec3f displacement_a,
+                            const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 
 ShapeDef def();
 

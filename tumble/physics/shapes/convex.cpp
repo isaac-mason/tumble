@@ -27,15 +27,15 @@ int32_t get_convex_material(const Shape *shape, SubShapeId sub_shape_id) {
 static Support cast_ray_support;
 
 void cast_ray_vs_convex(CastRayCollector &collector, const CastRaySettings &settings, const Rayf &ray,
-                        const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
-    shapes::set_shape_support(cast_ray_support, shape, SupportFunctionMode::INCLUDE_CONVEX_RADIUS, vec3f::load(transform.scale));
+                        const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform) {
+    shapes::set_shape_support(cast_ray_support, shape, SupportFunctionMode::INCLUDE_CONVEX_RADIUS, transform.scale);
 
     // transform ray from world space to shape local space
     // first, compute inverse quaternion
-    const Quatf inv_quat = quatf::conjugate(quatf::load(transform.quaternion));
+    const Quatf inv_quat = quatf::conjugate(transform.quaternion);
 
     // transform ray origin: (origin - position) rotated by inverse quaternion
-    Vec3f ray_origin_local = vec3f::subtract(ray.origin, vec3f::load(transform.position));
+    Vec3f ray_origin_local = vec3f::subtract(ray.origin, transform.position);
     ray_origin_local = vec3f::transform_quat(ray_origin_local, inv_quat);
 
     // transform ray direction: direction rotated by inverse quaternion
@@ -95,14 +95,14 @@ static Support collide_point_shape_support;
 
 void collide_point_vs_convex(CollidePointCollector &collector, const CollidePointSettings &settings,
                              Vec3f point, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                             const Transformf &transform_b) {
+                             const Transform &transform_b) {
     // transform point to shape's local space: apply inverse rotation
-    const Quatf inv_quat_b = quatf::conjugate(quatf::load(transform_b.quaternion));
-    Vec3f local_point = vec3f::subtract(point, vec3f::load(transform_b.position));
+    const Quatf inv_quat_b = quatf::conjugate(transform_b.quaternion);
+    Vec3f local_point = vec3f::subtract(point, transform_b.position);
     local_point = vec3f::transform_quat(local_point, inv_quat_b);
 
     // early-out: aabb test
-    const AABox scaled_aabb = aabox::scale(aabox::load(shape_b->aabb), vec3f::load(transform_b.scale));
+    const AABox scaled_aabb = aabox::scale(shape_b->aabb, transform_b.scale);
     if (!aabox::contains_point(scaled_aabb, local_point)) {
         return;
     }
@@ -111,7 +111,7 @@ void collide_point_vs_convex(CollidePointCollector &collector, const CollidePoin
     support::set_point_support(collide_point_point_support, local_point);
 
     // get shape support function with scale applied
-    shapes::set_shape_support(collide_point_shape_support, shape_b, SupportFunctionMode::INCLUDE_CONVEX_RADIUS, vec3f::load(transform_b.scale));
+    shapes::set_shape_support(collide_point_shape_support, shape_b, SupportFunctionMode::INCLUDE_CONVEX_RADIUS, transform_b.scale);
 
     // use point position as initial separating axis guess
     Vec3f initial_direction = local_point;
@@ -144,31 +144,31 @@ static Support collide_support_b;
 static PenetrationDepth collide_penetration_depth;
 
 void collide_convex_vs_convex(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                              const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                              const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                              const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                              const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     // to transform shape b into a's local space, we need to compute:
     // 1. the relative rotation: inv(quat_a) * quat_b
     // 2. the relative position: inv(quat_a) * (pos_b - pos_a)
 
     // compute the conjugate (inverse) of quat_a
-    const Quatf inv_quat_a = quatf::conjugate(quatf::load(transform_a.quaternion));
+    const Quatf inv_quat_a = quatf::conjugate(transform_a.quaternion);
 
     // compute relative rotation: inv(quat_a) * quat_b
-    const Quatf relative_rot = quatf::multiply(inv_quat_a, quatf::load(transform_b.quaternion));
+    const Quatf relative_rot = quatf::multiply(inv_quat_a, transform_b.quaternion);
 
     // compute the relative position vector: pos_b - pos_a, rotated by inv(quat_a) to bring it into a's local space
-    const Vec3f relative_pos = vec3f::subtract(vec3f::load(transform_b.position), vec3f::load(transform_a.position));
+    const Vec3f relative_pos = vec3f::subtract(transform_b.position, transform_a.position);
     const Vec3f rotated_relative_pos = vec3f::transform_quat(relative_pos, inv_quat_a);
 
     // the transformation matrix for a in world space (rotation + translation only, no scale)
-    Mat4f transform_a_in_world = mat4f::from_rotation_translation(quatf::load(transform_a.quaternion), vec3f::load(transform_a.position));
+    Mat4f transform_a_in_world = mat4f::from_rotation_translation(transform_a.quaternion, transform_a.position);
 
     // the transformation matrix for b relative to a's local space
     Mat4f transform_b_in_a = mat4f::from_rotation_translation(relative_rot, rotated_relative_pos);
 
     // delegate to local-space collision function
     collide_convex_vs_convex_local(collector, settings, shape_a, sub_shape_id_a.value, shape_b, sub_shape_id_b.value, transform_b_in_a,
-                                   transform_a_in_world, vec3f::load(transform_a.scale), vec3f::load(transform_b.scale));
+                                   transform_a_in_world, transform_a.scale, transform_b.scale);
 }
 
 void collide_convex_vs_convex_local(CollideShapeCollector &collector, const CollideShapeSettings &settings,
@@ -302,15 +302,15 @@ static Support cast_support_a;
 static Support cast_support_b;
 
 void cast_convex_vs_convex(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *shape_a,
-                           const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
-                           const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                           const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a, Vec3f displacement_a,
+                           const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     // compute inverse of b's quaternion for transforming displacement
-    const Quatf inverse_quaternion_b = quatf::conjugate(quatf::load(transform_b.quaternion));
+    const Quatf inverse_quaternion_b = quatf::conjugate(transform_b.quaternion);
 
     // transform a into b's local space using matrices
     // cast_transform = inverse(target_transform) * transform_a
-    const Mat4f transform_a_mat = mat4f::from_rotation_translation(quatf::load(transform_a.quaternion), vec3f::load(transform_a.position));
-    Mat4f target_transform = mat4f::from_rotation_translation(quatf::load(transform_b.quaternion), vec3f::load(transform_b.position));
+    const Mat4f transform_a_mat = mat4f::from_rotation_translation(transform_a.quaternion, transform_a.position);
+    Mat4f target_transform = mat4f::from_rotation_translation(transform_b.quaternion, transform_b.position);
     Mat4f inv_target_transform, cast_transform;
     mat4f::invert(inv_target_transform, target_transform);
 
@@ -322,7 +322,7 @@ void cast_convex_vs_convex(CastShapeCollector &collector, const CastShapeSetting
 
     // delegate to local-space function with world space info for contact points
     cast_convex_vs_convex_local(collector, settings, shape_a, sub_shape_id_a.value, shape_b, sub_shape_id_b.value, cast_transform,
-                                vec3f::load(transform_a.scale), displacement_in_b, vec3f::load(transform_b.scale), target_transform);
+                                transform_a.scale, displacement_in_b, transform_b.scale, target_transform);
 }
 
 void cast_convex_vs_convex_local(CastShapeCollector &collector, const CastShapeSettings &settings,

@@ -22,7 +22,7 @@ void test_world_create_copies_settings_and_destroy_frees(TestCtx &ctx) {
     // the defaults, the tuned value, and the layers, copied: the settings were released before any of this
     CHECK(ctx, world->settings.solver.velocity_iterations == 7);
     CHECK(ctx, world->settings.solver.position_iterations == 2);
-    CHECK(ctx, world->settings.gravity.y == -9.81f && world->settings.gravity_enabled);
+    CHECK(ctx, vec3f::y(world->settings.gravity) == -9.81f && world->settings.gravity_enabled);
     CHECK(ctx, world->settings.narrowphase.speculative_contact_distance == 0.02f);
     CHECK(ctx, world->settings.narrowphase.internal_edge_removal_vertex_tolerance_sq == 1e-8f);
     CHECK(ctx, world->settings.layers.object_layers == 2);
@@ -32,8 +32,8 @@ void test_world_create_copies_settings_and_destroy_frees(TestCtx &ctx) {
     CHECK(ctx, world->previous_time_step == 0.0f && world->delta_time == 0.0f);
 
     // bodies, contacts, constraints and events in use, then every part freed
-    Ref<Shape> floor_shape = box::create({.half_extents = {5.0f, 0.5f, 5.0f}});
-    Ref<Shape> box_shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> floor_shape = box::create({.half_extents = vec3f::make(5.0f, 0.5f, 5.0f)});
+    Ref<Shape> box_shape = box::create({.half_extents = vec3f::splat(0.5f)});
     rigid_body::create(*world, body_settings(floor_shape, not_moving, MotionType::STATIC, {0.0f, -0.5f, 0.0f}));
     rigid_body::create(*world, body_settings(box_shape, moving, MotionType::DYNAMIC, {0.0f, 0.5f, 0.0f}));
     for (uint32_t i = 0; i < 5; i++) step_world(*world);
@@ -158,11 +158,11 @@ void test_world_one_settings_makes_two_worlds(TestCtx &ctx) {
 static float first_contact_friction(TestCtx &ctx, const WorldMaterial *materials, uint32_t count) {
     WorldScene scene = make_world_scene(ctx);
     world::set_materials(*scene.world, materials, count);
-    Ref<Shape> floor_shape = box::create({.half_extents = {10.0f, 0.5f, 10.0f}, .material_id = 0});
+    Ref<Shape> floor_shape = box::create({.half_extents = vec3f::make(10.0f, 0.5f, 10.0f), .material_id = 0});
     RigidBodySettings floor = body_settings(floor_shape, scene.not_moving, MotionType::STATIC, {0.0f, -0.5f, 0.0f});
     floor.friction = 0.2f;
     rigid_body::create(*scene.world, floor);
-    Ref<Shape> box_shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> box_shape = box::create({.half_extents = vec3f::splat(0.5f)});
     RigidBodySettings box = body_settings(box_shape, scene.moving, MotionType::DYNAMIC, {0.0f, 0.5f, 0.0f});
     box.friction = 0.25f;
     rigid_body::create(*scene.world, box);

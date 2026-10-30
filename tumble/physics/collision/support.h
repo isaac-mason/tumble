@@ -72,13 +72,13 @@ struct Support {
     Vec3f point;
     /** convex vertex set (a hull, or a borrowed polygon face): the vertex with the greatest dot against the direction */
     struct {
-        /** flat xyz vertices scanned by the evaluator; a borrow valid for the current pair */
-        const float *vertices;
+        /** the vertices scanned by the evaluator; a borrow valid for the current pair */
+        const Vec3f *vertices;
         uint32_t vertex_count;
         /** per-vertex output scale: the winning vertex is multiplied by it (uniform-scale fast path); 1 when `vertices` are baked */
         float output_scale;
-        /** inline flat xyz buffer `vertices` points at on the non-uniform or mirrored scale slow path */
-        float scratch[support::MAX_HULL_POINTS * 3];
+        /** what `vertices` points at for a copied polygon face, and on the non-uniform or mirrored scale slow path */
+        Vec3f scratch[support::MAX_HULL_POINTS];
         /** borrowed csr neighbour prefix offsets (shape-owned, vertex_count + 1 long); null means brute scan */
         const uint32_t *neighbors_start;
         /** borrowed csr flat neighbour indices, indexed through neighbors_start */
@@ -138,13 +138,12 @@ void set_polygon_support(Support &out, const Vec3f *vertices, uint32_t vertex_co
 // the hull geometry convex_hull's create and fill read (support.cpp). per point, `point_num_faces`
 // (1..3) neighbouring faces listed 3 per point in `point_faces` (-1 unused), indexing `planes`.
 
-/** the convex-radius-shrunk vertices, unscaled, into `dst` as flat xyz (grown to fit). */
-void compute_shrunk_hull_points(collections::Array<float> &dst, uint32_t num_points, const float *point_positions, const uint32_t *point_num_faces,
-                                const int32_t *point_faces, const Plane3f *planes, float convex_radius);
-/** the shrunk vertices at a non-uniform or mirrored `scale` into `dst` (num_points * 3 long): the hull fill's slow path into `hull.scratch`. */
-void compute_scaled_shrunk_hull_points(float *dst, uint32_t num_points, const float *point_positions,
-                                       const uint32_t *point_num_faces, const int32_t *point_faces, const Plane3f *planes,
-                                       float convex_radius, Vec3f scale);
+/** the convex-radius-shrunk vertices, unscaled, into `dst` (grown to fit). */
+void compute_shrunk_hull_points(collections::Array<Vec3f> &dst, uint32_t num_points, const Vec3f *points, const uint32_t *point_num_faces,
+                                const int32_t *point_faces, const Plane *planes, float convex_radius);
+/** the shrunk vertices at a non-uniform or mirrored `scale` into `dst` (num_points long): the hull fill's slow path into `hull.scratch`. */
+void compute_scaled_shrunk_hull_points(Vec3f *dst, uint32_t num_points, const Vec3f *points, const uint32_t *point_num_faces,
+                                       const int32_t *point_faces, const Plane *planes, float convex_radius, Vec3f scale);
 /** a convex radius at `scale`: scaled by the smallest absolute component. */
 float scale_convex_radius(float radius, Vec3f scale);
 

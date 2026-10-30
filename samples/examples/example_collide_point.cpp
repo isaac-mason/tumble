@@ -34,14 +34,14 @@ static void init(App &app) {
     WorldSettings settings = world_settings::create();
     state.layer = world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
     world_settings::enable_collision(settings, state.layer, state.layer);
-    settings.gravity = {0.0f, 0.0f, 0.0f};
+    settings.gravity = vec3f::zero();
     app.world = world::create(settings);
 
     RigidBodySettings box_settings;
-    box_settings.shape = app::keep(app, box::create({.half_extents = {2.0f, 2.0f, 2.0f}}));
+    box_settings.shape = app::keep(app, box::create({.half_extents = vec3f::splat(2.0f)}));
     box_settings.object_layer = state.layer;
     box_settings.motion_type = MotionType::STATIC;
-    box_settings.position = {0.0f, 2.0f, 0.0f};
+    box_settings.position = vec3f::make(0.0f, 2.0f, 0.0f);
     rigid_body::create(*app.world, box_settings);
 
     state.point_shape = app::keep(app, sphere::create({.radius = 0.2f}));

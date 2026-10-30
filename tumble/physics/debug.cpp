@@ -1,7 +1,9 @@
 #include "tumble/physics/debug.h"
 
+#include "tumble/math/plane3f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
+#include "tumble/math/transform.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/body/bodies.h"
 #include "tumble/physics/body/motion_type.h"
@@ -158,28 +160,28 @@ static void perpendicular_axes(Vec3f &out_u, Vec3f &out_v, Vec3f n) {
 }
 
 /** a local point into world space: position + q * (scale * local); the scale is the shape's local space, as a scaled shape's */
-static Vec3f &transform_point(Vec3f &out, Vec3f local, const Transformf &transform) {
-    out = vec3f::multiply(local, vec3f::load(transform.scale));
-    out = vec3f::transform_quat(out, quatf::load(transform.quaternion));
-    return (out = vec3f::add(out, vec3f::load(transform.position)));
+static Vec3f &transform_point(Vec3f &out, Vec3f local, const Transform &transform) {
+    out = vec3f::multiply(local, transform.scale);
+    out = vec3f::transform_quat(out, transform.quaternion);
+    return (out = vec3f::add(out, transform.position));
 }
 
-static void draw_shape(DebugDraw &out, const Shape *shape, const Transformf &transform, Vec3f color);
+static void draw_shape(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color);
 
-static void draw_sphere(DebugDraw &out, const Shape *shape, const Transformf &transform, Vec3f color) {
+static void draw_sphere(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
     // sphere only supports uniform scaling
-    const float radius = shapes::as<SphereShape>(shape).radius * transform.scale.x;
+    const float radius = shapes::as<SphereShape>(shape).radius * vec3f::x(transform.scale);
     const float a =1.0f / scalar::sqrt(2.0f);
     const Vec3f normals[5] = {vec3f::make(1.0f, 0.0f, 0.0f), vec3f::make(0.0f, 1.0f, 0.0f), vec3f::make(0.0f, 0.0f, 1.0f), vec3f::make(a, 0.0f, a), vec3f::make(a, 0.0f, -a)};
     for (uint32_t i = 0; i < 5; i++) {
         Vec3f u, v;
         perpendicular_axes(u, v, normals[i]);
-        push_circle(out, vec3f::load(transform.position), u, v, radius, 32, color);
+        push_circle(out, transform.position, u, v, radius, 32, color);
     }
 }
 
 /** the 12 edges of the local box from lo to hi */
-static void draw_local_box(DebugDraw &out, Vec3f lo, Vec3f hi, const Transformf &transform, Vec3f color) {
+static void draw_local_box(DebugDraw &out, Vec3f lo, Vec3f hi, const Transform &transform, Vec3f color) {
     const Vec3f corners[8] = {
         vec3f::make(vec3f::x(lo), vec3f::y(lo), vec3f::z(lo)), vec3f::make(vec3f::x(hi), vec3f::y(lo), vec3f::z(lo)), vec3f::make(vec3f::x(hi), vec3f::y(lo), vec3f::z(hi)), vec3f::make(vec3f::x(lo), vec3f::y(lo), vec3f::z(hi)),
         vec3f::make(vec3f::x(lo), vec3f::y(hi), vec3f::z(lo)), vec3f::make(vec3f::x(hi), vec3f::y(hi), vec3f::z(lo)), vec3f::make(vec3f::x(hi), vec3f::y(hi), vec3f::z(hi)), vec3f::make(vec3f::x(lo), vec3f::y(hi), vec3f::z(hi)),
@@ -194,18 +196,18 @@ static void draw_local_box(DebugDraw &out, Vec3f lo, Vec3f hi, const Transformf 
     for (uint32_t i = 0; i < 12; i++) push_line(out, world_corners[EDGES[i][0]], world_corners[EDGES[i][1]], color);
 }
 
-static void draw_box(DebugDraw &out, const Shape *shape, const Transformf &transform, Vec3f color) {
-    const Vec3f h = vec3f::load(shapes::as<BoxShape>(shape).half_extents);
+static void draw_box(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
+    const Vec3f h = shapes::as<BoxShape>(shape).half_extents;
     draw_local_box(out, vec3f::negate(h), h, transform, color);
 }
 
-static void draw_capsule(DebugDraw &out, const Shape *shape, const Transformf &transform, Vec3f color) {
+static void draw_capsule(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
     // capsule only supports uniform scaling
     const CapsuleShape &capsule = shapes::as<CapsuleShape>(shape);
-    const float radius = capsule.radius * transform.scale.x;
-    const float half_height = capsule.half_height_of_cylinder * transform.scale.x;
-    const Vec3f position = vec3f::load(transform.position);
-    Vec3f axis = vec3f::transform_quat(vec3f::make(0.0f, 1.0f, 0.0f), quatf::load(transform.quaternion));
+    const float radius = capsule.radius * vec3f::x(transform.scale);
+    const float half_height = capsule.half_height_of_cylinder * vec3f::x(transform.scale);
+    const Vec3f position = transform.position;
+    Vec3f axis = vec3f::transform_quat(vec3f::make(0.0f, 1.0f, 0.0f), transform.quaternion);
     Vec3f u, v;
     perpendicular_axes(u, v, axis);
     const float total_half_height = half_height + radius;
@@ -245,16 +247,16 @@ static void draw_capsule(DebugDraw &out, const Shape *shape, const Transformf &t
     }
 }
 
-static void draw_cylinder(DebugDraw &out, const Shape *shape, const Transformf &transform, Vec3f color) {
+static void draw_cylinder(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
     // cylinder scales radius by x/z (uniform) and half-height by y
     const CylinderShape &cylinder = shapes::as<CylinderShape>(shape);
-    const float radius = cylinder.radius * transform.scale.x;
-    const float half_height = cylinder.half_height * transform.scale.y;
-    Vec3f axis = vec3f::transform_quat(vec3f::make(0.0f, 1.0f, 0.0f), quatf::load(transform.quaternion));
+    const float radius = cylinder.radius * vec3f::x(transform.scale);
+    const float half_height = cylinder.half_height * vec3f::y(transform.scale);
+    Vec3f axis = vec3f::transform_quat(vec3f::make(0.0f, 1.0f, 0.0f), transform.quaternion);
     Vec3f u, v;
     perpendicular_axes(u, v, axis);
-    Vec3f top = vec3f::scale_and_add(vec3f::load(transform.position), axis, half_height);
-    Vec3f bottom = vec3f::scale_and_add(vec3f::load(transform.position), axis, -half_height);
+    Vec3f top = vec3f::scale_and_add(transform.position, axis, half_height);
+    Vec3f bottom = vec3f::scale_and_add(transform.position, axis, -half_height);
     push_circle(out, top, u, v, radius, 32, color);
     push_circle(out, bottom, u, v, radius, 32, color);
     Vec3f sides[4];
@@ -269,15 +271,15 @@ static void draw_cylinder(DebugDraw &out, const Shape *shape, const Transformf &
     }
 }
 
-static void draw_plane(DebugDraw &out, const Shape *shape, const Transformf &transform, Vec3f color) {
+static void draw_plane(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
     // infinite plane: draw a grid (sized by half_extent) in the plane's local frame, then transform every point into
     // world space by the node transform
     const PlaneShape &plane = shapes::as<PlaneShape>(shape);
-    const Vec3f n = vec3f::load(plane.plane.normal);
+    const Vec3f n = plane3f::normal(plane.plane);
     const float size = plane.half_extent;
     Vec3f u, v;
     perpendicular_axes(u, v, n);
-    const Vec3f origin = vec3f::scale(n, -plane.plane.constant);
+    const Vec3f origin = vec3f::scale(n, -plane3f::constant(plane.plane));
     const int32_t steps = 5;
     for (int32_t i = -steps; i <= steps; i++) {
         const float t = ((float)i / (float)steps) * size;
@@ -293,10 +295,9 @@ static void draw_plane(DebugDraw &out, const Shape *shape, const Transformf &tra
     }
 }
 
-static void draw_convex_hull(DebugDraw &out, const Shape *shape, const Transformf &transform, Vec3f color) {
+static void draw_convex_hull(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
     // emit all face edges (may duplicate, fine for debug use)
     const ConvexHullShape::Data &hull = *shapes::as<ConvexHullShape>(shape).data;
-    const float *points = hull.point_positions.data;
     for (uint32_t f = 0; f < hull.faces.length; f++) {
         const ConvexHullShape::Face &face = hull.faces[f];
         const uint32_t n = face.num_vertices;
@@ -304,14 +305,14 @@ static void draw_convex_hull(DebugDraw &out, const Shape *shape, const Transform
             const uint32_t index_a = hull.vertex_indices[face.first_vertex + i];
             const uint32_t index_b = hull.vertex_indices[face.first_vertex + (i + 1) % n];
             Vec3f world_a, world_b;
-            transform_point(world_a, vec3f::make(points[index_a * 3], points[index_a * 3 + 1], points[index_a * 3 + 2]), transform);
-            transform_point(world_b, vec3f::make(points[index_b * 3], points[index_b * 3 + 1], points[index_b * 3 + 2]), transform);
+            transform_point(world_a, hull.points[index_a], transform);
+            transform_point(world_b, hull.points[index_b], transform);
             push_line(out, world_a, world_b, color);
         }
     }
 }
 
-static void draw_triangle_mesh(DebugDraw &out, const Shape *shape, const Transformf &transform, Vec3f color) {
+static void draw_triangle_mesh(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
     const TriangleMeshShape::Data &mesh = *shapes::as<TriangleMeshShape>(shape).data;
     const float *positions = mesh.positions;
     for (uint32_t i = 0; i < mesh.triangle_count; i++) {
@@ -328,7 +329,7 @@ static void draw_triangle_mesh(DebugDraw &out, const Shape *shape, const Transfo
 }
 
 /** recursively emits a shape and its children, accumulating the local to world transform as it descends */
-static void draw_shape(DebugDraw &out, const Shape *shape, const Transformf &transform, Vec3f color) {
+static void draw_shape(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
     switch (shape->type) {
         case ShapeType::SPHERE:
             draw_sphere(out, shape, transform, color);
@@ -355,7 +356,7 @@ static void draw_shape(DebugDraw &out, const Shape *shape, const Transformf &tra
         case ShapeType::STATIC_COMPOUND: {
             const collections::Array<CompoundShape::Child> &children = compound::children_of(shape);
             for (uint32_t i = 0; i < children.length; i++) {
-                Transformf child;
+                Transform child;
                 compound::child_transform(child, transform, children[i]);
                 draw_shape(out, children[i].shape, child, color);
             }
@@ -364,12 +365,12 @@ static void draw_shape(DebugDraw &out, const Shape *shape, const Transformf &tra
         case ShapeType::TRANSFORMED: {
             // the parent's scale applies to the offset; the inner shape sees it in its own space
             const TransformedShape &transformed = shapes::as<TransformedShape>(shape);
-            Transformf inner;
-            Vec3f translation = vec3f::multiply(vec3f::load(transformed.position), vec3f::load(transform.scale));
-            translation = vec3f::transform_quat(translation, quatf::load(transform.quaternion));
-            vec3f::store(inner.position, vec3f::add(vec3f::load(transform.position), translation));
-            quatf::store(inner.quaternion, quatf::multiply(quatf::load(transform.quaternion), quatf::load(transformed.quaternion)));
-            vec3f::store(inner.scale, shapes::transform_scale(quatf::load(transformed.quaternion), vec3f::load(transform.scale)));
+            Transform inner;
+            Vec3f translation = vec3f::multiply(transformed.position, transform.scale);
+            translation = vec3f::transform_quat(translation, transform.quaternion);
+            inner.position = vec3f::add(transform.position, translation);
+            inner.quaternion = quatf::multiply(transform.quaternion, transformed.quaternion);
+            inner.scale = shapes::transform_scale(transformed.quaternion, transform.scale);
             draw_shape(out, transformed.shape, inner, color);
             break;
         }
@@ -377,8 +378,8 @@ static void draw_shape(DebugDraw &out, const Shape *shape, const Transformf &tra
             // accumulate this node's scale into the local-space scale, then recurse. leaf shapes apply the scale to their
             // geometry; the inner shape's own data is never pre-scaled, so the scale must be threaded through here
             const ScaledShape &scaled = shapes::as<ScaledShape>(shape);
-            Transformf inner = transform;
-            vec3f::store(inner.scale, vec3f::multiply(vec3f::load(transform.scale), vec3f::load(scaled.scale)));
+            Transform inner = transform;
+            inner.scale = vec3f::multiply(transform.scale, scaled.scale);
             draw_shape(out, scaled.shape, inner, color);
             break;
         }
@@ -391,7 +392,7 @@ static void draw_shape(DebugDraw &out, const Shape *shape, const Transformf &tra
         default: {
             const ShapeDef &def = shapes::def_of(shape);
             if (def.draw != nullptr) def.draw(out, shape, transform, color);
-            else draw_local_box(out, vec3f::load(shape->aabb.min), vec3f::load(shape->aabb.max), transform, color);
+            else draw_local_box(out, shape->aabb.min, shape->aabb.max, transform, color);
             break;
         }
     }
@@ -412,13 +413,13 @@ static void push_velocity(DebugDraw &out, Vec3f origin, Vec3f velocity, float le
 /** shape and velocity arrows for one body */
 static void draw_body_lines(DebugDraw &out, const RigidBody &body, Vec3f color, bool show_linear_velocity,
                             bool show_angular_velocity) {
-    draw_shape(out, body.shape, {body.position, body.quaternion, {1.0f, 1.0f, 1.0f}}, color);
+    draw_shape(out, body.shape, transform::make(body.position, body.quaternion), color);
     if (body.motion_type == MotionType::STATIC) return;
     if (show_linear_velocity) {
-        push_velocity(out, vec3f::load(body.center_of_mass_position), vec3f::load(body.motion_properties.linear_velocity), 1.0f, 5.0f, vec3f::load(VELOCITY_LINEAR_COLOR));
+        push_velocity(out, body.center_of_mass_position, body.motion_properties.linear_velocity, 1.0f, 5.0f, vec3f::load(VELOCITY_LINEAR_COLOR));
     }
     if (show_angular_velocity) {
-        push_velocity(out, vec3f::load(body.center_of_mass_position), vec3f::load(body.motion_properties.angular_velocity), 0.5f, 3.0f, vec3f::load(VELOCITY_ANGULAR_COLOR));
+        push_velocity(out, body.center_of_mass_position, body.motion_properties.angular_velocity, 0.5f, 3.0f, vec3f::load(VELOCITY_ANGULAR_COLOR));
     }
 }
 
@@ -438,15 +439,12 @@ void bodies(DebugDraw &out, const World &world, const DebugDraw::BodiesOptions &
 }
 
 void body(DebugDraw &out, const RigidBody &body, const DebugDraw::BodyOptions &options) {
-    const Vec3f color = options.has_color ? vec3f::load(options.color) : body_color(body, options.color_mode);
+    const Vec3f color = options.has_color ? options.color : body_color(body, options.color_mode);
     draw_body_lines(out, body, color, options.show_linear_velocity, options.show_angular_velocity);
 }
 
 void shape(DebugDraw &out, const Shape *shape, Vec3f position, Quatf quaternion, const DebugDraw::ShapeOptions &options) {
-    Transformf transform = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}};
-    vec3f::store(transform.position, position);
-    quatf::store(transform.quaternion, quaternion);
-    draw_shape(out, shape, transform, vec3f::load(options.color));
+    draw_shape(out, shape, transform::make(position, quaternion), options.color);
 }
 
 void contacts(DebugDraw &out, const World &world) {
@@ -556,16 +554,16 @@ static void draw_swing_cone_limits(DebugDraw &out, Vec3f center, Vec3f twist_axi
 
 /** a body's centre of mass frame, which constraint local positions are given in */
 struct BodyTransform {
-    Float3 center_of_mass_position;
-    Float4 quaternion;
+    Vec3f center_of_mass_position;
+    Quatf quaternion;
 };
 
 static Vec3f transform_point_to_world(Vec3f local, const BodyTransform &transform) {
-    return vec3f::add(vec3f::transform_quat(local, quatf::load(transform.quaternion)), vec3f::load(transform.center_of_mass_position));
+    return vec3f::add(vec3f::transform_quat(local, transform.quaternion), transform.center_of_mass_position);
 }
 
 static Vec3f transform_direction_to_world(Vec3f local, const BodyTransform &transform) {
-    return vec3f::transform_quat(local, quatf::load(transform.quaternion));
+    return vec3f::transform_quat(local, transform.quaternion);
 }
 
 /** the frames of an enabled constraint's bodies; false when the constraint is free or disabled or a body is gone */
@@ -616,7 +614,7 @@ static void draw_hinge(DebugDraw &out, const HingeConstraint &constraint, const 
 
 /** the constraint space's axes in world space: the body's rotation times constraint_to_body */
 static void constraint_space_axes(Vec3f out_axes[3], const BodyTransform &body, Quatf constraint_to_body) {
-    const Quatf rotation = quatf::multiply(quatf::load(body.quaternion), constraint_to_body);
+    const Quatf rotation = quatf::multiply(body.quaternion, constraint_to_body);
     out_axes[0] = vec3f::transform_quat(vec3f::axis_x(), rotation);
     out_axes[1] = vec3f::transform_quat(vec3f::axis_y(), rotation);
     out_axes[2] = vec3f::transform_quat(vec3f::axis_z(), rotation);

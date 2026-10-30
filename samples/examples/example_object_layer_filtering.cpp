@@ -54,7 +54,7 @@ static void init(App &app) {
     app.world = world::create(settings);
 
     RigidBodySettings floor;
-    floor.shape = app::keep(app, box::create({.half_extents = {5.0f, 0.1f, 5.0f}}));
+    floor.shape = app::keep(app, box::create({.half_extents = vec3f::make(5.0f, 0.1f, 5.0f)}));
     floor.object_layer = state.environment;
     floor.motion_type = MotionType::STATIC;
     floor.friction = 0.5f;
@@ -64,7 +64,7 @@ static void init(App &app) {
     character.shape = app::keep(app, capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.5f}));
     character.object_layer = state.characters;
     character.motion_type = MotionType::KINEMATIC;
-    character.position = {0.0f, 1.3f, 0.0f};
+    character.position = vec3f::make(0.0f, 1.3f, 0.0f);
     character.friction = 0.5f;
     rigid_body::create(*app.world, character);
 
@@ -83,7 +83,7 @@ static void step(App &app, float) {
         settings.shape = state.debris_shape;
         settings.object_layer = state.debris_layer;
         settings.motion_type = MotionType::DYNAMIC;
-        settings.position = {cosf(angle) * radius, SPAWN_HEIGHT, sinf(angle) * radius};
+        settings.position = vec3f::make(cosf(angle) * radius, SPAWN_HEIGHT, sinf(angle) * radius);
         settings.allowed_degrees_of_freedom = dof::DOF_TRANSLATION_ONLY;
         settings.friction = 0.3f;
         settings.restitution = 0.2f;

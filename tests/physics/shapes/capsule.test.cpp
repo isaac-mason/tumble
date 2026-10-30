@@ -19,9 +19,8 @@ void test_capsule_create(TestCtx &ctx) {
     CHECK(ctx, c->material_id == -1);
 
     // bounds reach half height plus radius along y, the radius across
-    CHECK(ctx, c->aabb.min.x == -0.5f && c->aabb.min.y == -2.5f && c->aabb.min.z == -0.5f);
-    CHECK(ctx, c->aabb.max.x == 0.5f && c->aabb.max.y == 2.5f && c->aabb.max.z == 0.5f);
-    CHECK(ctx, c->center_of_mass.x == 0.0f && c->center_of_mass.y == 0.0f && c->center_of_mass.z == 0.0f);
+    CHECK(ctx, near3(c->aabb.min, -0.5f, -2.5f, -0.5f, 0.0f) && near3(c->aabb.max, 0.5f, 2.5f, 0.5f, 0.0f));
+    CHECK(ctx, vec3f::exact_equals(c->center_of_mass, vec3f::zero()));
 
     // cylinder of height 2h plus a whole sphere
     CHECK_NEAR(ctx, c->volume, scalar::PI * 0.25f * 4.0f + 4.0f / 3.0f * scalar::PI * 0.125f, 1e-5f);
@@ -62,14 +61,14 @@ void test_capsule_mass_properties(TestCtx &ctx) {
 
     float i_xx_zz, i_yy;
     expected_inertia(1.0f, 1.0f, 1000.0f, i_xx_zz, i_yy);
-    CHECK_NEAR(ctx, props.inertia.m[0], i_xx_zz, 1.0f);
-    CHECK_NEAR(ctx, props.inertia.m[5], i_yy, 1.0f);
-    CHECK_NEAR(ctx, props.inertia.m[10], i_xx_zz, 1.0f);
-    CHECK(ctx, props.inertia.m[0] == props.inertia.m[10]);
-    CHECK(ctx, props.inertia.m[5] < props.inertia.m[0]);
-    CHECK(ctx, props.inertia.m[15] == 1.0f);
-    CHECK(ctx, props.inertia.m[1] == 0.0f && props.inertia.m[2] == 0.0f && props.inertia.m[4] == 0.0f);
-    CHECK(ctx, props.inertia.m[6] == 0.0f && props.inertia.m[8] == 0.0f && props.inertia.m[9] == 0.0f);
+    CHECK_NEAR(ctx, elements(props.inertia).m[0], i_xx_zz, 1.0f);
+    CHECK_NEAR(ctx, elements(props.inertia).m[5], i_yy, 1.0f);
+    CHECK_NEAR(ctx, elements(props.inertia).m[10], i_xx_zz, 1.0f);
+    CHECK(ctx, elements(props.inertia).m[0] == elements(props.inertia).m[10]);
+    CHECK(ctx, elements(props.inertia).m[5] < elements(props.inertia).m[0]);
+    CHECK(ctx, elements(props.inertia).m[15] == 1.0f);
+    CHECK(ctx, elements(props.inertia).m[1] == 0.0f && elements(props.inertia).m[2] == 0.0f && elements(props.inertia).m[4] == 0.0f);
+    CHECK(ctx, elements(props.inertia).m[6] == 0.0f && elements(props.inertia).m[8] == 0.0f && elements(props.inertia).m[9] == 0.0f);
 
     // twice the density, twice the mass and inertia
     CapsuleShapeSettings dense = {.half_height_of_cylinder = 1.0f, .radius = 1.0f};
@@ -78,27 +77,27 @@ void test_capsule_mass_properties(TestCtx &ctx) {
     MassProperties props2 = mass_properties::create();
     capsule::compute_mass_properties(props2, c2);
     CHECK_NEAR(ctx, props2.mass, props.mass * 2.0f, 1e-1f);
-    CHECK_NEAR(ctx, props2.inertia.m[0], props.inertia.m[0] * 2.0f, 1.0f);
-    CHECK_NEAR(ctx, props2.inertia.m[5], props.inertia.m[5] * 2.0f, 1.0f);
+    CHECK_NEAR(ctx, elements(props2.inertia).m[0], elements(props.inertia).m[0] * 2.0f, 1.0f);
+    CHECK_NEAR(ctx, elements(props2.inertia).m[5], elements(props.inertia).m[5] * 2.0f, 1.0f);
 
     // long and thin: spinning about the axis is far easier than tumbling
     Ref<Shape> rod = capsule::create({.half_height_of_cylinder = 10.0f, .radius = 0.5f});
     capsule::compute_mass_properties(props, rod);
-    CHECK(ctx, props.inertia.m[5] < props.inertia.m[0] * 0.1f);
+    CHECK(ctx, elements(props.inertia).m[5] < elements(props.inertia).m[0] * 0.1f);
 
     // short and wide: close to a sphere
     Ref<Shape> ball = capsule::create({.half_height_of_cylinder = 0.1f, .radius = 2.0f});
     capsule::compute_mass_properties(props, ball);
-    CHECK(ctx, props.inertia.m[5] / props.inertia.m[0] > 0.5f);
+    CHECK(ctx, elements(props.inertia).m[5] / elements(props.inertia).m[0] > 0.5f);
 
     // almost no cylinder (create refuses none): a sphere, 2/5 m r^2 on every diagonal entry, to the sliver's share
     Ref<Shape> sphere_like = capsule::create({.half_height_of_cylinder = 1e-3f, .radius = 2.0f});
     capsule::compute_mass_properties(props, sphere_like);
     const float sphere_inertia = 0.4f * props.mass * 4.0f;
     CHECK_NEAR(ctx, props.mass, 1000.0f * 4.0f / 3.0f * scalar::PI * 8.0f, 30.0f);
-    CHECK_NEAR(ctx, props.inertia.m[0] / sphere_inertia, 1.0f, 2e-3f);
-    CHECK_NEAR(ctx, props.inertia.m[5] / sphere_inertia, 1.0f, 2e-3f);
-    CHECK_NEAR(ctx, props.inertia.m[10] / props.inertia.m[5], 1.0f, 2e-3f);
+    CHECK_NEAR(ctx, elements(props.inertia).m[0] / sphere_inertia, 1.0f, 2e-3f);
+    CHECK_NEAR(ctx, elements(props.inertia).m[5] / sphere_inertia, 1.0f, 2e-3f);
+    CHECK_NEAR(ctx, elements(props.inertia).m[10] / elements(props.inertia).m[5], 1.0f, 2e-3f);
     sphere_like = nullptr;
 
     c = nullptr;

@@ -107,7 +107,7 @@ describe('the step', () => {
         const listener: Listener = {
             onContactValidate(contact) {
                 validated++;
-                return contact.bodyA !== body && contact.bodyB !== body;
+                return contact.bodyIdA !== body && contact.bodyIdB !== body;
             },
         };
         for (let i = 0; i < 90; i++) updateWorld(world, listener, 1 / 60);
@@ -143,16 +143,16 @@ describe('the step', () => {
         updateWorld(world, listener, 1 / 60);
         expect(added.length).toBe(1);
         const event = added[0]!;
-        expect(event.bodyA === body || event.bodyB === body).toBe(true);
-        expect(event.bodyA === body ? event.userDataA : event.userDataB).toBe(2 ** 40 + 5);
-        expect(event.points).toBe(4);
+        expect(event.bodyIdA === body || event.bodyIdB === body).toBe(true);
+        expect(event.bodyIdA === body ? event.userDataA : event.userDataB).toBe(2 ** 40 + 5);
+        expect(event.numPoints).toBe(4);
         expect(Math.abs(event.normal[1])).toBeCloseTo(1, 5);
         for (let i = 0; i < 4; i++) expect(Math.abs(event.pointsA[i]![1])).toBeLessThan(0.05);
 
         rigidBody.remove(world, body);
         updateWorld(world, listener, 1 / 60);
         expect(removed.length).toBe(1);
-        expect(removed[0]!.bodyA === body || removed[0]!.bodyB === body).toBe(true);
+        expect(removed[0]!.bodyIdA === body || removed[0]!.bodyIdB === body).toBe(true);
         releaseScene(scene);
         releaseShape(crate);
     });

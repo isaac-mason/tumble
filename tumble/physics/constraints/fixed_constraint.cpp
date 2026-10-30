@@ -65,17 +65,17 @@ ConstraintId create(World &world, RigidBody *body_a, RigidBody *body_b,
     constraint.base.body_index_b = body_b->index;
 
     // normalize axes
-    const Vec3f axis_x1 = vec3f::normalize(vec3f::load(settings.axis_x_a));
-    const Vec3f axis_y1 = vec3f::normalize(vec3f::load(settings.axis_y_a));
-    const Vec3f axis_x2 = vec3f::normalize(vec3f::load(settings.axis_x_b));
-    const Vec3f axis_y2 = vec3f::normalize(vec3f::load(settings.axis_y_b));
+    const Vec3f axis_x1 = vec3f::normalize(settings.axis_x_a);
+    const Vec3f axis_y1 = vec3f::normalize(settings.axis_y_a);
+    const Vec3f axis_x2 = vec3f::normalize(settings.axis_x_b);
+    const Vec3f axis_y2 = vec3f::normalize(settings.axis_y_b);
 
     // initial orientation from the reference axes
     const Quatf r0 = rotation_euler_constraint_part::get_inv_initial_orientation_xy(axis_x1, axis_y1, axis_x2, axis_y2);
 
     if (settings.space == ConstraintSpace::WORLD) {
-        const Quatf inv_quat_a = quatf::conjugate(quatf::load(body_a->quaternion));
-        const Quatf inv_quat_b = quatf::conjugate(quatf::load(body_b->quaternion));
+        const Quatf inv_quat_a = quatf::conjugate(body_a->quaternion);
+        const Quatf inv_quat_b = quatf::conjugate(body_b->quaternion);
 
         if (settings.auto_detect_point) {
             // if either body is static, anchor on the other body's center of mass.
@@ -84,8 +84,8 @@ ConstraintId create(World &world, RigidBody *body_a, RigidBody *body_b,
             const float inv_m2 = body_b->motion_properties.inv_mass;
             const float total_inv_mass = inv_m1 + inv_m2;
 
-            const Vec3f center_of_mass_a = vec3f::load(body_a->center_of_mass_position);
-            const Vec3f center_of_mass_b = vec3f::load(body_b->center_of_mass_position);
+            const Vec3f center_of_mass_a = body_a->center_of_mass_position;
+            const Vec3f center_of_mass_b = body_b->center_of_mass_position;
             Vec3f anchor;
             if (body_a->motion_type == MotionType::STATIC) {
                 anchor = center_of_mass_b;
@@ -102,17 +102,17 @@ ConstraintId create(World &world, RigidBody *body_a, RigidBody *body_b,
             constraint.local_space_position1 = vec3f::transform_quat(vec3f::subtract(anchor, center_of_mass_a), inv_quat_a);
             constraint.local_space_position2 = vec3f::transform_quat(vec3f::subtract(anchor, center_of_mass_b), inv_quat_b);
         } else {
-            constraint.local_space_position1 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point_a), vec3f::load(body_a->center_of_mass_position)), inv_quat_a);
+            constraint.local_space_position1 = vec3f::transform_quat(vec3f::subtract(settings.point_a, body_a->center_of_mass_position), inv_quat_a);
 
-            constraint.local_space_position2 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point_b), vec3f::load(body_b->center_of_mass_position)), inv_quat_b);
+            constraint.local_space_position2 = vec3f::transform_quat(vec3f::subtract(settings.point_b, body_b->center_of_mass_position), inv_quat_b);
         }
 
         // the axes were given in world space, so c1 becomes q10^-1 c1 and c2 becomes q20^-1 c2:
         // r0^-1 = (q20^-1 c2) (q10^-1 c1)^-1 = q20^-1 (c2 c1^-1) q10
-        constraint.inv_initial_orientation = quatf::multiply(quatf::multiply(inv_quat_b, r0), quatf::load(body_a->quaternion));
+        constraint.inv_initial_orientation = quatf::multiply(quatf::multiply(inv_quat_b, r0), body_a->quaternion);
     } else {
-        constraint.local_space_position1 = vec3f::load(settings.point_a);
-        constraint.local_space_position2 = vec3f::load(settings.point_b);
+        constraint.local_space_position1 = settings.point_a;
+        constraint.local_space_position2 = settings.point_b;
         constraint.inv_initial_orientation = r0;
     }
 
@@ -136,8 +136,8 @@ void setup_velocity(FixedConstraint &constraint, Bodies &bodies, float delta_tim
     RigidBody &body_a = *bodies.pool[constraint.base.body_index_a];
     RigidBody &body_b = *bodies.pool[constraint.base.body_index_b];
 
-    const Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
+    const Mat4f rotation_a = mat4f::from_quat(body_a.quaternion);
+    const Mat4f rotation_b = mat4f::from_quat(body_b.quaternion);
 
     // rotation (3 DOF, keeps orientations locked)
     rotation_euler_constraint_part::calculate_constraint_properties(constraint.rotation_constraint_part, body_a, body_b, bodies.step_stamp);
@@ -182,8 +182,8 @@ bool solve_position(FixedConstraint &constraint, Bodies &bodies, float delta_tim
         constraint.rotation_constraint_part, body_a, body_b, constraint.inv_initial_orientation, baumgarte);
 
     // the rotation solve moved the bodies
-    const Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
+    const Mat4f rotation_a = mat4f::from_quat(body_a.quaternion);
+    const Mat4f rotation_b = mat4f::from_quat(body_b.quaternion);
 
     point_constraint_part::calculate_constraint_properties(constraint.point_constraint_part, body_a, rotation_a,
                                                            constraint.local_space_position1, body_b, rotation_b,

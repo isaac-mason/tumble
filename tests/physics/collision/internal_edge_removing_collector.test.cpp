@@ -159,10 +159,10 @@ void test_internal_edge_removing_reset_and_early_out(TestCtx &ctx) {
 /** collides the ball against both slabs into `collector` (the wrapper's or a plain one), one query over two parts */
 static void collide_ball_with_slabs(CollideShapeCollector &collector, const CollideShapeSettings &settings, const Shape *ball,
                                     const Float3 &centre, const Shape *slab) {
-    const Transformf ball_pose = {centre, {0, 0, 0, 1}, {1, 1, 1}};
+    const Transform ball_pose = pose(centre);
     // two slabs with tops at y = 0 meeting at x = 0: x in [-2, 0] and x in [0, 2]
-    const Transformf left = {{-1, -0.5f, 0}, {0, 0, 0, 1}, {1, 1, 1}};
-    const Transformf right = {{1, -0.5f, 0}, {0, 0, 0, 1}, {1, 1, 1}};
+    const Transform left = pose({-1, -0.5f, 0});
+    const Transform right = pose({1, -0.5f, 0});
     const CollideShapeVsShapeFn fn = shapes::collide_fn(ball->type, slab->type);
     fn(collector, settings, ball, NO_SUB_SHAPE, ball_pose, slab, {0, 0}, left);
     fn(collector, settings, ball, NO_SUB_SHAPE, ball_pose, slab, {1, 0}, right);
@@ -175,7 +175,7 @@ static float normal_y(const CollideShapeHit &hit) {
 void test_internal_edge_removing_sphere_across_coplanar_boxes(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> ball = sphere::create({.radius = 0.5f});
-    Ref<Shape> slab = box::create({.half_extents = {1, 0.5f, 1}, .convex_radius = 0.0f});
+    Ref<Shape> slab = box::create({.half_extents = vec3f::make(1, 0.5f, 1), .convex_radius = 0.0f});
     CollideShapeSettings settings = collide_shape::default_settings();
     settings.collect_faces = true;
     settings.collide_only_with_active_edges = false;

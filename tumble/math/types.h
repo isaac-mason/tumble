@@ -55,10 +55,18 @@ struct OrientedBox {
     Vec3f half_extents;
 };
 
-/** normal . x + constant = 0 */
+/** normal . x + constant = 0: the normal in lanes 0 to 2, the constant in lane 3, as jolt's Plane */
 struct Plane {
-    Vec3f normal;
-    float constant;
+    V128 v;
+    Plane() = default;
+    constexpr Plane(V128 value) : v(value) {}
+};
+
+/** rotated, then moved, after scaling along its own axes; Transformf is the storage form */
+struct Transform {
+    Vec3f position;
+    Quatf quaternion;
+    Vec3f scale;
 };
 
 enum class EulerOrder : uint8_t {

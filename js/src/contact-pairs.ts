@@ -1,54 +1,13 @@
-import type { BodyId } from './body.js';
 import * as Low from './generated/tumble.js';
 import type { KCC } from './kcc.js';
-import type { Vec3 } from './math.js';
 import type { World } from './world.js';
 
-/** a pair of body sub shapes in contact, one side a body observing contacts; its fields are its last record's */
-export type ContactPair = {
-    /** stable while the pair lasts; reused the frame after it is removed */
-    handle: number;
-    bodyA: BodyId;
-    subShapeA: number;
-    userDataA: number;
-    sensorA: boolean;
-    bodyB: BodyId;
-    subShapeB: number;
-    userDataB: number;
-    sensorB: boolean;
-    /** the first contact point, on a */
-    point: Vec3;
-    /** from a to b */
-    normal: Vec3;
-    penetrationDepth: number;
-    /** b's velocity less a's */
-    relativeVelocity: Vec3;
-    /** not there the frame before */
-    added: boolean;
-};
-
-const TWO_32 = 0x100000000;
-const pair = Low.ContactPair.create();
-
-function copyPair(out: ContactPair): ContactPair {
-    out.handle = pair.handle;
-    out.bodyA = pair.bodyA;
-    out.subShapeA = pair.subShapeA;
-    out.userDataA = pair.userDataAHigh * TWO_32 + pair.userDataALow;
-    out.sensorA = pair.sensorA;
-    out.bodyB = pair.bodyB;
-    out.subShapeB = pair.subShapeB;
-    out.userDataB = pair.userDataBHigh * TWO_32 + pair.userDataBLow;
-    out.sensorB = pair.sensorB;
-    for (let i = 0; i < 3; i++) {
-        out.point[i] = pair.point[i]!;
-        out.normal[i] = pair.normal[i]!;
-        out.relativeVelocity[i] = pair.relativeVelocity[i]!;
-    }
-    out.penetrationDepth = pair.penetrationDepth;
-    out.added = pair.added;
-    return out;
-}
+/**
+ * a pair of body sub shapes in contact, one side a body observing contacts; its fields are its last record's. handle is
+ * stable while the pair lasts and reused the frame after it is removed; point is the first contact point, on a; normal
+ * is from a to b; relativeVelocity is b's velocity less a's; added is not there the frame before
+ */
+export type ContactPair = Low.ContactPair;
 
 /**
  * a frame of contact pairs: begin, record what moved (each world step, each character's update), end, then read. a
@@ -56,22 +15,7 @@ function copyPair(out: ContactPair): ContactPair {
  * the pairs a body observing contacts is a side of are kept
  */
 export function create(): ContactPair {
-    return {
-        handle: 0,
-        bodyA: 0,
-        subShapeA: 0,
-        userDataA: 0,
-        sensorA: false,
-        bodyB: 0,
-        subShapeB: 0,
-        userDataB: 0,
-        sensorB: false,
-        point: [0, 0, 0],
-        normal: [0, 0, 0],
-        penetrationDepth: 0,
-        relativeVelocity: [0, 0, 0],
-        added: false,
-    };
+    return Low.ContactPair.create();
 }
 
 /** last frame's removed pairs freed, their handles reusable */
@@ -109,9 +53,7 @@ export function activeCount(world: World): number {
 
 /** false past activeCount */
 export function readActive(out: ContactPair, world: World, index: number): boolean {
-    if (!Low.ContactPairs.readActive(pair, world, index)) return false;
-    copyPair(out);
-    return true;
+    return Low.ContactPairs.readActive(out, world, index);
 }
 
 export function removedCount(world: World): number {
@@ -120,7 +62,5 @@ export function removedCount(world: World): number {
 
 /** a pair live last frame, not this; its fields last frame's */
 export function readRemoved(out: ContactPair, world: World, index: number): boolean {
-    if (!Low.ContactPairs.readRemoved(pair, world, index)) return false;
-    copyPair(out);
-    return true;
+    return Low.ContactPairs.readRemoved(out, world, index);
 }

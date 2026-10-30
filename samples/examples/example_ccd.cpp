@@ -23,8 +23,8 @@ static void create_wall(App &app, Shape *brick, Float3 offset, int stack_height)
             settings.shape = brick;
             settings.object_layer = state.layers.moving;
             settings.motion_type = MotionType::DYNAMIC;
-            settings.position = {offset.x, (float)i * shift_y + offset.y,
-                                 (float)i * shift_z / 2.0f + (float)(j - i) * shift_z + offset.z - (float)stack_height};
+            settings.position = vec3f::make(offset.x, (float)i * shift_y + offset.y,
+                                            (float)i * shift_z / 2.0f + (float)(j - i) * shift_z + offset.z - (float)stack_height);
             settings.restitution = 0.0f;
             settings.friction = 0.5f;
             rigid_body::create(*app.world, settings);
@@ -36,14 +36,14 @@ static void init(App &app) {
     app.world = app::create_world(state.layers);
 
     RigidBodySettings ground;
-    ground.shape = app::keep(app, box::create({.half_extents = {30.0f, GROUND_HEIGHT, 30.0f}}));
+    ground.shape = app::keep(app, box::create({.half_extents = vec3f::make(30.0f, GROUND_HEIGHT, 30.0f)}));
     ground.object_layer = state.layers.not_moving;
     ground.motion_type = MotionType::STATIC;
     ground.restitution = 0.0f;
     ground.friction = 0.5f;
     rigid_body::create(*app.world, ground);
 
-    Shape *brick = app::keep(app, box::create({.half_extents = {0.5f, 0.5f, 1.0f}}));
+    Shape *brick = app::keep(app, box::create({.half_extents = vec3f::make(0.5f, 0.5f, 1.0f)}));
     const float shift_y = GROUND_HEIGHT + 0.5f;
     for (int i = 0; i < WALLS; i++) create_wall(app, brick, {(float)i * 6.0f, shift_y, 0.0f}, WALL_HEIGHT);
 
@@ -52,7 +52,7 @@ static void init(App &app) {
     ball.shape = app::keep(app, sphere::create({.radius = 1.0f, .density = 10000.0f}));
     ball.object_layer = state.layers.moving;
     ball.motion_type = MotionType::DYNAMIC;
-    ball.position = {-20.0f, shift_y + 2.0f, 0.0f};
+    ball.position = vec3f::make(-20.0f, shift_y + 2.0f, 0.0f);
     ball.restitution = 0.0f;
     ball.friction = 0.5f;
     ball.motion_quality = MotionQuality::LINEAR_CAST;

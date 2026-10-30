@@ -18,9 +18,8 @@ void test_sphere_create(TestCtx &ctx) {
     CHECK(ctx, s->material_id == -1);
 
     // bounds +-r
-    CHECK(ctx, s->aabb.min.x == -2.0f && s->aabb.min.y == -2.0f && s->aabb.min.z == -2.0f);
-    CHECK(ctx, s->aabb.max.x == 2.0f && s->aabb.max.y == 2.0f && s->aabb.max.z == 2.0f);
-    CHECK(ctx, s->center_of_mass.x == 0.0f && s->center_of_mass.y == 0.0f && s->center_of_mass.z == 0.0f);
+    CHECK(ctx, near3(s->aabb.min, -2.0f, -2.0f, -2.0f, 0.0f) && near3(s->aabb.max, 2.0f, 2.0f, 2.0f, 0.0f));
+    CHECK(ctx, vec3f::exact_equals(s->center_of_mass, vec3f::zero()));
 
     // V = 4/3 pi r^3
     CHECK_NEAR(ctx, s->volume, 4.0f / 3.0f * scalar::PI * 8.0f, 1e-4f);
@@ -28,7 +27,7 @@ void test_sphere_create(TestCtx &ctx) {
     // update follows a radius change
     shapes::as<SphereShape>(s).radius = 0.5f;
     sphere::update(s);
-    CHECK(ctx, s->aabb.max.y == 0.5f && s->aabb.min.x == -0.5f);
+    CHECK(ctx, vec3f::y(s->aabb.max) == 0.5f && vec3f::x(s->aabb.min) == -0.5f);
     CHECK_NEAR(ctx, s->volume, 4.0f / 3.0f * scalar::PI * 0.125f, 1e-6f);
 
     SphereShapeSettings custom = {.radius = 1.0f};
@@ -51,18 +50,18 @@ void test_sphere_mass_properties(TestCtx &ctx) {
     CHECK_NEAR(ctx, props.mass, mass, 1e-2f);
     // solid sphere: 2/5 m r^2 on the diagonal, nothing off it
     const float inertia = 0.4f * mass;
-    CHECK_NEAR(ctx, props.inertia.m[0], inertia, 1e-2f);
-    CHECK_NEAR(ctx, props.inertia.m[5], inertia, 1e-2f);
-    CHECK_NEAR(ctx, props.inertia.m[10], inertia, 1e-2f);
-    CHECK(ctx, props.inertia.m[15] == 1.0f);
-    CHECK(ctx, props.inertia.m[1] == 0.0f && props.inertia.m[2] == 0.0f && props.inertia.m[4] == 0.0f);
-    CHECK(ctx, props.inertia.m[6] == 0.0f && props.inertia.m[8] == 0.0f && props.inertia.m[9] == 0.0f);
+    CHECK_NEAR(ctx, elements(props.inertia).m[0], inertia, 1e-2f);
+    CHECK_NEAR(ctx, elements(props.inertia).m[5], inertia, 1e-2f);
+    CHECK_NEAR(ctx, elements(props.inertia).m[10], inertia, 1e-2f);
+    CHECK(ctx, elements(props.inertia).m[15] == 1.0f);
+    CHECK(ctx, elements(props.inertia).m[1] == 0.0f && elements(props.inertia).m[2] == 0.0f && elements(props.inertia).m[4] == 0.0f);
+    CHECK(ctx, elements(props.inertia).m[6] == 0.0f && elements(props.inertia).m[8] == 0.0f && elements(props.inertia).m[9] == 0.0f);
 
     // radius 2: mass scales by r^3, inertia by r^5
     Ref<Shape> big = sphere::create({.radius = 2.0f});
     sphere::compute_mass_properties(props, big);
     CHECK_NEAR(ctx, props.mass, mass * 8.0f, 1e-1f);
-    CHECK_NEAR(ctx, props.inertia.m[0], inertia * 32.0f, 1.0f);
+    CHECK_NEAR(ctx, elements(props.inertia).m[0], inertia * 32.0f, 1.0f);
 
     s = nullptr;
     big = nullptr;

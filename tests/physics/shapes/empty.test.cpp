@@ -14,17 +14,16 @@ void test_empty_shape(TestCtx &ctx) {
     CHECK(ctx, e->type == ShapeType::EMPTY);
     CHECK(ctx, e->volume == 0.0f);
     // a point at the origin
-    CHECK(ctx, e->aabb.min.x == 0.0f && e->aabb.min.y == 0.0f && e->aabb.min.z == 0.0f);
-    CHECK(ctx, e->aabb.max.x == 0.0f && e->aabb.max.y == 0.0f && e->aabb.max.z == 0.0f);
-    CHECK(ctx, e->center_of_mass.x == 0.0f && e->center_of_mass.y == 0.0f && e->center_of_mass.z == 0.0f);
+    CHECK(ctx, vec3f::exact_equals(e->aabb.min, vec3f::zero()) && vec3f::exact_equals(e->aabb.max, vec3f::zero()));
+    CHECK(ctx, vec3f::exact_equals(e->center_of_mass, vec3f::zero()));
 
     // unit mass and identity inertia, whatever the caller left there
     MassProperties props = mass_properties::create();
     props.mass = 5.0f;
-    props.inertia = {{7, 0, 0, 0, 0, 7, 0, 0, 0, 0, 7, 0, 0, 0, 0, 1}};
+    props.inertia = mat4f::from_scaling(vec3f::splat(7.0f));
     empty::compute_mass_properties(props, e);
     CHECK(ctx, props.mass == 1.0f);
-    CHECK(ctx, props.inertia.m[0] == 1.0f && props.inertia.m[5] == 1.0f && props.inertia.m[10] == 1.0f && props.inertia.m[15] == 1.0f);
+    CHECK(ctx, same_bits(props.inertia, mat4f::identity()));
 
     // no surface: zero normal, and the accumulated pose is reset
     SurfaceNormalResult io;

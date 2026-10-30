@@ -9,7 +9,7 @@ namespace {
 /** a 2 m static box at the origin */
 WorldScene make_box_scene(TestCtx &ctx, RigidBody **out_box = nullptr) {
     WorldScene scene = make_world_scene(ctx);
-    RigidBody *box_body = add_body(scene, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}), MotionType::STATIC, {0.0f, 0.0f, 0.0f});
+    RigidBody *box_body = add_body(scene, box::create({.half_extents = vec3f::splat(1.0f)}), MotionType::STATIC, {0.0f, 0.0f, 0.0f});
     if (out_box != nullptr) *out_box = box_body;
     return scene;
 }
@@ -43,7 +43,7 @@ void test_query_cast_ray_misses_box(TestCtx &ctx) {
 
 void test_query_cast_ray_closest_of_two_bodies(TestCtx &ctx) {
     WorldScene scene = make_box_scene(ctx);
-    RigidBody *near_box = add_body(scene, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}), MotionType::STATIC, {-3.0f, 0.0f, 0.0f});
+    RigidBody *near_box = add_body(scene, box::create({.half_extents = vec3f::splat(0.5f)}), MotionType::STATIC, {-3.0f, 0.0f, 0.0f});
     Filter query_filter = filter::create(scene.world->settings.layers);
     CastRayCollector collector = cast_ray::create_collector(CollectorKind::CLOSEST);
     query::cast_ray(*scene.world, collector, cast_ray::default_settings(), Rayf{vec3f::make(-5.0f, 0.0f, 0.0f), vec3f::make(1.0f, 0.0f, 0.0f), 10.0f}, query_filter);
@@ -99,7 +99,7 @@ void check_closest_reports_deeper_start_overlap(TestCtx &ctx, bool right_first) 
         slabs[1] = first;
     }
     for (uint32_t i = 0; i < 2; i++) {
-        add_body(scene, box::create({.half_extents = {1.0f, 0.5f, 1.0f}, .convex_radius = 0.0f}), MotionType::STATIC, slabs[i]);
+        add_body(scene, box::create({.half_extents = vec3f::make(1.0f, 0.5f, 1.0f), .convex_radius = 0.0f}), MotionType::STATIC, slabs[i]);
     }
     Filter query_filter = filter::create(scene.world->settings.layers);
     CastShapeCollector collector = cast_shape::create_collector(CollectorKind::CLOSEST);
@@ -187,7 +187,7 @@ void log_body_end(CollideShapeCollector &collector) { static_cast<BodyLog *>(col
 void test_query_collide_shape_tells_collector_each_body(TestCtx &ctx) {
     RigidBody *box_body;
     WorldScene scene = make_box_scene(ctx, &box_body);
-    RigidBody *other = add_body(scene, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}), MotionType::STATIC, {3.0f, 0.0f, 0.0f});
+    RigidBody *other = add_body(scene, box::create({.half_extents = vec3f::splat(1.0f)}), MotionType::STATIC, {3.0f, 0.0f, 0.0f});
     Filter query_filter = filter::create(scene.world->settings.layers);
     BodyLog log = {};
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);

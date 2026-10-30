@@ -22,7 +22,7 @@ void make_scene(Scene &s) {
     s.layer = world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
     world_settings::enable_collision(settings, s.layer, s.layer);
     s.world = world::create(settings);
-    s.box = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    s.box = box::create({.half_extents = vec3f::splat(0.5f)});
     body_activation::init_recorder(s.recorder);
     world::set_body_activation_listener(*s.world, &s.recorder.listener);
 }
@@ -33,7 +33,7 @@ void release_scene(Scene &s) {
 }
 
 RigidBody *add(Scene &s, MotionType motion_type, Float3 position, uint64_t user_data = 0) {
-    return rigid_body::create(*s.world, {.shape = s.box, .object_layer = s.layer, .motion_type = motion_type, .user_data = user_data, .position = position});
+    return rigid_body::create(*s.world, {.shape = s.box, .object_layer = s.layer, .motion_type = motion_type, .user_data = user_data, .position = vec3f::load(position)});
 }
 
 void steps(Scene &s, uint32_t count) {
@@ -114,10 +114,10 @@ void test_body_activation_calls_between_steps(TestCtx &ctx) {
 void test_body_activation_steps(TestCtx &ctx) {
     Scene s;
     make_scene(s);
-    RigidBody *ground = rigid_body::create(*s.world, {.shape = box::create({.half_extents = {20.0f, 0.5f, 20.0f}}),
+    RigidBody *ground = rigid_body::create(*s.world, {.shape = box::create({.half_extents = vec3f::make(20.0f, 0.5f, 20.0f)}),
                                                       .object_layer = s.layer,
                                                       .motion_type = MotionType::STATIC,
-                                                      .position = {0.0f, -0.5f, 0.0f}});
+                                                      .position = vec3f::make(0.0f, -0.5f, 0.0f)});
     RigidBody *resting = add(s, MotionType::DYNAMIC, {0.0f, 0.5f, 0.0f});
     s.recorder.events.length = 0;
 
@@ -137,7 +137,7 @@ void test_body_activation_steps(TestCtx &ctx) {
     // a sleeping body jointed to an active one is woken by the step
     RigidBody *anchor = add(s, MotionType::KINEMATIC, {10.0f, 5.0f, 0.0f});
     RigidBody *hanging = add(s, MotionType::DYNAMIC, {10.0f, 4.0f, 0.0f});
-    point_constraint::create(*s.world, anchor, hanging, {.point_a = {10.0f, 4.5f, 0.0f}, .point_b = {10.0f, 4.5f, 0.0f}});
+    point_constraint::create(*s.world, anchor, hanging, {.point_a = vec3f::make(10.0f, 4.5f, 0.0f), .point_b = vec3f::make(10.0f, 4.5f, 0.0f)});
     rigid_body::sleep(*s.world, hanging);
     s.recorder.events.length = 0;
     steps(s, 1);

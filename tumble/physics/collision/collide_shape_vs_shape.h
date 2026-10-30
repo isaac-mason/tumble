@@ -192,17 +192,17 @@ void inverted_add_miss(CollideShapeCollector &c);
 }  // namespace collide_shape
 
 typedef void (*CollideShapeFn)(CollideShapeCollector &collector, const CollideShapeSettings &settings, const Shape *shape_a,
-                          const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, const Shape *shape_b,
-                          const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                          const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a, const Shape *shape_b,
+                          const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 
 namespace collide_shape {
 
 /** `fn` with a and b swapped, its hits swapped back: the handler for the reverse pair */
 template <CollideShapeFn fn>
 void reversed_collide_shape_vs_shape(CollideShapeCollector &collector, const CollideShapeSettings &settings, const Shape *shape_a,
-                                     const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
+                                     const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                                      const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                                     const Transformf &transform_b) {
+                                     const Transform &transform_b) {
     CollideShapeCollector inverted = create_collector(CollectorKind::CUSTOM);
     inverted.body_id_b = collector.body_id_b;
     inverted.early_out_fraction = collector.early_out_fraction;

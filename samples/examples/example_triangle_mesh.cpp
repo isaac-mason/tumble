@@ -49,8 +49,10 @@ static RigidBody *spawn(App &app) {
     settings.shape = state.kinds[(uint32_t)(seeded::next(state.random) * KIND_COUNT) % KIND_COUNT];
     settings.object_layer = state.layers.moving;
     settings.motion_type = MotionType::DYNAMIC;
-    settings.position = {seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA), SPAWN_HEIGHT, seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA)};
-    settings.quaternion = vec::quat_axis_angle(axis, seeded::next(state.random) * 2.0f * scalar::PI);
+    const float x = seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA);
+    const float z = seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA);
+    settings.position = vec3f::make(x, SPAWN_HEIGHT, z);
+    settings.quaternion = quatf::set_axis_angle(vec3f::normalize(vec3f::load(axis)), seeded::next(state.random) * 2.0f * scalar::PI);
     settings.restitution = 0.4f;
     settings.friction = 0.6f;
     return rigid_body::create(*app.world, settings);
@@ -71,7 +73,7 @@ static void init(App &app) {
     app.world = app::create_world(state.layers);
     make_jungle(app);
     state.kinds[0] = app::keep(app, sphere::create({.radius = 0.5f}));
-    state.kinds[1] = app::keep(app, box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.05f}));
+    state.kinds[1] = app::keep(app, box::create({.half_extents = vec3f::splat(0.5f), .convex_radius = 0.05f}));
     match_count(app);
     app.drawing.grid = false;
     camera::look_at(app.camera, {20.0f, 15.0f, -20.0f}, {0.0f, 5.0f, 0.0f});

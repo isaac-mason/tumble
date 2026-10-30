@@ -43,12 +43,12 @@ void test_swing_twist_constraint_create(TestCtx &ctx) {
     // world space: twist down, plane along x; the constraint frames taken to each body's space
     const ConstraintId id =
         swing_twist_constraint::create(*scene.world, a, b,
-                                       {.point_a = {0.0f, -1.0f, 0.0f},
-                                        .point_b = {0.0f, -1.0f, 0.0f},
-                                        .twist_axis_a = {0.0f, -2.0f, 0.0f},
-                                        .plane_axis_a = {3.0f, 0.0f, 0.0f},
-                                        .twist_axis_b = {0.0f, -2.0f, 0.0f},
-                                        .plane_axis_b = {3.0f, 0.0f, 0.0f},
+                                       {.point_a = vec3f::make(0.0f, -1.0f, 0.0f),
+                                        .point_b = vec3f::make(0.0f, -1.0f, 0.0f),
+                                        .twist_axis_a = vec3f::make(0.0f, -2.0f, 0.0f),
+                                        .plane_axis_a = vec3f::make(3.0f, 0.0f, 0.0f),
+                                        .twist_axis_b = vec3f::make(0.0f, -2.0f, 0.0f),
+                                        .plane_axis_b = vec3f::make(3.0f, 0.0f, 0.0f),
                                         .normal_half_cone_angle = 0.5f,
                                         .plane_half_cone_angle = 0.25f,
                                         .twist_min_angle = -0.1f,
@@ -60,9 +60,9 @@ void test_swing_twist_constraint_create(TestCtx &ctx) {
     CHECK(ctx, vec3f::distance(world_point(b, constraint->local_space_position2), vec3f::make(0.0f, -1.0f, 0.0f)) < 1e-5f);
 
     // constraint x is the twist axis and z the plane axis, in world space through either body
-    const Vec3f twist1 = vec3f::transform_quat(vec3f::axis_x(), quatf::multiply(quatf::load(a->quaternion), constraint->constraint_to_body1));
+    const Vec3f twist1 = vec3f::transform_quat(vec3f::axis_x(), quatf::multiply(a->quaternion, constraint->constraint_to_body1));
     CHECK(ctx, vec3f::distance(twist1, vec3f::make(0.0f, -1.0f, 0.0f)) < 1e-5f);
-    const Vec3f plane2 = vec3f::transform_quat(vec3f::axis_z(), quatf::multiply(quatf::load(b->quaternion), constraint->constraint_to_body2));
+    const Vec3f plane2 = vec3f::transform_quat(vec3f::axis_z(), quatf::multiply(b->quaternion, constraint->constraint_to_body2));
     CHECK(ctx, vec3f::distance(plane2, vec3f::make(1.0f, 0.0f, 0.0f)) < 1e-5f);
 
     // the rest pose is the identity in constraint space
@@ -87,7 +87,7 @@ void test_swing_twist_constraint_create(TestCtx &ctx) {
 
     // local space positions are as given
     const ConstraintId local_id = swing_twist_constraint::create(
-        *scene.world, a, b, {.point_a = {0.5f, 0.0f, 0.0f}, .space = ConstraintSpace::LOCAL});
+        *scene.world, a, b, {.point_a = vec3f::make(0.5f, 0.0f, 0.0f), .space = ConstraintSpace::LOCAL});
     const SwingTwistConstraint *local = swing_twist_constraint::get(*scene.world, local_id);
     CHECK(ctx, vec3f::exact_equals(local->local_space_position1, vec3f::make(0.5f, 0.0f, 0.0f)));
     CHECK(ctx, same_rotation(local->constraint_to_body1, quatf::make(0.0f, 0.0f, 0.0f, 1.0f)));
@@ -141,7 +141,7 @@ void test_swing_twist_constraint_clamps_swing(TestCtx &ctx) {
                                                          .twist_min_angle = -0.3f,
                                                          .twist_max_angle = 0.3f});
     // a swing about z, the normal axis
-    ball->motion_properties.angular_velocity = {0.0f, 0.0f, 3.0f};
+    ball->motion_properties.angular_velocity = vec3f::make(0.0f, 0.0f, 3.0f);
 
     float widest = 0.0f;
     float hardest = 0.0f;
@@ -156,7 +156,7 @@ void test_swing_twist_constraint_clamps_swing(TestCtx &ctx) {
     const SwingTwistAngles end = angles(*constraint, scene.world->bodies);
     CHECK_NEAR(ctx, end.swing, 0.4f, 1e-2f);
     CHECK(ctx, scalar::abs(end.twist) < 1e-3f);
-    CHECK(ctx, vec3f::length(vec3f::load(ball->motion_properties.angular_velocity)) < 1e-2f);
+    CHECK(ctx, vec3f::length(ball->motion_properties.angular_velocity) < 1e-2f);
     // the limit took out the spin's angular momentum, I * 3, in about one step
     CHECK(ctx, hardest > 2.0f * SPHERE_INERTIA && hardest < 4.0f * SPHERE_INERTIA);
     release_constraint_scene(scene);
@@ -170,7 +170,7 @@ void test_swing_twist_constraint_clamps_twist(TestCtx &ctx) {
                                                          .plane_half_cone_angle = 0.4f,
                                                          .twist_min_angle = -0.3f,
                                                          .twist_max_angle = 0.2f});
-    ball->motion_properties.angular_velocity = {3.0f, 0.0f, 0.0f};
+    ball->motion_properties.angular_velocity = vec3f::make(3.0f, 0.0f, 0.0f);
 
     float most = 0.0f;
     for (int i = 0; i < 90; i++) {
@@ -181,10 +181,10 @@ void test_swing_twist_constraint_clamps_twist(TestCtx &ctx) {
     SwingTwistAngles end = angles(*constraint, scene.world->bodies);
     CHECK_NEAR(ctx, end.twist, 0.2f, 1e-2f);
     CHECK(ctx, end.swing < 1e-3f);
-    CHECK(ctx, vec3f::length(vec3f::load(ball->motion_properties.angular_velocity)) < 1e-2f);
+    CHECK(ctx, vec3f::length(ball->motion_properties.angular_velocity) < 1e-2f);
 
     // and the other way to the asymmetric lower limit
-    ball->motion_properties.angular_velocity = {-3.0f, 0.0f, 0.0f};
+    ball->motion_properties.angular_velocity = vec3f::make(-3.0f, 0.0f, 0.0f);
     float least = 0.0f;
     float hardest = 0.0f;
     for (int i = 0; i < 90; i++) {
@@ -204,23 +204,23 @@ void test_swing_twist_constraint_pendulum(TestCtx &ctx) {
     ConstraintScene scene = make_constraint_scene();
     RigidBody *pivot = add_body(scene, MotionType::STATIC, {0.0f, 10.0f, 0.0f});
     RigidBody *ball = add_body(scene, MotionType::DYNAMIC, {0.0f, 9.0f, 0.0f});
-    const Float3 pivot_point = {0.0f, 10.0f, 0.0f};
+    const Vec3f pivot_point = vec3f::make(0.0f, 10.0f, 0.0f);
     const float half_cone = 20.0f * scalar::DEGREES_TO_RADIANS;
     const ConstraintId id = swing_twist_constraint::create(*scene.world, pivot, ball,
                                                                           {.point_a = pivot_point,
                                                                            .point_b = pivot_point,
-                                                                           .twist_axis_a = {0.0f, -1.0f, 0.0f},
-                                                                           .plane_axis_a = {1.0f, 0.0f, 0.0f},
-                                                                           .twist_axis_b = {0.0f, -1.0f, 0.0f},
-                                                                           .plane_axis_b = {1.0f, 0.0f, 0.0f},
+                                                                           .twist_axis_a = vec3f::make(0.0f, -1.0f, 0.0f),
+                                                                           .plane_axis_a = vec3f::axis_x(),
+                                                                           .twist_axis_b = vec3f::make(0.0f, -1.0f, 0.0f),
+                                                                           .plane_axis_b = vec3f::axis_x(),
                                                                            .normal_half_cone_angle = half_cone,
                                                                            .plane_half_cone_angle = half_cone,
                                                                            .twist_min_angle = -0.1f,
                                                                            .twist_max_angle = 0.1f});
     scene.ids.push(id);
     const SwingTwistConstraint *constraint = swing_twist_constraint::get(*scene.world, id);
-    ball->motion_properties.linear_velocity = {5.0f, 0.0f, 2.0f};
-    ball->motion_properties.angular_velocity = {0.0f, 4.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(5.0f, 0.0f, 2.0f);
+    ball->motion_properties.angular_velocity = vec3f::make(0.0f, 4.0f, 0.0f);
 
     float widest = 0.0f;
     float worst_twist = 0.0f;
@@ -230,15 +230,15 @@ void test_swing_twist_constraint_pendulum(TestCtx &ctx) {
         const SwingTwistAngles now = angles(*constraint, scene.world->bodies);
         widest = scalar::max(widest, now.swing);
         worst_twist = scalar::max(worst_twist, scalar::abs(now.twist));
-        worst_anchor = scalar::max(worst_anchor, vec3f::distance(world_point(ball, constraint->local_space_position2), vec3f::load(pivot_point)));
+        worst_anchor = scalar::max(worst_anchor, vec3f::distance(world_point(ball, constraint->local_space_position2), pivot_point));
     }
     // it reaches the cone and stays in it, overshooting by at most a step's swing (about 5.4 rad/s)
     CHECK(ctx, widest > half_cone - 2e-2f);
     CHECK(ctx, widest < half_cone + 5.4f * DT);
     CHECK(ctx, worst_twist < 0.1f + 4.0f * DT);
     CHECK(ctx, worst_anchor < 5e-2f);
-    CHECK(ctx, vec3f::distance(world_point(ball, constraint->local_space_position2), vec3f::load(pivot_point)) < 1e-2f);
-    CHECK_NEAR(ctx, vec3f::distance(vec3f::load(ball->center_of_mass_position), vec3f::load(pivot_point)), 1.0f, 1e-2f);
+    CHECK(ctx, vec3f::distance(world_point(ball, constraint->local_space_position2), pivot_point) < 1e-2f);
+    CHECK_NEAR(ctx, vec3f::distance(ball->center_of_mass_position, pivot_point), 1.0f, 1e-2f);
     release_constraint_scene(scene);
 }
 
@@ -255,8 +255,8 @@ void test_swing_twist_constraint_twist_motor_and_friction(TestCtx &ctx) {
 
     // a twist velocity motor spins the ball about the twist axis at the target
     for (int i = 0; i < 30; i++) step_constraint_scene(scene, DT, vec3f::zero());
-    CHECK_NEAR(ctx, ball->motion_properties.angular_velocity.x, 1.0f, 1e-3f);
-    CHECK(ctx, scalar::abs(ball->motion_properties.angular_velocity.y) < 1e-4f);
+    CHECK_NEAR(ctx, vec3f::x(ball->motion_properties.angular_velocity), 1.0f, 1e-3f);
+    CHECK(ctx, scalar::abs(vec3f::y(ball->motion_properties.angular_velocity)) < 1e-4f);
     CHECK_NEAR(ctx, angles(*constraint, scene.world->bodies).twist, 0.5f, 2e-2f);
     const Vec3f motor_lambda = swing_twist_constraint::get_total_lambda_motor(*constraint);
     CHECK(ctx, scalar::abs(vec3f::x(motor_lambda)) < 1e-3f && vec3f::y(motor_lambda) == 0.0f);
@@ -264,9 +264,9 @@ void test_swing_twist_constraint_twist_motor_and_friction(TestCtx &ctx) {
     // with the motor off, a friction torque of I slows it by 1 rad/s each second
     swing_twist_constraint::set_twist_motor_state(*constraint, MotorState::OFF);
     swing_twist_constraint::set_max_friction_torque(*constraint, SPHERE_INERTIA);
-    ball->motion_properties.angular_velocity = {-2.0f, 0.0f, 0.0f};
+    ball->motion_properties.angular_velocity = vec3f::make(-2.0f, 0.0f, 0.0f);
     for (int i = 0; i < 60; i++) step_constraint_scene(scene, DT, vec3f::zero());
-    CHECK_NEAR(ctx, ball->motion_properties.angular_velocity.x, -1.0f, 1e-3f);
+    CHECK_NEAR(ctx, vec3f::x(ball->motion_properties.angular_velocity), -1.0f, 1e-3f);
     release_constraint_scene(scene);
 }
 
@@ -280,7 +280,7 @@ void test_swing_twist_constraint_position_and_velocity_motors(TestCtx &ctx) {
     settings.twist_min_angle = -scalar::PI;
     settings.twist_max_angle = scalar::PI;
     // a damping only twist spring: dt c / I = 1 halves the target
-    const float inertia = 1.0f / ball->motion_properties.inv_inertia_diagonal.x;
+    const float inertia = 1.0f / vec3f::x(ball->motion_properties.inv_inertia_diagonal);
     settings.twist_motor_settings.spring = {SpringMode::STIFFNESS_AND_DAMPING, 0.0f, inertia / DT};
     const ConstraintId id = swing_twist_constraint::create(*scene.world, base, ball, settings);
     SwingTwistConstraint *constraint = swing_twist_constraint::get(*scene.world, id);
@@ -291,7 +291,7 @@ void test_swing_twist_constraint_position_and_velocity_motors(TestCtx &ctx) {
     swing_twist_constraint::setup_velocity(*constraint, scene.world->bodies, DT);
     swing_twist_constraint::warm_start_velocity(*constraint, scene.world->bodies, 1.0f);
     for (uint32_t i = 0; i < 10; i++) swing_twist_constraint::solve_velocity(*constraint, scene.world->bodies, DT);
-    CHECK_NEAR(ctx, ball->motion_properties.angular_velocity.x, 1.0f, 1e-4f);
-    CHECK(ctx, ball->motion_properties.angular_velocity.z > 0.0f);
+    CHECK_NEAR(ctx, vec3f::x(ball->motion_properties.angular_velocity), 1.0f, 1e-4f);
+    CHECK(ctx, vec3f::z(ball->motion_properties.angular_velocity) > 0.0f);
     release_constraint_scene(scene);
 }

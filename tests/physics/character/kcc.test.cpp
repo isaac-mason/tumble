@@ -18,8 +18,8 @@ const Float4 IDENTITY = {0.0f, 0.0f, 0.0f, 1.0f};
 
 RigidBody *add_static_box(WorldScene &scene, const Float3 &half_extents, const Float3 &position, const Float4 &quaternion = IDENTITY) {
     RigidBodySettings settings =
-        body_settings(box::create({.half_extents = half_extents}), scene.not_moving, MotionType::STATIC, position);
-    settings.quaternion = quaternion;
+        body_settings(box::create({.half_extents = vec3f::load(half_extents)}), scene.not_moving, MotionType::STATIC, position);
+    settings.quaternion = quatf::load(quaternion);
     return rigid_body::create(*scene.world, settings);
 }
 
@@ -37,15 +37,15 @@ Ref<KCC> make_capsule_character(const Float3 &position, KCC::BackFaceMode back_f
 Ref<KCC> make_footed_character(const Float3 &position, float max_slope_angle = 50.0f * scalar::DEGREES_TO_RADIANS) {
     KCCSettings settings;
     settings.shape = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
-    settings.shape_offset = {0.0f, 0.8f, 0.0f};
+    settings.shape_offset = vec3f::make(0.0f, 0.8f, 0.0f);
     settings.max_slope_angle = max_slope_angle;
     return kcc::create(settings, vec3f::load(position), quatf::load(IDENTITY));
 }
 
 KCCUpdateSettings no_stairs_no_stick() {
     KCCUpdateSettings settings;
-    settings.stick_to_floor_step_down = {0.0f, 0.0f, 0.0f};
-    settings.walk_stairs_step_up = {0.0f, 0.0f, 0.0f};
+    settings.stick_to_floor_step_down = vec3f::zero();
+    settings.walk_stairs_step_up = vec3f::zero();
     return settings;
 }
 
@@ -275,13 +275,13 @@ void test_kcc_defaults_and_slope_test(TestCtx &ctx) {
     dispatch::init();
     KCCSettings settings;
     settings.shape = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
-    settings.up = {0.0f, 2.0f, 0.0f};
+    settings.up = vec3f::make(0.0f, 2.0f, 0.0f);
     Ref<KCC> character = kcc::create(settings, vec3f::make(1.0f, 2.0f, 3.0f), quatf::load(IDENTITY));
 
     // up normalised, the supporting plane below everything, in the air
     CHECK_NEAR(ctx, vec3f::y(character->up), 1.0f, 1e-6f);
-    CHECK_NEAR(ctx, vec4f::y(character->supporting_volume_plane), 1.0f, 1e-6f);
-    CHECK(ctx, vec4f::w(character->supporting_volume_plane) == -1.0e10f);
+    CHECK_NEAR(ctx, vec3f::y(plane3f::normal(character->supporting_volume_plane)), 1.0f, 1e-6f);
+    CHECK(ctx, plane3f::constant(character->supporting_volume_plane) == -1.0e10f);
     CHECK_NEAR(ctx, character->cos_max_slope_angle, 0.6427876f, 1e-6f);
     CHECK(ctx, character->ground.state == KCC::GroundState::IN_AIR);
     CHECK(ctx, !kcc::is_supported(*character));
@@ -478,7 +478,7 @@ void test_kcc_rides_a_moving_kinematic_platform(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     World &world = *scene.world;
     add_floor(scene);
-    RigidBody *platform = add_body(scene, box::create({.half_extents = {2.0f, 0.25f, 2.0f}}), MotionType::KINEMATIC, {0.0f, 1.0f, 0.0f});
+    RigidBody *platform = add_body(scene, box::create({.half_extents = vec3f::make(2.0f, 0.25f, 2.0f)}), MotionType::KINEMATIC, {0.0f, 1.0f, 0.0f});
     rigid_body::set_linear_velocity(world, platform, vec3f::make(1.0f, 0.0f, 0.0f));
     step_world(world, DT);
 
@@ -491,13 +491,13 @@ void test_kcc_rides_a_moving_kinematic_platform(TestCtx &ctx) {
     CHECK(ctx, character->ground.body_id == platform->id);
     CHECK_NEAR(ctx, vec3f::x(character->ground.velocity), 1.0f, 1e-3f);
 
-    const float platform_start = platform->position.x;
+    const float platform_start = vec3f::x(platform->position);
     const float character_start = vec3f::x(character->position);
     for (int i = 0; i < 60; i++) step_walking(world, *character, {0.0f, 0.0f, 0.0f}, settings, filter);
 
     // it moved with the platform, standing on its top
-    CHECK_NEAR(ctx, platform->position.x - platform_start, 1.0f, 1e-3f);
-    CHECK_NEAR(ctx, vec3f::x(character->position) - character_start, platform->position.x - platform_start, 0.02f);
+    CHECK_NEAR(ctx, vec3f::x(platform->position) - platform_start, 1.0f, 1e-3f);
+    CHECK_NEAR(ctx, vec3f::x(character->position) - character_start, vec3f::x(platform->position) - platform_start, 0.02f);
     CHECK_NEAR(ctx, vec3f::y(character->position), 1.25f, 0.03f);
     CHECK(ctx, character->ground.state == KCC::GroundState::ON_GROUND);
 
@@ -510,7 +510,7 @@ void test_kcc_reports_a_sensor_and_walks_through_it(TestCtx &ctx) {
     World &world = *scene.world;
     add_floor(scene);
     RigidBodySettings sensor_settings =
-        body_settings(box::create({.half_extents = {0.5f, 1.0f, 2.0f}}), scene.not_moving, MotionType::STATIC, {1.5f, 1.0f, 0.0f});
+        body_settings(box::create({.half_extents = vec3f::make(0.5f, 1.0f, 2.0f)}), scene.not_moving, MotionType::STATIC, {1.5f, 1.0f, 0.0f});
     sensor_settings.sensor = true;
     RigidBody *sensor = rigid_body::create(world, sensor_settings);
     step_world(world, DT);
@@ -544,9 +544,9 @@ void test_kcc_pushes_a_dynamic_box(TestCtx &ctx) {
     add_floor(scene);
     // 10 kg: the character's 100 N strength moves it against friction
     RigidBody *crate =
-        add_body(scene, box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .density = 10.0f}), MotionType::DYNAMIC, {1.5f, 0.5f, 0.0f});
+        add_body(scene, box::create({.half_extents = vec3f::splat(0.5f), .density = 10.0f}), MotionType::DYNAMIC, {1.5f, 0.5f, 0.0f});
     for (int i = 0; i < 30; i++) step_world(world, DT);
-    const float crate_start = crate->position.x;
+    const float crate_start = vec3f::x(crate->position);
 
     Ref<KCC> character = make_footed_character({0.0f, 0.0f, 0.0f});
     Filter filter = filter::create(world.settings.layers);
@@ -560,7 +560,7 @@ void test_kcc_pushes_a_dynamic_box(TestCtx &ctx) {
 
     // the character's impulses moved the box along +x, and the character followed it
     CHECK(ctx, collided);
-    CHECK(ctx, crate->position.x > crate_start + 0.1f);
+    CHECK(ctx, vec3f::x(crate->position) > crate_start + 0.1f);
     CHECK(ctx, vec3f::x(character->position) > 0.8f);
 
     character = nullptr;
@@ -575,7 +575,7 @@ void test_kcc_inner_body_follows_and_is_ignored_by_its_own_queries(TestCtx &ctx)
 
     KCCSettings character_settings;
     character_settings.shape = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
-    character_settings.shape_offset = {0.0f, 0.8f, 0.0f};
+    character_settings.shape_offset = vec3f::make(0.0f, 0.8f, 0.0f);
     character_settings.user_data = 42;
     character_settings.inner_rigid_body_shape = character_settings.shape;
     character_settings.inner_rigid_body_object_layer = scene.moving;
@@ -600,8 +600,8 @@ void test_kcc_inner_body_follows_and_is_ignored_by_its_own_queries(TestCtx &ctx)
     CHECK_NEAR(ctx, vec3f::x(character->position), 1.0f, 0.03f);
     CHECK_NEAR(ctx, vec3f::y(character->position), 0.0f, 0.03f);
     CHECK(ctx, !kcc::has_collided_with(*character, inner_id));
-    CHECK_NEAR(ctx, inner->position.x, vec3f::x(character->position), 1e-5f);
-    CHECK_NEAR(ctx, inner->position.y, vec3f::y(character->position) + 0.8f + character->character_padding, 1e-5f);
+    CHECK_NEAR(ctx, vec3f::x(inner->position), vec3f::x(character->position), 1e-5f);
+    CHECK_NEAR(ctx, vec3f::y(inner->position), vec3f::y(character->position) + 0.8f + character->character_padding, 1e-5f);
 
     // a ray down onto the character hits the inner body
     CastRayCollector rays = cast_ray::create_collector(CollectorKind::CLOSEST);
@@ -630,7 +630,7 @@ void test_kcc_set_shape_refuses_a_shape_that_would_penetrate(TestCtx &ctx) {
     Ref<Shape> crouched = capsule::create({.half_height_of_cylinder = 0.2f, .radius = 0.3f});
     Ref<Shape> standing = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
     character_settings.shape = crouched;
-    character_settings.shape_offset = {0.0f, 0.5f, 0.0f};
+    character_settings.shape_offset = vec3f::make(0.0f, 0.5f, 0.0f);
     Ref<KCC> character = kcc::create(character_settings, vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY));
     Filter filter = filter::create(world.settings.layers);
 
@@ -705,8 +705,8 @@ void test_kcc_stair_walk_that_gains_no_height_is_cancelled(TestCtx &ctx) {
     step_world(world, DT);
 
     KCCSettings character_settings;
-    character_settings.shape = box::create({.half_extents = {0.3f, 0.8f, 0.3f}});
-    character_settings.shape_offset = {0.0f, 0.8f, 0.0f};
+    character_settings.shape = box::create({.half_extents = vec3f::make(0.3f, 0.8f, 0.3f)});
+    character_settings.shape_offset = vec3f::make(0.0f, 0.8f, 0.0f);
     Ref<KCC> character = kcc::create(character_settings, vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY));
     Filter filter = filter::create(world.settings.layers);
     const KCCUpdateSettings settings;

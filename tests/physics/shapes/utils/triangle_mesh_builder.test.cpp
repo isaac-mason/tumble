@@ -476,7 +476,7 @@ void test_triangle_mesh_builder_flat_grid(TestCtx &ctx) {
 
         // the precomputed aabbs follow the final triangle order
         Box3f aabb;
-        triangle_mesh_data::calculate_triangle_aabb(aabb, *data, t);
+        aabox::store(aabb, triangle_mesh_data::calculate_triangle_aabb(*data, t));
         const float *stored = data->triangle_aabbs + t * 6;
         aabbs_ok = aabbs_ok && stored[0] == aabb.min.x && stored[1] == aabb.min.y && stored[2] == aabb.min.z && stored[3] == aabb.max.x &&
                    stored[4] == aabb.max.y && stored[5] == aabb.max.z;

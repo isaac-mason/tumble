@@ -55,18 +55,20 @@ struct ConvexHullShape : Shape {
 
     /** the built hull: the shape's own, built by create and freed with the shape */
     struct Data {
-        /** flat xyz, 3 per hull vertex, in the input's space (not relative to the centre of mass) */
-        collections::Array<float> point_positions;
-        /** the vertices shrunk by convex_radius, flat xyz in the same order; empty when convex_radius is 0 (the shrink is the identity) */
-        collections::Array<float> shrunk_point_positions;
+        /**
+         * the hull's vertices, in the input's space (not relative to the centre of mass). jolt keeps them in its
+         * Point with their faces; here they are one array, which the support borrows without a copy
+         */
+        collections::Array<Vec3f> points;
+        /** the vertices shrunk by convex_radius, in the same order; empty when convex_radius is 0 (the shrink is the identity) */
+        collections::Array<Vec3f> shrunk_points;
         /** neighbouring faces per vertex (1..3), used by the convex-radius shrink */
         collections::Array<uint32_t> point_num_faces;
         /** up to 3 neighbouring face indices per vertex, 3 per vertex, -1 unused */
         collections::Array<int32_t> point_faces;
-        uint32_t num_points;
         collections::Array<Face> faces;
         /** one per face, the normal unit and outward */
-        collections::Array<Plane3f> planes;
+        collections::Array<Plane> planes;
         /** every face's vertex ring, counter clockwise seen from outside, indexing the points */
         collections::Array<uint32_t> vertex_indices;
         /**
@@ -77,10 +79,10 @@ struct ConvexHullShape : Shape {
         collections::Array<uint32_t> point_neighbors;
         float convex_radius;
         /** about the centre of mass at unit density, column-major */
-        Float4x4 inertia;
+        Mat4f inertia;
         /** local bounds of the points */
-        Box3f aabb;
-        Float3 center_of_mass;
+        AABox aabb;
+        Vec3f center_of_mass;
         float volume;
     };
 
@@ -90,9 +92,8 @@ struct ConvexHullShape : Shape {
 };
 
 struct ConvexHullShapeSettings {
-    /** flat input points xyz, interior points allowed; read during build only */
-    const float *positions = nullptr;
-    /** the number of points, a third of the floats in positions */
+    /** the input points, interior points allowed; read during build only */
+    const Vec3f *positions = nullptr;
     uint32_t num_positions = 0;
     float convex_radius = support::DEFAULT_CONVEX_RADIUS;
     /**

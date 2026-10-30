@@ -41,16 +41,16 @@ static void init(App &app) {
     // one layer that collides with nothing, and no gravity: the boxes only spin
     WorldSettings settings = world_settings::create();
     const uint32_t moving = world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
-    settings.gravity = {0.0f, 0.0f, 0.0f};
+    settings.gravity = vec3f::zero();
     app.world = world::create(settings);
 
-    Shape *cube = app::keep(app, box::create({.half_extents = {0.75f, 0.75f, 0.75f}}));
+    Shape *cube = app::keep(app, box::create({.half_extents = vec3f::splat(0.75f)}));
     for (int i = 0; i < BOX_COUNT; i++) {
         RigidBodySettings body;
         body.shape = cube;
         body.object_layer = moving;
         body.motion_type = MotionType::DYNAMIC;
-        body.position = {x_of(i), START_Y, 0.0f};
+        body.position = vec3f::make(x_of(i), START_Y, 0.0f);
         body.angular_damping = damping_of(i);
         state.boxes[i] = rigid_body::create(*app.world, body);
     }
@@ -68,8 +68,7 @@ static void step(App &app, float) {
     }
     bool all_stopped = true;
     for (int i = 0; i < BOX_COUNT; i++) {
-        const Float3 &w = state.boxes[i]->motion_properties.angular_velocity;
-        all_stopped = all_stopped && scalar::sqrt(w.x * w.x + w.y * w.y + w.z * w.z) < 0.05f;
+        all_stopped = all_stopped && vec3f::length(state.boxes[i]->motion_properties.angular_velocity) < 0.05f;
     }
     if (all_stopped && state.steps > 60) state.reset_countdown = RESET_DELAY_STEPS;
 }

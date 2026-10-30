@@ -62,11 +62,11 @@ void reinsert_body(Broadphase &broadphase, RigidBody *body, const Layers &layers
     add_body(broadphase, body, layers);
 }
 
-Box3f &read_fat_bounds(Box3f &out, const Broadphase &broadphase, const RigidBody &body) {
-    return quad_tree::read_body_bounds(out, broadphase.trees[(uint32_t)body.broadphase_layer], body);
+AABox read_fat_bounds(const Broadphase &broadphase, const RigidBody &body) {
+    return quad_tree::read_body_bounds(broadphase.trees[(uint32_t)body.broadphase_layer], body);
 }
 
-void intersect_fat_leaves(Broadphase &broadphase, const Bodies &bodies, uint32_t broadphase_layer, const Box3f &aabb, BodyVisitor &visitor) {
+void intersect_fat_leaves(Broadphase &broadphase, const Bodies &bodies, uint32_t broadphase_layer, const AABox &aabb, BodyVisitor &visitor) {
     quad_tree::intersect_aabb_fat_leaves(bodies, broadphase.trees[broadphase_layer], aabb, visitor);
 }
 
@@ -81,7 +81,7 @@ void cast_ray(Broadphase &broadphase, const Bodies &bodies, const Rayf &ray, con
     }
 }
 
-void intersect_aabb(Broadphase &broadphase, const Bodies &bodies, const Box3f &aabb, const Filter &query_filter,
+void intersect_aabb(Broadphase &broadphase, const Bodies &bodies, const AABox &aabb, const Filter &query_filter,
                     BodyVisitor &visitor) {
     for (uint32_t broadphase_layer = 0; broadphase_layer < broadphase.trees.length; broadphase_layer++) {
         if (!filter::filter_broadphase_layer(query_filter, broadphase_layer)) continue;
@@ -125,7 +125,7 @@ void intersect_point(Broadphase &broadphase, const Bodies &bodies, Vec3f point, 
     }
 }
 
-void cast_aabb(Broadphase &broadphase, const Bodies &bodies, const Box3f &bounds, Vec3f displacement,
+void cast_aabb(Broadphase &broadphase, const Bodies &bodies, const AABox &bounds, Vec3f displacement,
                const Filter &query_filter, BodyVisitor &visitor) {
     for (uint32_t broadphase_layer = 0; broadphase_layer < broadphase.trees.length; broadphase_layer++) {
         if (!filter::filter_broadphase_layer(query_filter, broadphase_layer)) continue;
@@ -136,13 +136,10 @@ void cast_aabb(Broadphase &broadphase, const Bodies &bodies, const Box3f &bounds
     }
 }
 
-Box3f &bounds(Box3f &out, const Broadphase &broadphase) {
+AABox bounds(const Broadphase &broadphase) {
     AABox all = aabox::empty();
-    for (uint32_t i = 0; i < broadphase.trees.length; i++) {
-        Box3f tree_bounds;
-        all = aabox::union_(all, aabox::load(quad_tree::bounds(tree_bounds, broadphase.trees[i])));
-    }
-    return aabox::store(out, all);
+    for (uint32_t i = 0; i < broadphase.trees.length; i++) all = aabox::union_(all, quad_tree::bounds(broadphase.trees[i]));
+    return all;
 }
 
 }  // namespace broadphase

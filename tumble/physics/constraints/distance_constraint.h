@@ -40,9 +40,9 @@ struct DistanceConstraintSettings {
      * the point on body a (space by `space`). the constraint keeps point_a and point_b at the same distance;
      * point_a = point_b makes a cheap point constraint, though it removes only 1 degree of freedom instead of 3
      */
-    Float3 point_a = {0.0f, 0.0f, 0.0f};
+    Vec3f point_a = vec3f::zero();
     /** the point on body b (space by `space`) */
-    Float3 point_b = {0.0f, 0.0f, 0.0f};
+    Vec3f point_b = vec3f::zero();
     /** minimum distance, -1 for the initial distance */
     float min_distance = -1.0f;
     /** maximum distance, -1 for the initial distance */

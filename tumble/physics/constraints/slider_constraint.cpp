@@ -89,18 +89,18 @@ ConstraintId create(World &world, RigidBody *body_a, RigidBody *body_b,
     constraint.base.body_index_b = body_b->index;
 
     // normalize axes
-    const Vec3f slider_axis1 = vec3f::normalize(vec3f::load(settings.slider_axis_a));
-    const Vec3f slider_axis2 = vec3f::normalize(vec3f::load(settings.slider_axis_b));
-    const Vec3f normal_axis1 = vec3f::normalize(vec3f::load(settings.normal_axis_a));
-    const Vec3f normal_axis2 = vec3f::normalize(vec3f::load(settings.normal_axis_b));
+    const Vec3f slider_axis1 = vec3f::normalize(settings.slider_axis_a);
+    const Vec3f slider_axis2 = vec3f::normalize(settings.slider_axis_b);
+    const Vec3f normal_axis1 = vec3f::normalize(settings.normal_axis_a);
+    const Vec3f normal_axis2 = vec3f::normalize(settings.normal_axis_b);
 
     // initial orientation from the slider (x) and normal (y) axes
     constraint.inv_initial_orientation =
         rotation_euler_constraint_part::get_inv_initial_orientation_xy(slider_axis1, normal_axis1, slider_axis2, normal_axis2);
 
     if (settings.space == ConstraintSpace::WORLD) {
-        const Quatf inv_quat_a = quatf::conjugate(quatf::load(body_a->quaternion));
-        const Quatf inv_quat_b = quatf::conjugate(quatf::load(body_b->quaternion));
+        const Quatf inv_quat_a = quatf::conjugate(body_a->quaternion);
+        const Quatf inv_quat_b = quatf::conjugate(body_b->quaternion);
 
         if (settings.auto_detect_point) {
             // if either body is static, anchor on the other body's center of mass. otherwise weight the anchor
@@ -109,8 +109,8 @@ ConstraintId create(World &world, RigidBody *body_a, RigidBody *body_b,
             const float inv_mass_b = body_b->motion_properties.inv_mass;
             const float total_inv_mass = inv_mass_a + inv_mass_b;
 
-            const Vec3f center_of_mass_a = vec3f::load(body_a->center_of_mass_position);
-            const Vec3f center_of_mass_b = vec3f::load(body_b->center_of_mass_position);
+            const Vec3f center_of_mass_a = body_a->center_of_mass_position;
+            const Vec3f center_of_mass_b = body_b->center_of_mass_position;
             Vec3f anchor;
             if (body_a->motion_type == MotionType::STATIC) {
                 anchor = center_of_mass_b;
@@ -127,9 +127,9 @@ ConstraintId create(World &world, RigidBody *body_a, RigidBody *body_b,
             constraint.local_space_position_a = vec3f::transform_quat(vec3f::subtract(anchor, center_of_mass_a), inv_quat_a);
             constraint.local_space_position_b = vec3f::transform_quat(vec3f::subtract(anchor, center_of_mass_b), inv_quat_b);
         } else {
-            constraint.local_space_position_a = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point_a), vec3f::load(body_a->center_of_mass_position)), inv_quat_a);
+            constraint.local_space_position_a = vec3f::transform_quat(vec3f::subtract(settings.point_a, body_a->center_of_mass_position), inv_quat_a);
 
-            constraint.local_space_position_b = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point_b), vec3f::load(body_b->center_of_mass_position)), inv_quat_b);
+            constraint.local_space_position_b = vec3f::transform_quat(vec3f::subtract(settings.point_b, body_b->center_of_mass_position), inv_quat_b);
         }
 
         // slider axis and normal to local space
@@ -140,10 +140,10 @@ ConstraintId create(World &world, RigidBody *body_a, RigidBody *body_b,
 
         // the axes were given in world space: r0^-1 = q20^-1 (c2 c1^-1) q10
         constraint.inv_initial_orientation =
-            quatf::multiply(quatf::multiply(inv_quat_b, constraint.inv_initial_orientation), quatf::load(body_a->quaternion));
+            quatf::multiply(quatf::multiply(inv_quat_b, constraint.inv_initial_orientation), body_a->quaternion);
     } else {
-        constraint.local_space_position_a = vec3f::load(settings.point_a);
-        constraint.local_space_position_b = vec3f::load(settings.point_b);
+        constraint.local_space_position_a = settings.point_a;
+        constraint.local_space_position_b = settings.point_b;
         constraint.local_space_slider_axis_a = slider_axis1;
         constraint.local_space_normal_a = normal_axis1;
         constraint.local_space_normal_b = vec3f::cross(constraint.local_space_slider_axis_a, constraint.local_space_normal_a);
@@ -183,13 +183,13 @@ float get_current_position(const World &world, const SliderConstraint &constrain
     const RigidBody &body_a = *bodies.pool[constraint.base.body_index_a];
     const RigidBody &body_b = *bodies.pool[constraint.base.body_index_b];
 
-    const Quatf rotation_a = quatf::load(body_a.quaternion);
+    const Quatf rotation_a = body_a.quaternion;
     const Vec3f r1 = vec3f::transform_quat(constraint.local_space_position_a, rotation_a);
-    const Vec3f r2 = vec3f::transform_quat(constraint.local_space_position_b, quatf::load(body_b.quaternion));
+    const Vec3f r2 = vec3f::transform_quat(constraint.local_space_position_b, body_b.quaternion);
 
     // u = x2 + r2 - x1 - r1
     const Vec3f u = vec3f::subtract(
-        vec3f::add(vec3f::subtract(vec3f::load(body_b.center_of_mass_position), vec3f::load(body_a.center_of_mass_position)), r2), r1);
+        vec3f::add(vec3f::subtract(body_b.center_of_mass_position, body_a.center_of_mass_position), r2), r1);
 
     return vec3f::dot(u, vec3f::transform_quat(constraint.local_space_slider_axis_a, rotation_a));
 }
@@ -225,7 +225,7 @@ float get_max_friction_force(const SliderConstraint &constraint) { return constr
 static void get_inverse_mass_and_inertia(float &out_inv_mass, Mat4f &out_inv_inertia, RigidBody &body, uint32_t step_stamp) {
     if (body.motion_type == MotionType::DYNAMIC) {
         out_inv_mass = body.motion_properties.inv_mass;
-        out_inv_inertia = motion_properties::get_world_inverse_inertia(body.motion_properties, quatf::load(body.quaternion), step_stamp);
+        out_inv_inertia = motion_properties::get_world_inverse_inertia(body.motion_properties, body.quaternion, step_stamp);
     } else {
         out_inv_mass = 0.0f;
         out_inv_inertia = mat4f::zero();
@@ -238,7 +238,7 @@ static void calculate_r1_r2_u(SliderConstraint &constraint, const RigidBody &bod
     constraint.r1 = mat4f::multiply3x3_vec(rotation_a, constraint.local_space_position_a);
     constraint.r2 = mat4f::multiply3x3_vec(rotation_b, constraint.local_space_position_b);
 
-    const Vec3f delta_com = vec3f::subtract(vec3f::load(body_b.center_of_mass_position), vec3f::load(body_a.center_of_mass_position));
+    const Vec3f delta_com = vec3f::subtract(body_b.center_of_mass_position, body_a.center_of_mass_position);
     constraint.u = vec3f::subtract(vec3f::add(delta_com, constraint.r2), constraint.r1);
 }
 
@@ -351,8 +351,8 @@ void setup_velocity(SliderConstraint &constraint, Bodies &bodies, float delta_ti
     RigidBody &body_a = *bodies.pool[constraint.base.body_index_a];
     RigidBody &body_b = *bodies.pool[constraint.base.body_index_b];
 
-    const Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
+    const Mat4f rotation_a = mat4f::from_quat(body_a.quaternion);
+    const Mat4f rotation_b = mat4f::from_quat(body_b.quaternion);
 
     calculate_r1_r2_u(constraint, body_a, body_b, rotation_a, rotation_b);
     calculate_position_constraint_properties(constraint, body_a, body_b, rotation_a, bodies.step_stamp);
@@ -440,8 +440,8 @@ bool solve_position(SliderConstraint &constraint, Bodies &bodies, float delta_ti
 
     // the motor works on velocities only
 
-    Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
+    Mat4f rotation_a = mat4f::from_quat(body_a.quaternion);
+    Mat4f rotation_b = mat4f::from_quat(body_b.quaternion);
     calculate_r1_r2_u(constraint, body_a, body_b, rotation_a, rotation_b);
     calculate_position_constraint_properties(constraint, body_a, body_b, rotation_a, motion_properties::STEP_STAMP_NONE);
     const bool pos = dual_axis_constraint_part::solve_position_constraint(constraint.position_constraint_part, body_a, body_b,
@@ -455,8 +455,8 @@ bool solve_position(SliderConstraint &constraint, Bodies &bodies, float delta_ti
     // soft limits have no position solve
     bool limit = false;
     if (constraint.has_limits && constraint.limits_spring_settings.frequency_or_stiffness <= 0.0f) {
-        rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-        rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
+        rotation_a = mat4f::from_quat(body_a.quaternion);
+        rotation_b = mat4f::from_quat(body_b.quaternion);
         calculate_r1_r2_u(constraint, body_a, body_b, rotation_a, rotation_b);
         calculate_sliding_axis_and_position(constraint, rotation_a);
         calculate_position_limits_constraint_properties(constraint, body_a, body_b, delta_time, motion_properties::STEP_STAMP_NONE);

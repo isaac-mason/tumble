@@ -65,17 +65,16 @@ static bool should_report_pair(const Layers &layers, const RigidBody &active_bod
 /** the sweep's keep test: body a's fat leaf grown by the speculative distance against body b's */
 static bool fat_leaves_overlap(const Broadphase &broadphase, const RigidBody &body_a, const RigidBody &body_b,
                                float speculative_contact_distance) {
-    Box3f fat_a, fat_b;
-    broadphase::read_fat_bounds(fat_a, broadphase, body_a);
-    broadphase::read_fat_bounds(fat_b, broadphase, body_b);
+    const AABox fat_a = broadphase::read_fat_bounds(broadphase, body_a);
+    const AABox fat_b = broadphase::read_fat_bounds(broadphase, body_b);
     // mirrors the discovery reach (fat + speculative distance vs fat) so a just-discovered pair always survives the
     // same-step sweep, whatever the relative sizes of the expansion margin and the speculative distance
-    return aabox::intersects(aabox::expand_by_margin(aabox::load(fat_a), speculative_contact_distance), aabox::load(fat_b));
+    return aabox::intersects(aabox::expand_by_margin(fat_a, speculative_contact_distance), fat_b);
 }
 
 /** the emission's tight test: the more active body's box grown by the speculative distance against the other's */
 static bool overlaps_for_narrowphase(const RigidBody &more_active, const RigidBody &less_active, float speculative_contact_distance) {
-    return aabox::intersects(aabox::expand_by_margin(aabox::load(more_active.aabb), speculative_contact_distance), aabox::load(less_active.aabb));
+    return aabox::intersects(aabox::expand_by_margin(more_active.aabb, speculative_contact_distance), less_active.aabb);
 }
 
 /** link a record's edge at the head of the body's intrusive pair list */
@@ -312,9 +311,7 @@ void find_colliding_pairs(Pairs &pairs, Contacts &contacts, Broadphase &broadpha
         const uint32_t body_broadphase_layer = (uint32_t)body->broadphase_layer;
 
         // fat leaf aabb expanded by the speculative distance: the discovery reach
-        Box3f fat_leaf, expanded_fat_aabb;
-        broadphase::read_fat_bounds(fat_leaf, broadphase, *body);
-        aabox::store(expanded_fat_aabb, aabox::expand_by_margin(aabox::load(fat_leaf), speculative_contact_distance));
+        const AABox expanded_fat_aabb = aabox::expand_by_margin(broadphase::read_fat_bounds(broadphase, *body), speculative_contact_distance);
 
         for (uint32_t other_broadphase_layer = 0; other_broadphase_layer < broadphase.trees.length; other_broadphase_layer++) {
             if (!layers::object_layer_collides_with_broadphase_layer(layers, object_layer, other_broadphase_layer)) continue;

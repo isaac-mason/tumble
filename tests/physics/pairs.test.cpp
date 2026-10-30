@@ -42,7 +42,7 @@ RigidBody *add_body(World &world, Shape *shape, uint32_t layer, const Float3 &po
                                           .object_layer = layer,
                                           .motion_type = options.motion_type,
                                           .user_data = options.user_data,
-                                          .position = position,
+                                          .position = vec3f::load(position),
                                           .sensor = options.sensor,
                                           .collide_kinematic_vs_non_dynamic = options.collide_kinematic_vs_non_dynamic,
                                           .mass = options.motion_type == MotionType::DYNAMIC ? 1.0f : -1.0f});
@@ -129,7 +129,7 @@ void test_pairs_edge_keys(TestCtx &ctx) {
 
 void test_pairs_reporting_truth_table(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(0.5f)});
 
     const MotionType motion_types[] = {MotionType::STATIC, MotionType::KINEMATIC, MotionType::DYNAMIC};
     uint32_t combos = 0;
@@ -159,7 +159,7 @@ void test_pairs_cluster_records_and_events(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
     World &world = make_single_layer_world(layer);
-    Ref<Shape> shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(0.5f)});
 
     // three mutually overlapping boxes and a fourth far away
     RigidBody *a = add_body(world, shape, layer, {0, 0, 0}, {.user_data = 101});
@@ -205,7 +205,7 @@ void test_pairs_record_survives_while_overlapping(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
     World &world = make_single_layer_world(layer);
-    Ref<Shape> shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(0.5f)});
 
     RigidBody *a = add_body(world, shape, layer, {0, 0, 0});
     RigidBody *b = add_body(world, shape, layer, {0.4f, 0, 0});
@@ -241,7 +241,7 @@ void test_pairs_persist_through_sleep(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
     World &world = make_single_layer_world(layer);
-    Ref<Shape> shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(0.5f)});
 
     RigidBody *a = add_body(world, shape, layer, {0, 0, 0});
     RigidBody *b = add_body(world, shape, layer, {0.4f, 0, 0});
@@ -269,7 +269,7 @@ void test_pairs_teleport_sleeping_destroys_record(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
     World &world = make_single_layer_world(layer);
-    Ref<Shape> shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(0.5f)});
 
     RigidBody *a = add_body(world, shape, layer, {0, 0, 0});
     RigidBody *b = add_body(world, shape, layer, {0.4f, 0, 0});
@@ -296,7 +296,7 @@ void test_pairs_teleport_sleeping_discovers_pair(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
     World &world = make_single_layer_world(layer);
-    Ref<Shape> shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(0.5f)});
 
     RigidBody *a = add_body(world, shape, layer, {0, 0, 0});
     RigidBody *b = add_body(world, shape, layer, {50, 0, 0});
@@ -323,7 +323,7 @@ void test_pairs_removal_purges(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
     World &world = make_single_layer_world(layer);
-    Ref<Shape> shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(0.5f)});
 
     RigidBody *a = add_body(world, shape, layer, {0, 0, 0});
     RigidBody *b = add_body(world, shape, layer, {0.4f, 0, 0});
@@ -352,7 +352,7 @@ void test_pairs_recycled_bodies_stay_distinct(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
     World &world = make_single_layer_world(layer);
-    Ref<Shape> shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(0.5f)});
 
     // recycle three slots so the ids carry sequences above the index bits
     RigidBody *scratch[3] = {add_body(world, shape, layer, {100, 0, 0}), add_body(world, shape, layer, {103, 0, 0}),
@@ -377,8 +377,8 @@ void test_pairs_hub_with_spokes(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
     World &world = make_single_layer_world(layer);
-    Ref<Shape> hub_shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
-    Ref<Shape> spoke_shape = box::create({.half_extents = {0.1f, 0.1f, 0.1f}});
+    Ref<Shape> hub_shape = box::create({.half_extents = vec3f::splat(0.5f)});
+    Ref<Shape> spoke_shape = box::create({.half_extents = vec3f::splat(0.1f)});
 
     RigidBody *hub = add_body(world, hub_shape, layer, {0, 0, 0});
     // four spokes overlapping only the hub, pairwise far apart even with fat margins: one record each
@@ -413,7 +413,7 @@ void test_pairs_pose_cache(TestCtx &ctx) {
     dispatch::init();
     uint32_t layer;
     World &world = make_single_layer_world(layer);
-    Ref<Shape> shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(0.5f)});
 
     RigidBody *a = add_body(world, shape, layer, {0, 0, 0});
     RigidBody *b = add_body(world, shape, layer, {0.4f, 0, 0});

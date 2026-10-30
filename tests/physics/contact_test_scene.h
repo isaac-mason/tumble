@@ -49,7 +49,7 @@ inline RigidBody *add_contact_body(ContactScene &scene, Shape *shape, MotionType
     settings.shape = shape;
     settings.object_layer = scene.layer;
     settings.motion_type = motion_type;
-    settings.position = position;
+    settings.position = vec3f::load(position);
     settings.linear_damping = 0.0f;
     settings.angular_damping = 0.0f;
     settings.friction = body_settings.friction;

@@ -11,7 +11,7 @@ constexpr ShapeType SHAPE_ELLIPSOID = ShapeType::USER_1;
 
 struct EllipsoidShape : Shape {
     static constexpr ShapeType TYPE = SHAPE_ELLIPSOID;
-    Float3 radii;
+    Vec3f radii;
     float density;
 };
 /* SNIPPET_END: data */
@@ -23,7 +23,7 @@ Vec3f ellipsoid_support(Support &support, Vec3f direction) {
     const Vec3f local = support::to_local_direction(support, direction);
     const EllipsoidShape &ellipsoid = *static_cast<const EllipsoidShape *>(support.user.data);
     const Vec3f scale = vec3f::abs(support.user.scale);
-    const Vec3f radii = vec3f::multiply(vec3f::load(ellipsoid.radii), scale);
+    const Vec3f radii = vec3f::multiply(ellipsoid.radii, scale);
 
     const Vec3f stretched = vec3f::multiply(radii, local);
     const float length = vec3f::length(stretched);
@@ -48,22 +48,20 @@ void ellipsoid_set_support(Support &out, const Shape *shape, SupportFunctionMode
 /* SNIPPET_START: functions */
 void ellipsoid_mass_properties(MassProperties &out, const Shape *shape) {
     const EllipsoidShape &ellipsoid = shapes::as<EllipsoidShape>(shape);
-    const float a = ellipsoid.radii.x;
-    const float b = ellipsoid.radii.y;
-    const float c = ellipsoid.radii.z;
+    const float a = vec3f::x(ellipsoid.radii);
+    const float b = vec3f::y(ellipsoid.radii);
+    const float c = vec3f::z(ellipsoid.radii);
     out.mass = 4.0f / 3.0f * scalar::PI * a * b * c * ellipsoid.density;
     const float k = out.mass / 5.0f;
-    out.inertia = {{
-        k * (b * b + c * c), 0.0f, 0.0f, 0.0f,
-        0.0f, k * (a * a + c * c), 0.0f, 0.0f,
-        0.0f, 0.0f, k * (a * a + b * b), 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f,
-    }};
+    out.inertia = mat4f::from_scaling(vec3f::make(
+        k * (b * b + c * c),
+        k * (a * a + c * c),
+        k * (a * a + b * b)));
 }
 
 // the gradient of x^2/a^2 + y^2/b^2 + z^2/c^2 at the point
 void ellipsoid_surface_normal(SurfaceNormalResult &io, const Shape *shape, SubShapeId) {
-    const Vec3f radii = vec3f::load(shapes::as<EllipsoidShape>(shape).radii);
+    const Vec3f radii = shapes::as<EllipsoidShape>(shape).radii;
     const Vec3f gradient = vec3f::divide(io.position, vec3f::multiply(radii, radii));
     const bool at_centre = vec3f::squared_length(gradient) <= 0.0f;
     io.normal = at_centre ? vec3f::axis_y() : vec3f::normalize(gradient);
@@ -77,22 +75,22 @@ void ellipsoid_supporting_face(SupportingFaceResult &io, Vec3f, const Shape *, S
 int32_t ellipsoid_material(const Shape *shape, SubShapeId) { return shape->material_id; }
 
 float ellipsoid_inner_radius(const Shape *shape) {
-    const Float3 &r = shapes::as<EllipsoidShape>(shape).radii;
-    return scalar::min(r.x, scalar::min(r.y, r.z));
+    const Vec3f r = shapes::as<EllipsoidShape>(shape).radii;
+    return scalar::min(vec3f::x(r), scalar::min(vec3f::y(r), vec3f::z(r)));
 }
 
 void ellipsoid_collide_point(
         CollidePointCollector &collector, const CollidePointSettings &, Vec3f point,
-        const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
+        const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform) {
     // move the point into the shape's space. it is inside when the scaled coordinates fall within
     // the unit sphere
-    const Vec3f offset = vec3f::subtract(point, vec3f::load(transform.position));
-    const Quatf inverse_rotation = quatf::conjugate(quatf::load(transform.quaternion));
+    const Vec3f offset = vec3f::subtract(point, transform.position);
+    const Quatf inverse_rotation = quatf::conjugate(transform.quaternion);
     const Vec3f local = vec3f::transform_quat(offset, inverse_rotation);
 
     const EllipsoidShape &ellipsoid = shapes::as<EllipsoidShape>(shape);
-    const Vec3f scale = vec3f::abs(vec3f::load(transform.scale));
-    const Vec3f radii = vec3f::multiply(vec3f::load(ellipsoid.radii), scale);
+    const Vec3f scale = vec3f::abs(transform.scale);
+    const Vec3f radii = vec3f::multiply(ellipsoid.radii, scale);
     if (vec3f::squared_length(vec3f::divide(local, radii)) > 1.0f) return;
 
     CollidePointHit hit = collide_point::create_hit();
@@ -102,12 +100,11 @@ void ellipsoid_collide_point(
 }
 
 // three rings, one in each axis plane
-void ellipsoid_draw(DebugDraw &out, const Shape *shape, const Transformf &transform, Vec3f color) {
+void ellipsoid_draw(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
     const EllipsoidShape &ellipsoid = shapes::as<EllipsoidShape>(shape);
-    const Vec3f scale = vec3f::load(transform.scale);
-    const Vec3f radii = vec3f::multiply(vec3f::load(ellipsoid.radii), scale);
-    const Quatf rotation = quatf::load(transform.quaternion);
-    const Vec3f centre = vec3f::load(transform.position);
+    const Vec3f radii = vec3f::multiply(ellipsoid.radii, transform.scale);
+    const Quatf rotation = transform.quaternion;
+    const Vec3f centre = transform.position;
 
     for (int plane = 0; plane < 3; plane++) {
         Vec3f previous = vec3f::zero();
@@ -153,14 +150,14 @@ ShapeDef ellipsoid_def() {
 }
 
 /** a shape of the type: its own fields, and the bounds, centre of mass and volume of every shape */
-Shape *create_ellipsoid(Float3 radii, float density) {
+Shape *create_ellipsoid(Vec3f radii, float density) {
     EllipsoidShape *shape = shapes::allocate<EllipsoidShape>();
     if (shape == nullptr) return nullptr;
     shape->radii = radii;
     shape->density = density;
-    shape->aabb = {{-radii.x, -radii.y, -radii.z}, {radii.x, radii.y, radii.z}};
-    shape->center_of_mass = {0.0f, 0.0f, 0.0f};
-    shape->volume = 4.0f / 3.0f * scalar::PI * radii.x * radii.y * radii.z;
+    shape->aabb = aabox::make(vec3f::negate(radii), radii);
+    shape->center_of_mass = vec3f::zero();
+    shape->volume = 4.0f / 3.0f * scalar::PI * vec3f::x(radii) * vec3f::y(radii) * vec3f::z(radii);
     shape->material_id = -1;
     return shape;
 }
@@ -181,34 +178,34 @@ int main() {
     world_settings::enable_collision(settings, moving, moving);
     world_settings::enable_collision(settings, moving, not_moving);
     World *world = world::create(settings);
-    Ref<Shape> ground_shape = box::create({.half_extents = {20.0f, 0.5f, 20.0f}});
+    Ref<Shape> ground_shape = box::create({.half_extents = vec3f::make(20.0f, 0.5f, 20.0f)});
     rigid_body::create(*world, {
         .shape = ground_shape,
         .object_layer = not_moving,
         .motion_type = MotionType::STATIC,
-        .position = {0.0f, -0.5f, 0.0f},
+        .position = vec3f::make(0.0f, -0.5f, 0.0f),
     });
 
     /* SNIPPET_START: use */
     // an egg, 0.3 m wide and 0.5 m tall, dropped on its side. it rolls to rest on its long axis
-    Ref<Shape> egg_shape = create_ellipsoid({0.3f, 0.5f, 0.3f}, 1000.0f);
+    Ref<Shape> egg_shape = create_ellipsoid(vec3f::make(0.3f, 0.5f, 0.3f), 1000.0f);
     RigidBody *body = rigid_body::create(*world, {
         .shape = egg_shape,
         .object_layer = moving,
         .motion_type = MotionType::DYNAMIC,
-        .position = {0.0f, 2.0f, 0.0f},
-        .quaternion = {0.0f, 0.0f, 0.38268343f, 0.92387953f},
+        .position = vec3f::make(0.0f, 2.0f, 0.0f),
+        .quaternion = quatf::make(0.0f, 0.0f, 0.38268343f, 0.92387953f),
     });
     for (int i = 0; i < 300; i++) world::step(*world, 1.0f / 60.0f);
-    printf("the egg rests at y %.2f\n", body->position.y);
+    printf("the egg rests at y %.2f\n", vec3f::y(body->position));
     /* SNIPPET_END: use */
     /* HIDE_START */
     // lying on its side, its centre a short radius up (less the penetration slop); its tip no longer up
-    if (body->position.y < 0.26f || body->position.y > 0.32f) return 1;
+    if (vec3f::y(body->position) < 0.26f || vec3f::y(body->position) > 0.32f) return 1;
     // a point inside it is found by a query, and it draws its rings
     Filter filter = filter::create(world->settings.layers);
     CollidePointCollector inside = collide_point::create_collector(CollectorKind::ALL);
-    query::collide_point(*world, inside, collide_point::default_settings(), vec3f::load(body->position), filter);
+    query::collide_point(*world, inside, collide_point::default_settings(), body->position, filter);
     const bool found = inside.hits.length == 1 && inside.hits[0].body_id_b == body->id;
     DebugDraw buffers;
     debug::body(buffers, *body, {});

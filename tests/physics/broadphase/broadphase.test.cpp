@@ -48,8 +48,8 @@ void release_scene(Scene &scene) {
 /** a dynamic box body filling the given world-space box, in the world's broadphase */
 RigidBody *make_body(World &world, float min_x, float min_y, float min_z, float max_x, float max_y, float max_z, uint32_t object_layer,
                      uint32_t collision_groups = 0xffffffffu, uint32_t collision_mask = 0xffffffffu) {
-    const Float3 half_extents = {(max_x - min_x) * 0.5f, (max_y - min_y) * 0.5f, (max_z - min_z) * 0.5f};
-    const Float3 center = {(min_x + max_x) * 0.5f, (min_y + max_y) * 0.5f, (min_z + max_z) * 0.5f};
+    const Vec3f half_extents = vec3f::make((max_x - min_x) * 0.5f, (max_y - min_y) * 0.5f, (max_z - min_z) * 0.5f);
+    const Vec3f center = vec3f::make((min_x + max_x) * 0.5f, (min_y + max_y) * 0.5f, (min_z + max_z) * 0.5f);
     return rigid_body::create(world,
                                          {.shape = box::create({.half_extents = half_extents}),
                                           .object_layer = object_layer,
@@ -77,7 +77,7 @@ void record_hit(BodyVisitor *visitor, RigidBody *body) {
     hits->count++;
     if (hits->closest_along != nullptr) {
         const Rayf &ray = *hits->closest_along;
-        visitor->early_out_fraction = (body->aabb.min.x - vec3f::x(ray.origin)) / (vec3f::x(ray.direction) * ray.length);
+        visitor->early_out_fraction = (vec3f::x(body->aabb.min) - vec3f::x(ray.origin)) / (vec3f::x(ray.direction) * ray.length);
     }
     if (hits->exit_after_first) visitor->should_exit = true;
 }
@@ -104,12 +104,12 @@ bool tree_holds(World &world, uint32_t broadphase_layer, const RigidBody *body) 
 
 /** the body's pose and bounds changed without telling the broadphase, so update_body is what publishes them */
 void move_unpublished(RigidBody *body, Vec3f position) {
-    vec3f::store(body->position, position);
+    body->position = position;
     rigid_body::update_center_of_mass_position(body);
     rigid_body::update_aabb(body);
 }
 
-const Box3f EVERYTHING = {{-100, -100, -100}, {100, 100, 100}};
+AABox everything() { return aabox::make(vec3f::splat(-100.0f), vec3f::splat(100.0f)); }
 
 }  // namespace
 
@@ -126,9 +126,7 @@ void test_broadphase_add_to_layer_trees(TestCtx &ctx) {
     CHECK(ctx, a->broadphase_layer == (int32_t)scene.broadphase_moving && b->broadphase_layer == (int32_t)scene.broadphase_moving);
     CHECK(ctx, c->broadphase_layer == (int32_t)scene.broadphase_not_moving);
     CHECK(ctx, a->broadphase_node != -1 && b->broadphase_node != -1 && c->broadphase_node != -1);
-    Box3f fat, expected;
-    aabox::store(expected, aabox::expand_by_margin(aabox::load(c->aabb), 0.05f));
-    CHECK(ctx, equal_boxes(broadphase::read_fat_bounds(fat, world.broadphase, *c), expected));
+    CHECK(ctx, equal_boxes(broadphase::read_fat_bounds(world.broadphase, *c), aabox::expand_by_margin(c->aabb, 0.05f)));
     CHECK(ctx, tree_holds(world, scene.broadphase_moving, a) && tree_holds(world, scene.broadphase_moving, b));
     CHECK(ctx, !tree_holds(world, scene.broadphase_moving, c));
     CHECK(ctx, tree_holds(world, scene.broadphase_not_moving, c) && !tree_holds(world, scene.broadphase_not_moving, a));
@@ -187,13 +185,13 @@ void test_broadphase_layer_filter(TestCtx &ctx) {
     broadphase::cast_ray(world.broadphase, world.bodies, ray, scene.filter, visitor);
     CHECK(ctx, hits.count == 1 && hits.bodies[0] == moving);
     visitor = visitor_for(hits);
-    broadphase::intersect_aabb(world.broadphase, world.bodies, EVERYTHING, scene.filter, visitor);
+    broadphase::intersect_aabb(world.broadphase, world.bodies, everything(), scene.filter, visitor);
     CHECK(ctx, hits.count == 1 && hits.bodies[0] == moving);
     visitor = visitor_for(hits);
     broadphase::intersect_point(world.broadphase, world.bodies, vec3f::make(0.5f, 0.5f, 0.5f), scene.filter, visitor);
     CHECK(ctx, hits.count == 1 && hits.bodies[0] == moving);
     visitor = visitor_for(hits);
-    broadphase::cast_aabb(world.broadphase, world.bodies, Box3f{{-3.0f, 0.25f, 0.25f}, {-2.5f, 0.75f, 0.75f}}, vec3f::make(20.0f, 0.0f, 0.0f), scene.filter,
+    broadphase::cast_aabb(world.broadphase, world.bodies, aabox::make(vec3f::make(-3.0f, 0.25f, 0.25f), vec3f::make(-2.5f, 0.75f, 0.75f)), vec3f::make(20.0f, 0.0f, 0.0f), scene.filter,
                           visitor);
     CHECK(ctx, hits.count == 1 && hits.bodies[0] == moving);
 
@@ -201,13 +199,13 @@ void test_broadphase_layer_filter(TestCtx &ctx) {
     filter::disable_all_layers(scene.filter, world.settings.layers);
     filter::enable_broadphase_layer(scene.filter, world.settings.layers, scene.broadphase_not_moving);
     visitor = visitor_for(hits);
-    broadphase::intersect_aabb(world.broadphase, world.bodies, EVERYTHING, scene.filter, visitor);
+    broadphase::intersect_aabb(world.broadphase, world.bodies, everything(), scene.filter, visitor);
     CHECK(ctx, hits.count == 2 && contains(hits, not_moving) && contains(hits, overlapping));
 
     // the tree is enabled but the object layer is not: its bodies are still filtered out
     scene.filter.enabled_object_layers[scene.not_moving] = 0;
     visitor = visitor_for(hits);
-    broadphase::intersect_aabb(world.broadphase, world.bodies, EVERYTHING, scene.filter, visitor);
+    broadphase::intersect_aabb(world.broadphase, world.bodies, everything(), scene.filter, visitor);
     CHECK(ctx, hits.count == 0);
 
     release_scene(scene);
@@ -235,7 +233,7 @@ void test_broadphase_groups_and_mask(TestCtx &ctx) {
     broadphase::intersect_point(world.broadphase, world.bodies, vec3f::make(1.0f, 1.0f, 1.0f), scene.filter, visitor);
     CHECK(ctx, hits.count == 1 && hits.bodies[0] == second);
     visitor = visitor_for(hits);
-    broadphase::intersect_aabb(world.broadphase, world.bodies, EVERYTHING, scene.filter, visitor);
+    broadphase::intersect_aabb(world.broadphase, world.bodies, everything(), scene.filter, visitor);
     CHECK(ctx, hits.count == 1 && hits.bodies[0] == second);
     visitor = visitor_for(hits);
     broadphase::cast_ray(world.broadphase, world.bodies, Rayf{vec3f::make(-5.0f, 1.0f, 1.0f), vec3f::make(1.0f, 0.0f, 0.0f), 10.0f}, scene.filter, visitor);
@@ -246,7 +244,7 @@ void test_broadphase_groups_and_mask(TestCtx &ctx) {
     scene.filter.collision_groups = 0b0010;
     scene.filter.collision_mask = 0b0001;
     visitor = visitor_for(hits);
-    broadphase::intersect_aabb(world.broadphase, world.bodies, {{9, 0, 0}, {13, 2, 2}}, scene.filter, visitor);
+    broadphase::intersect_aabb(world.broadphase, world.bodies, aabox::make(vec3f::make(9, 0, 0), vec3f::make(13, 2, 2)), scene.filter, visitor);
     CHECK(ctx, hits.count == 1 && hits.bodies[0] == a);
 
     release_scene(scene);
@@ -290,12 +288,12 @@ void test_broadphase_body_filter(TestCtx &ctx) {
     filter::disable_object_layer(scene.filter, world.settings.layers, scene.not_moving);
     reject.calls = 0;
     visitor = visitor_for(hits);
-    broadphase::intersect_aabb(world.broadphase, world.bodies, {{-1, 0, 0}, {6, 1, 1}}, scene.filter, visitor);
+    broadphase::intersect_aabb(world.broadphase, world.bodies, aabox::make(vec3f::make(-1, 0, 0), vec3f::make(6, 1, 1)), scene.filter, visitor);
     CHECK(ctx, reject.calls == 2 && hits.count == 1 && hits.bodies[0] == a);
     scene.filter.collision_mask = 0;
     reject.calls = 0;
     visitor = visitor_for(hits);
-    broadphase::intersect_aabb(world.broadphase, world.bodies, EVERYTHING, scene.filter, visitor);
+    broadphase::intersect_aabb(world.broadphase, world.bodies, everything(), scene.filter, visitor);
     CHECK(ctx, reject.calls == 0 && hits.count == 0);
 
     release_scene(scene);
@@ -321,7 +319,7 @@ void test_broadphase_update_moved_body(TestCtx &ctx) {
     broadphase::intersect_point(world.broadphase, world.bodies, vec3f::make(20.5f, 0.5f, -7.5f), scene.filter, visitor);
     CHECK(ctx, hits.count == 1 && hits.bodies[0] == body);
     visitor = visitor_for(hits);
-    broadphase::intersect_aabb(world.broadphase, world.bodies, {{-0.5f, -0.5f, -0.5f}, {1.5f, 1.5f, 1.5f}}, scene.filter, visitor);
+    broadphase::intersect_aabb(world.broadphase, world.bodies, aabox::make(vec3f::splat(-0.5f), vec3f::splat(1.5f)), scene.filter, visitor);
     CHECK(ctx, hits.count == 0);
     visitor = visitor_for(hits);
     broadphase::cast_ray(world.broadphase, world.bodies, Rayf{vec3f::make(20.5f, 10.0f, -7.5f), vec3f::make(0.0f, -1.0f, 0.0f), 20.0f}, scene.filter, visitor);
@@ -349,13 +347,12 @@ void test_broadphase_remove(TestCtx &ctx) {
 
     broadphase::remove_body(world.broadphase, b);
     CHECK(ctx, b->broadphase_layer == -1 && b->broadphase_node == -1);
-    Box3f not_moving_bounds;
-    CHECK(ctx, aabox::is_empty(aabox::load(quad_tree::bounds(not_moving_bounds, world.broadphase.trees[scene.broadphase_not_moving]))));
+    CHECK(ctx, aabox::is_empty(quad_tree::bounds(world.broadphase.trees[scene.broadphase_not_moving])));
 
     // gone from every query; the rest still found
     Hits hits;
     BodyVisitor visitor = visitor_for(hits);
-    broadphase::intersect_aabb(world.broadphase, world.bodies, EVERYTHING, scene.filter, visitor);
+    broadphase::intersect_aabb(world.broadphase, world.bodies, everything(), scene.filter, visitor);
     CHECK(ctx, hits.count == 2 && contains(hits, a) && contains(hits, c));
     visitor = visitor_for(hits);
     broadphase::intersect_point(world.broadphase, world.bodies, vec3f::make(0.5f, 0.5f, 0.5f), scene.filter, visitor);
@@ -364,7 +361,7 @@ void test_broadphase_remove(TestCtx &ctx) {
     broadphase::cast_ray(world.broadphase, world.bodies, Rayf{vec3f::make(-1.0f, 0.5f, 0.5f), vec3f::make(1.0f, 0.0f, 0.0f), 10.0f}, scene.filter, visitor);
     CHECK(ctx, hits.count == 2 && !contains(hits, b));
     visitor = visitor_for(hits);
-    broadphase::cast_aabb(world.broadphase, world.bodies, Box3f{{-2.0f, 0.4f, 0.4f}, {-1.8f, 0.6f, 0.6f}}, vec3f::make(10.0f, 0.0f, 0.0f), scene.filter,
+    broadphase::cast_aabb(world.broadphase, world.bodies, aabox::make(vec3f::make(-2.0f, 0.4f, 0.4f), vec3f::make(-1.8f, 0.6f, 0.6f)), vec3f::make(10.0f, 0.0f, 0.0f), scene.filter,
                           visitor);
     CHECK(ctx, hits.count == 2 && !contains(hits, b));
 
@@ -373,10 +370,9 @@ void test_broadphase_remove(TestCtx &ctx) {
     broadphase::remove_body(world.broadphase, a);
     broadphase::remove_body(world.broadphase, c);
     visitor = visitor_for(hits);
-    broadphase::intersect_aabb(world.broadphase, world.bodies, EVERYTHING, scene.filter, visitor);
+    broadphase::intersect_aabb(world.broadphase, world.bodies, everything(), scene.filter, visitor);
     CHECK(ctx, hits.count == 0);
-    Box3f all;
-    CHECK(ctx, aabox::is_empty(aabox::load(broadphase::bounds(all, world.broadphase))));
+    CHECK(ctx, aabox::is_empty(broadphase::bounds(world.broadphase)));
 
     release_scene(scene);
 }
@@ -444,9 +440,9 @@ void test_broadphase_cast_ray_layers(TestCtx &ctx) {
 
     // the sweep finds the body along its path
     visitor = visitor_for(hits);
-    broadphase::cast_aabb(world.broadphase, world.bodies, Box3f{{-0.5f, 4.5f, -0.5f}, {0.5f, 5.5f, 0.5f}}, vec3f::make(10.0f, 0.0f, 0.0f), scene.filter,
+    broadphase::cast_aabb(world.broadphase, world.bodies, aabox::make(vec3f::make(-0.5f, 4.5f, -0.5f), vec3f::make(0.5f, 5.5f, 0.5f)), vec3f::make(10.0f, 0.0f, 0.0f), scene.filter,
                           visitor);
-    CHECK(ctx, hits.count == 1 && hits.bodies[0]->aabb.min.y == 5.0f);
+    CHECK(ctx, hits.count == 1 && vec3f::y(hits.bodies[0]->aabb.min) == 5.0f);
 
     release_scene(scene);
 }
@@ -481,31 +477,24 @@ void test_broadphase_point_queries(TestCtx &ctx) {
 void test_broadphase_bounds(TestCtx &ctx) {
     Scene scene = make_scene();
     World &world = *scene.world;
-    Box3f all;
-    CHECK(ctx, aabox::is_empty(aabox::load(broadphase::bounds(all, world.broadphase))));
+    CHECK(ctx, aabox::is_empty(broadphase::bounds(world.broadphase)));
 
     make_body(world, -3, 0, 0, -2, 1, 1, scene.moving);
     make_body(world, 0, 0, 0, 1, 2, 1, scene.moving);
     RigidBody *not_moving = make_body(world, 5, -4, 2, 6, -3, 9, scene.not_moving);
 
     // the union of the two trees' root boxes, each the union of its fat leaves
-    broadphase::bounds(all, world.broadphase);
-    Box3f moving_root, not_moving_root, expected;
-    quad_tree::bounds(moving_root, world.broadphase.trees[scene.broadphase_moving]);
-    quad_tree::bounds(not_moving_root, world.broadphase.trees[scene.broadphase_not_moving]);
-    aabox::store(expected, aabox::union_(aabox::load(moving_root), aabox::load(not_moving_root)));
-    CHECK(ctx, equal_boxes(all, expected));
+    const AABox all = broadphase::bounds(world.broadphase);
+    const AABox moving_root = quad_tree::bounds(world.broadphase.trees[scene.broadphase_moving]);
+    const AABox not_moving_root = quad_tree::bounds(world.broadphase.trees[scene.broadphase_not_moving]);
+    CHECK(ctx, equal_boxes(all, aabox::union_(moving_root, not_moving_root)));
     const float margin = world.broadphase.trees[0].expansion_margin;
-    CHECK_NEAR(ctx, all.min.x, -3.0f - margin, 1e-6f);
-    CHECK_NEAR(ctx, all.min.y, -4.0f - margin, 1e-6f);
-    CHECK_NEAR(ctx, all.min.z, 0.0f - margin, 1e-6f);
-    CHECK_NEAR(ctx, all.max.x, 6.0f + margin, 1e-6f);
-    CHECK_NEAR(ctx, all.max.y, 2.0f + margin, 1e-6f);
-    CHECK_NEAR(ctx, all.max.z, 9.0f + margin, 1e-6f);
+    CHECK(ctx, near3(all.min, -3.0f - margin, -4.0f - margin, 0.0f - margin, 1e-6f));
+    CHECK(ctx, near3(all.max, 6.0f + margin, 2.0f + margin, 9.0f + margin, 1e-6f));
 
     // one tree empty: the other's bounds alone
     broadphase::remove_body(world.broadphase, not_moving);
-    CHECK(ctx, equal_boxes(broadphase::bounds(all, world.broadphase), moving_root));
+    CHECK(ctx, equal_boxes(broadphase::bounds(world.broadphase), moving_root));
 
     release_scene(scene);
 }

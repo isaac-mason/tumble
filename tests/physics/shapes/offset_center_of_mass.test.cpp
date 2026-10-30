@@ -14,14 +14,14 @@
 static const SubShapeIdBuilder NO_SUB_SHAPE = {sub_shape::EMPTY_SUB_SHAPE_ID, 0};
 static const Float4 IDENTITY = {0, 0, 0, 1};
 
-static void collide(CollideShapeCollector &collector, const Shape *a, const Transformf &transform_a, const Shape *b,
-                    const Transformf &transform_b) {
+static void collide(CollideShapeCollector &collector, const Shape *a, const Transform &transform_a, const Shape *b,
+                    const Transform &transform_b) {
     shapes::collide_fn(a->type, b->type)(collector, collide_shape::default_settings(), a, NO_SUB_SHAPE, transform_a, b, NO_SUB_SHAPE,
                                          transform_b);
 }
 
-static void cast(CastShapeCollector &collector, const Shape *a, const Transformf &transform_a, const Float3 &displacement,
-                 const Shape *b, const Transformf &transform_b) {
+static void cast(CastShapeCollector &collector, const Shape *a, const Transform &transform_a, const Float3 &displacement,
+                 const Shape *b, const Transform &transform_b) {
     shapes::cast_fn(a->type, b->type)(collector, cast_shape::default_settings(), a, NO_SUB_SHAPE, transform_a, vec3f::load(displacement), b,
                                       NO_SUB_SHAPE, transform_b);
 }
@@ -32,10 +32,12 @@ static void check_parallel_axis(TestCtx &ctx, const MassProperties &outer, const
     const float d[3] = {offset.x, offset.y, offset.z};
     const float d2 = vec3f::dot(vec3f::load(offset), vec3f::load(offset));
     CHECK_NEAR(ctx, outer.mass, inner.mass, 1e-2f);
+    const Float4x4 outer_inertia = elements(outer.inertia);
+    const Float4x4 inner_inertia = elements(inner.inertia);
     for (int col = 0; col < 3; col++) {
         for (int row = 0; row < 3; row++) {
-            const float expected = inner.inertia.m[col * 4 + row] + inner.mass * ((row == col ? d2 : 0.0f) - d[row] * d[col]);
-            CHECK_NEAR(ctx, outer.inertia.m[col * 4 + row], expected, eps);
+            const float expected = inner_inertia.m[col * 4 + row] + inner.mass * ((row == col ? d2 : 0.0f) - d[row] * d[col]);
+            CHECK_NEAR(ctx, outer_inertia.m[col * 4 + row], expected, eps);
         }
     }
 }
@@ -45,7 +47,7 @@ static void check_parallel_axis(TestCtx &ctx, const MassProperties &outer, const
 void test_offset_center_of_mass_create(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> o = offset_center_of_mass::create({.shape = s, .offset = {0, -2, 0}});
+    Ref<Shape> o = offset_center_of_mass::create({.shape = s, .offset = vec3f::make(0, -2, 0)});
 
     CHECK(ctx, o->type == ShapeType::OFFSET_CENTER_OF_MASS);
     CHECK(ctx, shapes::as<OffsetCenterOfMassShape>(o).shape == s);
@@ -57,15 +59,15 @@ void test_offset_center_of_mass_create(TestCtx &ctx) {
     CHECK(ctx, o->volume == s->volume);
 
     // a zero offset behaves as the inner shape
-    Ref<Shape> zero = offset_center_of_mass::create({.shape = s, .offset = {0, 0, 0}});
+    Ref<Shape> zero = offset_center_of_mass::create({.shape = s, .offset = vec3f::zero()});
     CHECK(ctx, near3(zero->center_of_mass, s->center_of_mass, 0.0f));
     CHECK(ctx, near3(zero->aabb.min, s->aabb.min, 0.0f) && near3(zero->aabb.max, s->aabb.max, 0.0f));
 
     // nested offsets add; the bounds stay at the origin
-    Ref<Shape> first = offset_center_of_mass::create({.shape = s, .offset = {0, 0.5f, 0}});
-    Ref<Shape> second = offset_center_of_mass::create({.shape = first, .offset = {0, 0.3f, 0}});
-    CHECK_NEAR(ctx, second->center_of_mass.y, 0.8f, 1e-6f);
-    CHECK(ctx, second->aabb.min.y == -1 && second->aabb.max.y == 1);
+    Ref<Shape> first = offset_center_of_mass::create({.shape = s, .offset = vec3f::make(0, 0.5f, 0)});
+    Ref<Shape> second = offset_center_of_mass::create({.shape = first, .offset = vec3f::make(0, 0.3f, 0)});
+    CHECK_NEAR(ctx, vec3f::y(second->center_of_mass), 0.8f, 1e-6f);
+    CHECK(ctx, vec3f::y(second->aabb.min) == -1 && vec3f::y(second->aabb.max) == 1);
 
     o = nullptr;
     zero = nullptr;
@@ -79,32 +81,32 @@ void test_offset_center_of_mass_mass_properties(TestCtx &ctx) {
     MassProperties inner, outer;
 
     // a unit box offset up by 2: the same mass, ixx and izz grow by m * 4, iyy stays
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
-    Ref<Shape> up = offset_center_of_mass::create({.shape = b, .offset = {0, 2, 0}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
+    Ref<Shape> up = offset_center_of_mass::create({.shape = b, .offset = vec3f::make(0, 2, 0)});
     shapes::compute_mass_properties(inner, b);
     shapes::compute_mass_properties(outer, up);
     check_parallel_axis(ctx, outer, inner, {0, 2, 0}, 1.0f);
-    CHECK_NEAR(ctx, outer.inertia.m[0], inner.inertia.m[0] + 4.0f * inner.mass, 1.0f);
-    CHECK_NEAR(ctx, outer.inertia.m[5], inner.inertia.m[5], 1e-2f);
+    CHECK_NEAR(ctx, elements(outer.inertia).m[0], elements(inner.inertia).m[0] + 4.0f * inner.mass, 1.0f);
+    CHECK_NEAR(ctx, elements(outer.inertia).m[5], elements(inner.inertia).m[5], 1e-2f);
 
     // an offset along every axis: the full parallel axis tensor, off-diagonals included
-    Ref<Shape> flat = box::create({.half_extents = {2, 1, 0.5f}});
-    Ref<Shape> skew = offset_center_of_mass::create({.shape = flat, .offset = {1, -1, 0.5f}});
+    Ref<Shape> flat = box::create({.half_extents = vec3f::make(2, 1, 0.5f)});
+    Ref<Shape> skew = offset_center_of_mass::create({.shape = flat, .offset = vec3f::make(1, -1, 0.5f)});
     shapes::compute_mass_properties(inner, flat);
     shapes::compute_mass_properties(outer, skew);
     check_parallel_axis(ctx, outer, inner, {1, -1, 0.5f}, 1.0f);
-    CHECK(ctx, outer.inertia.m[0] > inner.inertia.m[0] && outer.inertia.m[5] > inner.inertia.m[5] && outer.inertia.m[10] > inner.inertia.m[10]);
+    CHECK(ctx, elements(outer.inertia).m[0] > elements(inner.inertia).m[0] && elements(outer.inertia).m[5] > elements(inner.inertia).m[5] && elements(outer.inertia).m[10] > elements(inner.inertia).m[10]);
 
     // a unit sphere offset down by 2: m = 4/3 pi rho, ixx = izz = (2/5 + 4) m, iyy = 2/5 m
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> low = offset_center_of_mass::create({.shape = s, .offset = {0, -2, 0}});
+    Ref<Shape> low = offset_center_of_mass::create({.shape = s, .offset = vec3f::make(0, -2, 0)});
     shapes::compute_mass_properties(outer, low);
     const float mass = (4.0f / 3.0f) * scalar::PI * shapes::DEFAULT_SHAPE_DENSITY;
     CHECK_NEAR(ctx, outer.mass, mass, 1e-1f);
-    CHECK_NEAR(ctx, outer.inertia.m[0], 4.4f * mass, 1.0f);
-    CHECK_NEAR(ctx, outer.inertia.m[5], 0.4f * mass, 1.0f);
-    CHECK_NEAR(ctx, outer.inertia.m[10], 4.4f * mass, 1.0f);
-    CHECK_NEAR(ctx, outer.inertia.m[4], 0.0f, 1e-2f);
+    CHECK_NEAR(ctx, elements(outer.inertia).m[0], 4.4f * mass, 1.0f);
+    CHECK_NEAR(ctx, elements(outer.inertia).m[5], 0.4f * mass, 1.0f);
+    CHECK_NEAR(ctx, elements(outer.inertia).m[10], 4.4f * mass, 1.0f);
+    CHECK_NEAR(ctx, elements(outer.inertia).m[4], 0.0f, 1e-2f);
 
     up = nullptr;
     skew = nullptr;
@@ -117,7 +119,7 @@ void test_offset_center_of_mass_mass_properties(TestCtx &ctx) {
 void test_offset_center_of_mass_pass_through(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> o = offset_center_of_mass::create({.shape = s, .offset = {0, -0.5f, 0}});
+    Ref<Shape> o = offset_center_of_mass::create({.shape = s, .offset = vec3f::make(0, -0.5f, 0)});
 
     // the inner radius, the surface normal, ray and point: the geometry has not moved
     CHECK(ctx, shapes::get_shape_inner_radius(o) == 1.0f);
@@ -136,10 +138,10 @@ void test_offset_center_of_mass_pass_through(TestCtx &ctx) {
     CHECK(ctx, point_collector.hits.length == 1);
 
     // the leaf and the sub shape's transform are the inner shape's, not the wrapper's
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
-    const CompoundShapeSettings::Child children[] = {{{0, 0, 0}, IDENTITY, s}, {{3, 0, 0}, IDENTITY, b}};
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}, {vec3f::make(3, 0, 0), quatf::identity(), b}};
     Ref<Shape> c = compound::create({.children = children, .num_children = 2});
-    Ref<Shape> oc = offset_center_of_mass::create({.shape = c, .offset = {0, -1, 0}});
+    Ref<Shape> oc = offset_center_of_mass::create({.shape = c, .offset = vec3f::make(0, -1, 0)});
     SubShapeIdBuilder child_one;
     sub_shape::push_index(child_one, sub_shape::builder(), 1, 2);
     GetLeafShapeResult leaf;
@@ -167,8 +169,8 @@ void test_offset_center_of_mass_sphere_vs_box(TestCtx &ctx) {
     // a unit sphere with its centre of mass 2 below: collides where the sphere is, not where the mass is. a unit box at
     // (0, 1.5, 0) reaches down to 0.5, 0.5 into the sphere's top
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> o = offset_center_of_mass::create({.shape = s, .offset = {0, -2, 0}});
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
+    Ref<Shape> o = offset_center_of_mass::create({.shape = s, .offset = vec3f::make(0, -2, 0)});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
 
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
     collide(collector, o, pose({0, 0, 0}), b, pose({0, 1.5f, 0}));
@@ -235,12 +237,12 @@ void test_offset_center_of_mass_dispatch_rows(TestCtx &ctx) {
 void test_offset_center_of_mass_material(TestCtx &ctx) {
     dispatch::init();
     // through the inner shape, sub shape id and all
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}, .material_id = 6});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f), .material_id = 6});
     Ref<Shape> s = sphere::create({.radius = 1.0f, .material_id = 8});
-    const CompoundShapeSettings::Child children[] = {{{0, 0, 0}, IDENTITY, b}, {{3, 0, 0}, IDENTITY, s}};
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(0, 0, 0), quatf::identity(), b}, {vec3f::make(3, 0, 0), quatf::identity(), s}};
     Ref<Shape> c = compound::create({.children = children, .num_children = 2});
-    Ref<Shape> offset_sphere = offset_center_of_mass::create({.shape = s, .offset = {0, -1, 0}});
-    Ref<Shape> offset_compound = offset_center_of_mass::create({.shape = c, .offset = {1, 0, 0}});
+    Ref<Shape> offset_sphere = offset_center_of_mass::create({.shape = s, .offset = vec3f::make(0, -1, 0)});
+    Ref<Shape> offset_compound = offset_center_of_mass::create({.shape = c, .offset = vec3f::make(1, 0, 0)});
     CHECK(ctx, shapes::get_shape_material(offset_sphere, sub_shape::EMPTY_SUB_SHAPE_ID) == 8);
     SubShapeIdBuilder id;
     sub_shape::push_index(id, sub_shape::builder(), 0, 2);

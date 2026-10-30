@@ -15,14 +15,14 @@
 static const SubShapeIdBuilder NO_SUB_SHAPE = {sub_shape::EMPTY_SUB_SHAPE_ID, 0};
 static const Float4 IDENTITY = {0, 0, 0, 1};
 
-static void collide(CollideShapeCollector &collector, const Shape *a, const Transformf &transform_a, const Shape *b,
-                    const Transformf &transform_b) {
+static void collide(CollideShapeCollector &collector, const Shape *a, const Transform &transform_a, const Shape *b,
+                    const Transform &transform_b) {
     shapes::collide_fn(a->type, b->type)(collector, collide_shape::default_settings(), a, NO_SUB_SHAPE, transform_a, b, NO_SUB_SHAPE,
                                          transform_b);
 }
 
 /** the closest ray hit's fraction, or -1 for none */
-static float ray_fraction(const Shape *shape, const Transformf &transform, const Float3 &origin, const Float3 &direction, float length) {
+static float ray_fraction(const Shape *shape, const Transform &transform, const Float3 &origin, const Float3 &direction, float length) {
     CastRayCollector collector = cast_ray::create_collector(CollectorKind::CLOSEST);
     const Rayf ray = {vec3f::load(origin), unit(vec3f::load(direction)), length};
     shapes::def_of(shape).cast_ray(collector, cast_ray::default_settings(), ray, shape, NO_SUB_SHAPE, transform);
@@ -30,7 +30,7 @@ static float ray_fraction(const Shape *shape, const Transformf &transform, const
     return fraction;
 }
 
-static bool point_inside(const Shape *shape, const Transformf &transform, const Float3 &point) {
+static bool point_inside(const Shape *shape, const Transform &transform, const Float3 &point) {
     CollidePointCollector collector = collide_point::create_collector(CollectorKind::ALL);
     shapes::def_of(shape).collide_point(collector, collide_point::default_settings(), vec3f::load(point), shape, NO_SUB_SHAPE, transform);
     const bool inside = collector.hits.length > 0;
@@ -42,18 +42,17 @@ static bool point_inside(const Shape *shape, const Transformf &transform, const 
 void test_scaled_create_and_aabb(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> ss = scaled::create({.shape = s, .scale = {2, 3, 4}});
+    Ref<Shape> ss = scaled::create({.shape = s, .scale = vec3f::make(2, 3, 4)});
 
     CHECK(ctx, ss->type == ShapeType::SCALED);
     CHECK(ctx, shapes::as<ScaledShape>(ss).shape == s);
-    CHECK(ctx, shapes::as<ScaledShape>(ss).scale.x == 2 && shapes::as<ScaledShape>(ss).scale.y == 3 && shapes::as<ScaledShape>(ss).scale.z == 4);
+    CHECK(ctx, near3(shapes::as<ScaledShape>(ss).scale, 2, 3, 4, 0.0f));
 
     // [-2, -3, -4] to [2, 3, 4]
-    CHECK(ctx, ss->aabb.min.x == -2 && ss->aabb.min.y == -3 && ss->aabb.min.z == -4);
-    CHECK(ctx, ss->aabb.max.x == 2 && ss->aabb.max.y == 3 && ss->aabb.max.z == 4);
+    CHECK(ctx, near3(ss->aabb.min, -2, -3, -4, 0.0f) && near3(ss->aabb.max, 2, 3, 4, 0.0f));
 
     // a symmetric shape's centre of mass stays at the origin
-    CHECK(ctx, ss->center_of_mass.x == 0 && ss->center_of_mass.y == 0 && ss->center_of_mass.z == 0);
+    CHECK(ctx, vec3f::exact_equals(ss->center_of_mass, vec3f::zero()));
 
     // the volume scales by |sx sy sz|
     CHECK_NEAR(ctx, ss->volume, s->volume * 24.0f, 1e-4f);
@@ -65,17 +64,17 @@ void test_scaled_create_and_aabb(TestCtx &ctx) {
 void test_scaled_offset_inner_shape(TestCtx &ctx) {
     dispatch::init();
     // an inner shape whose centre of mass and bounds sit off the origin: a unit box moved to (1, 1, 1)
-    Ref<Shape> s = box::create({.half_extents = {1, 1, 1}});
-    Ref<Shape> moved = transformed::create({.shape = s, .position = {1, 1, 1}, .quaternion = IDENTITY});
+    Ref<Shape> s = box::create({.half_extents = vec3f::splat(1.0f)});
+    Ref<Shape> moved = transformed::create({.shape = s, .position = vec3f::splat(1.0f), .quaternion = quatf::identity()});
 
     // the centre of mass scales with the inner shape's
-    Ref<Shape> ss = scaled::create({.shape = moved, .scale = {2, 3, 4}});
+    Ref<Shape> ss = scaled::create({.shape = moved, .scale = vec3f::make(2, 3, 4)});
     CHECK(ctx, near3(ss->center_of_mass, 2, 3, 4, 1e-6f));
     CHECK(ctx, near3(ss->aabb.min, 0, 0, 0, 1e-6f));
     CHECK(ctx, near3(ss->aabb.max, 4, 6, 8, 1e-6f));
 
     // a mirroring scale mirrors the bounds: x over [0, 2] goes to [-4, 0]
-    Ref<Shape> mirrored = scaled::create({.shape = moved, .scale = {-2, 1, 1}});
+    Ref<Shape> mirrored = scaled::create({.shape = moved, .scale = vec3f::make(-2, 1, 1)});
     CHECK(ctx, near3(mirrored->aabb.min, -4, 0, 0, 1e-6f));
     CHECK(ctx, near3(mirrored->aabb.max, 0, 2, 2, 1e-6f));
     CHECK(ctx, near3(mirrored->center_of_mass, -2, 1, 1, 1e-6f));
@@ -94,25 +93,27 @@ void test_scaled_mass_properties(TestCtx &ctx) {
     dispatch::init();
 
     // a unit box scaled (2, 1, 1) is a (2, 1, 1) box
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
-    Ref<Shape> sb = scaled::create({.shape = b, .scale = {2, 1, 1}});
-    Ref<Shape> wide = box::create({.half_extents = {2, 1, 1}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
+    Ref<Shape> sb = scaled::create({.shape = b, .scale = vec3f::make(2, 1, 1)});
+    Ref<Shape> wide = box::create({.half_extents = vec3f::make(2, 1, 1)});
     MassProperties scaled_mass, wide_mass;
     shapes::compute_mass_properties(scaled_mass, sb);
     shapes::compute_mass_properties(wide_mass, wide);
     CHECK_NEAR(ctx, scaled_mass.mass, wide_mass.mass, 1e-1f);
-    CHECK_NEAR(ctx, scaled_mass.inertia.m[0], wide_mass.inertia.m[0], 1.0f);
-    CHECK_NEAR(ctx, scaled_mass.inertia.m[5], wide_mass.inertia.m[5], 1.0f);
-    CHECK_NEAR(ctx, scaled_mass.inertia.m[10], wide_mass.inertia.m[10], 1.0f);
+    const Float4x4 scaled_inertia = elements(scaled_mass.inertia);
+    const Float4x4 wide_inertia = elements(wide_mass.inertia);
+    CHECK_NEAR(ctx, scaled_inertia.m[0], wide_inertia.m[0], 1.0f);
+    CHECK_NEAR(ctx, scaled_inertia.m[5], wide_inertia.m[5], 1.0f);
+    CHECK_NEAR(ctx, scaled_inertia.m[10], wide_inertia.m[10], 1.0f);
 
     // a sphere scaled by 2: mass x 8, inertia x 32
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> ss = scaled::create({.shape = s, .scale = {2, 2, 2}});
+    Ref<Shape> ss = scaled::create({.shape = s, .scale = vec3f::splat(2.0f)});
     MassProperties inner, outer;
     shapes::compute_mass_properties(inner, s);
     shapes::compute_mass_properties(outer, ss);
     CHECK_NEAR(ctx, outer.mass, inner.mass * 8.0f, 1e-1f);
-    CHECK_NEAR(ctx, outer.inertia.m[0], inner.inertia.m[0] * 32.0f, 1.0f);
+    CHECK_NEAR(ctx, elements(outer.inertia).m[0], elements(inner.inertia).m[0] * 32.0f, 1.0f);
 
     sb = nullptr;
     ss = nullptr;
@@ -126,9 +127,9 @@ void test_scaled_inner_radius_and_leaf(TestCtx &ctx) {
     Ref<Shape> s = sphere::create({.radius = 10.0f});
 
     // the smallest absolute scale times the inner radius
-    Ref<Shape> ss = scaled::create({.shape = s, .scale = {2, 3, 4}});
+    Ref<Shape> ss = scaled::create({.shape = s, .scale = vec3f::make(2, 3, 4)});
     CHECK(ctx, shapes::get_shape_inner_radius(ss) == 20.0f);
-    Ref<Shape> negative = scaled::create({.shape = s, .scale = {-2, 3, 4}});
+    Ref<Shape> negative = scaled::create({.shape = s, .scale = vec3f::make(-2, 3, 4)});
     CHECK(ctx, shapes::get_shape_inner_radius(negative) == 20.0f);
 
     // the leaf is the inner shape, the id untouched
@@ -158,20 +159,20 @@ void test_scaled_surface_normal(TestCtx &ctx) {
     Float3 normal;
 
     // outside the +x face of a box scaled (2, 3, 1): still +x
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
-    Ref<Shape> sb = scaled::create({.shape = b, .scale = {2, 3, 1}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
+    Ref<Shape> sb = scaled::create({.shape = b, .scale = vec3f::make(2, 3, 1)});
     vec3f::store(normal, shapes::get_shape_surface_normal(sb, vec3f::make(2.1f, 1, 0), sub_shape::EMPTY_SUB_SHAPE_ID));
     CHECK(ctx, near3(normal, 1, 0, 0, 1e-6f));
 
     // on a sphere scaled by 2, normalised and outward
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> ss = scaled::create({.shape = s, .scale = {2, 2, 2}});
+    Ref<Shape> ss = scaled::create({.shape = s, .scale = vec3f::splat(2.0f)});
     vec3f::store(normal, shapes::get_shape_surface_normal(ss, vec3f::make(2, 2, 0), sub_shape::EMPTY_SUB_SHAPE_ID));
     const float r = 1.0f / scalar::sqrt(2.0f);
     CHECK(ctx, near3(normal, r, r, 0, 1e-6f));
 
     // an ellipsoid (a sphere scaled (2, 1, 1)): at (sqrt 2, 1 / sqrt 2, 0) the normal is the inverse-transpose of the sphere's
-    Ref<Shape> ellipsoid = scaled::create({.shape = s, .scale = {2, 1, 1}});
+    Ref<Shape> ellipsoid = scaled::create({.shape = s, .scale = vec3f::make(2, 1, 1)});
     vec3f::store(normal, shapes::get_shape_surface_normal(ellipsoid, vec3f::make(2.0f * r, r, 0), sub_shape::EMPTY_SUB_SHAPE_ID));
     CHECK(ctx, near3(normal, unit(vec3f::make(r / 2.0f, r, 0)), 1e-6f));
 
@@ -189,8 +190,8 @@ void test_scaled_supporting_face(TestCtx &ctx) {
     SupportingFace face;
 
     // uniform: the face at x = -1 scales to -2, y and z to +-2
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
-    Ref<Shape> uniform = scaled::create({.shape = b, .scale = {2, 2, 2}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
+    Ref<Shape> uniform = scaled::create({.shape = b, .scale = vec3f::splat(2.0f)});
     shapes::get_shape_supporting_face(face, uniform, 0, vec3f::make(1, 0, 0), mat4f::load(identity), vec3f::make(1, 1, 1));
     CHECK(ctx, face.num_vertices == 4);
     for (uint32_t i = 0; i < face.num_vertices; i++) {
@@ -200,8 +201,8 @@ void test_scaled_supporting_face(TestCtx &ctx) {
     }
 
     // non-uniform
-    Ref<Shape> b123 = box::create({.half_extents = {1, 2, 3}});
-    Ref<Shape> non_uniform = scaled::create({.shape = b123, .scale = {2, 0.5f, 4}});
+    Ref<Shape> b123 = box::create({.half_extents = vec3f::make(1, 2, 3)});
+    Ref<Shape> non_uniform = scaled::create({.shape = b123, .scale = vec3f::make(2, 0.5f, 4)});
     shapes::get_shape_supporting_face(face, non_uniform, 0, vec3f::make(1, 0, 0), mat4f::load(identity), vec3f::make(1, 1, 1));
     CHECK(ctx, face.num_vertices == 4);
     for (uint32_t i = 0; i < face.num_vertices; i++) {
@@ -211,7 +212,7 @@ void test_scaled_supporting_face(TestCtx &ctx) {
     }
 
     // a mirrored box is the same box: the face opposite the direction stays at x = -1
-    Ref<Shape> mirrored = scaled::create({.shape = b, .scale = {-1, 1, 1}});
+    Ref<Shape> mirrored = scaled::create({.shape = b, .scale = vec3f::make(-1, 1, 1)});
     shapes::get_shape_supporting_face(face, mirrored, 0, vec3f::make(1, 0, 0), mat4f::load(identity), vec3f::make(1, 1, 1));
     CHECK(ctx, face.num_vertices == 4);
     for (uint32_t i = 0; i < face.num_vertices; i++) CHECK_NEAR(ctx, vec3f::x(face.vertices[i]), -1.0f, 1e-6f);
@@ -226,7 +227,7 @@ void test_scaled_supporting_face(TestCtx &ctx) {
 
     // a sphere has none
     Ref<Shape> s = sphere::create({.radius = 2.0f});
-    Ref<Shape> ss = scaled::create({.shape = s, .scale = {3, 3, 3}});
+    Ref<Shape> ss = scaled::create({.shape = s, .scale = vec3f::splat(3.0f)});
     shapes::get_shape_supporting_face(face, ss, 0, vec3f::make(1, 0, 0), mat4f::load(identity), vec3f::make(1, 1, 1));
     CHECK(ctx, face.num_vertices == 0);
 
@@ -246,23 +247,23 @@ void test_scaled_cast_ray(TestCtx &ctx) {
 
     // a unit sphere scaled by 2 at x = 5: its surface at 3
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> ss = scaled::create({.shape = s, .scale = {2, 2, 2}});
+    Ref<Shape> ss = scaled::create({.shape = s, .scale = vec3f::splat(2.0f)});
     CHECK_NEAR(ctx, ray_fraction(ss, pose({5, 0, 0}), {0, 0, 0}, {1, 0, 0}, 10.0f), 0.3f, 1e-5f);
 
     // a unit box scaled (2, 1, 1) at x = 5: its -x face at 3; from above, its top at 1
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
-    Ref<Shape> sb = scaled::create({.shape = b, .scale = {2, 1, 1}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
+    Ref<Shape> sb = scaled::create({.shape = b, .scale = vec3f::make(2, 1, 1)});
     CHECK_NEAR(ctx, ray_fraction(sb, pose({5, 0, 0}), {0, 0, 0}, {1, 0, 0}, 10.0f), 0.3f, 1e-5f);
     CHECK_NEAR(ctx, ray_fraction(sb, pose({5, 0, 0}), {6.5f, 5, 0}, {0, -1, 0}, 10.0f), 0.4f, 1e-5f);
     CHECK(ctx, ray_fraction(sb, pose({5, 0, 0}), {7.5f, 5, 0}, {0, -1, 0}, 10.0f) < 0.0f);
 
     // scaled down too small to reach: a box 0.01 across at x = 5 misses a ray straight down at x = 4.9
-    Ref<Shape> tiny = scaled::create({.shape = b, .scale = {0.01f, 0.01f, 0.01f}});
+    Ref<Shape> tiny = scaled::create({.shape = b, .scale = vec3f::splat(0.01f)});
     CHECK(ctx, ray_fraction(tiny, pose({5, 0, 0}), {4.9f, 5, 0}, {0, -1, 0}, 10.0f) < 0.0f);
     CHECK_NEAR(ctx, ray_fraction(tiny, pose({5, 0, 0}), {5, 5, 0}, {0, -1, 0}, 10.0f), 0.499f, 1e-5f);
 
     // nested in a transformed shape moved to 5
-    Ref<Shape> moved = transformed::create({.shape = sb, .position = {5, 0, 0}, .quaternion = IDENTITY});
+    Ref<Shape> moved = transformed::create({.shape = sb, .position = vec3f::make(5, 0, 0), .quaternion = quatf::identity()});
     CHECK_NEAR(ctx, ray_fraction(moved, pose({0, 0, 0}), {0, 0, 0}, {1, 0, 0}, 10.0f), 0.3f, 1e-5f);
 
     moved = nullptr;
@@ -276,12 +277,12 @@ void test_scaled_cast_ray(TestCtx &ctx) {
 void test_scaled_collide_point(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> ss = scaled::create({.shape = s, .scale = {2, 2, 2}});
+    Ref<Shape> ss = scaled::create({.shape = s, .scale = vec3f::splat(2.0f)});
     CHECK(ctx, point_inside(ss, pose({0, 0, 0}), {1.9f, 0, 0}));
     CHECK(ctx, !point_inside(ss, pose({0, 0, 0}), {2.1f, 0, 0}));
 
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
-    Ref<Shape> sb = scaled::create({.shape = b, .scale = {2, 1, 1}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
+    Ref<Shape> sb = scaled::create({.shape = b, .scale = vec3f::make(2, 1, 1)});
     CHECK(ctx, point_inside(sb, pose({0, 0, 0}), {1.9f, 0.9f, 0}));
     CHECK(ctx, !point_inside(sb, pose({0, 0, 0}), {2.1f, 0, 0}));
     CHECK(ctx, !point_inside(sb, pose({0, 0, 0}), {0, 1.1f, 0}));
@@ -300,7 +301,7 @@ void test_scaled_sphere_and_box_vs_sphere(TestCtx &ctx) {
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
 
     // a unit sphere scaled by 2 against a unit sphere 2.5 away: 0.5 deep, points on each surface
-    Ref<Shape> ss = scaled::create({.shape = s, .scale = {2, 2, 2}});
+    Ref<Shape> ss = scaled::create({.shape = s, .scale = vec3f::splat(2.0f)});
     collide(collector, ss, pose({0, 0, 0}), s, pose({2.5f, 0, 0}));
     CHECK(ctx, collector.hits.length == 1);
     if (collector.hits.length == 1) {
@@ -311,8 +312,8 @@ void test_scaled_sphere_and_box_vs_sphere(TestCtx &ctx) {
     }
 
     // a unit box scaled (2, 1, 1): 0.5 into its +x face at 2 and into its top at 1
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
-    Ref<Shape> sb = scaled::create({.shape = b, .scale = {2, 1, 1}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
+    Ref<Shape> sb = scaled::create({.shape = b, .scale = vec3f::make(2, 1, 1)});
     collide_shape::reset(collector);
     collide(collector, sb, pose({0, 0, 0}), s, pose({2.5f, 0, 0}));
     CHECK(ctx, collector.hits.length == 1);
@@ -377,11 +378,11 @@ void test_scaled_dispatch_rows(TestCtx &ctx) {
 void test_scaled_material(TestCtx &ctx) {
     dispatch::init();
     // through the inner shape, sub shape id and all
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}, .material_id = 6});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f), .material_id = 6});
     Ref<Shape> s = sphere::create({.radius = 1.0f, .material_id = 3});
-    Ref<Shape> moved = transformed::create({.shape = s, .position = {3, 0, 0}});
-    Ref<Shape> scaled_box = scaled::create({.shape = b, .scale = {2, 3, 4}});
-    Ref<Shape> scaled_moved = scaled::create({.shape = moved, .scale = {-1, 2, 2}});
+    Ref<Shape> moved = transformed::create({.shape = s, .position = vec3f::make(3, 0, 0)});
+    Ref<Shape> scaled_box = scaled::create({.shape = b, .scale = vec3f::make(2, 3, 4)});
+    Ref<Shape> scaled_moved = scaled::create({.shape = moved, .scale = vec3f::make(-1, 2, 2)});
     CHECK(ctx, shapes::get_shape_material(scaled_box, sub_shape::EMPTY_SUB_SHAPE_ID) == 6);
     CHECK(ctx, shapes::get_shape_material(scaled_moved, sub_shape::EMPTY_SUB_SHAPE_ID) == 3);
     scaled_moved = nullptr;

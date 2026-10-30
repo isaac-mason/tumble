@@ -64,17 +64,17 @@ struct SwingTwistConstraint {
 
 struct SwingTwistConstraintSettings {
     /** pivot point on body 1 */
-    Float3 point_a = {0.0f, 0.0f, 0.0f};
+    Vec3f point_a = vec3f::zero();
     /** pivot point on body 2 */
-    Float3 point_b = {0.0f, 0.0f, 0.0f};
+    Vec3f point_b = vec3f::zero();
     /** twist axis on body 1, the x axis of constraint space (normalized on create) */
-    Float3 twist_axis_a = {1.0f, 0.0f, 0.0f};
+    Vec3f twist_axis_a = vec3f::axis_x();
     /** plane axis on body 1, the z axis of constraint space, perpendicular to the twist axis (normalized on create) */
-    Float3 plane_axis_a = {0.0f, 0.0f, 1.0f};
+    Vec3f plane_axis_a = vec3f::axis_z();
     /** twist axis on body 2 (normalized on create) */
-    Float3 twist_axis_b = {1.0f, 0.0f, 0.0f};
+    Vec3f twist_axis_b = vec3f::axis_x();
     /** plane axis on body 2 (normalized on create) */
-    Float3 plane_axis_b = {0.0f, 0.0f, 1.0f};
+    Vec3f plane_axis_b = vec3f::axis_z();
     ConstraintSpace space = ConstraintSpace::WORLD;
     SwingType swing_type = SwingType::CONE;
     /** swing limit about the z axis (radians) */

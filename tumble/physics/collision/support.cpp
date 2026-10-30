@@ -1,6 +1,7 @@
 #include "tumble/physics/collision/support.h"
 
 #include "tumble/math/mat4f.h"
+#include "tumble/math/plane3f.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/simd.h"
 #include "tumble/math/vec3f.h"
@@ -85,7 +86,7 @@ Vec3f point_support(Support &support, Vec3f direction) {
  * beats -inf. four vertices per iteration, each lane keeping its own running max and index, then
  * the lanes reduced and a scalar tail.
  */
-static int32_t hull_brute_scan(const float *vertices, uint32_t vertex_count, Vec3f direction) {
+static int32_t hull_brute_scan(const Vec3f *vertices, uint32_t vertex_count, Vec3f direction) {
     const float dx = vec3f::x(direction), dy = vec3f::y(direction), dz = vec3f::z(direction);
     const float neg_inf = -scalar::INF;
     float best_dot = neg_inf;
@@ -101,7 +102,7 @@ static int32_t hull_brute_scan(const float *vertices, uint32_t vertex_count, Vec
         const V128 four = v4i::splat(4);
         for (; i + 4 <= vertex_count; i += 4) {
             V128 x, y, z;
-            v4f::load3x4(vertices + i * 3, x, y, z);
+            v4f::transpose3x4(vertices[i].v, vertices[i + 1].v, vertices[i + 2].v, vertices[i + 3].v, x, y, z);
             // x·dx + y·dy + z·dz in the scalar order, so lanes and tail agree bit for bit
             const V128 dot = v4f::add(v4f::add(v4f::mul(x, direction_x), v4f::mul(y, direction_y)), v4f::mul(z, direction_z));
             const V128 better = v4f::gt(dot, lane_best_dot);
@@ -122,8 +123,7 @@ static int32_t hull_brute_scan(const float *vertices, uint32_t vertex_count, Vec
         }
     }
     for (; i < vertex_count; i++) {
-        const float *vertex = vertices + i * 3;
-        const float dot = vertex[0] * dx + vertex[1] * dy + vertex[2] * dz;
+        const float dot = vec3f::x(vertices[i]) * dx + vec3f::y(vertices[i]) * dy + vec3f::z(vertices[i]) * dz;
         if (dot > best_dot) {
             best_dot = dot;
             best_index = (int32_t)i;
@@ -140,7 +140,7 @@ Vec3f hull_support(Support &support, Vec3f direction) {
     const Vec3f local = to_local_direction(support, direction);
     const float lx = vec3f::x(local), ly = vec3f::y(local), lz = vec3f::z(local);
     auto &hull = support.hull;
-    const float *vertices = hull.vertices;
+    const Vec3f *vertices = hull.vertices;
     const uint32_t *neighbors_start = hull.neighbors_start;
     Vec3f point = vec3f::zero();
 
@@ -148,7 +148,7 @@ Vec3f hull_support(Support &support, Vec3f direction) {
         // brute scan: no adjacency baked, or cold pair-fill. when accelerated, this first call seeds
         // the warm-start hint with the exact argmax.
         const int32_t best = hull_brute_scan(vertices, hull.vertex_count, local);
-        if (best >= 0) point = vec3f::load(vertices, (uint32_t)best * 3);
+        if (best >= 0) point = vertices[best];
         if (neighbors_start != nullptr) hull.last_vertex = best < 0 ? 0 : best;
     } else {
         // warm hill-climb over the baked 1-ring: take the best neighbour of the current vertex,
@@ -157,8 +157,7 @@ Vec3f hull_support(Support &support, Vec3f direction) {
         const uint32_t *neighbors = hull.neighbors;
         const uint32_t vertex_count = hull.vertex_count;
         uint32_t current = (uint32_t)hull.last_vertex;
-        const float *vertex = vertices + current * 3;
-        float best_dot = vertex[0] * lx + vertex[1] * ly + vertex[2] * lz;
+        float best_dot = vec3f::x(vertices[current]) * lx + vec3f::y(vertices[current]) * ly + vec3f::z(vertices[current]) * lz;
         uint32_t steps = 0;
         uint32_t previous;
         do {
@@ -166,8 +165,8 @@ Vec3f hull_support(Support &support, Vec3f direction) {
             const uint32_t end = neighbors_start[current + 1];
             for (uint32_t k = neighbors_start[current]; k < end; k++) {
                 const uint32_t neighbor = neighbors[k];
-                const float *neighbor_vertex = vertices + neighbor * 3;
-                const float dot = neighbor_vertex[0] * lx + neighbor_vertex[1] * ly + neighbor_vertex[2] * lz;
+                const Vec3f neighbor_vertex = vertices[neighbor];
+                const float dot = vec3f::x(neighbor_vertex) * lx + vec3f::y(neighbor_vertex) * ly + vec3f::z(neighbor_vertex) * lz;
                 if (dot > best_dot) {
                     best_dot = dot;
                     current = neighbor;
@@ -175,7 +174,7 @@ Vec3f hull_support(Support &support, Vec3f direction) {
             }
         } while (current != previous && ++steps <= vertex_count);
         hull.last_vertex = (int32_t)current;
-        point = vec3f::load(vertices, current * 3);
+        point = vertices[current];
     }
 
     // uniform-scale fast path: scale the winning local vertex (must precede add_radius + transform-back)
@@ -199,9 +198,9 @@ void set_polygon_support(Support &out, const Vec3f *vertices, uint32_t vertex_co
     out.has_transform = false;
     out.add_radius = 0.0f;
     out.convex_radius = convex_radius;
-    // the hull evaluator scans flat xyz, so the face is copied into the scratch
+    // copied, so the support outlives the face it came from
     TUMBLE_ASSERT(vertex_count <= MAX_HULL_POINTS);
-    for (uint32_t i = 0; i < vertex_count; i++) vec3f::store(out.hull.scratch, vertices[i], i * 3);
+    for (uint32_t i = 0; i < vertex_count; i++) out.hull.scratch[i] = vertices[i];
     out.hull.vertices = out.hull.scratch;
     out.hull.vertex_count = vertex_count;
     out.hull.output_scale = 1.0f;
@@ -221,9 +220,9 @@ void set_point_support(Support &out, Vec3f point) {
 }
 
 /** `dst` at least `length` long, grown with zeros */
-static void grow_to(collections::Array<float> &dst, uint32_t length) {
+static void grow_to(collections::Array<Vec3f> &dst, uint32_t length) {
     dst.reserve(length);
-    while (dst.length < length) dst.push(0.0f);
+    while (dst.length < length) dst.push(vec3f::zero());
 }
 
 /**
@@ -250,38 +249,38 @@ static bool intersect_planes(Vec3f &out, Vec3f n1, float d1, Vec3f n2, float d2,
  * per-plane scale). computed once per shape at create, so `convex_radius` is passed in rather than
  * read off the shape.
  */
-void compute_shrunk_hull_points(collections::Array<float> &dst, uint32_t num_points, const float *point_positions, const uint32_t *point_num_faces,
-                                const int32_t *point_faces, const Plane3f *planes, float convex_radius) {
-    grow_to(dst, num_points * 3);
+void compute_shrunk_hull_points(collections::Array<Vec3f> &dst, uint32_t num_points, const Vec3f *points, const uint32_t *point_num_faces,
+                                const int32_t *point_faces, const Plane *planes, float convex_radius) {
+    grow_to(dst, num_points);
 
     for (uint32_t pi = 0; pi < num_points; pi++) {
         const uint32_t pb = pi * 3;
-        const Vec3f position = vec3f::load(point_positions, pb);
+        const Vec3f position = points[pi];
         const uint32_t num_faces = point_num_faces[pi];
 
         // first neighbouring face plane (normal is unit; offset inward: constant + r)
-        const Plane3f &plane1 = planes[point_faces[pb]];
-        const Vec3f n1 = vec3f::load(plane1.normal);
+        const Plane &plane1 = planes[point_faces[pb]];
+        const Vec3f n1 = plane3f::normal(plane1);
         Vec3f result;
 
         if (num_faces == 1) {
             // simple case: shift back along the single plane normal
             result = vec3f::scale_and_add(position, n1, -convex_radius);
         } else {
-            const Plane3f &plane2 = planes[point_faces[pb + 1]];
-            const Vec3f n2 = vec3f::load(plane2.normal);
+            const Plane &plane2 = planes[point_faces[pb + 1]];
+            const Vec3f n2 = plane3f::normal(plane2);
 
             // offset the two face planes inward by the convex radius (use the stored plane constants)
-            const float d1 = plane1.constant + convex_radius;
-            const float d2 = plane2.constant + convex_radius;
+            const float d1 = plane3f::constant(plane1) + convex_radius;
+            const float d2 = plane3f::constant(plane2) + convex_radius;
 
             // third plane: 3rd face plane (offset inward), or a perpendicular plane through the vertex
             Vec3f n3;
             float d3;
             if (num_faces == 3) {
-                const Plane3f &plane3 = planes[point_faces[pb + 2]];
-                n3 = vec3f::load(plane3.normal);
-                d3 = plane3.constant + convex_radius;
+                const Plane &plane3 = planes[point_faces[pb + 2]];
+                n3 = plane3f::normal(plane3);
+                d3 = plane3f::constant(plane3) + convex_radius;
             } else {
                 n3 = vec3f::cross(n1, n2);
                 d3 = -vec3f::dot(n3, position);
@@ -291,7 +290,7 @@ void compute_shrunk_hull_points(collections::Array<float> &dst, uint32_t num_poi
             if (!intersect_planes(result, n1, d1, n2, d2, n3, d3)) result = vec3f::scale_and_add(position, n1, -convex_radius);
         }
 
-        vec3f::store(dst.data, result, pb);
+        dst[pi] = result;
     }
 }
 
@@ -314,9 +313,8 @@ static Vec3f scaled_normal(Vec3f normal, Vec3f inverse_scale) {
  * rebuilt through the scaled vertex, offset inward by the scaled convex radius, then intersected.
  * the 2-face third plane uses the unnormalized cross of n1, n2.
  */
-void compute_scaled_shrunk_hull_points(float *dst, uint32_t num_points, const float *point_positions,
-                                       const uint32_t *point_num_faces, const int32_t *point_faces, const Plane3f *planes,
-                                       float convex_radius, Vec3f scale) {
+void compute_scaled_shrunk_hull_points(Vec3f *dst, uint32_t num_points, const Vec3f *points, const uint32_t *point_num_faces,
+                                       const int32_t *point_faces, const Plane *planes, float convex_radius, Vec3f scale) {
     const float scaled_radius = scale_convex_radius(convex_radius, scale);
 
     const Vec3f inverse_scale = vec3f::inverse(scale);
@@ -324,16 +322,16 @@ void compute_scaled_shrunk_hull_points(float *dst, uint32_t num_points, const fl
     for (uint32_t pi = 0; pi < num_points; pi++) {
         const uint32_t pb = pi * 3;
         // scaled vertex position
-        const Vec3f position = vec3f::multiply(vec3f::load(point_positions, pb), scale);
+        const Vec3f position = vec3f::multiply(points[pi], scale);
         const uint32_t num_faces = point_num_faces[pi];
 
-        const Vec3f n1 = scaled_normal(vec3f::load(planes[point_faces[pb]].normal), inverse_scale);
+        const Vec3f n1 = scaled_normal(plane3f::normal(planes[point_faces[pb]]), inverse_scale);
         Vec3f result;
 
         if (num_faces == 1) {
             result = vec3f::scale_and_add(position, n1, -scaled_radius);
         } else {
-            const Vec3f n2 = scaled_normal(vec3f::load(planes[point_faces[pb + 1]].normal), inverse_scale);
+            const Vec3f n2 = scaled_normal(plane3f::normal(planes[point_faces[pb + 1]]), inverse_scale);
 
             // planes rebuilt through the scaled vertex, offset inward by the scaled convex radius
             const float d1 = -vec3f::dot(n1, position) + scaled_radius;
@@ -342,7 +340,7 @@ void compute_scaled_shrunk_hull_points(float *dst, uint32_t num_points, const fl
             Vec3f n3;
             float d3;
             if (num_faces == 3) {
-                n3 = scaled_normal(vec3f::load(planes[point_faces[pb + 2]].normal), inverse_scale);
+                n3 = scaled_normal(plane3f::normal(planes[point_faces[pb + 2]]), inverse_scale);
                 d3 = -vec3f::dot(n3, position) + scaled_radius;
             } else {
                 // third plane perpendicular to the first two, through the scaled vertex (unnormalized normal)
@@ -353,7 +351,7 @@ void compute_scaled_shrunk_hull_points(float *dst, uint32_t num_points, const fl
             if (!intersect_planes(result, n1, d1, n2, d2, n3, d3)) result = vec3f::scale_and_add(position, n1, -scaled_radius);
         }
 
-        vec3f::store(dst, result, pb);
+        dst[pi] = result;
     }
 }
 

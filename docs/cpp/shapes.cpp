@@ -23,10 +23,10 @@ static float rest_height(World &world, Shape *shape, float x) {
         .shape = shape,
         .object_layer = moving,
         .motion_type = MotionType::DYNAMIC,
-        .position = {x, 3.0f, 0.0f},
+        .position = vec3f::make(x, 3.0f, 0.0f),
     });
     for (int i = 0; i < 180; i++) world::step(world, 1.0f / 60.0f);
-    const float height = body->position.y;
+    const float height = vec3f::y(body->position);
     rigid_body::remove(world, body);
     return height;
 }
@@ -40,7 +40,7 @@ int main() {
     /* SNIPPET_START: plane */
     // an infinite ground. the plane is point . normal + constant = 0, and the normal points out of
     // its front
-    Ref<Shape> ground = plane::create({.plane = {{0.0f, 1.0f, 0.0f}, 0.0f}});
+    Ref<Shape> ground = plane::create({.plane = plane3f::make(vec3f::axis_y(), 0.0f)});
     rigid_body::create(*world, {
         .shape = ground,
         .object_layer = not_moving,
@@ -52,7 +52,7 @@ int main() {
     // the convex primitives, centred on their origin. a body takes its mass from their volume and
     // density
     Ref<Shape> ball = sphere::create({.radius = 0.5f});
-    Ref<Shape> crate = box::create({.half_extents = {0.5f, 0.25f, 0.5f}, .density = 500.0f});
+    Ref<Shape> crate = box::create({.half_extents = vec3f::make(0.5f, 0.25f, 0.5f), .density = 500.0f});
 
     // y is the long axis of a capsule and a cylinder. a capsule's radius is its convex radius
     Ref<Shape> pill = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.25f});
@@ -67,13 +67,13 @@ int main() {
 
     /* SNIPPET_START: convex-hull */
     // any point cloud. the shape builds its hull, and any number of bodies can share the shape
-    const float points[] = {
-        -0.5f, 0.0f, -0.5f,
-        0.5f, 0.0f, -0.5f,
-        0.5f, 0.0f, 0.5f,
-        -0.5f, 0.0f, 0.5f,
-        0.0f, 0.8f, 0.0f,
-        0.1f, 0.2f, 0.1f,
+    const Vec3f points[] = {
+        vec3f::make(-0.5f, 0.0f, -0.5f),
+        vec3f::make(0.5f, 0.0f, -0.5f),
+        vec3f::make(0.5f, 0.0f, 0.5f),
+        vec3f::make(-0.5f, 0.0f, 0.5f),
+        vec3f::make(0.0f, 0.8f, 0.0f),
+        vec3f::make(0.1f, 0.2f, 0.1f),
     };
     ConvexHullShape::BuildResult result;
     Ref<Shape> pyramid = convex_hull::create({.positions = points, .num_positions = 6}, &result);
@@ -87,7 +87,7 @@ int main() {
     /* SNIPPET_END: convex-hull */
     /* HIDE_START */
     // the interior point (0.1, 0.2, 0.1) is dropped: the hull is the five corners
-    if (pyramid == nullptr || heavy_pyramid == nullptr || shapes::as<ConvexHullShape>(pyramid).data->num_points != 5) return 1;
+    if (pyramid == nullptr || heavy_pyramid == nullptr || shapes::as<ConvexHullShape>(pyramid).data->points.length != 5) return 1;
     if (rest_height(*world, pyramid, 8.0f) > 0.05f) return 1;
     /* HIDE_END */
 
@@ -111,7 +111,7 @@ int main() {
         .shape = ramp,
         .object_layer = not_moving,
         .motion_type = MotionType::STATIC,
-        .position = {20.0f, 0.0f, 0.0f},
+        .position = vec3f::make(20.0f, 0.0f, 0.0f),
     });
     /* SNIPPET_END: triangle-mesh */
     /* HIDE_START */
@@ -121,12 +121,12 @@ int main() {
             .shape = ball,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {20.0f, 3.0f, 1.5f},
+            .position = vec3f::make(20.0f, 3.0f, 1.5f),
         });
         float lowest_on_ramp = 10.0f;
         for (int i = 0; i < 30; i++) {
             world::step(*world, 1.0f / 60.0f);
-            if (roller->position.z > 0.0f && roller->position.y < lowest_on_ramp) lowest_on_ramp = roller->position.y;
+            if (vec3f::z(roller->position) > 0.0f && vec3f::y(roller->position) < lowest_on_ramp) lowest_on_ramp = vec3f::y(roller->position);
         }
         if (lowest_on_ramp < 0.9f) return 1;
         rigid_body::remove(*world, roller);
@@ -135,26 +135,27 @@ int main() {
 
     /* SNIPPET_START: compound */
     // several shapes as one body, each at its own pose. the compound holds its shapes
-    const Float4 upright = {0.0f, 0.0f, 0.0f, 1.0f};
-    const Float4 on_its_side = {0.0f, 0.0f, 0.70710678f, 0.70710678f};
+    const Quatf upright = quatf::identity();
+    const Quatf on_its_side = quatf::make(0.0f, 0.0f, 0.70710678f, 0.70710678f);
     const CompoundShapeSettings::Child dumbbell_parts[] = {
-        {.position = {-0.6f, 0.0f, 0.0f}, .quaternion = upright, .shape = ball},
-        {.position = {0.6f, 0.0f, 0.0f}, .quaternion = upright, .shape = ball},
-        {.position = {0.0f, 0.0f, 0.0f}, .quaternion = on_its_side, .shape = pill},
+        {.position = vec3f::make(-0.6f, 0.0f, 0.0f), .quaternion = upright, .shape = ball},
+        {.position = vec3f::make(0.6f, 0.0f, 0.0f), .quaternion = upright, .shape = ball},
+        {.position = vec3f::make(0.0f, 0.0f, 0.0f), .quaternion = on_its_side, .shape = pill},
     };
     Ref<Shape> dumbbell = compound::create({.children = dumbbell_parts, .num_children = 3});
 
     // a static compound is built once into a bvh. use it for many children that never change
     CompoundShapeSettings::Child fence_posts[16];
     for (uint32_t i = 0; i < 16; i++) {
-        fence_posts[i] = {.position = {(float)i, 0.4f, 0.0f}, .quaternion = upright, .shape = can};
+        fence_posts[i] = {.position = vec3f::make((float)i, 0.4f, 0.0f), .quaternion = upright,
+                          .shape = can};
     }
     Ref<Shape> fence = static_compound::create({.children = fence_posts, .num_children = 16});
     rigid_body::create(*world, {
         .shape = fence,
         .object_layer = not_moving,
         .motion_type = MotionType::STATIC,
-        .position = {-20.0f, 0.0f, 0.0f},
+        .position = vec3f::make(-20.0f, 0.0f, 0.0f),
     });
     /* SNIPPET_END: compound */
     /* HIDE_START */
@@ -168,15 +169,15 @@ int main() {
     // move its centre of mass
     Ref<Shape> raised = transformed::create({
         .shape = crate,
-        .position = {0.0f, 1.0f, 0.0f},
-        .quaternion = {0.0f, 0.0f, 0.0f, 1.0f},
+        .position = vec3f::make(0.0f, 1.0f, 0.0f),
+        .quaternion = quatf::identity(),
     });
-    Ref<Shape> big_ball = scaled::create({.shape = ball, .scale = {2.0f, 2.0f, 2.0f}});
+    Ref<Shape> big_ball = scaled::create({.shape = ball, .scale = vec3f::splat(2.0f)});
 
     // a low centre of mass keeps a tall box upright
     Ref<Shape> ballasted = offset_center_of_mass::create({
         .shape = crate,
-        .offset = {0.0f, -0.2f, 0.0f},
+        .offset = vec3f::make(0.0f, -0.2f, 0.0f),
     });
     /* SNIPPET_END: decorators */
     /* HIDE_START */

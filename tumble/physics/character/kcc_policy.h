@@ -4,6 +4,7 @@
 
 #include "tumble/config.h"
 #include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
 #include "tumble/physics/body/body_id.h"
 #include "tumble/physics/character/kcc.h"
 #include "tumble/util/collections.h"
@@ -23,8 +24,8 @@ struct KCC::BodyPolicy {
     /** false: no sliding along a still, walkable surface of it */
     bool slide_on_walkable = true;
     /** added to the body's velocities where the character meets it, as a conveyor's belt moves */
-    Float3 surface_linear_velocity = {0.0f, 0.0f, 0.0f};
-    Float3 surface_angular_velocity = {0.0f, 0.0f, 0.0f};
+    Vec3f surface_linear_velocity = vec3f::zero();
+    Vec3f surface_angular_velocity = vec3f::zero();
 };
 
 struct KCC::Policy {

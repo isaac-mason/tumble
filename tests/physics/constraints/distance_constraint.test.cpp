@@ -15,14 +15,14 @@ void test_distance_constraint_create_limits(TestCtx &ctx) {
     ConstraintScene scene = make_constraint_scene();
     RigidBody *a = add_body(scene, MotionType::DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, MotionType::DYNAMIC, {4.0f, 0.0f, 0.0f}, stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 1.0f));
-    const Float3 point_a = {0.5f, 0.0f, 0.0f};
-    const Float3 point_b = {3.5f, 0.0f, 0.0f};
+    const Vec3f point_a = vec3f::make(0.5f, 0.0f, 0.0f);
+    const Vec3f point_b = vec3f::make(3.5f, 0.0f, 0.0f);
 
     // no limits given: both are the initial distance
     const DistanceConstraint *fixed_length = distance_constraint::get(
         *scene.world, distance_constraint::create(*scene.world, a, b, {.point_a = point_a, .point_b = point_b}));
     CHECK(ctx, fixed_length->min_distance == 3.0f && fixed_length->max_distance == 3.0f);
-    CHECK(ctx, vec3f::distance(world_point(b, fixed_length->local_space_position2), vec3f::load(point_b)) < 1e-5f);
+    CHECK(ctx, vec3f::distance(world_point(b, fixed_length->local_space_position2), point_b) < 1e-5f);
     CHECK(ctx, vec3f::exact_equals(fixed_length->world_space_normal, vec3f::make(0.0f, 1.0f, 0.0f)));
 
     // one limit given: the other is the initial distance, or the given one when that is tighter
@@ -43,7 +43,7 @@ void test_distance_constraint_create_limits(TestCtx &ctx) {
     const DistanceConstraint *local = distance_constraint::get(
         *scene.world,
         distance_constraint::create(*scene.world, a, b,
-                                    {.point_a = {0.0f, 1.0f, 0.0f}, .point_b = {0.0f, 1.0f, 0.0f}, .space = ConstraintSpace::LOCAL}));
+                                    {.point_a = vec3f::make(0.0f, 1.0f, 0.0f), .point_b = vec3f::make(0.0f, 1.0f, 0.0f), .space = ConstraintSpace::LOCAL}));
     CHECK(ctx, vec3f::distance(local->world_space_position2, vec3f::make(4.0f, 1.0f, 0.0f)) < 1e-5f);
     CHECK_NEAR(ctx, local->min_distance, 4.0f, 1e-5f);
     release_constraint_scene(scene);
@@ -54,7 +54,7 @@ void test_distance_constraint_set_distance(TestCtx &ctx) {
     RigidBody *a = add_body(scene, MotionType::DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, MotionType::DYNAMIC, {2.0f, 0.0f, 0.0f});
     DistanceConstraint *constraint = distance_constraint::get(
-        *scene.world, distance_constraint::create(*scene.world, a, b, {.point_b = {2.0f, 0.0f, 0.0f}}));
+        *scene.world, distance_constraint::create(*scene.world, a, b, {.point_b = vec3f::make(2.0f, 0.0f, 0.0f)}));
     distance_constraint::set_distance(*constraint, 1.0f, 4.0f);
     CHECK(ctx, constraint->min_distance == 1.0f && constraint->max_distance == 4.0f);
     // both are set as given: a negative is a value like any other, not "keep the current one"
@@ -71,7 +71,7 @@ void test_distance_constraint_reused_slot_starts_fresh(TestCtx &ctx) {
     // a soft spring, and a setup that points the normal along +x from a to b
     const ConstraintId first_id = distance_constraint::create(
         *scene.world, a, b,
-        {.point_b = {5.0f, 0.0f, 0.0f},
+        {.point_b = vec3f::make(5.0f, 0.0f, 0.0f),
          .spring_settings = {.mode = SpringMode::STIFFNESS_AND_DAMPING, .frequency_or_stiffness = 500.0f, .damping = 3.0f}});
     DistanceConstraint *first = distance_constraint::get(*scene.world, first_id);
     distance_constraint::setup_velocity(*first, scene.world->bodies, 1.0f / 60.0f);
@@ -82,7 +82,7 @@ void test_distance_constraint_reused_slot_starts_fresh(TestCtx &ctx) {
     // coincident points have no direction of their own, so the normal is the fallback; no spring given is a hard limit
     const DistanceConstraint *second = distance_constraint::get(
         *scene.world, distance_constraint::create(*scene.world, a, b,
-                                                       {.point_a = {2.0f, 0.0f, 0.0f}, .point_b = {2.0f, 0.0f, 0.0f}}));
+                                                       {.point_a = vec3f::make(2.0f, 0.0f, 0.0f), .point_b = vec3f::make(2.0f, 0.0f, 0.0f)}));
     CHECK(ctx, second->base.index == first_index);
     CHECK(ctx, vec3f::exact_equals(second->world_space_normal, vec3f::make(0.0f, 1.0f, 0.0f)));
     CHECK(ctx, second->limits_spring_settings.mode == SpringMode::FREQUENCY_AND_DAMPING);
@@ -97,10 +97,10 @@ void test_distance_constraint_pendulum(TestCtx &ctx) {
     RigidBody *anchor = add_body(scene, MotionType::STATIC, {0.0f, 10.0f, 0.0f});
     RigidBody *bob = add_body(scene, MotionType::DYNAMIC, {0.0f, 5.0f, 0.0f});
     const ConstraintId id = distance_constraint::create(
-        *scene.world, anchor, bob, {.point_a = {0.0f, 10.0f, 0.0f}, .point_b = {0.0f, 5.0f, 0.0f}});
+        *scene.world, anchor, bob, {.point_a = vec3f::make(0.0f, 10.0f, 0.0f), .point_b = vec3f::make(0.0f, 5.0f, 0.0f)});
     scene.ids.push(id);
     for (int i = 0; i < 30; i++) step_constraint_scene(scene, 1.0f / 60.0f, vec3f::load(GRAVITY));
-    CHECK_NEAR(ctx, vec3f::distance(vec3f::load(anchor->position), vec3f::load(bob->position)), 5.0f, 0.05f);
+    CHECK_NEAR(ctx, vec3f::distance(anchor->position, bob->position), 5.0f, 0.05f);
     // hanging straight down, the rope carries the weight: m g dt per step
     const float weight_impulse = 9.81f / 60.0f / bob->motion_properties.inv_mass;
     CHECK_NEAR(ctx, scalar::abs(distance_constraint::get_total_lambda(*distance_constraint::get(*scene.world, id))), weight_impulse,
@@ -113,9 +113,9 @@ void test_distance_constraint_holds_length(TestCtx &ctx) {
     ConstraintScene scene = make_constraint_scene();
     RigidBody *pivot = add_body(scene, MotionType::STATIC, {0.0f, 10.0f, 0.0f});
     RigidBody *ball = add_body(scene, MotionType::DYNAMIC, {3.0f, 10.0f, 0.0f});
-    ball->motion_properties.linear_velocity = {0.0f, 0.0f, 4.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(0.0f, 0.0f, 4.0f);
     const ConstraintId id = distance_constraint::create(
-        *scene.world, pivot, ball, {.point_a = {0.0f, 10.0f, 0.0f}, .point_b = {3.0f, 10.0f, 0.0f}});
+        *scene.world, pivot, ball, {.point_a = vec3f::make(0.0f, 10.0f, 0.0f), .point_b = vec3f::make(3.0f, 10.0f, 0.0f)});
     scene.ids.push(id);
     const DistanceConstraint *constraint = distance_constraint::get(*scene.world, id);
 
@@ -124,7 +124,7 @@ void test_distance_constraint_holds_length(TestCtx &ctx) {
     for (int i = 0; i < 180; i++) {
         step_constraint_scene(scene, 1.0f / 60.0f, vec3f::load(GRAVITY));
         worst = scalar::max(worst, scalar::abs(current_distance(*constraint, pivot, ball) - 3.0f));
-        lowest = scalar::min(lowest, ball->center_of_mass_position.y);
+        lowest = scalar::min(lowest, vec3f::y(ball->center_of_mass_position));
     }
     CHECK(ctx, worst < 1e-2f);
     CHECK(ctx, lowest < 7.5f);
@@ -137,19 +137,19 @@ void test_distance_constraint_respects_min_max(TestCtx &ctx) {
     RigidBody *a = add_body(scene, MotionType::DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, MotionType::DYNAMIC, {2.0f, 0.0f, 0.0f});
     const ConstraintId id = distance_constraint::create(
-        *scene.world, a, b, {.point_b = {2.0f, 0.0f, 0.0f}, .min_distance = 1.0f, .max_distance = 3.0f});
+        *scene.world, a, b, {.point_b = vec3f::make(2.0f, 0.0f, 0.0f), .min_distance = 1.0f, .max_distance = 3.0f});
     scene.ids.push(id);
     const DistanceConstraint *constraint = distance_constraint::get(*scene.world, id);
     const float dt = 1.0f / 60.0f;
 
     // free in between: the first step leaves the velocities alone
-    a->motion_properties.linear_velocity = {-0.5f, 0.0f, 0.0f};
-    b->motion_properties.linear_velocity = {0.5f, 0.0f, 0.0f};
+    a->motion_properties.linear_velocity = vec3f::make(-0.5f, 0.0f, 0.0f);
+    b->motion_properties.linear_velocity = vec3f::make(0.5f, 0.0f, 0.0f);
     step_constraint_scene(scene, dt, vec3f::zero());
     CHECK(ctx, !axis_constraint_part::is_active(constraint->axis_constraint));
-    CHECK(ctx, b->motion_properties.linear_velocity.x == 0.5f);
+    CHECK(ctx, vec3f::x(b->motion_properties.linear_velocity) == 0.5f);
 
-    b->motion_properties.linear_velocity = {4.0f, 0.0f, 0.0f};
+    b->motion_properties.linear_velocity = vec3f::make(4.0f, 0.0f, 0.0f);
     float longest = 0.0f;
     for (int i = 0; i < 90; i++) {
         step_constraint_scene(scene, dt, vec3f::zero());
@@ -161,8 +161,8 @@ void test_distance_constraint_respects_min_max(TestCtx &ctx) {
     // at the max the rope only pulls
     CHECK(ctx, distance_constraint::get_total_lambda(*constraint) <= 0.0f);
 
-    a->motion_properties.linear_velocity = {3.0f, 0.0f, 0.0f};
-    b->motion_properties.linear_velocity = {-3.0f, 0.0f, 0.0f};
+    a->motion_properties.linear_velocity = vec3f::make(3.0f, 0.0f, 0.0f);
+    b->motion_properties.linear_velocity = vec3f::make(-3.0f, 0.0f, 0.0f);
     float shortest = 10.0f;
     for (int i = 0; i < 90; i++) {
         step_constraint_scene(scene, dt, vec3f::zero());
@@ -180,7 +180,7 @@ void test_distance_constraint_soft_limit(TestCtx &ctx) {
     RigidBody *bob = add_body(scene, MotionType::DYNAMIC, {0.0f, 8.0f, 0.0f});
     const ConstraintId id = distance_constraint::create(
         *scene.world, anchor, bob,
-        {.point_a = {0.0f, 10.0f, 0.0f}, .point_b = {0.0f, 8.0f, 0.0f}, .spring_settings = {.frequency_or_stiffness = 2.0f, .damping = 0.5f}});
+        {.point_a = vec3f::make(0.0f, 10.0f, 0.0f), .point_b = vec3f::make(0.0f, 8.0f, 0.0f), .spring_settings = {.frequency_or_stiffness = 2.0f, .damping = 0.5f}});
     scene.ids.push(id);
     DistanceConstraint *constraint = distance_constraint::get(*scene.world, id);
     CHECK(ctx, !distance_constraint::solve_position(*constraint, scene.world->bodies, 1.0f / 60.0f, 0.2f));

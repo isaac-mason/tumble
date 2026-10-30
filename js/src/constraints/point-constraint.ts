@@ -1,9 +1,9 @@
 import type { BodyId } from '../body.js';
 import * as Low from '../generated/tumble.js';
-import { copied, type Vec3 } from '../math.js';
+import type { Vec3 } from '../math.js';
 import { defaultsOf, over } from '../settings.js';
 import type { World } from '../world.js';
-import { type Common, type ConstraintId, created, expectCommon, vec3 } from './common.js';
+import { type Common, type ConstraintId, created, expectCommon } from './common.js';
 
 export type PointConstraintSettings = {
     /** the point on body a, held to the point on body b */
@@ -22,5 +22,5 @@ export function create(world: World, bodyA: BodyId, bodyB: BodyId, settings: Poi
 
 /** the impulse it applied in the last step, N s: for breaking it by force */
 export function getTotalLambda(out: Vec3, world: World, constraint: ConstraintId): boolean {
-    return copied(out, vec3, Low.PointConstraint.getTotalLambda(vec3, world, constraint));
+    return Low.PointConstraint.getTotalLambda(out, world, constraint);
 }

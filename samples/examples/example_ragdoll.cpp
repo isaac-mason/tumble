@@ -189,8 +189,8 @@ static void stabilize(Ragdoll &ragdoll, const RagdollSettings &settings) {
     bool decomposed[PART_COUNT] = {};
     for (uint32_t i = 0; i < chain_length; i++) {
         const uint32_t part = chain[i];
-        decomposed[part] = motion_properties::decompose_principal_moments_of_inertia(mat4f::load(ragdoll.bodies[part]->mass_properties.inertia),
-                                                                                     rotations[part], diagonals[part]);
+        decomposed[part] = motion_properties::decompose_principal_moments_of_inertia(ragdoll.bodies[part]->mass_properties.inertia, rotations[part],
+                                                                                     diagonals[part]);
     }
     for (uint32_t i = chain_length - 1; i > 0; i--) {
         const uint32_t part = chain[i];
@@ -203,10 +203,12 @@ static void stabilize(Ragdoll &ragdoll, const RagdollSettings &settings) {
         const float minimum = fminf(MAX_INERTIA_INCREASE * vec3f::x(diagonals[part]), child_sums[part]);
         const Vec3f diagonal = vec3f::max(diagonals[part], vec3f::splat(minimum));
         const Mat4f inertia = mat4f::multiply(mat4f::multiply(rotations[part], mat4f::from_scaling(diagonal)), mat4f::transpose(rotations[part]));
-        Float4x4 &stored = ragdoll.bodies[part]->mass_properties.inertia;
-        mat4f::store(stored, inertia);
-        stored.m[3] = stored.m[7] = stored.m[11] = stored.m[12] = stored.m[13] = stored.m[14] = 0.0f;
-        stored.m[15] = 1.0f;
+        // the rotation part only: the last row and column as an inertia keeps them
+        Float4x4 elements;
+        mat4f::store(elements, inertia);
+        elements.m[3] = elements.m[7] = elements.m[11] = elements.m[12] = elements.m[13] = elements.m[14] = 0.0f;
+        elements.m[15] = 1.0f;
+        ragdoll.bodies[part]->mass_properties.inertia = mat4f::load(elements);
     }
 
     for (uint32_t part = 0; part < PART_COUNT; part++) {
@@ -216,21 +218,22 @@ static void stabilize(Ragdoll &ragdoll, const RagdollSettings &settings) {
     }
 }
 
-static Float3 tangent(Float3 axis) {
-    const float ax = fabsf(axis.x), ay = fabsf(axis.y), az = fabsf(axis.z);
-    if (ax <= ay && ax <= az) return vec::normalize({0.0f, -axis.z, axis.y});
-    if (ay <= az) return vec::normalize({axis.z, 0.0f, -axis.x});
-    return vec::normalize({-axis.y, axis.x, 0.0f});
+static Vec3f tangent(Vec3f axis) {
+    const float x = vec3f::x(axis), y = vec3f::y(axis), z = vec3f::z(axis);
+    const float ax = fabsf(x), ay = fabsf(y), az = fabsf(z);
+    if (ax <= ay && ax <= az) return vec3f::normalize(vec3f::make(0.0f, -z, y));
+    if (ay <= az) return vec3f::normalize(vec3f::make(z, 0.0f, -x));
+    return vec3f::normalize(vec3f::make(-y, x, 0.0f));
 }
 
-static void create_ragdoll(App &app, Ragdoll &out, Shape *const *shapes, Float3 offset) {
+static void create_ragdoll(App &app, Ragdoll &out, Shape *const *shapes, Vec3f offset) {
     const RagdollSettings &settings = state.settings;
     for (uint32_t part = 0; part < PART_COUNT; part++) {
         RigidBodySettings body;
         body.shape = shapes[part];
         body.object_layer = state.layers.moving;
         body.motion_type = MotionType::DYNAMIC;
-        body.position = vec::add(settings.parts[part].position, offset);
+        body.position = vec3f::add(vec3f::load(settings.parts[part].position), offset);
         body.linear_damping = 0.05f;
         body.angular_damping = 0.05f;
         body.restitution = 0.0f;
@@ -240,12 +243,12 @@ static void create_ragdoll(App &app, Ragdoll &out, Shape *const *shapes, Float3 
     for (int i = 0; i < JOINT_COUNT; i++) {
         const JointSettings &joint = settings.joints[i];
         SwingTwistConstraintSettings constraint;
-        constraint.point_a = joint.pivot_a;
-        constraint.point_b = joint.pivot_b;
-        constraint.twist_axis_a = joint.axis_a;
-        constraint.plane_axis_a = tangent(joint.axis_a);
-        constraint.twist_axis_b = joint.axis_b;
-        constraint.plane_axis_b = tangent(joint.axis_b);
+        constraint.point_a = vec3f::load(joint.pivot_a);
+        constraint.point_b = vec3f::load(joint.pivot_b);
+        constraint.twist_axis_a = vec3f::load(joint.axis_a);
+        constraint.plane_axis_a = tangent(constraint.twist_axis_a);
+        constraint.twist_axis_b = vec3f::load(joint.axis_b);
+        constraint.plane_axis_b = tangent(constraint.twist_axis_b);
         constraint.space = ConstraintSpace::LOCAL;
         constraint.normal_half_cone_angle = joint.angle;
         constraint.plane_half_cone_angle = joint.angle;
@@ -265,19 +268,19 @@ static void init(App &app) {
     app.drawing.grid = false;
 
     RigidBodySettings ground;
-    ground.shape = app::keep(app, box::create({.half_extents = {500.0f, 1.0f, 500.0f}}));
+    ground.shape = app::keep(app, box::create({.half_extents = vec3f::make(500.0f, 1.0f, 500.0f)}));
     ground.object_layer = state.layers.not_moving;
     ground.motion_type = MotionType::STATIC;
-    ground.position = {0.0f, -5.0f, 0.0f};
+    ground.position = vec3f::make(0.0f, -5.0f, 0.0f);
     rigid_body::create(*app.world, ground);
 
     Shape *shapes[PART_COUNT];
     for (uint32_t part = 0; part < PART_COUNT; part++) {
-        shapes[part] = app::keep(app, box::create({.half_extents = state.settings.parts[part].half_extents, .convex_radius = 0.05f,
+        shapes[part] = app::keep(app, box::create({.half_extents = vec3f::load(state.settings.parts[part].half_extents), .convex_radius = 0.05f,
                                                    .density = state.settings.density}));
     }
     for (int i = 0; i < RAGDOLL_COUNT; i++) {
-        create_ragdoll(app, state.ragdolls[i], shapes, {-5.0f + (float)i * 4.0f, (float)i * 3.0f, 0.0f});
+        create_ragdoll(app, state.ragdolls[i], shapes, vec3f::make(-5.0f + (float)i * 4.0f, (float)i * 3.0f, 0.0f));
     }
     for (int i = 0; i < RAGDOLL_COUNT; i++) {
         for (uint32_t part = 0; part < PART_COUNT; part++) {
@@ -290,7 +293,7 @@ static void init(App &app) {
     RigidBodySettings pointer;
     pointer.object_layer = state.layers.moving;
     pointer.motion_type = MotionType::STATIC;
-    pointer.position = {0.0f, 0.0f, -10000.0f};
+    pointer.position = vec3f::make(0.0f, 0.0f, -10000.0f);
     state.pointer = rigid_body::create(*app.world, pointer);
 
     camera::look_at(app.camera, {0.0f, 5.0f, 15.0f}, {0.0f, 0.0f, 0.0f});
@@ -316,10 +319,11 @@ static void grab(App &app, const Ray &pointer) {
     state.plane_point = point;
     state.plane_normal = app.camera.forward;
     state.pointer_position = point;
-    rigid_body::set_position(*app.world, state.pointer, vec3f::load(point), false);
+    const Vec3f anchor = vec3f::load(point);
+    rigid_body::set_position(*app.world, state.pointer, anchor, false);
     app::snap(app, *state.pointer);
     state.drag = distance_constraint::create(*app.world, state.pointer, body,
-                                             {.point_a = point, .point_b = point, .min_distance = 0.0f, .max_distance = 1.0f,
+                                             {.point_a = anchor, .point_b = anchor, .min_distance = 0.0f, .max_distance = 1.0f,
                                               .constraint_priority = 100});
     state.dragging = true;
     rigid_body::wake(*app.world, body);

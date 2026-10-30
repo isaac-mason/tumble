@@ -29,34 +29,36 @@ static struct {
 /** text centred on a world point, over the scene */
 static void connect(App &app, ChainKind kind, RigidBody *a, RigidBody *b, float x, float z) {
     World &world = *app.world;
+    // between the two links, and at the second link's centre
+    const Vec3f between = vec3f::make(x, START_Y, z - 0.5f);
+    const Vec3f centre = vec3f::make(x, START_Y, z);
     switch (kind) {
         case FIXED:
-            fixed_constraint::create(world, a, b, {.point_a = {x, START_Y, z - 0.5f}, .point_b = {x, START_Y, z - 0.5f}});
+            fixed_constraint::create(world, a, b, {.point_a = between, .point_b = between});
             break;
         case POINT:
-            point_constraint::create(world, a, b, {.point_a = {x, START_Y, z - 0.5f}, .point_b = {x, START_Y, z - 0.5f}});
+            point_constraint::create(world, a, b, {.point_a = between, .point_b = between});
             break;
         case DISTANCE:
-            distance_constraint::create(world, a, b,
-                                        {.point_a = {x, START_Y, z - 0.5f}, .point_b = {x, START_Y, z - 0.5f}, .min_distance = 0.0f, .max_distance = 1.0f});
+            distance_constraint::create(world, a, b, {.point_a = between, .point_b = between, .min_distance = 0.0f, .max_distance = 1.0f});
             break;
-        case HINGE:
+        case HINGE: {
+            const Vec3f bottom_edge = vec3f::make(x, START_Y - 0.5f, z - 0.5f);
             hinge_constraint::create(world, a, b,
-                                     {.point_a = {x, START_Y - 0.5f, z - 0.5f},
-                                      .point_b = {x, START_Y - 0.5f, z - 0.5f},
-                                      .hinge_axis_a = {1.0f, 0.0f, 0.0f},
-                                      .hinge_axis_b = {1.0f, 0.0f, 0.0f},
-                                      .normal_axis_a = {0.0f, 1.0f, 0.0f},
-                                      .normal_axis_b = {0.0f, 1.0f, 0.0f}});
+                                     {.point_a = bottom_edge,
+                                      .point_b = bottom_edge,
+                                      .hinge_axis_a = vec3f::axis_x(),
+                                      .hinge_axis_b = vec3f::axis_x(),
+                                      .normal_axis_a = vec3f::axis_y(),
+                                      .normal_axis_b = vec3f::axis_y()});
             break;
+        }
         case SLIDER: {
-            const Vec3f slider_axis = vec3f::normalize(vec3f::make(0.0f, -1.0f, 1.0f));
-            Float3 axis, normal;
-            vec3f::store(axis, slider_axis);
-            vec3f::store(normal, vec3f::perpendicular(slider_axis));
+            const Vec3f axis = vec3f::normalize(vec3f::make(0.0f, -1.0f, 1.0f));
+            const Vec3f normal = vec3f::perpendicular(axis);
             slider_constraint::create(world, a, b,
-                                      {.point_a = {x, START_Y, z - 0.5f},
-                                       .point_b = {x, START_Y, z - 0.5f},
+                                      {.point_a = between,
+                                       .point_b = between,
                                        .slider_axis_a = axis,
                                        .slider_axis_b = axis,
                                        .normal_axis_a = normal,
@@ -68,20 +70,20 @@ static void connect(App &app, ChainKind kind, RigidBody *a, RigidBody *b, float 
         }
         case CONE:
             cone_constraint::create(world, a, b,
-                                    {.point_a = {x, START_Y, z},
-                                     .twist_axis_a = {0.0f, 0.0f, 1.0f},
-                                     .point_b = {x, START_Y, z},
-                                     .twist_axis_b = {0.0f, 0.0f, 1.0f},
+                                    {.point_a = centre,
+                                     .twist_axis_a = vec3f::axis_z(),
+                                     .point_b = centre,
+                                     .twist_axis_b = vec3f::axis_z(),
                                      .half_cone_angle = 0.1f * scalar::PI});
             break;
         case SWING_TWIST:
             swing_twist_constraint::create(world, a, b,
-                                           {.point_a = {x, START_Y, z},
-                                            .point_b = {x, START_Y, z},
-                                            .twist_axis_a = {0.0f, 0.0f, 1.0f},
-                                            .plane_axis_a = {1.0f, 0.0f, 0.0f},
-                                            .twist_axis_b = {0.0f, 0.0f, 1.0f},
-                                            .plane_axis_b = {1.0f, 0.0f, 0.0f},
+                                           {.point_a = centre,
+                                            .point_b = centre,
+                                            .twist_axis_a = vec3f::axis_z(),
+                                            .plane_axis_a = vec3f::axis_x(),
+                                            .twist_axis_b = vec3f::axis_z(),
+                                            .plane_axis_b = vec3f::axis_x(),
                                             .normal_half_cone_angle = 0.2f * scalar::PI,
                                             .plane_half_cone_angle = 0.1f * scalar::PI,
                                             .twist_min_angle = -0.3f * scalar::PI,
@@ -90,12 +92,12 @@ static void connect(App &app, ChainKind kind, RigidBody *a, RigidBody *b, float 
         case SIX_DOF: {
             const float max_angle = 10.0f * scalar::DEGREES_TO_RADIANS;
             SixDOFConstraintSettings settings;
-            settings.point_a = {x, START_Y, z};
-            settings.point_b = {x, START_Y, z};
-            settings.axis_x_a = {0.0f, 0.0f, 1.0f};
-            settings.axis_y_a = {1.0f, 0.0f, 0.0f};
-            settings.axis_x_b = {0.0f, 0.0f, 1.0f};
-            settings.axis_y_b = {1.0f, 0.0f, 0.0f};
+            settings.point_a = centre;
+            settings.point_b = centre;
+            settings.axis_x_a = vec3f::axis_z();
+            settings.axis_y_a = vec3f::axis_x();
+            settings.axis_x_b = vec3f::axis_z();
+            settings.axis_y_b = vec3f::axis_x();
             for (uint32_t axis = 0; axis < SixDOFConstraint::Axis::NUM; axis++) {
                 const float limit = axis < SixDOFConstraint::Axis::NUM_TRANSLATION ? 0.1f : max_angle;
                 settings.limit_min[axis] = -limit;
@@ -118,7 +120,7 @@ static void make_chain(App &app, ChainKind kind) {
         settings.shape = state.link;
         settings.object_layer = z == 0 ? state.layers.not_moving : state.layers.moving;
         settings.motion_type = z == 0 ? MotionType::STATIC : MotionType::DYNAMIC;
-        settings.position = {x, START_Y, (float)z};
+        settings.position = vec3f::make(x, START_Y, (float)z);
         settings.restitution = 0.0f;
         settings.friction = 0.5f;
         RigidBody *body = rigid_body::create(*app.world, settings);
@@ -131,14 +133,14 @@ static void make_chain(App &app, ChainKind kind) {
 static void init(App &app) {
     app.world = app::create_world(state.layers);
     RigidBodySettings ground;
-    ground.shape = app::keep(app, box::create({.half_extents = {50.0f, 0.5f, 10.0f}}));
+    ground.shape = app::keep(app, box::create({.half_extents = vec3f::make(50.0f, 0.5f, 10.0f)}));
     ground.object_layer = state.layers.not_moving;
     ground.motion_type = MotionType::STATIC;
-    ground.position = {0.0f, -0.5f, 0.0f};
+    ground.position = vec3f::make(0.0f, -0.5f, 0.0f);
     ground.restitution = 0.0f;
     ground.friction = 0.5f;
     rigid_body::create(*app.world, ground);
-    state.link = app::keep(app, box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.05f}));
+    state.link = app::keep(app, box::create({.half_extents = vec3f::splat(0.5f), .convex_radius = 0.05f}));
     for (int kind = 0; kind < CHAIN_KIND_COUNT; kind++) make_chain(app, (ChainKind)kind);
     camera::look_at(app.camera, {10.0f, 30.0f, 30.0f}, {0.0f, 5.0f, 0.0f});
 }

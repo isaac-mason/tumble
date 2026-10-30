@@ -27,7 +27,7 @@ void calculate_constraint_properties(PointConstraintPart &part, RigidBody &body_
         summed_inv_mass += mp1.inv_mass;
 
         // inverse inertia in world space
-        const Mat4f inv_inertia1 = motion_properties::get_world_inverse_inertia(mp1, quatf::load(body_a.quaternion), step_stamp);
+        const Mat4f inv_inertia1 = motion_properties::get_world_inverse_inertia(mp1, body_a.quaternion, step_stamp);
 
         // [r1]x cross product matrix
         const Mat4f r_cross = mat4f::cross_product_matrix(part.r1);
@@ -48,7 +48,7 @@ void calculate_constraint_properties(PointConstraintPart &part, RigidBody &body_
         summed_inv_mass += mp2.inv_mass;
 
         // inverse inertia in world space
-        const Mat4f inv_inertia2 = motion_properties::get_world_inverse_inertia(mp2, quatf::load(body_b.quaternion), step_stamp);
+        const Mat4f inv_inertia2 = motion_properties::get_world_inverse_inertia(mp2, body_b.quaternion, step_stamp);
 
         // [r2]x cross product matrix
         const Mat4f r_cross = mat4f::cross_product_matrix(part.r2);
@@ -129,9 +129,9 @@ bool solve_velocity_constraint(PointConstraintPart &part, RigidBody &body_a, Rig
     // jacobian velocity: J v = v1 - [r1]x w1 - v2 + [r2]x w2, where [r]x w = r x w
     const MotionProperties &mp1 = body_a.motion_properties;
     const MotionProperties &mp2 = body_b.motion_properties;
-    Vec3f jv = vec3f::subtract(vec3f::load(mp1.linear_velocity), vec3f::cross(part.r1, vec3f::load(mp1.angular_velocity)));
-    jv = vec3f::subtract(jv, vec3f::load(mp2.linear_velocity));
-    jv = vec3f::add(jv, vec3f::cross(part.r2, vec3f::load(mp2.angular_velocity)));
+    Vec3f jv = vec3f::subtract(mp1.linear_velocity, vec3f::cross(part.r1, mp1.angular_velocity));
+    jv = vec3f::subtract(jv, mp2.linear_velocity);
+    jv = vec3f::add(jv, vec3f::cross(part.r2, mp2.angular_velocity));
 
     // lambda = K (v1 - r1 x w1 - v2 + r2 x w2); this computes -J v, so no negation needed
     const Vec3f lambda = mat4f::multiply3x3_vec(part.effective_mass, jv);
@@ -147,8 +147,8 @@ bool solve_position_constraint(PointConstraintPart &part, RigidBody &body_a, Rig
     if (!is_active(part)) return false;
 
     // separation vector: C = (x2 + r2) - (x1 + r1), x the center of mass position
-    Vec3f separation = vec3f::add(vec3f::load(body_b.center_of_mass_position), part.r2);
-    separation = vec3f::subtract(separation, vec3f::load(body_a.center_of_mass_position));
+    Vec3f separation = vec3f::add(body_b.center_of_mass_position, part.r2);
+    separation = vec3f::subtract(separation, body_a.center_of_mass_position);
     separation = vec3f::subtract(separation, part.r1);
 
     // check for zero separation (small epsilon for floating point)

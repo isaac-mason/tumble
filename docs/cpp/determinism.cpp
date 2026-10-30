@@ -19,7 +19,7 @@ static World *make_pile(Shape *ground_shape, Shape *ball_shape) {
         .shape = ground_shape,
         .object_layer = not_moving,
         .motion_type = MotionType::STATIC,
-        .position = {0.0f, -0.5f, 0.0f},
+        .position = vec3f::make(0.0f, -0.5f, 0.0f),
     });
     for (int i = 0; i < 20; i++) {
         // offsets exact in every float type, so js builds the same pile
@@ -30,7 +30,7 @@ static World *make_pile(Shape *ground_shape, Shape *ball_shape) {
             .shape = ball_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {x, y, z},
+            .position = vec3f::make(x, y, z),
         });
     }
     return world;
@@ -38,7 +38,7 @@ static World *make_pile(Shape *ground_shape, Shape *ball_shape) {
 
 int main() {
     dispatch::init();
-    Ref<Shape> ground_shape = box::create({.half_extents = {10.0f, 0.5f, 10.0f}});
+    Ref<Shape> ground_shape = box::create({.half_extents = vec3f::make(10.0f, 0.5f, 10.0f)});
     Ref<Shape> ball_shape = sphere::create({.radius = 0.45f});
 
     /* SNIPPET_START: replay */
@@ -71,8 +71,8 @@ int main() {
     };
     for (uint32_t i = 0; i < first->bodies.pool.length; i++) {
         const RigidBody &body = *first->bodies.pool[i];
-        const float values[7] = {body.position.x,   body.position.y,   body.position.z,  body.quaternion.x,
-                                 body.quaternion.y, body.quaternion.z, body.quaternion.w};
+        const float values[7] = {vec3f::x(body.position),   vec3f::y(body.position),   vec3f::z(body.position),  quatf::x(body.quaternion),
+                                 quatf::y(body.quaternion), quatf::z(body.quaternion), quatf::w(body.quaternion)};
         for (float value : values) {
             uint32_t bits;
             memcpy(&bits, &value, sizeof bits);

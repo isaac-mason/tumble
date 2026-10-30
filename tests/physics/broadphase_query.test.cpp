@@ -1,5 +1,6 @@
 #include "physics/world_test_scene.h"
 #include "test.h"
+#include "test_math.h"
 #include "tumble/math/aabox.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
@@ -22,7 +23,7 @@ WorldScene make_grid_scene(TestCtx &ctx) {
     for (uint32_t x = 0; x < GRID; x++) {
         for (uint32_t y = 0; y < 3; y++) {
             for (uint32_t z = 0; z < GRID; z++) {
-                const Float3 half = {0.3f + 0.1f * (float)((x + y) % 4), 0.4f + 0.1f * (float)(z % 3), 0.3f + 0.1f * (float)((x * z) % 3)};
+                const Vec3f half = vec3f::make(0.3f + 0.1f * (float)((x + y) % 4), 0.4f + 0.1f * (float)(z % 3), 0.3f + 0.1f * (float)((x * z) % 3));
                 Shape *shape = box::create({.half_extents = half, .convex_radius = 0.0f});
                 add_body(scene, shape, MotionType::STATIC, {2.5f * (float)x, 2.5f * (float)y, 2.5f * (float)z});
             }
@@ -47,7 +48,7 @@ bool holds(const collections::Array<BodyId> &ids, BodyId id) {
 }
 
 /** the bodies the shape at the pose overlaps, by the shape queries */
-void overlapped(collections::Array<BodyId> &out, World &world, const Shape *shape, const Transformf &pose,
+void overlapped(collections::Array<BodyId> &out, World &world, const Shape *shape, const Transform &pose,
                 const Filter &filter) {
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
     query::collide_shape(world, collector, collide_shape::default_settings(), shape, pose, filter);
@@ -65,14 +66,6 @@ void check_between(TestCtx &ctx, const collections::Array<BodyId> &found, const 
                    const collections::Array<BodyId> &outer) {
     for (uint32_t i = 0; i < inner.length; i++) CHECK(ctx, holds(found, inner[i]));
     for (uint32_t i = 0; i < found.length; i++) CHECK(ctx, holds(outer, found[i]));
-}
-
-Transformf pose_of(Vec3f position, Quatf quaternion) {
-    Transformf pose;
-    vec3f::store(pose.position, position);
-    quatf::store(pose.quaternion, quaternion);
-    pose.scale = {1.0f, 1.0f, 1.0f};
-    return pose;
 }
 
 }  // namespace
@@ -93,13 +86,10 @@ void test_broadphase_query_oriented_box_meets_the_bodies_its_shape_does(TestCtx 
         broadphase_query::reset(found);
         broadphase_query::collide_oriented_box(*scene.world, found, {mat4f::from_rotation_translation(rotation, position), half}, filter);
 
-        Float3 shrunk, grown;
-        vec3f::store(shrunk, vec3f::subtract(half, vec3f::splat(1e-3f)));
-        vec3f::store(grown, vec3f::add(half, vec3f::splat(1e-3f)));
-        Ref<Shape> inner_box = box::create({.half_extents = shrunk, .convex_radius = 0.0f});
-        Ref<Shape> outer_box = box::create({.half_extents = grown, .convex_radius = 0.0f});
-        overlapped(inner, *scene.world, inner_box, pose_of(position, rotation), filter);
-        overlapped(outer, *scene.world, outer_box, pose_of(position, rotation), filter);
+        Ref<Shape> inner_box = box::create({.half_extents = vec3f::subtract(half, vec3f::splat(1e-3f)), .convex_radius = 0.0f});
+        Ref<Shape> outer_box = box::create({.half_extents = vec3f::add(half, vec3f::splat(1e-3f)), .convex_radius = 0.0f});
+        overlapped(inner, *scene.world, inner_box, pose(position, rotation), filter);
+        overlapped(outer, *scene.world, outer_box, pose(position, rotation), filter);
         check_between(ctx, found.hits, inner, outer);
         hits += found.hits.length;
         inner_box = nullptr;
@@ -128,8 +118,8 @@ void test_broadphase_query_sphere_meets_the_bodies_its_shape_does(TestCtx &ctx) 
 
         Ref<Shape> inner_sphere = sphere::create({.radius = radius - 1e-3f});
         Ref<Shape> outer_sphere = sphere::create({.radius = radius + 1e-3f});
-        overlapped(inner, *scene.world, inner_sphere, pose_of(center, quatf::identity()), filter);
-        overlapped(outer, *scene.world, outer_sphere, pose_of(center, quatf::identity()), filter);
+        overlapped(inner, *scene.world, inner_sphere, pose(center), filter);
+        overlapped(outer, *scene.world, outer_sphere, pose(center), filter);
         check_between(ctx, found.hits, inner, outer);
         hits += found.hits.length;
         inner_sphere = nullptr;
@@ -152,13 +142,10 @@ void test_broadphase_query_box_and_point_meet_the_bodies_their_shapes_do(TestCtx
         const Vec3f half = vec3f::make(random.next(0.1f, 2.0f), random.next(0.1f, 2.0f), random.next(0.1f, 2.0f));
         broadphase_query::reset(found);
         broadphase_query::collide_aabb(*scene.world, found, aabox::make(vec3f::subtract(center, half), vec3f::add(center, half)), filter);
-        Float3 shrunk, grown;
-        vec3f::store(shrunk, vec3f::subtract(half, vec3f::splat(1e-3f)));
-        vec3f::store(grown, vec3f::add(half, vec3f::splat(1e-3f)));
-        Ref<Shape> inner_box = box::create({.half_extents = shrunk, .convex_radius = 0.0f});
-        Ref<Shape> outer_box = box::create({.half_extents = grown, .convex_radius = 0.0f});
-        overlapped(inner, *scene.world, inner_box, pose_of(center, quatf::identity()), filter);
-        overlapped(outer, *scene.world, outer_box, pose_of(center, quatf::identity()), filter);
+        Ref<Shape> inner_box = box::create({.half_extents = vec3f::subtract(half, vec3f::splat(1e-3f)), .convex_radius = 0.0f});
+        Ref<Shape> outer_box = box::create({.half_extents = vec3f::add(half, vec3f::splat(1e-3f)), .convex_radius = 0.0f});
+        overlapped(inner, *scene.world, inner_box, pose(center), filter);
+        overlapped(outer, *scene.world, outer_box, pose(center), filter);
         check_between(ctx, found.hits, inner, outer);
         inner_box = nullptr;
         outer_box = nullptr;
@@ -213,15 +200,13 @@ void test_broadphase_query_casts_find_the_nearest_body_where_the_shape_casts_do(
         const Vec3f displacement = vec3f::scale(direction, ray.length);
         broadphase_query::reset(nearest);
         broadphase_query::cast_aabb(*scene.world, nearest, aabox::make(vec3f::subtract(origin, half), vec3f::add(origin, half)), displacement, filter);
-        Float3 half_extents;
-        vec3f::store(half_extents, half);
-        Ref<Shape> swept = box::create({.half_extents = half_extents, .convex_radius = 0.0f});
+        Ref<Shape> swept = box::create({.half_extents = half, .convex_radius = 0.0f});
         // back faces on: a cast's first touch can give a contact axis against the motion, which jolt and tumble both drop
         // as a back face, and a start inside a box is a hit at 0 only with them
         CastShapeSettings cast_settings = cast_shape::default_settings();
         cast_settings.collide_with_backfaces_convex = true;
         CastShapeCollector shape_cast = cast_shape::create_collector(CollectorKind::CLOSEST);
-        query::cast_shape(*scene.world, shape_cast, cast_settings, swept, pose_of(origin, quatf::identity()), displacement, filter);
+        query::cast_shape(*scene.world, shape_cast, cast_settings, swept, pose(origin), displacement, filter);
         const CastShapeHit *cast_hit = cast_shape::hit(shape_cast);
         const BodyCastHit *box_hit = broadphase_query::hit(nearest);
         CHECK(ctx, (cast_hit != nullptr) == (box_hit != nullptr));

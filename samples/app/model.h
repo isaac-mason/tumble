@@ -19,5 +19,7 @@ namespace model {
 /** a file in samples/assets, by name */
 Model load(const char *name);
 void release(Model &model);
+/** the first `max_points` vertex positions as points, as a convex hull takes them; the caller releases them */
+tumble::collections::Array<tumble::Vec3f> points(const Model &model, uint32_t max_points = UINT32_MAX);
 
 }

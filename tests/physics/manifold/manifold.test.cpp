@@ -152,7 +152,7 @@ void test_manifold_capsule_along_box_top(TestCtx &ctx) {
 
     // a 2 m box at the origin, and a capsule (radius 0.5, cylinder half height 0.5) turned to lie along x, its bottom
     // line sunk 0.1 into the box's top face
-    Ref<Shape> box_shape = box::create({.half_extents = {1, 1, 1}});
+    Ref<Shape> box_shape = box::create({.half_extents = vec3f::splat(1.0f)});
     Ref<Shape> capsule_shape = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.5f});
     Float4 capsule_rotation = stored_axis_angle(vec3f::make(0, 0, 1), scalar::PI / 2.0f);
 
@@ -185,8 +185,8 @@ void test_manifold_two_boxes_face_to_face(TestCtx &ctx) {
     dispatch::init();
 
     // a 2 m box at the origin, a 1 m box on it, 0.25 off centre in x and sunk 0.1 into its top face
-    Ref<Shape> box_a = box::create({.half_extents = {1, 1, 1}});
-    Ref<Shape> box_b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> box_a = box::create({.half_extents = vec3f::splat(1.0f)});
+    Ref<Shape> box_b = box::create({.half_extents = vec3f::splat(0.5f)});
     const Float3 position_b = {0.25f, 1.4f, 0};
     const Float3 penetration_axis = {0, 1, 0};
 

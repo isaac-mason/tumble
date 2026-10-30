@@ -15,8 +15,8 @@
 static const SubShapeIdBuilder NO_SUB_SHAPE = {sub_shape::EMPTY_SUB_SHAPE_ID, 0};
 
 /** sweeps a against b through the cast table, as the narrowphase dispatches it */
-static void cast(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *a, const Transformf &transform_a,
-                 const Float3 &displacement, const Shape *b, const Transformf &transform_b) {
+static void cast(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *a, const Transform &transform_a,
+                 const Float3 &displacement, const Shape *b, const Transform &transform_b) {
     const CastShapeVsShapeFn fn = shapes::cast_fn(a->type, b->type);
     if (fn != nullptr) fn(collector, settings, a, NO_SUB_SHAPE, transform_a, vec3f::load(displacement), b, NO_SUB_SHAPE, transform_b);
 }
@@ -66,8 +66,8 @@ void test_cast_shape_vs_shape_sphere_vs_sphere(TestCtx &ctx) {
 
 void test_cast_shape_vs_shape_box_vs_box(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> a = box::create({.half_extents = {1, 1, 1}, .convex_radius = 0.0f});
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}, .convex_radius = 0.0f});
+    Ref<Shape> a = box::create({.half_extents = vec3f::splat(1.0f), .convex_radius = 0.0f});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f), .convex_radius = 0.0f});
     const CastShapeSettings settings = cast_shape::default_settings();
     CastShapeCollector collector = cast_shape::create_collector(CollectorKind::ALL);
 
@@ -103,7 +103,7 @@ void test_cast_shape_vs_shape_box_vs_box(TestCtx &ctx) {
 void test_cast_shape_vs_shape_sphere_vs_box(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> a = sphere::create({.radius = 1.0f});
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}, .convex_radius = 0.0f});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f), .convex_radius = 0.0f});
     const CastShapeSettings settings = cast_shape::default_settings();
     CastShapeCollector collector = cast_shape::create_collector(CollectorKind::ALL);
 
@@ -136,8 +136,8 @@ void test_cast_shape_vs_shape_sphere_vs_box(TestCtx &ctx) {
 
 void test_cast_shape_vs_shape_supporting_faces(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> unit_box_a = box::create({.half_extents = {1, 1, 1}, .convex_radius = 0.0f});
-    Ref<Shape> unit_box_b = box::create({.half_extents = {1, 1, 1}, .convex_radius = 0.0f});
+    Ref<Shape> unit_box_a = box::create({.half_extents = vec3f::splat(1.0f), .convex_radius = 0.0f});
+    Ref<Shape> unit_box_b = box::create({.half_extents = vec3f::splat(1.0f), .convex_radius = 0.0f});
     Ref<Shape> ball = sphere::create({.radius = 1.0f});
     Ref<Shape> small_ball = sphere::create({.radius = 0.5f});
     CastShapeSettings with_faces = cast_shape::default_settings();
@@ -176,7 +176,7 @@ void test_cast_shape_vs_shape_supporting_faces(TestCtx &ctx) {
 
     // b turned 90 degrees about y and approached along +x: the face b presents sits at x = -1 in world space
     cast_shape::reset(collector);
-    cast(collector, with_faces, unit_box_a, pose({-3, 0, 0}), {2, 0, 0}, unit_box_b, pose({0, 0, 0}, stored_axis_angle(vec3f::make(0, 1, 0), scalar::PI / 2.0f)));
+    cast(collector, with_faces, unit_box_a, pose({-3, 0, 0}), {2, 0, 0}, unit_box_b, pose({0, 0, 0}, axis_angle(vec3f::axis_y(), scalar::PI / 2.0f)));
     CHECK(ctx, collector.hits.length == 1);
     CHECK(ctx, collector.hits[0].face_a.num_vertices == 4 && collector.hits[0].face_b.num_vertices == 4);
     bool at_x = true;
@@ -188,7 +188,7 @@ void test_cast_shape_vs_shape_supporting_faces(TestCtx &ctx) {
 
     // b turned 45 degrees about z, a small sphere from below: b's -z face, still at z = -1
     cast_shape::reset(collector);
-    cast(collector, with_faces, small_ball, pose({0, 0, -3}), {0, 0, 2}, unit_box_b, pose({0, 0, 0}, stored_axis_angle(vec3f::make(0, 0, 1), scalar::PI / 4.0f)));
+    cast(collector, with_faces, small_ball, pose({0, 0, -3}), {0, 0, 2}, unit_box_b, pose({0, 0, 0}, axis_angle(vec3f::axis_z(), scalar::PI / 4.0f)));
     CHECK(ctx, collector.hits.length == 1);
     CHECK(ctx, collector.hits[0].face_a.num_vertices == 0 && collector.hits[0].face_b.num_vertices == 4);
     bool turned = true;
@@ -206,8 +206,8 @@ void test_cast_shape_vs_shape_supporting_faces(TestCtx &ctx) {
 
 void test_cast_shape_vs_shape_epa_faces(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> a = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.0f});
-    Ref<Shape> b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.0f});
+    Ref<Shape> a = box::create({.half_extents = vec3f::splat(0.5f), .convex_radius = 0.0f});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(0.5f), .convex_radius = 0.0f});
     CastShapeSettings settings = cast_shape::default_settings();
     settings.collect_faces = true;
     CastShapeCollector collector = cast_shape::create_collector(CollectorKind::ALL);
@@ -277,7 +277,7 @@ void test_cast_shape_vs_shape_any_collector_early_out(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> ball = sphere::create({.radius = 1.0f});
     // its top face at y = 0
-    Ref<Shape> slab = box::create({.half_extents = {4, 1, 4}});
+    Ref<Shape> slab = box::create({.half_extents = vec3f::make(4, 1, 4)});
     const CastShapeSettings settings = cast_shape::default_settings();
 
     CountingCollector counting;
@@ -304,7 +304,7 @@ void test_cast_shape_vs_shape_closest_orders_starting_overlaps_by_depth(TestCtx 
     dispatch::init();
     Ref<Shape> ball = sphere::create({.radius = 0.5f});
     // its top face at y = 0, so a radius 0.5 sphere at height y starts 0.5 - y deep
-    Ref<Shape> slab = box::create({.half_extents = {2, 1, 2}});
+    Ref<Shape> slab = box::create({.half_extents = vec3f::make(2, 1, 2)});
     CastShapeSettings settings = cast_shape::default_settings();
     settings.return_deepest_point = true;
 
@@ -327,7 +327,7 @@ void test_cast_shape_vs_shape_closest_orders_starting_overlaps_by_depth(TestCtx 
 void test_cast_shape_vs_shape_reversed(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> ball = sphere::create({.radius = 0.5f, .material_id = 3});
-    Ref<Shape> block = box::create({.half_extents = {1, 1, 1}, .material_id = 7});
+    Ref<Shape> block = box::create({.half_extents = vec3f::splat(1.0f), .material_id = 7});
     CastShapeSettings settings = cast_shape::default_settings();
     settings.collect_faces = true;
 

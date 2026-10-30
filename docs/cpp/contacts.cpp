@@ -26,8 +26,9 @@ void print_pairs(const World &world) {
         const uint32_t a = body_id::index(pair.a.body_id);
         const uint32_t b = body_id::index(pair.b.body_id);
         printf("%s: body %u touches body %u\n", pair.added ? "added" : "persisted", a, b);
-        printf("  at %.2f %.2f %.2f\n", pair.point.x, pair.point.y, pair.point.z);
-        printf("  %.2f m/s apart\n", pair.relative_velocity.y);
+        const Vec3f point = pair.point;
+        printf("  at %.2f %.2f %.2f\n", vec3f::x(point), vec3f::y(point), vec3f::z(point));
+        printf("  %.2f m/s apart\n", vec3f::y(pair.relative_velocity));
     }
     for (uint32_t i = 0; i < pairs.removed.length; i++) {
         const ContactPair &pair = pairs.pairs[pairs.removed[i]];
@@ -46,13 +47,13 @@ int main() {
     world_settings::enable_collision(settings, moving, moving);
     world_settings::enable_collision(settings, moving, not_moving);
     World *world = world::create(settings);
-    Ref<Shape> ground_shape = box::create({.half_extents = {20.0f, 0.5f, 20.0f}});
+    Ref<Shape> ground_shape = box::create({.half_extents = vec3f::make(20.0f, 0.5f, 20.0f)});
     Ref<Shape> ball_shape = sphere::create({.radius = 0.5f});
     rigid_body::create(*world, {
         .shape = ground_shape,
         .object_layer = not_moving,
         .motion_type = MotionType::STATIC,
-        .position = {0.0f, -0.5f, 0.0f},
+        .position = vec3f::make(0.0f, -0.5f, 0.0f),
     });
 
     /* SNIPPET_START: observe */
@@ -61,7 +62,7 @@ int main() {
         .shape = ball_shape,
         .object_layer = moving,
         .motion_type = MotionType::DYNAMIC,
-        .position = {0.0f, 2.0f, 0.0f},
+        .position = vec3f::make(0.0f, 2.0f, 0.0f),
         .restitution = 0.6f,
         .observes_contacts = true,
     });
@@ -82,7 +83,7 @@ int main() {
         }
     }
     // the ball bounced: its pair with the ground was added, removed in the air, and added again
-    if (added < 2 || removed < 1 || ball->position.y > 0.6f) return 1;
+    if (added < 2 || removed < 1 || vec3f::y(ball->position) > 0.6f) return 1;
     /* HIDE_END */
 
     world::destroy(world);

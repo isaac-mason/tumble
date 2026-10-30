@@ -13,28 +13,28 @@ int main() {
     world_settings::enable_collision(settings, moving, moving);
     world_settings::enable_collision(settings, moving, not_moving);
     World *world = world::create(settings);
-    Ref<Shape> ground_shape = box::create({.half_extents = {50.0f, 0.5f, 50.0f}});
-    Ref<Shape> step_shape = box::create({.half_extents = {1.0f, 0.15f, 2.0f}});
+    Ref<Shape> ground_shape = box::create({.half_extents = vec3f::make(50.0f, 0.5f, 50.0f)});
+    Ref<Shape> step_shape = box::create({.half_extents = vec3f::make(1.0f, 0.15f, 2.0f)});
     rigid_body::create(*world, {
         .shape = ground_shape,
         .object_layer = not_moving,
         .motion_type = MotionType::STATIC,
-        .position = {0.0f, -0.5f, 0.0f},
+        .position = vec3f::make(0.0f, -0.5f, 0.0f),
     });
     // a 30 cm step 4 m ahead
     rigid_body::create(*world, {
         .shape = step_shape,
         .object_layer = not_moving,
         .motion_type = MotionType::STATIC,
-        .position = {5.0f, 0.15f, 0.0f},
+        .position = vec3f::make(5.0f, 0.15f, 0.0f),
     });
     // a crate beside the way
-    Ref<Shape> crate_shape = box::create({.half_extents = {0.4f, 0.4f, 0.4f}, .density = 20.0f});
+    Ref<Shape> crate_shape = box::create({.half_extents = vec3f::splat(0.4f), .density = 20.0f});
     RigidBody *crate = rigid_body::create(*world, {
         .shape = crate_shape,
         .object_layer = moving,
         .motion_type = MotionType::DYNAMIC,
-        .position = {2.0f, 0.4f, 3.0f},
+        .position = vec3f::make(2.0f, 0.4f, 3.0f),
     });
 
     /* SNIPPET_START: create */
@@ -43,7 +43,7 @@ int main() {
     Ref<Shape> standing_capsule = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
     Ref<Shape> standing = transformed::create({
         .shape = standing_capsule,
-        .position = {0.0f, 0.8f, 0.0f},
+        .position = vec3f::make(0.0f, 0.8f, 0.0f),
     });
 
     // the inner body represents the character in the world. rigid bodies and queries see it, and
@@ -76,7 +76,7 @@ int main() {
     /* SNIPPET_END: policy */
 
     const float delta_time = 1.0f / 60.0f;
-    const Vec3f gravity = vec3f::load(world->settings.gravity);
+    const Vec3f gravity = world->settings.gravity;
     /* SNIPPET_START: update */
     // one game frame. the velocity starts from the ground's when standing, or keeps falling when
     // not, and adds the input. then the character moves: it slides along walls, climbs stairs and
@@ -115,7 +115,7 @@ int main() {
     Ref<Shape> crouching_capsule = capsule::create({.half_height_of_cylinder = 0.2f, .radius = 0.3f});
     Ref<Shape> crouching = transformed::create({
         .shape = crouching_capsule,
-        .position = {0.0f, 0.5f, 0.0f},
+        .position = vec3f::make(0.0f, 0.5f, 0.0f),
     });
 
     const bool crouched = kcc::set_shape(*world, *character, crouching, filter, &listener, 0.01f);
@@ -149,7 +149,7 @@ int main() {
     /* HIDE_START */
     if (world->contact_pairs.active.length == 0) return 1;
     const ContactPair &pair = world->contact_pairs.pairs[world->contact_pairs.active[0]];
-    if (pair.a.body_id != character->inner_rigid_body_id || pair.normal.y > -0.99f) return 1;
+    if (pair.a.body_id != character->inner_rigid_body_id || vec3f::y(pair.normal) > -0.99f) return 1;
     /* HIDE_END */
 
     /* HIDE_START */
@@ -160,12 +160,12 @@ int main() {
     // can edit the contacts between collide and solve. here the character jumps up through a
     // one-way platform. from below, the loop discards the platform's contacts and the sweep's hit
     // on it
-    Ref<Shape> platform_shape = box::create({.half_extents = {1.5f, 0.1f, 1.5f}});
+    Ref<Shape> platform_shape = box::create({.half_extents = vec3f::make(1.5f, 0.1f, 1.5f)});
     RigidBody *platform = rigid_body::create(*world, {
         .shape = platform_shape,
         .object_layer = not_moving,
         .motion_type = MotionType::STATIC,
-        .position = {vec3f::x(character->position), 1.8f, 0.0f},
+        .position = vec3f::make(vec3f::x(character->position), 1.8f, 0.0f),
     });
     const auto from_below = [&](const KCC::Contact &contact) {
         return contact.body_id == platform->id && vec3f::y(contact.contact_normal) < 0.5f;
@@ -225,14 +225,14 @@ int main() {
 
     /* HIDE_START */
     // a slope of 20 degrees, well away from the rest
-    Ref<Shape> slope_shape = box::create({.half_extents = {4.0f, 0.2f, 4.0f}});
+    Ref<Shape> slope_shape = box::create({.half_extents = vec3f::make(4.0f, 0.2f, 4.0f)});
     const float tilt = 0.5f * 20.0f * scalar::DEGREES_TO_RADIANS;
     rigid_body::create(*world, {
         .shape = slope_shape,
         .object_layer = not_moving,
         .motion_type = MotionType::STATIC,
-        .position = {-20.0f, 0.0f, 0.0f},
-        .quaternion = {0.0f, 0.0f, scalar::sin(tilt), scalar::cos(tilt)},
+        .position = vec3f::make(-20.0f, 0.0f, 0.0f),
+        .quaternion = quatf::make(0.0f, 0.0f, scalar::sin(tilt), scalar::cos(tilt)),
     });
     kcc::set_shape(*world, *character, standing, filter, nullptr, FLT_MAX);
     /* HIDE_END */

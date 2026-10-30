@@ -45,30 +45,30 @@ Shape *create(const StaticCompoundShapeSettings &settings);
 void update(Shape *shape);
 
 void cast_ray(CastRayCollector &collector, const CastRaySettings &settings, const Rayf &ray, const Shape *shape,
-              const SubShapeIdBuilder &sub_shape_id, const Transformf &transform);
+              const SubShapeIdBuilder &sub_shape_id, const Transform &transform);
 void collide_point(CollidePointCollector &collector, const CollidePointSettings &settings, Vec3f point,
-                   const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                   const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 
 /** a's children whose bounds overlap b's, against b through the collide table */
 void collide_static_compound_vs_shape(CollideShapeCollector &collector, const CollideShapeSettings &settings,
                                       const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a,
-                                      const Transformf &transform_a, const Shape *shape_b,
-                                      const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                                      const Transform &transform_a, const Shape *shape_b,
+                                      const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 /** a against b's children whose bounds overlap a's, through the collide table */
 void collide_shape_vs_static_compound(CollideShapeCollector &collector, const CollideShapeSettings &settings,
                                       const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a,
-                                      const Transformf &transform_a, const Shape *shape_b,
-                                      const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                                      const Transform &transform_a, const Shape *shape_b,
+                                      const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 /** a's children whose bounds overlap b's bounds swept back along the displacement, cast against b */
 void cast_static_compound_vs_shape(CastShapeCollector &collector, const CastShapeSettings &settings,
-                                   const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
+                                   const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                                    Vec3f displacement_a, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                                   const Transformf &transform_b);
+                                   const Transform &transform_b);
 /** a cast against b's children, nearest first along the sweep of a's bounds */
 void cast_shape_vs_static_compound(CastShapeCollector &collector, const CastShapeSettings &settings,
-                                   const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
+                                   const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                                    Vec3f displacement_a, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                                   const Transformf &transform_b);
+                                   const Transform &transform_b);
 
 ShapeDef def();
 

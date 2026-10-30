@@ -34,14 +34,14 @@ static const CompoundShape::Child &child_of(const Shape *shape, SubShapeId id) {
     return children_of(shape)[popped.value];
 }
 
-static void cast_ray_at(CastRayCollector &collector, const Shape *shape, const Transformf &transform, const Float3 &origin,
+static void cast_ray_at(CastRayCollector &collector, const Shape *shape, const Transform &transform, const Float3 &origin,
                         const Float3 &direction, float length) {
     const Vec3f unit_direction = vec3f::normalize(vec3f::load(direction));
     const Rayf ray = {vec3f::load(origin), unit_direction, length};
     shapes::def_of(shape).cast_ray(collector, cast_ray::default_settings(), ray, shape, NO_SUB_SHAPE, transform);
 }
 
-static void collide_point_at(CollidePointCollector &collector, const Shape *shape, const Transformf &transform,
+static void collide_point_at(CollidePointCollector &collector, const Shape *shape, const Transform &transform,
                              const Float3 &point) {
     shapes::def_of(shape).collide_point(collector, collide_point::default_settings(), vec3f::load(point), shape, NO_SUB_SHAPE, transform);
 }
@@ -59,15 +59,15 @@ void test_static_compound_creation(TestCtx &ctx) {
 
     // single child
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    const CompoundShapeSettings::Child one[] = {{{0, 0, 0}, IDENTITY, s}};
+    const CompoundShapeSettings::Child one[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}};
     Ref<Shape> single = make_static(one, 1);
     CHECK(ctx, children_of(single).length == 1);
     CHECK(ctx, compound_data(single).bvh.length > 0);
     CHECK_NEAR(ctx, single->volume, 4.0f / 3.0f * scalar::PI, 1e-4f);
 
     // multiple children
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
-    const CompoundShapeSettings::Child two[] = {{{0, 0, 0}, IDENTITY, s}, {{5, 0, 0}, IDENTITY, b}};
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
+    const CompoundShapeSettings::Child two[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}, {vec3f::make(5, 0, 0), quatf::identity(), b}};
     Ref<Shape> multiple = make_static(two, 2);
     CHECK(ctx, children_of(multiple).length == 2);
     CHECK(ctx, compound_data(multiple).bvh.length > 0);
@@ -82,19 +82,19 @@ void test_static_compound_creation(TestCtx &ctx) {
 void test_static_compound_aabb(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    const CompoundShapeSettings::Child one[] = {{{0, 0, 0}, IDENTITY, s}};
+    const CompoundShapeSettings::Child one[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}};
     Ref<Shape> single = make_static(one, 1);
     CHECK(ctx, near3(single->aabb.min, -1, -1, -1, 1e-5f) && near3(single->aabb.max, 1, 1, 1, 1e-5f));
 
     // sphere at the origin and a box at (10, 0, 0): [-1, -1, -1] to [11, 1, 1]
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
-    const CompoundShapeSettings::Child offset[] = {{{0, 0, 0}, IDENTITY, s}, {{10, 0, 0}, IDENTITY, b}};
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
+    const CompoundShapeSettings::Child offset[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}, {vec3f::make(10, 0, 0), quatf::identity(), b}};
     Ref<Shape> o = make_static(offset, 2);
     CHECK(ctx, near3(o->aabb.min, -1, -1, -1, 1e-5f) && near3(o->aabb.max, 11, 1, 1, 1e-5f));
 
     // the same as a compound over the same children: [-1, -2, -2] to [7, 2, 2]
-    Ref<Shape> b2 = box::create({.half_extents = {2, 2, 2}});
-    const CompoundShapeSettings::Child parity[] = {{{0, 0, 0}, IDENTITY, s}, {{5, 0, 0}, IDENTITY, b2}};
+    Ref<Shape> b2 = box::create({.half_extents = vec3f::splat(2.0f)});
+    const CompoundShapeSettings::Child parity[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}, {vec3f::make(5, 0, 0), quatf::identity(), b2}};
     Ref<Shape> st = make_static(parity, 2);
     Ref<Shape> dyn = compound::create({.children = parity, .num_children = 2});
     CHECK(ctx, near3(st->aabb.min, -1, -2, -2, 1e-5f) && near3(st->aabb.max, 7, 2, 2, 1e-5f));
@@ -112,11 +112,11 @@ void test_static_compound_aabb(TestCtx &ctx) {
 void test_static_compound_center_of_mass(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    const CompoundShapeSettings::Child one[] = {{{0, 0, 0}, IDENTITY, s}};
+    const CompoundShapeSettings::Child one[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}};
     Ref<Shape> single = make_static(one, 1);
     CHECK(ctx, near3(single->center_of_mass, 0, 0, 0, 1e-5f));
 
-    const CompoundShapeSettings::Child two[] = {{{0, 0, 0}, IDENTITY, s}, {{4, 0, 0}, IDENTITY, s}};
+    const CompoundShapeSettings::Child two[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}, {vec3f::make(4, 0, 0), quatf::identity(), s}};
     Ref<Shape> pair = make_static(two, 2);
     CHECK(ctx, near3(pair->center_of_mass, 2, 0, 0, 1e-5f));
 
@@ -126,7 +126,7 @@ void test_static_compound_center_of_mass(TestCtx &ctx) {
     shapes::compute_mass_properties(a, pair);
     shapes::compute_mass_properties(b, dyn);
     CHECK_NEAR(ctx, a.mass, b.mass, 1e-2f);
-    for (uint32_t i = 0; i < 16; i++) CHECK_NEAR(ctx, a.inertia.m[i], b.inertia.m[i], 1e-1f);
+    for (uint32_t i = 0; i < 16; i++) CHECK_NEAR(ctx, elements(a.inertia).m[i], elements(b.inertia).m[i], 1e-1f);
 
     single = nullptr;
     pair = nullptr;
@@ -138,7 +138,7 @@ void test_static_compound_bvh_structure(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 0.5f});
     CompoundShapeSettings::Child row[10];
-    for (uint32_t i = 0; i < 10; i++) row[i] = {{(float)i * 2.0f, 0, 0}, IDENTITY, s};
+    for (uint32_t i = 0; i < 10; i++) row[i] = {vec3f::make((float)i * 2.0f, 0, 0), quatf::identity(), s};
     Ref<Shape> shape = make_static(row, 10);
     const collections::Array<BvhNode> &tree = compound_data(shape).bvh;
 
@@ -171,7 +171,7 @@ void test_static_compound_bvh_structure(TestCtx &ctx) {
     CompoundShapeSettings::Child lattice[125];
     for (uint32_t x = 0; x < 5; x++)
         for (uint32_t y = 0; y < 5; y++)
-            for (uint32_t z = 0; z < 5; z++) lattice[x * 25 + y * 5 + z] = {{(float)x * 3, (float)y * 3, (float)z * 3}, IDENTITY, s};
+            for (uint32_t z = 0; z < 5; z++) lattice[x * 25 + y * 5 + z] = {vec3f::make((float)x * 3, (float)y * 3, (float)z * 3), quatf::identity(), s};
     Ref<Shape> cube = make_static(lattice, 125);
     const collections::Array<BvhNode> &cube_tree = compound_data(cube).bvh;
     const StaticCompoundBvhStats cube_stats = static_compound_bvh::stats(cube_tree.data, cube_tree.length);
@@ -190,7 +190,7 @@ void test_static_compound_bvh_structure(TestCtx &ctx) {
 void test_static_compound_update(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    const CompoundShapeSettings::Child one[] = {{{0, 0, 0}, IDENTITY, s}};
+    const CompoundShapeSettings::Child one[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}};
     Ref<Shape> shape = make_static(one, 1);
     const uint32_t original_nodes = compound_data(shape).bvh.length;
 
@@ -199,7 +199,7 @@ void test_static_compound_update(TestCtx &ctx) {
     compound_data(shape).children.push({{10, 0, 0}, IDENTITY, s2});
     static_compound::update(shape);
     CHECK(ctx, compound_data(shape).bvh.length >= original_nodes);
-    CHECK_NEAR(ctx, shape->aabb.max.x, 11.0f, 1e-5f);
+    CHECK_NEAR(ctx, vec3f::x(shape->aabb.max), 11.0f, 1e-5f);
     CHECK(ctx, static_compound_bvh::stats(compound_data(shape).bvh.data, compound_data(shape).bvh.length).total_children == 2);
 
     shape = nullptr;
@@ -213,7 +213,7 @@ void test_static_compound_cast_ray(TestCtx &ctx) {
     CastRayCollector collector = cast_ray::create_collector(CollectorKind::ALL);
 
     // one sphere at x = 5: hit at 4 of 1000
-    const CompoundShapeSettings::Child one[] = {{{5, 0, 0}, IDENTITY, s}};
+    const CompoundShapeSettings::Child one[] = {{vec3f::make(5, 0, 0), quatf::identity(), s}};
     Ref<Shape> single = make_static(one, 1);
     cast_ray_at(collector, single, pose({0, 0, 0}), {0, 0, 0}, {1, 0, 0}, 1000.0f);
     CHECK(ctx, collector.hits.length == 1);
@@ -226,7 +226,7 @@ void test_static_compound_cast_ray(TestCtx &ctx) {
     CHECK(ctx, collector.hits.length == 0);
 
     // two spheres along the ray: both
-    const CompoundShapeSettings::Child two[] = {{{5, 0, 0}, IDENTITY, s}, {{10, 0, 0}, IDENTITY, s}};
+    const CompoundShapeSettings::Child two[] = {{vec3f::make(5, 0, 0), quatf::identity(), s}, {vec3f::make(10, 0, 0), quatf::identity(), s}};
     Ref<Shape> pair = make_static(two, 2);
     cast_ray::reset(collector);
     cast_ray_at(collector, pair, pose({0, 0, 0}), {0, 0, 0}, {1, 0, 0}, 1000.0f);
@@ -234,7 +234,7 @@ void test_static_compound_cast_ray(TestCtx &ctx) {
 
     // fifty spheres along x: every one, through the bvh
     CompoundShapeSettings::Child row[50];
-    for (uint32_t i = 0; i < 50; i++) row[i] = {{(float)i * 3.0f, 0, 0}, IDENTITY, s};
+    for (uint32_t i = 0; i < 50; i++) row[i] = {vec3f::make((float)i * 3.0f, 0, 0), quatf::identity(), s};
     Ref<Shape> many = make_static(row, 50);
     cast_ray::reset(collector);
     cast_ray_at(collector, many, pose({0, 0, 0}), {0, 0, 0}, {1, 0, 0}, 1000.0f);
@@ -276,7 +276,7 @@ void test_static_compound_collide_point(TestCtx &ctx) {
     Ref<Shape> s = sphere::create({.radius = 1.0f});
     CollidePointCollector collector = collide_point::create_collector(CollectorKind::ALL);
 
-    const CompoundShapeSettings::Child one[] = {{{5, 0, 0}, IDENTITY, s}};
+    const CompoundShapeSettings::Child one[] = {{vec3f::make(5, 0, 0), quatf::identity(), s}};
     Ref<Shape> single = make_static(one, 1);
     collide_point_at(collector, single, pose({0, 0, 0}), {5, 0, 0});
     CHECK(ctx, collector.hits.length == 1);
@@ -286,7 +286,7 @@ void test_static_compound_collide_point(TestCtx &ctx) {
 
     // inside two overlapping spheres: both
     Ref<Shape> s2 = sphere::create({.radius = 2.0f});
-    const CompoundShapeSettings::Child overlapping[] = {{{0, 0, 0}, IDENTITY, s2}, {{1, 0, 0}, IDENTITY, s2}};
+    const CompoundShapeSettings::Child overlapping[] = {{vec3f::make(0, 0, 0), quatf::identity(), s2}, {vec3f::make(1, 0, 0), quatf::identity(), s2}};
     Ref<Shape> pair = make_static(overlapping, 2);
     collide_point::reset(collector);
     collide_point_at(collector, pair, pose({0, 0, 0}), {0.5f, 0, 0});
@@ -306,7 +306,7 @@ static constexpr float SPACING = 3.0f;
 static Shape *make_grid(Shape *box_shape) {
     CompoundShapeSettings::Child cells[GRID * GRID];
     for (uint32_t i = 0; i < GRID; i++)
-        for (uint32_t j = 0; j < GRID; j++) cells[i * GRID + j] = {{(float)i * SPACING, 0, (float)j * SPACING}, IDENTITY, box_shape};
+        for (uint32_t j = 0; j < GRID; j++) cells[i * GRID + j] = {vec3f::make((float)i * SPACING, 0, (float)j * SPACING), quatf::identity(), box_shape};
     return make_static(cells, GRID * GRID);
 }
 
@@ -335,7 +335,7 @@ void test_static_compound_dispatch_wiring(TestCtx &ctx) {
 
 void test_static_compound_grid_cast_sphere(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.0f});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(0.5f), .convex_radius = 0.0f});
     Ref<Shape> grid = make_grid(b);
     Ref<Shape> s = sphere::create({.radius = 0.25f});
     const CastShapeSettings settings = cast_shape::default_settings();
@@ -402,7 +402,7 @@ void test_static_compound_grid_cast_sphere(TestCtx &ctx) {
 
 void test_static_compound_grid_collide(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(0.5f)});
     Ref<Shape> grid = make_grid(b);
     CollidePointCollector points = collide_point::create_collector(CollectorKind::ALL);
 
@@ -426,7 +426,7 @@ void test_static_compound_grid_collide(TestCtx &ctx) {
     CHECK(ctx, points.hits.length == 0);
 
     // a sphere at the corner of four cells touches exactly those four
-    Ref<Shape> big = box::create({.half_extents = {1.2f, 0.5f, 1.2f}});
+    Ref<Shape> big = box::create({.half_extents = vec3f::make(1.2f, 0.5f, 1.2f)});
     Ref<Shape> coarse = make_grid(big);
     Ref<Shape> s = sphere::create({.radius = 1.0f});
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
@@ -464,18 +464,18 @@ static uint32_t dyn_child_index(SubShapeId id) {
 void test_static_compound_agrees_with_compound(TestCtx &ctx) {
     dispatch::init();
     // the bvh walk finds what walking every child finds, for rays and points in and around a scattered set
-    Ref<Shape> b = box::create({.half_extents = {0.4f, 0.7f, 0.3f}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::make(0.4f, 0.7f, 0.3f)});
     Ref<Shape> s = sphere::create({.radius = 0.6f});
     uint32_t state = 12345;
     CompoundShapeSettings::Child scattered[64];
     for (uint32_t i = 0; i < 64; i++) {
         const Float3 position = {mulberry32_unit(state) * 20 - 10, mulberry32_unit(state) * 20 - 10, mulberry32_unit(state) * 20 - 10};
-        Float4 rotation = stored_axis_angle(vec3f::make(0, 1, 0), mulberry32_unit(state) * 6.0f);
-        scattered[i] = {position, rotation, (i & 1) ? b : s};
+        const Quatf rotation = axis_angle(vec3f::make(0, 1, 0), mulberry32_unit(state) * 6.0f);
+        scattered[i] = {vec3f::load(position), rotation, (i & 1) ? b : s};
     }
     Ref<Shape> st = make_static(scattered, 64, 2);
     Ref<Shape> dyn = compound::create({.children = scattered, .num_children = 64});
-    const Transformf placed = pose({1, 2, 3}, IDENTITY, {1, 1, 1});
+    const Transform placed = pose({1, 2, 3}, IDENTITY, {1, 1, 1});
 
     CastRayCollector st_ray = cast_ray::create_collector(CollectorKind::CLOSEST);
     CastRayCollector dyn_ray = cast_ray::create_collector(CollectorKind::CLOSEST);
@@ -486,14 +486,14 @@ void test_static_compound_agrees_with_compound(TestCtx &ctx) {
     for (uint32_t t = 0; t < trials; t++) {
         // rays from anywhere around the set aimed near a random child, points near another
         const Float3 origin = {mulberry32_unit(state) * 30 - 14, mulberry32_unit(state) * 30 - 13, mulberry32_unit(state) * 30 - 12};
-        const Float3 &aim = scattered[(uint32_t)(mulberry32_unit(state) * 64) & 63].position;
-        const Float3 target = {aim.x + 1 + mulberry32_unit(state) * 3 - 1.5f, aim.y + 2 + mulberry32_unit(state) * 3 - 1.5f,
-                              aim.z + 3 + mulberry32_unit(state) * 3 - 1.5f};
+        const Vec3f aim = scattered[(uint32_t)(mulberry32_unit(state) * 64) & 63].position;
+        const Float3 target = {vec3f::x(aim) + 1 + mulberry32_unit(state) * 3 - 1.5f, vec3f::y(aim) + 2 + mulberry32_unit(state) * 3 - 1.5f,
+                               vec3f::z(aim) + 3 + mulberry32_unit(state) * 3 - 1.5f};
         Float3 direction;
         vec3f::store(direction, vec3f::subtract(vec3f::load(target), vec3f::load(origin)));
-        const Float3 &near_child = scattered[(uint32_t)(mulberry32_unit(state) * 64) & 63].position;
-        const Float3 point = {near_child.x + 1 + mulberry32_unit(state) - 0.5f, near_child.y + 2 + mulberry32_unit(state) - 0.5f,
-                             near_child.z + 3 + mulberry32_unit(state) - 0.5f};
+        const Vec3f near_child = scattered[(uint32_t)(mulberry32_unit(state) * 64) & 63].position;
+        const Float3 point = {vec3f::x(near_child) + 1 + mulberry32_unit(state) - 0.5f, vec3f::y(near_child) + 2 + mulberry32_unit(state) - 0.5f,
+                              vec3f::z(near_child) + 3 + mulberry32_unit(state) - 0.5f};
         cast_ray::reset(st_ray);
         cast_ray::reset(dyn_ray);
         cast_ray_at(st_ray, st, placed, origin, direction, 25.0f);
@@ -528,12 +528,12 @@ void test_static_compound_agrees_with_compound(TestCtx &ctx) {
 void test_static_compound_nested(TestCtx &ctx) {
     dispatch::init();
     // static compounds inside a static compound: each walk keeps its own stack and bounds
-    Ref<Shape> b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(0.5f)});
     CompoundShapeSettings::Child row[8];
-    for (uint32_t i = 0; i < 8; i++) row[i] = {{(float)i * 2.0f, 0, 0}, IDENTITY, b};
+    for (uint32_t i = 0; i < 8; i++) row[i] = {vec3f::make((float)i * 2.0f, 0, 0), quatf::identity(), b};
     Ref<Shape> inner = make_static(row, 8, 1);
     CompoundShapeSettings::Child rows[8];
-    for (uint32_t i = 0; i < 8; i++) rows[i] = {{0, 0, (float)i * 2.0f}, IDENTITY, inner};
+    for (uint32_t i = 0; i < 8; i++) rows[i] = {vec3f::make(0, 0, (float)i * 2.0f), quatf::identity(), inner};
     Ref<Shape> outer = make_static(rows, 8, 1);
 
     // a sphere spanning four cells of the 8 x 8 grid of boxes
@@ -594,8 +594,8 @@ static GetSubShapeTransformedShapeResult transformed_shape_of(const Shape *shape
 void test_static_compound_sub_shape_id_last_of_two(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> leaf = box::create({.half_extents = {1, 1, 1}});
-    const CompoundShapeSettings::Child children[] = {{{-2, 0, 0}, IDENTITY, s}, {{2, 0, 0}, IDENTITY, leaf}};
+    Ref<Shape> leaf = box::create({.half_extents = vec3f::splat(1.0f)});
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(-2, 0, 0), quatf::identity(), s}, {vec3f::make(2, 0, 0), quatf::identity(), leaf}};
     Ref<Shape> c = make_static(children, 2);
     CHECK(ctx, children_of(c)[1].shape == leaf);
 
@@ -623,10 +623,10 @@ void test_static_compound_sub_shape_id_last_of_two(TestCtx &ctx) {
 void test_static_compound_sub_shape_id_path_one_one(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> leaf = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
-    const CompoundShapeSettings::Child inner_children[] = {{{-2, 0, 0}, IDENTITY, s}, {{2, 0, 0}, IDENTITY, leaf}};
+    Ref<Shape> leaf = box::create({.half_extents = vec3f::splat(0.5f)});
+    const CompoundShapeSettings::Child inner_children[] = {{vec3f::make(-2, 0, 0), quatf::identity(), s}, {vec3f::make(2, 0, 0), quatf::identity(), leaf}};
     Ref<Shape> inner = make_static(inner_children, 2);
-    const CompoundShapeSettings::Child outer_children[] = {{{-2, 0, 0}, IDENTITY, s}, {{2, 0, 0}, IDENTITY, inner}};
+    const CompoundShapeSettings::Child outer_children[] = {{vec3f::make(-2, 0, 0), quatf::identity(), s}, {vec3f::make(2, 0, 0), quatf::identity(), inner}};
     Ref<Shape> outer = make_static(outer_children, 2);
 
     // inner child 1 sits at 2 + 2 along x
@@ -648,10 +648,10 @@ void test_static_compound_sub_shape_id_path_one_one(TestCtx &ctx) {
 void test_static_compound_nested_rotated_surface_normal(TestCtx &ctx) {
     dispatch::init();
     // outer turns its child a quarter about z, inner turns its box a quarter about x
-    Ref<Shape> leaf = box::create({.half_extents = {1, 2, 3}});
-    const CompoundShapeSettings::Child inner_children[] = {{{0, 0, 0}, stored_axis_angle(vec3f::make(1, 0, 0), scalar::PI * 0.5f), leaf}};
+    Ref<Shape> leaf = box::create({.half_extents = vec3f::make(1, 2, 3)});
+    const CompoundShapeSettings::Child inner_children[] = {{vec3f::make(0, 0, 0), axis_angle(vec3f::make(1, 0, 0), scalar::PI * 0.5f), leaf}};
     Ref<Shape> inner = make_static(inner_children, 1);
-    const CompoundShapeSettings::Child outer_children[] = {{{0, 0, 0}, stored_axis_angle(vec3f::make(0, 0, 1), scalar::PI * 0.5f), inner}};
+    const CompoundShapeSettings::Child outer_children[] = {{vec3f::make(0, 0, 0), axis_angle(vec3f::make(0, 0, 1), scalar::PI * 0.5f), inner}};
     Ref<Shape> outer = make_static(outer_children, 1);
 
     // the box's +y face centre (0, 2, 0) goes to (0, 0, 2) under x, which z leaves alone
@@ -665,8 +665,8 @@ void test_static_compound_nested_rotated_surface_normal(TestCtx &ctx) {
 
 void test_static_compound_scaled_supporting_face(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
-    const CompoundShapeSettings::Child children[] = {{{-2, 0, 0}, IDENTITY, b}, {{2, 0, 0}, IDENTITY, b}};
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(-2, 0, 0), quatf::identity(), b}, {vec3f::make(2, 0, 0), quatf::identity(), b}};
     Ref<Shape> c = make_static(children, 2);
     CHECK(ctx, children_of(c)[1].position.x == 2.0f);
     Float4x4 identity;
@@ -684,8 +684,8 @@ void test_static_compound_scaled_supporting_face(TestCtx &ctx) {
 
 void test_static_compound_as_a_culls_with_b_scale(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
-    const CompoundShapeSettings::Child children[] = {{{0, 0, 0}, IDENTITY, b}};
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(0, 0, 0), quatf::identity(), b}};
     Ref<Shape> c = make_static(children, 1);
     Ref<Shape> s = sphere::create({.radius = 1.0f});
 
@@ -717,10 +717,10 @@ static bool box_contains(const Box3f &outer, const Box3f &inner) {
 
 void test_static_compound_bvh_bounds_exact(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> b = box::create({.half_extents = {0.21f, 0.07f, 0.13f}, .convex_radius = 0.0f});
+    Ref<Shape> b = box::create({.half_extents = vec3f::make(0.21f, 0.07f, 0.13f), .convex_radius = 0.0f});
     CompoundShapeSettings::Child children[64];
     for (uint32_t i = 0; i < 64; i++) {
-        children[i] = {{(float)i * 0.1f + 0.37f, (float)(i % 7) * 0.13f - 0.3f, (float)(i % 5) * 0.29f + 0.01f}, IDENTITY, b};
+        children[i] = {vec3f::make((float)i * 0.1f + 0.37f, (float)(i % 7) * 0.13f - 0.3f, (float)(i % 5) * 0.29f + 0.01f), quatf::identity(), b};
     }
     Ref<Shape> shape = make_static(children, 64, 2);
     const collections::Array<BvhNode> &tree = compound_data(shape).bvh;
@@ -736,7 +736,7 @@ void test_static_compound_bvh_bounds_exact(TestCtx &ctx) {
                 const CompoundShape::Child &child = children_of(shape)[i];
                 const Mat4f transform = mat4f::from_rotation_translation(quatf::load(child.quaternion), vec3f::load(child.position));
                 Box3f child_bounds;
-                aabox::store(child_bounds, aabox::transform_mat4(aabox::load(child.shape->aabb), transform));
+                aabox::store(child_bounds, aabox::transform_mat4(child.shape->aabb, transform));
                 CHECK(ctx, box_contains(n.bounds, child_bounds));
                 checked++;
             }
@@ -756,8 +756,8 @@ void test_static_compound_bvh_bounds_exact(TestCtx &ctx) {
 void test_static_compound_material(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f, .material_id = 2});
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}, .material_id = 5});
-    const CompoundShapeSettings::Child children[] = {{{-4, 0, 0}, IDENTITY, s}, {{0, 0, 0}, IDENTITY, b}, {{4, 0, 0}, IDENTITY, s}};
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f), .material_id = 5});
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(-4, 0, 0), quatf::identity(), s}, {vec3f::make(0, 0, 0), quatf::identity(), b}, {vec3f::make(4, 0, 0), quatf::identity(), s}};
     Ref<Shape> c = make_static(children, 3);
 
     // the child the first level names, whatever order the bvh keeps the children in

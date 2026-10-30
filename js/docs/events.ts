@@ -51,7 +51,7 @@ const ghostB = body(ballShape, MotionType.DYNAMIC, [18, 3, 0], PLAYER);
 
 /** the other body of the contact, when one side is `body` */
 const other = (contact: ContactEvent, of: number): number | null =>
-    contact.bodyA === of ? contact.bodyB : contact.bodyB === of ? contact.bodyA : null;
+    contact.bodyIdA === of ? contact.bodyIdB : contact.bodyIdB === of ? contact.bodyIdA : null;
 
 /* SNIPPET_START: listener */
 // the listener hears the step's events, and can reject or change them, while it runs
@@ -66,7 +66,7 @@ const listener: Listener = {
     onContactValidate(contact) {
         if (other(contact, platform) === null) return true;
         // the normal points from a to b. from the platform to a body landing on it, that is up
-        const up = contact.bodyA === platform ? contact.normal[1] : -contact.normal[1];
+        const up = contact.bodyIdA === platform ? contact.normal[1] : -contact.normal[1];
         return up > 0.5;
     },
     // called for a new contact. you can change its settings. here a pad bounces whatever lands on it
@@ -77,12 +77,12 @@ const listener: Listener = {
     // it. the surface velocity is b's minus a's
     onContactPersisted(contact, settings) {
         if (other(contact, belt) === null) return;
-        const carry = contact.bodyA === belt ? -2 : 2;
+        const carry = contact.bodyIdA === belt ? -2 : 2;
         settings.relativeLinearSurfaceVelocity = [carry, 0, 0];
     },
     // called after the solve for each contact that ended, including those of removed bodies
     onContactRemoved(removed) {
-        removed.bodyA;
+        removed.bodyIdA;
     },
 };
 updateWorld(world, listener, 1 / 60);
@@ -115,12 +115,12 @@ check(Math.abs(at[1] - a) < 0.1, "a player's parts fell through each other");
 /* SNIPPET_START: rules */
 // hook events are reused, so copy what you keep. the world is mid step while hooks run. read it, but do not change it.
 // if a hook throws, no more hooks run. the step finishes, then throws the error
-const kept: { bodyA: number; normal: Vec3 }[] = [];
+const kept: { bodyIdA: number; normal: Vec3 }[] = [];
 updateWorld(
     world,
     {
         onContactAdded(contact) {
-            kept.push({ bodyA: contact.bodyA, normal: [...contact.normal] });
+            kept.push({ bodyIdA: contact.bodyIdA, normal: [...contact.normal] });
         },
     },
     1 / 60,

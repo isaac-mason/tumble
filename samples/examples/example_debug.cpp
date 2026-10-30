@@ -47,14 +47,12 @@ static struct {
     int label_count;
 } state;
 
-static const Float4 IDENTITY = {0.0f, 0.0f, 0.0f, 1.0f};
-
 static void add_label(const char *text, float x, float y, float z) {
     if (state.label_count < MAX_LABELS) state.labels[state.label_count++] = {text, {x, y, z}};
 }
 
 /** a world-space label as crashcat's sprites are: a box `width` by `height` facing the camera, its text a fraction of the height */
-static RigidBody *create_body(App &app, Shape *shape, Float3 position, MotionType motion_type) {
+static RigidBody *create_body(App &app, Shape *shape, Vec3f position, MotionType motion_type) {
     RigidBodySettings settings;
     settings.shape = shape;
     settings.object_layer = motion_type == MotionType::STATIC ? state.layers.not_moving : state.layers.moving;
@@ -73,7 +71,7 @@ static void chain(App &app, float start_x, const char *name, Join join) {
     RigidBody *previous = nullptr;
     for (int z = 0; z < CHAIN_LENGTH; z++) {
         const MotionType motion = z == 0 ? MotionType::STATIC : MotionType::DYNAMIC;
-        RigidBody *body = create_body(app, state.link, {start_x, start_y, start_z + (float)z}, motion);
+        RigidBody *body = create_body(app, state.link, vec3f::make(start_x, start_y, start_z + (float)z), motion);
         if (previous != nullptr) join(previous, body, start_x, start_y, start_z + (float)z);
         if (z == CHAIN_LENGTH - 1) rigid_body::add_impulse(*app.world, body, vec3f::make(500.0f, 0.0f, 0.0f));
         previous = body;
@@ -85,47 +83,51 @@ static void make_shapes(App &app) {
     add_label("Shapes", 0.0f, 12.0f, -15.0f);
     const float start_x = -12.0f, start_y = 1.0f, spacing = 4.0f;
     const MotionType dynamic = MotionType::DYNAMIC;
-    create_body(app, app::keep(app, sphere::create({.radius = 1.0f})), {start_x, start_y, 0.0f}, dynamic);
+    create_body(app, app::keep(app, sphere::create({.radius = 1.0f})), vec3f::make(start_x, start_y, 0.0f), dynamic);
     add_label("Sphere", start_x, start_y + 2.5f, 0.0f);
-    create_body(app, app::keep(app, box::create({.half_extents = {1.0f, 1.0f, 1.0f}, .convex_radius = 0.05f})), {start_x + spacing, start_y, 0.0f}, dynamic);
-    add_label("Box", start_x + spacing, start_y + 2.5f, 0.0f);
-    create_body(app, app::keep(app, capsule::create({.half_height_of_cylinder = 1.0f, .radius = 0.8f})), {start_x + spacing * 2.0f, start_y + 1.0f, 0.0f},
+    create_body(app, app::keep(app, box::create({.half_extents = vec3f::splat(1.0f), .convex_radius = 0.05f})), vec3f::make(start_x + spacing, start_y, 0.0f),
                 dynamic);
+    add_label("Box", start_x + spacing, start_y + 2.5f, 0.0f);
+    create_body(app, app::keep(app, capsule::create({.half_height_of_cylinder = 1.0f, .radius = 0.8f})),
+                vec3f::make(start_x + spacing * 2.0f, start_y + 1.0f, 0.0f), dynamic);
     add_label("Capsule", start_x + spacing * 2.0f, start_y + 3.5f, 0.0f);
-    create_body(app, app::keep(app, cylinder::create({.half_height = 1.0f, .radius = 0.8f})), {start_x + spacing * 3.0f, start_y, 0.0f}, dynamic);
+    create_body(app, app::keep(app, cylinder::create({.half_height = 1.0f, .radius = 0.8f})), vec3f::make(start_x + spacing * 3.0f, start_y, 0.0f), dynamic);
     add_label("Cylinder", start_x + spacing * 3.0f, start_y + 2.5f, 0.0f);
 
     add_label("Static Shapes", -10.0f, 6.0f, -8.0f);
     const float static_x = -14.0f, static_y = 0.5f;
     const MotionType fixed = MotionType::STATIC;
-    create_body(app, app::keep(app, box::create({.half_extents = {1.5f, 0.5f, 1.5f}, .convex_radius = 0.05f})), {static_x, static_y, -10.0f}, fixed);
+    create_body(app, app::keep(app, box::create({.half_extents = vec3f::make(1.5f, 0.5f, 1.5f), .convex_radius = 0.05f})),
+                vec3f::make(static_x, static_y, -10.0f), fixed);
     add_label("Static Box", static_x, static_y + 2.0f, -10.0f);
-    create_body(app, app::keep(app, sphere::create({.radius = 1.0f})), {static_x + spacing, static_y + 1.0f, -10.0f}, fixed);
+    create_body(app, app::keep(app, sphere::create({.radius = 1.0f})), vec3f::make(static_x + spacing, static_y + 1.0f, -10.0f), fixed);
     add_label("Static Sphere", static_x + spacing, static_y + 3.0f, -10.0f);
 
     Shape *ball = app::keep(app, sphere::create({.radius = 0.6f}));
     Shape *bar = app::keep(app, cylinder::create({.half_height = 0.5f, .radius = 0.3f}));
     const CompoundShapeSettings::Child dumbbell[] = {
-        {.position = {-0.6f, 0.0f, 0.0f}, .quaternion = IDENTITY, .shape = ball},
-        {.position = {0.6f, 0.0f, 0.0f}, .quaternion = IDENTITY, .shape = ball},
-        {.position = {0.0f, 0.0f, 0.0f}, .quaternion = vec::quat_axis_angle({0.0f, 0.0f, 1.0f}, PI * 0.5f), .shape = bar},
+        {.position = vec3f::make(-0.6f, 0.0f, 0.0f), .quaternion = quatf::identity(), .shape = ball},
+        {.position = vec3f::make(0.6f, 0.0f, 0.0f), .quaternion = quatf::identity(), .shape = ball},
+        {.position = vec3f::make(0.0f, 0.0f, 0.0f), .quaternion = quatf::set_axis_angle(vec3f::axis_z(), PI * 0.5f), .shape = bar},
     };
-    create_body(app, app::keep(app, compound::create({.children = dumbbell, .num_children = 3})), {10.0f, 1.0f, -10.0f}, dynamic);
+    create_body(app, app::keep(app, compound::create({.children = dumbbell, .num_children = 3})), vec3f::make(10.0f, 1.0f, -10.0f), dynamic);
     add_label("Compound", 10.0f, 4.0f, -10.0f);
 
-    Shape *post = app::keep(app, box::create({.half_extents = {0.3f, 1.0f, 0.3f}, .convex_radius = 0.05f}));
-    Shape *rung = app::keep(app, box::create({.half_extents = {1.2f, 0.1f, 0.1f}, .convex_radius = 0.05f}));
+    Shape *post = app::keep(app, box::create({.half_extents = vec3f::make(0.3f, 1.0f, 0.3f), .convex_radius = 0.05f}));
+    Shape *rung = app::keep(app, box::create({.half_extents = vec3f::make(1.2f, 0.1f, 0.1f), .convex_radius = 0.05f}));
     const CompoundShapeSettings::Child frame[] = {
-        {.position = {-1.0f, 0.0f, 0.0f}, .quaternion = IDENTITY, .shape = post},
-        {.position = {1.0f, 0.0f, 0.0f}, .quaternion = IDENTITY, .shape = post},
-        {.position = {0.0f, -0.5f, -0.5f}, .quaternion = IDENTITY, .shape = rung},
-        {.position = {0.0f, -0.5f, 0.5f}, .quaternion = IDENTITY, .shape = rung},
+        {.position = vec3f::make(-1.0f, 0.0f, 0.0f), .quaternion = quatf::identity(), .shape = post},
+        {.position = vec3f::make(1.0f, 0.0f, 0.0f), .quaternion = quatf::identity(), .shape = post},
+        {.position = vec3f::make(0.0f, -0.5f, -0.5f), .quaternion = quatf::identity(), .shape = rung},
+        {.position = vec3f::make(0.0f, -0.5f, 0.5f), .quaternion = quatf::identity(), .shape = rung},
     };
-    create_body(app, app::keep(app, static_compound::create({.children = frame, .num_children = 4})), {10.0f, 1.0f, -4.0f}, fixed);
+    create_body(app, app::keep(app, static_compound::create({.children = frame, .num_children = 4})), vec3f::make(10.0f, 1.0f, -4.0f), fixed);
     add_label("Static Compound", 10.0f, 4.0f, -4.0f);
 
-    const float pyramid[] = {-0.8f, 0.0f, -0.8f, 0.8f, 0.0f, -0.8f, 0.8f, 0.0f, 0.8f, -0.8f, 0.0f, 0.8f, 0.0f, 1.2f, 0.0f};
-    create_body(app, app::keep(app, convex_hull::create({.positions = pyramid, .num_positions = 5, .convex_radius = 0.05f})), {10.0f, 1.0f, 2.0f}, dynamic);
+    const Vec3f pyramid[] = {vec3f::make(-0.8f, 0.0f, -0.8f), vec3f::make(0.8f, 0.0f, -0.8f), vec3f::make(0.8f, 0.0f, 0.8f), vec3f::make(-0.8f, 0.0f, 0.8f),
+                             vec3f::make(0.0f, 1.2f, 0.0f)};
+    create_body(app, app::keep(app, convex_hull::create({.positions = pyramid, .num_positions = 5, .convex_radius = 0.05f})), vec3f::make(10.0f, 1.0f, 2.0f),
+                dynamic);
     add_label("Convex Hull", 10.0f, 4.0f, 2.0f);
 }
 
@@ -134,31 +136,34 @@ static void make_chains(App &app) {
     World &world = *app.world;
 
     chain(app, -15.0f, "Fixed", [&](RigidBody *a, RigidBody *b, float x, float y, float z) {
-        fixed_constraint::create(world, a, b, {.point_a = {x, y, z - 0.5f}, .point_b = {x, y, z - 0.5f}});
+        const Vec3f between = vec3f::make(x, y, z - 0.5f);
+        fixed_constraint::create(world, a, b, {.point_a = between, .point_b = between});
     });
     chain(app, -10.0f, "Point", [&](RigidBody *a, RigidBody *b, float x, float y, float z) {
-        point_constraint::create(world, a, b, {.point_a = {x, y, z - 0.5f}, .point_b = {x, y, z - 0.5f}});
+        const Vec3f between = vec3f::make(x, y, z - 0.5f);
+        point_constraint::create(world, a, b, {.point_a = between, .point_b = between});
     });
     chain(app, -5.0f, "Distance", [&](RigidBody *a, RigidBody *b, float x, float y, float z) {
-        distance_constraint::create(world, a, b, {.point_a = {x, y, z - 0.5f}, .point_b = {x, y, z - 0.5f}, .min_distance = 0.0f, .max_distance = 1.0f});
+        const Vec3f between = vec3f::make(x, y, z - 0.5f);
+        distance_constraint::create(world, a, b, {.point_a = between, .point_b = between, .min_distance = 0.0f, .max_distance = 1.0f});
     });
     chain(app, 0.0f, "Hinge", [&](RigidBody *a, RigidBody *b, float x, float y, float z) {
+        const Vec3f bottom_edge = vec3f::make(x, y - 0.5f, z - 0.5f);
         hinge_constraint::create(world, a, b,
-                                 {.point_a = {x, y - 0.5f, z - 0.5f},
-                                  .point_b = {x, y - 0.5f, z - 0.5f},
-                                  .hinge_axis_a = {1.0f, 0.0f, 0.0f},
-                                  .hinge_axis_b = {1.0f, 0.0f, 0.0f},
-                                  .normal_axis_a = {0.0f, 1.0f, 0.0f},
-                                  .normal_axis_b = {0.0f, 1.0f, 0.0f}});
+                                 {.point_a = bottom_edge,
+                                  .point_b = bottom_edge,
+                                  .hinge_axis_a = vec3f::axis_x(),
+                                  .hinge_axis_b = vec3f::axis_x(),
+                                  .normal_axis_a = vec3f::axis_y(),
+                                  .normal_axis_b = vec3f::axis_y()});
     });
-    const Vec3f slider_axis = vec3f::normalize(vec3f::make(0.0f, -1.0f, 1.0f));
-    const Vec3f normal_axis = vec3f::perpendicular(slider_axis);
-    const Float3 slider = {vec3f::x(slider_axis), vec3f::y(slider_axis), vec3f::z(slider_axis)};
-    const Float3 normal = {vec3f::x(normal_axis), vec3f::y(normal_axis), vec3f::z(normal_axis)};
+    const Vec3f slider = vec3f::normalize(vec3f::make(0.0f, -1.0f, 1.0f));
+    const Vec3f normal = vec3f::perpendicular(slider);
     chain(app, 5.0f, "Slider", [&](RigidBody *a, RigidBody *b, float x, float y, float z) {
+        const Vec3f between = vec3f::make(x, y, z - 0.5f);
         slider_constraint::create(world, a, b,
-                                  {.point_a = {x, y, z - 0.5f},
-                                   .point_b = {x, y, z - 0.5f},
+                                  {.point_a = between,
+                                   .point_b = between,
                                    .slider_axis_a = slider,
                                    .slider_axis_b = slider,
                                    .normal_axis_a = normal,
@@ -167,17 +172,19 @@ static void make_chains(App &app) {
                                    .limits_max = 1.0f});
     });
     chain(app, 10.0f, "Cone", [&](RigidBody *a, RigidBody *b, float x, float y, float z) {
+        const Vec3f centre = vec3f::make(x, y, z);
         cone_constraint::create(world, a, b,
-                                {.point_a = {x, y, z}, .twist_axis_a = {0.0f, 0.0f, 1.0f}, .point_b = {x, y, z}, .twist_axis_b = {0.0f, 0.0f, 1.0f}, .half_cone_angle = 0.1f * PI});
+                                {.point_a = centre, .twist_axis_a = vec3f::axis_z(), .point_b = centre, .twist_axis_b = vec3f::axis_z(), .half_cone_angle = 0.1f * PI});
     });
     chain(app, 15.0f, "Swing-Twist", [&](RigidBody *a, RigidBody *b, float x, float y, float z) {
+        const Vec3f centre = vec3f::make(x, y, z);
         swing_twist_constraint::create(world, a, b,
-                                       {.point_a = {x, y, z},
-                                        .point_b = {x, y, z},
-                                        .twist_axis_a = {0.0f, 0.0f, 1.0f},
-                                        .plane_axis_a = {1.0f, 0.0f, 0.0f},
-                                        .twist_axis_b = {0.0f, 0.0f, 1.0f},
-                                        .plane_axis_b = {1.0f, 0.0f, 0.0f},
+                                       {.point_a = centre,
+                                        .point_b = centre,
+                                        .twist_axis_a = vec3f::axis_z(),
+                                        .plane_axis_a = vec3f::axis_x(),
+                                        .twist_axis_b = vec3f::axis_z(),
+                                        .plane_axis_b = vec3f::axis_x(),
                                         .normal_half_cone_angle = 0.2f * PI,
                                         .plane_half_cone_angle = 0.1f * PI,
                                         .twist_min_angle = -0.3f * PI,
@@ -186,12 +193,12 @@ static void make_chains(App &app) {
     const float max_angle = PI / 18.0f;
     chain(app, 20.0f, "6DOF", [&](RigidBody *a, RigidBody *b, float x, float y, float z) {
         SixDOFConstraintSettings settings;
-        settings.point_a = {x, y, z};
-        settings.point_b = {x, y, z};
-        settings.axis_x_a = {0.0f, 0.0f, 1.0f};
-        settings.axis_y_a = {1.0f, 0.0f, 0.0f};
-        settings.axis_x_b = {0.0f, 0.0f, 1.0f};
-        settings.axis_y_b = {1.0f, 0.0f, 0.0f};
+        settings.point_a = vec3f::make(x, y, z);
+        settings.point_b = settings.point_a;
+        settings.axis_x_a = vec3f::axis_z();
+        settings.axis_y_a = vec3f::axis_x();
+        settings.axis_x_b = vec3f::axis_z();
+        settings.axis_y_b = vec3f::axis_x();
         for (uint32_t axis = 0; axis < SixDOFConstraint::Axis::NUM; axis++) {
             const float limit = axis < SixDOFConstraint::Axis::NUM_TRANSLATION ? 0.1f : max_angle;
             settings.limit_min[axis] = -limit;
@@ -206,14 +213,14 @@ static void init(App &app) {
     app.world = app::create_world(state.layers);
 
     RigidBodySettings ground;
-    ground.shape = app::keep(app, plane::create({.plane = {{0.0f, 1.0f, 0.0f}, 0.0f}, .half_extent = 50.0f}));
+    ground.shape = app::keep(app, plane::create({.plane = plane3f::make(vec3f::axis_y(), 0.0f), .half_extent = 50.0f}));
     ground.object_layer = state.layers.not_moving;
     ground.motion_type = MotionType::STATIC;
     ground.restitution = 0.0f;
     ground.friction = 0.5f;
     rigid_body::create(*app.world, ground);
 
-    state.link = app::keep(app, box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.05f}));
+    state.link = app::keep(app, box::create({.half_extents = vec3f::splat(0.5f), .convex_radius = 0.05f}));
     make_shapes(app);
     make_chains(app);
 

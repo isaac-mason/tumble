@@ -12,13 +12,13 @@ RigidBody *add_bullet(WorldScene &scene, float x = -2.0f) {
     RigidBodySettings settings = body_settings(sphere::create({.radius = 0.2f}), scene.moving, MotionType::DYNAMIC, {x, 0.0f, 0.0f});
     settings.motion_quality = MotionQuality::LINEAR_CAST;
     RigidBody *bullet = rigid_body::create(*scene.world, settings);
-    bullet->motion_properties.linear_velocity = {300.0f, 0.0f, 0.0f};
+    bullet->motion_properties.linear_velocity = vec3f::make(300.0f, 0.0f, 0.0f);
     return bullet;
 }
 
 /** a thin static wall spanning x in [-0.1, 0.1] */
 RigidBody *add_thin_wall(WorldScene &scene) {
-    return add_body(scene, box::create({.half_extents = {0.1f, 5.0f, 5.0f}}), MotionType::STATIC, {0.0f, 0.0f, 0.0f});
+    return add_body(scene, box::create({.half_extents = vec3f::make(0.1f, 5.0f, 5.0f)}), MotionType::STATIC, {0.0f, 0.0f, 0.0f});
 }
 
 }  // namespace
@@ -33,7 +33,7 @@ void test_ccd_reset_and_swept_aabb(TestCtx &ctx) {
 
     // the union of the start bounds and the same moved by the displacement
     RigidBody body = {};
-    body.aabb = {{-1.0f, -2.0f, -3.0f}, {1.0f, 2.0f, 3.0f}};
+    body.aabb = aabox::make(vec3f::make(-1.0f, -2.0f, -3.0f), vec3f::make(1.0f, 2.0f, 3.0f));
     Box3f swept;
     aabox::store(swept, ccd::compute_swept_aabb(body, vec3f::make(4.0f, -1.0f, 0.5f)));
     CHECK(ctx, swept.min.x == -1.0f && swept.min.y == -3.0f && swept.min.z == -3.0f);
@@ -51,14 +51,14 @@ void test_ccd_fast_sphere_stopped_by_thin_wall(TestCtx &ctx) {
     // stopped at the near face (-0.1 - radius, plus at most the allowed penetration), not tunnelled through
     CHECK(ctx, scene.world->ccd.ccd_bodies.length == 1);
     CHECK(ctx, scene.world->ccd.ccd_bodies[0].hit_body_index == wall->index);
-    CHECK(ctx, bullet->position.x > -2.0f && bullet->position.x < 0.0f);
-    CHECK_NEAR(ctx, bullet->position.x, -0.3f, 0.025f);
+    CHECK(ctx, vec3f::x(bullet->position) > -2.0f && vec3f::x(bullet->position) < 0.0f);
+    CHECK_NEAR(ctx, vec3f::x(bullet->position), -0.3f, 0.025f);
     // the contact killed the approach velocity (no restitution)
-    CHECK(ctx, bullet->motion_properties.linear_velocity.x < 1.0f);
+    CHECK(ctx, vec3f::x(bullet->motion_properties.linear_velocity) < 1.0f);
 
     // and it stays on the near side
     for (uint32_t i = 0; i < 30; i++) step_world(*scene.world);
-    CHECK(ctx, bullet->position.x < -0.1f);
+    CHECK(ctx, vec3f::x(bullet->position) < -0.1f);
     release_world_scene(scene);
 }
 
@@ -66,11 +66,11 @@ void test_ccd_without_linear_cast_tunnels(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     add_thin_wall(scene);
     RigidBody *bullet = add_body(scene, sphere::create({.radius = 0.2f}), MotionType::DYNAMIC, {-2.0f, 0.0f, 0.0f});
-    bullet->motion_properties.linear_velocity = {300.0f, 0.0f, 0.0f};
+    bullet->motion_properties.linear_velocity = vec3f::make(300.0f, 0.0f, 0.0f);
     step_world(*scene.world);
     // the discrete step jumps the wall
     CHECK(ctx, scene.world->ccd.ccd_bodies.length == 0);
-    CHECK(ctx, bullet->position.x > 2.9f);
+    CHECK(ctx, vec3f::x(bullet->position) > 2.9f);
     release_world_scene(scene);
 }
 
@@ -88,25 +88,25 @@ void test_ccd_contact_reported_on_impact_step(TestCtx &ctx) {
         CHECK(ctx, (event.body_id_a == wall->id && event.body_id_b == bullet->id) || (event.body_id_a == bullet->id && event.body_id_b == wall->id));
         CHECK(ctx, event.body_id_a < event.body_id_b);
         // along the travel axis, from a to b: the wall (a) to the bullet (b) points back along -x
-        CHECK(ctx, scalar::abs(event.normal.x) > 0.9f);
-        CHECK(ctx, event.normal.x < 0.0f);
+        CHECK(ctx, scalar::abs(vec3f::x(event.normal)) > 0.9f);
+        CHECK(ctx, vec3f::x(event.normal) < 0.0f);
         CHECK(ctx, event.num_points >= 1);
     }
-    CHECK(ctx, bullet->position.x < 0.0f);
+    CHECK(ctx, vec3f::x(bullet->position) < 0.0f);
     release_world_scene(scene);
 }
 
 void test_ccd_sweeps_target_moved_into_path_this_step(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     // a kinematic plate whose bottom face starts at y = 0.245, above the bullet, and ends at y = 0.185, inside its path
-    RigidBody *plate = add_body(scene, box::create({.half_extents = {0.1f, 0.5f, 5.0f}}), MotionType::KINEMATIC, {0.0f, 0.745f, 0.0f});
-    plate->motion_properties.linear_velocity = {0.0f, -3.6f, 0.0f};
+    RigidBody *plate = add_body(scene, box::create({.half_extents = vec3f::make(0.1f, 0.5f, 5.0f)}), MotionType::KINEMATIC, {0.0f, 0.745f, 0.0f});
+    plate->motion_properties.linear_velocity = vec3f::make(0.0f, -3.6f, 0.0f);
     RigidBody *bullet = add_bullet(scene);
 
     step_world(*scene.world);
 
-    CHECK(ctx, plate->position.y - 0.5f < 0.2f);
-    CHECK(ctx, bullet->position.x < 0.0f);
+    CHECK(ctx, vec3f::y(plate->position) - 0.5f < 0.2f);
+    CHECK(ctx, vec3f::x(bullet->position) < 0.0f);
     release_world_scene(scene);
 }
 
@@ -124,12 +124,12 @@ void test_ccd_contact_creates_pair_record(TestCtx &ctx) {
     CHECK(ctx, scene.world->events.contacts_added.length == 1);
     CHECK(ctx, pairs::find_pair_record(scene.world->pairs, *wall, *bullet) != pairs::INVALID_PAIR_KEY);
     CHECK(ctx, pair_contact_count(*scene.world, *wall, *bullet) == 1);
-    CHECK(ctx, bullet->position.x < 0.0f);
+    CHECK(ctx, vec3f::x(bullet->position) < 0.0f);
 
     // the next step keeps the record through the usual sweep
     step_world(*scene.world);
     CHECK(ctx, pairs::find_pair_record(scene.world->pairs, *wall, *bullet) != pairs::INVALID_PAIR_KEY);
-    CHECK(ctx, bullet->position.x < 0.0f);
+    CHECK(ctx, vec3f::x(bullet->position) < 0.0f);
     release_world_scene(scene);
 }
 
@@ -142,7 +142,7 @@ void gravity_off(WorldSettings &settings) { settings.gravity_enabled = false; }
 
 void test_ccd_body_index_only_for_ccd_bodies(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx, gravity_off);
-    RigidBody *wall = add_body(scene, box::create({.half_extents = {0.5f, 5.0f, 5.0f}}), MotionType::STATIC, {20.0f, 0.0f, 0.0f});
+    RigidBody *wall = add_body(scene, box::create({.half_extents = vec3f::make(0.5f, 5.0f, 5.0f)}), MotionType::STATIC, {20.0f, 0.0f, 0.0f});
     RigidBodySettings settings = body_settings(sphere::create({.radius = 0.1f}), scene.moving, MotionType::DYNAMIC, {0.0f, 0.0f, 0.0f});
     settings.motion_quality = MotionQuality::LINEAR_CAST;
     RigidBody *bullet = rigid_body::create(*scene.world, settings);
@@ -157,7 +157,7 @@ void test_ccd_body_index_only_for_ccd_bodies(TestCtx &ctx) {
     CHECK(ctx, bystander->ccd_body_index == -1);
     CHECK(ctx, wall->ccd_body_index == -1);
     // no hit: the whole displacement
-    CHECK_NEAR(ctx, bullet->position.x, 200.0f * WORLD_TEST_DELTA_TIME * (1.0f - 0.05f * WORLD_TEST_DELTA_TIME), 1e-3f);
+    CHECK_NEAR(ctx, vec3f::x(bullet->position), 200.0f * WORLD_TEST_DELTA_TIME * (1.0f - 0.05f * WORLD_TEST_DELTA_TIME), 1e-3f);
 
     rigid_body::set_linear_velocity(*scene.world, bullet, vec3f::make(0.0f, 0.0f, 0.0f));
     step_world(*scene.world);
@@ -176,7 +176,7 @@ void test_ccd_two_bullets_in_time_of_impact_order(TestCtx &ctx) {
     RigidBodySettings settings = body_settings(sphere::create({.radius = 0.2f}), scene.moving, MotionType::DYNAMIC, {-2.0f, 2.0f, 0.0f});
     settings.motion_quality = MotionQuality::LINEAR_CAST;
     RigidBody *near_bullet = rigid_body::create(*scene.world, settings);
-    near_bullet->motion_properties.linear_velocity = {300.0f, 0.0f, 0.0f};
+    near_bullet->motion_properties.linear_velocity = vec3f::make(300.0f, 0.0f, 0.0f);
 
     step_world(*scene.world);
 
@@ -187,8 +187,8 @@ void test_ccd_two_bullets_in_time_of_impact_order(TestCtx &ctx) {
     CHECK(ctx, scene.world->ccd.ccd_bodies[(uint32_t)near_bullet->ccd_body_index].fraction <
                scene.world->ccd.ccd_bodies[(uint32_t)far_bullet->ccd_body_index].fraction);
     // both stopped at the wall's near face
-    CHECK_NEAR(ctx, far_bullet->position.x, -0.3f, 0.025f);
-    CHECK_NEAR(ctx, near_bullet->position.x, -0.3f, 0.025f);
+    CHECK_NEAR(ctx, vec3f::x(far_bullet->position), -0.3f, 0.025f);
+    CHECK_NEAR(ctx, vec3f::x(near_bullet->position), -0.3f, 0.025f);
     release_world_scene(scene);
 }
 
@@ -200,7 +200,7 @@ RigidBody *add_linear_cast_sphere(WorldScene &scene, float radius, float x, floa
         body_settings(sphere::create({.radius = radius, .material_id = material_id}), scene.moving, MotionType::DYNAMIC, {x, y, 0.0f});
     settings.motion_quality = MotionQuality::LINEAR_CAST;
     RigidBody *body = rigid_body::create(*scene.world, settings);
-    body->motion_properties.linear_velocity = {velocity_x, 0.0f, 0.0f};
+    body->motion_properties.linear_velocity = vec3f::make(velocity_x, 0.0f, 0.0f);
     return body;
 }
 
@@ -220,11 +220,11 @@ void test_ccd_body_hit_earlier_by_another_ccd_body_travels_only_to_the_impact(Te
 
     // they meet at the origin, 5.6 of the 10 units closing: b stops at its side, not 5 units on through a
     CHECK(ctx, ccd_body_of(scene, *a).hit_body_index == b->index);
-    CHECK_NEAR(ctx, b->position.x, 0.2f, 0.005f);
-    CHECK(ctx, a->position.x < b->position.x);
+    CHECK_NEAR(ctx, vec3f::x(b->position), 0.2f, 0.005f);
+    CHECK(ctx, vec3f::x(a->position) < vec3f::x(b->position));
     // head on with equal masses and no restitution, the impulse stops both
-    CHECK(ctx, scalar::abs(a->motion_properties.linear_velocity.x) < 1.0f);
-    CHECK(ctx, scalar::abs(b->motion_properties.linear_velocity.x) < 1.0f);
+    CHECK(ctx, scalar::abs(vec3f::x(a->motion_properties.linear_velocity)) < 1.0f);
+    CHECK(ctx, scalar::abs(vec3f::x(b->motion_properties.linear_velocity)) < 1.0f);
     release_world_scene(scene);
 }
 
@@ -240,9 +240,9 @@ void test_ccd_target_stopped_earlier_against_something_else_takes_no_response(Te
     CHECK(ctx, ccd_body_of(scene, *b).hit_body_index == wall->index);
     CHECK(ctx, ccd_body_of(scene, *a).hit_body_index == b->index);
     // b resolved first and stopped at the wall; a's hit on b's swept path never happened, so b is not pushed on
-    CHECK_NEAR(ctx, b->position.x, -0.6f, 0.05f);
-    CHECK(ctx, scalar::abs(b->motion_properties.linear_velocity.x) < 1.0f);
-    CHECK(ctx, a->motion_properties.linear_velocity.x > 470.0f);
+    CHECK_NEAR(ctx, vec3f::x(b->position), -0.6f, 0.05f);
+    CHECK(ctx, scalar::abs(vec3f::x(b->motion_properties.linear_velocity)) < 1.0f);
+    CHECK(ctx, vec3f::x(a->motion_properties.linear_velocity) > 470.0f);
     release_world_scene(scene);
 }
 
@@ -250,10 +250,10 @@ void test_ccd_kinematic_linear_cast_target_does_not_shift_the_contact(TestCtx &c
     WorldScene scene = make_world_scene(ctx);
     // the wall slides 1 unit along +y this step; it is kinematic, so it moves during integration like any other
     RigidBodySettings settings =
-        body_settings(box::create({.half_extents = {0.1f, 5.0f, 5.0f}}), scene.moving, MotionType::KINEMATIC, {0.0f, 0.0f, 0.0f});
+        body_settings(box::create({.half_extents = vec3f::make(0.1f, 5.0f, 5.0f)}), scene.moving, MotionType::KINEMATIC, {0.0f, 0.0f, 0.0f});
     settings.motion_quality = MotionQuality::LINEAR_CAST;
     RigidBody *wall = rigid_body::create(*scene.world, settings);
-    wall->motion_properties.linear_velocity = {0.0f, 60.0f, 0.0f};
+    wall->motion_properties.linear_velocity = vec3f::make(0.0f, 60.0f, 0.0f);
     add_bullet(scene);
 
     step_world(*scene.world);
@@ -264,7 +264,7 @@ void test_ccd_kinematic_linear_cast_target_does_not_shift_the_contact(TestCtx &c
         const ContactEvent &event = scene.world->events.contacts_added[0];
         CHECK(ctx, event.body_id_a == wall->id);
         CHECK(ctx, event.num_points == 1);
-        CHECK_NEAR(ctx, event.points_a[0].y, 0.0f, 0.005f);
+        CHECK_NEAR(ctx, vec3f::y(event.points_a[0]), 0.0f, 0.005f);
     }
     release_world_scene(scene);
 }
@@ -272,7 +272,7 @@ void test_ccd_kinematic_linear_cast_target_does_not_shift_the_contact(TestCtx &c
 void test_ccd_contact_with_bodies_swapped_negates_normal_and_swaps_materials(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     // the wall is created first, so it has the lower id and comes first in the report
-    RigidBody *wall = add_body(scene, box::create({.half_extents = {0.1f, 5.0f, 5.0f}, .material_id = 7}), MotionType::STATIC, {0.0f, 0.0f, 0.0f});
+    RigidBody *wall = add_body(scene, box::create({.half_extents = vec3f::make(0.1f, 5.0f, 5.0f), .material_id = 7}), MotionType::STATIC, {0.0f, 0.0f, 0.0f});
     RigidBody *bullet = add_linear_cast_sphere(scene, 0.2f, -2.0f, 0.0f, 300.0f, 3);
 
     step_world(*scene.world);
@@ -282,10 +282,10 @@ void test_ccd_contact_with_bodies_swapped_negates_normal_and_swaps_materials(Tes
         const ContactEvent &event = scene.world->events.contacts_added[0];
         CHECK(ctx, event.body_id_a == wall->id && event.body_id_b == bullet->id);
         // from a (the wall) to b (the bullet): back along -x
-        CHECK(ctx, event.normal.x < -0.9f);
+        CHECK(ctx, vec3f::x(event.normal) < -0.9f);
         CHECK(ctx, event.material_id_a == 7 && event.material_id_b == 3);
     }
-    CHECK(ctx, bullet->position.x < 0.0f);
+    CHECK(ctx, vec3f::x(bullet->position) < 0.0f);
     release_world_scene(scene);
 }
 
@@ -295,7 +295,7 @@ void test_ccd_bodies_resolved_out_of_creation_order_find_their_targets_records(T
     RigidBody *a = add_linear_cast_sphere(scene, 0.2f, -3.0f, 0.0f, 300.0f);
     RigidBody *b = add_linear_cast_sphere(scene, 0.2f, 3.0f, 0.0f, -300.0f);
     RigidBody *c = add_linear_cast_sphere(scene, 0.2f, -2.0f, 20.0f, 300.0f);
-    add_body(scene, box::create({.half_extents = {0.1f, 1.0f, 1.0f}}), MotionType::STATIC, {0.0f, 20.0f, 0.0f});
+    add_body(scene, box::create({.half_extents = vec3f::make(0.1f, 1.0f, 1.0f)}), MotionType::STATIC, {0.0f, 20.0f, 0.0f});
 
     step_world(*scene.world);
 
@@ -309,9 +309,9 @@ void test_ccd_bodies_resolved_out_of_creation_order_find_their_targets_records(T
     CHECK(ctx, ccd_body_of(scene, *a).body_index == a->index);
     CHECK(ctx, ccd_body_of(scene, *b).body_index == b->index);
     CHECK(ctx, ccd_body_of(scene, *c).body_index == c->index);
-    CHECK_NEAR(ctx, c->position.x, -0.3f, 0.025f);
-    CHECK_NEAR(ctx, b->position.x, 0.2f, 0.005f);
-    CHECK(ctx, a->position.x < b->position.x);
+    CHECK_NEAR(ctx, vec3f::x(c->position), -0.3f, 0.025f);
+    CHECK_NEAR(ctx, vec3f::x(b->position), 0.2f, 0.005f);
+    CHECK(ctx, vec3f::x(a->position) < vec3f::x(b->position));
     release_world_scene(scene);
 }
 
@@ -324,14 +324,14 @@ void test_ccd_contact_whose_bodies_are_separating_is_still_solved(TestCtx &ctx) 
     // a small a keeps its allowed penetration (a quarter of its radius) small, so the grazing hit is kept
     RigidBody *a = add_linear_cast_sphere(scene, 0.02f, 0.0f, 0.0f, 15.0f);
     RigidBody *b = add_body(scene, sphere::create({.radius = 0.5f}), MotionType::DYNAMIC, {0.28f, 0.47f, 0.0f});
-    b->motion_properties.linear_velocity = {0.0f, 2.7f, 0.0f};
+    b->motion_properties.linear_velocity = vec3f::make(0.0f, 2.7f, 0.0f);
 
     step_world(*scene.world);
 
     const CCD::Body &ccd_body_a = ccd_body_of(scene, *a);
     CHECK(ctx, ccd_body_a.hit_body_index == b->index);
     CHECK(ctx, vec3f::y(ccd_body_a.contact_normal) > 0.95f);
-    const Vec3f relative_velocity = vec3f::subtract(vec3f::load(b->motion_properties.linear_velocity), vec3f::load(a->motion_properties.linear_velocity));
+    const Vec3f relative_velocity = vec3f::subtract(b->motion_properties.linear_velocity, a->motion_properties.linear_velocity);
     CHECK_NEAR(ctx, vec3f::dot(relative_velocity, ccd_body_a.contact_normal), 0.0f, 5e-4f);
     release_world_scene(scene);
 }
@@ -349,7 +349,7 @@ void test_ccd_linear_cast_target_below_its_threshold_still_shortens_the_sweep(Te
     // b's face ends at 1.07, a's leading point at 1.1 after a full step and 1.06 after the relative one
     CHECK(ctx, b->ccd_body_index == -1);
     CHECK(ctx, ccd_body_of(scene, *a).hit_body_index == ~0u);
-    CHECK_NEAR(ctx, a->position.x, 1.0f, 0.005f);
-    CHECK(ctx, a->motion_properties.linear_velocity.x > 59.0f);
+    CHECK_NEAR(ctx, vec3f::x(a->position), 1.0f, 0.005f);
+    CHECK(ctx, vec3f::x(a->motion_properties.linear_velocity) > 59.0f);
     release_world_scene(scene);
 }

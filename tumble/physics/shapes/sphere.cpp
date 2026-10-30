@@ -16,7 +16,7 @@ Shape *create(const SphereShapeSettings &settings) {
     shape->density = settings.density;
     shape->material_id = settings.material_id;
     // always at origin
-    vec3f::store(shape->center_of_mass, vec3f::zero());
+    shape->center_of_mass = vec3f::zero();
     update(shape);
     return shape;
 }
@@ -30,10 +30,10 @@ float compute_sphere_volume(float radius) {
     return (4.0f / 3.0f) * scalar::PI * radius * radius * radius;
 }
 
-void compute_sphere_local_bounds(Box3f &out, float radius) { out = {{-radius, -radius, -radius}, {radius, radius, radius}}; }
+AABox compute_sphere_local_bounds(float radius) { return aabox::make(vec3f::splat(-radius), vec3f::splat(radius)); }
 
 void update(Shape *shape) {
-    compute_sphere_local_bounds(shape->aabb, shapes::as<SphereShape>(shape).radius);
+    shape->aabb = compute_sphere_local_bounds(shapes::as<SphereShape>(shape).radius);
     shape->volume = compute_sphere_volume(shapes::as<SphereShape>(shape).radius);
 }
 
@@ -59,7 +59,7 @@ void compute_mass_properties(MassProperties &out, const Shape *shape) {
 
     // I = (2/5) * m * r^2
     const float inertia = (2.0f / 5.0f) * out.mass * r2;
-    out.inertia = {{inertia, 0, 0, 0, 0, inertia, 0, 0, 0, 0, inertia, 0, 0, 0, 0, 1.0f}};
+    out.inertia = mat4f::from_scaling(vec3f::splat(inertia));
 }
 
 void get_surface_normal(SurfaceNormalResult &io, const Shape *, SubShapeId) {
@@ -100,12 +100,12 @@ ShapeDef def() {
 
 void collide_point_vs_sphere(CollidePointCollector &collector, const CollidePointSettings &,
                              Vec3f point, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                             const Transformf &transform_b) {
+                             const Transform &transform_b) {
     // transform point to sphere's local space
-    const Vec3f local = vec3f::subtract(point, vec3f::load(transform_b.position));
+    const Vec3f local = vec3f::subtract(point, transform_b.position);
 
     // apply accumulated scale to radius (uniform scale, using x component)
-    const float radius = shapes::as<SphereShape>(shape_b).radius * scalar::abs(transform_b.scale.x);
+    const float radius = shapes::as<SphereShape>(shape_b).radius * scalar::abs(vec3f::x(transform_b.scale));
 
     // sphere is centered at origin in local space, test distance squared
     if (vec3f::squared_length(local) <= radius * radius) {
@@ -119,16 +119,16 @@ void collide_point_vs_sphere(CollidePointCollector &collector, const CollidePoin
 /* collide shape */
 
 void collide_sphere_vs_sphere(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                              const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                              const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                              const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                              const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     // optimized case for sphere vs sphere: simpler than gjk, just check distance between centers
 
     // apply accumulated scale to radii (uniform scale, using x component)
-    const float radius_a = shapes::as<SphereShape>(shape_a).radius * scalar::abs(transform_a.scale.x);
-    const float radius_b = shapes::as<SphereShape>(shape_b).radius * scalar::abs(transform_b.scale.x);
+    const float radius_a = shapes::as<SphereShape>(shape_a).radius * scalar::abs(vec3f::x(transform_a.scale));
+    const float radius_b = shapes::as<SphereShape>(shape_b).radius * scalar::abs(vec3f::x(transform_b.scale));
 
     // distance between centers
-    const Vec3f delta = vec3f::subtract(vec3f::load(transform_b.position), vec3f::load(transform_a.position));
+    const Vec3f delta = vec3f::subtract(transform_b.position, transform_a.position);
     const float dist_sq = vec3f::squared_length(delta);
     const float radius_sum = radius_a + radius_b;
 
@@ -156,8 +156,8 @@ void collide_sphere_vs_sphere(CollideShapeCollector &collector, const CollideSha
 
     // report hit; a sphere has no supporting face
     CollideShapeHit hit = collide_shape::create_hit();
-    hit.point_a = vec3f::scale_and_add(vec3f::load(transform_a.position), normal, radius_a);
-    hit.point_b = vec3f::scale_and_add(vec3f::load(transform_b.position), normal, -radius_b);
+    hit.point_a = vec3f::scale_and_add(transform_a.position, normal, radius_a);
+    hit.point_b = vec3f::scale_and_add(transform_b.position, normal, -radius_b);
     hit.penetration_axis = normal;
     hit.penetration = penetration;
     hit.sub_shape_id_a = sub_shape_id_a.value;

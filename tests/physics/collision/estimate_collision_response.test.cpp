@@ -30,12 +30,16 @@ static void make_scene(Scene &scene, const Float3 &velocity) {
     scene.world = world::create(settings);
 
     scene.ball_shape = sphere::create({.radius = RADIUS, .density = 1000.0f});
-    scene.ground_shape = box::create({.half_extents = {5, 1, 5}});
-    scene.ball = rigid_body::create(*scene.world,
-                                    {.shape = scene.ball_shape, .object_layer = object_layer, .motion_type = MotionType::DYNAMIC, .position = {0, RADIUS, 0}});
-    scene.ground = rigid_body::create(*scene.world,
-                                      {.shape = scene.ground_shape, .object_layer = object_layer, .motion_type = MotionType::STATIC, .position = {0, -1, 0}});
-    scene.ball->motion_properties.linear_velocity = velocity;
+    scene.ground_shape = box::create({.half_extents = vec3f::make(5, 1, 5)});
+    scene.ball = rigid_body::create(*scene.world, {.shape = scene.ball_shape,
+                                                   .object_layer = object_layer,
+                                                   .motion_type = MotionType::DYNAMIC,
+                                                   .position = vec3f::make(0, RADIUS, 0)});
+    scene.ground = rigid_body::create(*scene.world, {.shape = scene.ground_shape,
+                                                     .object_layer = object_layer,
+                                                     .motion_type = MotionType::STATIC,
+                                                     .position = vec3f::make(0, -1, 0)});
+    scene.ball->motion_properties.linear_velocity = vec3f::load(velocity);
     scene.mass = 4.0f / 3.0f * scalar::PI * RADIUS * RADIUS * RADIUS * 1000.0f;
 
     // one contact at the origin, the normal from the ball (a) into the ground (b)
@@ -83,19 +87,19 @@ void test_estimate_collision_response_sphere_drop(TestCtx &ctx) {
     CHECK_NEAR(ctx, vec3f::y(result.linear_velocity_1), 0.0f, 1e-5f);
 
     // slower than the restitution threshold: no bounce
-    scene.ball->motion_properties.linear_velocity = {0, -0.5f, 0};
+    scene.ball->motion_properties.linear_velocity = vec3f::make(0, -0.5f, 0);
     estimate_collision_response::estimate_collision_response(result, *scene.ball, *scene.ground, scene.manifold, materials(0.0f, 0.5f));
     CHECK_NEAR(ctx, result.contact_impulse[0], scene.mass * 0.5f, 0.01f);
     CHECK_NEAR(ctx, vec3f::y(result.linear_velocity_1), 0.0f, 1e-5f);
 
     // moving apart: no impulse at all
-    scene.ball->motion_properties.linear_velocity = {0, 2, 0};
+    scene.ball->motion_properties.linear_velocity = vec3f::make(0, 2, 0);
     estimate_collision_response::estimate_collision_response(result, *scene.ball, *scene.ground, scene.manifold, materials(0.5f, 0.5f));
     CHECK(ctx, result.contact_impulse[0] == 0.0f);
     CHECK_NEAR(ctx, vec3f::y(result.linear_velocity_1), 2.0f, 1e-6f);
 
     // the bodies themselves are untouched
-    CHECK(ctx, scene.ball->motion_properties.linear_velocity.y == 2.0f);
+    CHECK(ctx, vec3f::y(scene.ball->motion_properties.linear_velocity) == 2.0f);
     release_scene(scene);
 }
 
@@ -121,7 +125,7 @@ void test_estimate_collision_response_sliding_sphere_rolls(TestCtx &ctx) {
     CHECK(ctx, vec3f::x(result.friction_point) == 0.0f && vec3f::y(result.friction_point) == 0.0f && vec3f::z(result.friction_point) == 0.0f);
 
     // too little friction to grip: the friction impulse saturates at mu times the normal impulse
-    scene.ball->motion_properties.linear_velocity = {20, -v0, 0};
+    scene.ball->motion_properties.linear_velocity = vec3f::make(20, -v0, 0);
     estimate_collision_response::estimate_collision_response(result, *scene.ball, *scene.ground, scene.manifold, materials(0.1f, 0.0f));
     const float saturated = vec3f::length(result.friction_impulse);
     CHECK_NEAR(ctx, saturated, 0.1f * result.contact_impulse[0], 0.01f);
@@ -160,7 +164,7 @@ void test_estimate_collision_response_follows_the_contact_settings(TestCtx &ctx)
 
     // a conveyor: the ground's surface moving along -x, relative to the ball, drags the ball along with it
     ContactSettings conveyor = materials(1.0f, 0.0f);
-    conveyor.relative_linear_surface_velocity = {-2, 0, 0};
+    conveyor.relative_linear_surface_velocity = vec3f::make(-2, 0, 0);
     estimate_collision_response::estimate_collision_response(result, *scene.ball, *scene.ground, scene.manifold, conveyor);
     CHECK(ctx, vec3f::x(result.linear_velocity_1) < -0.5f);
     release_scene(scene);

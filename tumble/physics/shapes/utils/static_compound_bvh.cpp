@@ -50,7 +50,7 @@ static inline float build_data_center(const float *entry, uint32_t axis) {
 /** compute child aabb in compound local space (transformed by position and rotation) */
 static AABox compute_child_bounds(const CompoundShape::Child &child) {
     const Mat4f transform = mat4f::from_rotation_translation(quatf::load(child.quaternion), vec3f::load(child.position));
-    return aabox::transform_mat4(aabox::load(child.shape->aabb), transform);
+    return aabox::transform_mat4(child.shape->aabb, transform);
 }
 
 /** precompute child bounds (exact min and max) */

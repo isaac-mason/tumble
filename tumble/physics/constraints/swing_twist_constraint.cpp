@@ -94,27 +94,27 @@ ConstraintId create(World &world, RigidBody *body_a, RigidBody *body_b,
     constraint.base.body_index_b = body_b->index;
 
     // normalize axes
-    const Vec3f twist_axis1 = vec3f::normalize(vec3f::load(settings.twist_axis_a));
-    const Vec3f twist_axis2 = vec3f::normalize(vec3f::load(settings.twist_axis_b));
-    const Vec3f plane_axis1 = vec3f::normalize(vec3f::load(settings.plane_axis_a));
-    const Vec3f plane_axis2 = vec3f::normalize(vec3f::load(settings.plane_axis_b));
+    const Vec3f twist_axis1 = vec3f::normalize(settings.twist_axis_a);
+    const Vec3f twist_axis2 = vec3f::normalize(settings.twist_axis_b);
+    const Vec3f plane_axis1 = vec3f::normalize(settings.plane_axis_a);
+    const Vec3f plane_axis2 = vec3f::normalize(settings.plane_axis_b);
 
     constraint.constraint_to_body1 = constraint_to_body(twist_axis1, plane_axis1);
     constraint.constraint_to_body2 = constraint_to_body(twist_axis2, plane_axis2);
 
     if (settings.space == ConstraintSpace::WORLD) {
-        const Quatf inv_quat_a = quatf::conjugate(quatf::load(body_a->quaternion));
-        const Quatf inv_quat_b = quatf::conjugate(quatf::load(body_b->quaternion));
+        const Quatf inv_quat_a = quatf::conjugate(body_a->quaternion);
+        const Quatf inv_quat_b = quatf::conjugate(body_b->quaternion);
 
-        constraint.local_space_position1 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point_a), vec3f::load(body_a->center_of_mass_position)), inv_quat_a);
+        constraint.local_space_position1 = vec3f::transform_quat(vec3f::subtract(settings.point_a, body_a->center_of_mass_position), inv_quat_a);
 
-        constraint.local_space_position2 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point_b), vec3f::load(body_b->center_of_mass_position)), inv_quat_b);
+        constraint.local_space_position2 = vec3f::transform_quat(vec3f::subtract(settings.point_b, body_b->center_of_mass_position), inv_quat_b);
 
         constraint.constraint_to_body1 = quatf::multiply(inv_quat_a, constraint.constraint_to_body1);
         constraint.constraint_to_body2 = quatf::multiply(inv_quat_b, constraint.constraint_to_body2);
     } else {
-        constraint.local_space_position1 = vec3f::load(settings.point_a);
-        constraint.local_space_position2 = vec3f::load(settings.point_b);
+        constraint.local_space_position1 = settings.point_a;
+        constraint.local_space_position2 = settings.point_b;
     }
 
     constraint.normal_half_cone_angle = settings.normal_half_cone_angle;
@@ -210,8 +210,8 @@ Quatf get_rotation_in_constraint_space(const SwingTwistConstraint &constraint, c
     const RigidBody &body_b = *bodies.pool[constraint.base.body_index_b];
 
     // q = (q1 * c1)^-1 * (q2 * c2)
-    const Quatf q1 = quatf::multiply(quatf::load(body_a.quaternion), constraint.constraint_to_body1);
-    const Quatf q2 = quatf::multiply(quatf::load(body_b.quaternion), constraint.constraint_to_body2);
+    const Quatf q1 = quatf::multiply(body_a.quaternion, constraint.constraint_to_body1);
+    const Quatf q2 = quatf::multiply(body_b.quaternion, constraint.constraint_to_body2);
     return quatf::multiply(quatf::conjugate(q1), q2);
 }
 
@@ -220,15 +220,15 @@ void setup_velocity(SwingTwistConstraint &constraint, Bodies &bodies, float delt
     RigidBody &body_a = *bodies.pool[constraint.base.body_index_a];
     RigidBody &body_b = *bodies.pool[constraint.base.body_index_b];
 
-    const Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
+    const Mat4f rotation_a = mat4f::from_quat(body_a.quaternion);
+    const Mat4f rotation_b = mat4f::from_quat(body_b.quaternion);
     point_constraint_part::calculate_constraint_properties(constraint.point_constraint_part, body_a, rotation_a,
                                                            constraint.local_space_position1, body_b, rotation_b,
                                                            constraint.local_space_position2, bodies.step_stamp);
 
     // the constraint rotation, q = (q1 * c1)^-1 * (q2 * c2), keeping the sub expressions
-    const Quatf constraint_body1_to_world = quatf::multiply(quatf::load(body_a.quaternion), constraint.constraint_to_body1);
-    const Quatf constraint_body2_to_world = quatf::multiply(quatf::load(body_b.quaternion), constraint.constraint_to_body2);
+    const Quatf constraint_body1_to_world = quatf::multiply(body_a.quaternion, constraint.constraint_to_body1);
+    const Quatf constraint_body2_to_world = quatf::multiply(body_b.quaternion, constraint.constraint_to_body2);
     const Quatf q = quatf::multiply(quatf::conjugate(constraint_body1_to_world), constraint_body2_to_world);
 
     swing_twist_constraint_part::calculate_constraint_properties(constraint.swing_twist_constraint_part, body_a, body_b, q,
@@ -423,8 +423,8 @@ bool solve_position(SwingTwistConstraint &constraint, Bodies &bodies, float delt
               impulse;
 
     // position violations
-    const Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
+    const Mat4f rotation_a = mat4f::from_quat(body_a.quaternion);
+    const Mat4f rotation_b = mat4f::from_quat(body_b.quaternion);
     point_constraint_part::calculate_constraint_properties(constraint.point_constraint_part, body_a, rotation_a,
                                                            constraint.local_space_position1, body_b, rotation_b,
                                                            constraint.local_space_position2, motion_properties::STEP_STAMP_NONE);

@@ -1,5 +1,6 @@
 #include "tumble/physics/body/sleep.h"
 
+#include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/body/rigid_body.h"
@@ -8,58 +9,37 @@ TUMBLE_NAMESPACE_BEGIN
 
 namespace sleep {
 
-void get_sleep_test_points(Float3 out_points[3], const RigidBody *body) {
-    const Float3 &com = body->center_of_mass_position;
+/** column i of the rotation matrix of q, straight from the quaternion */
+static Vec3f rotation_axis(Quatf q, int i) {
+    const float qx = quatf::x(q), qy = quatf::y(q), qz = quatf::z(q), qw = quatf::w(q);
+    if (i == 0) return vec3f::make(1.0f - 2.0f * (qy * qy + qz * qz), 2.0f * (qx * qy + qw * qz), 2.0f * (qx * qz - qw * qy));
+    if (i == 1) return vec3f::make(2.0f * (qx * qy - qw * qz), 1.0f - 2.0f * (qx * qx + qz * qz), 2.0f * (qy * qz + qw * qx));
+    return vec3f::make(2.0f * (qx * qz + qw * qy), 2.0f * (qy * qz - qw * qx), 1.0f - 2.0f * (qx * qx + qy * qy));
+}
 
+void get_sleep_test_points(Vec3f out_points[3], const RigidBody *body) {
     // center of mass is the first position
+    const Vec3f com = body->center_of_mass_position;
     out_points[0] = com;
 
     // half-sizes of shape AABB
-    const Box3f &shape_aabb = body->shape->aabb;
-    const float ex = (shape_aabb.max.x - shape_aabb.min.x) * 0.5f;
-    const float ey = (shape_aabb.max.y - shape_aabb.min.y) * 0.5f;
-    const float ez = (shape_aabb.max.z - shape_aabb.min.z) * 0.5f;
+    const AABox &shape_aabb = body->shape->aabb;
+    const float extents[3] = {(vec3f::x(shape_aabb.max) - vec3f::x(shape_aabb.min)) * 0.5f, (vec3f::y(shape_aabb.max) - vec3f::y(shape_aabb.min)) * 0.5f,
+                              (vec3f::z(shape_aabb.max) - vec3f::z(shape_aabb.min)) * 0.5f};
 
-    // the two largest extents pick the two rotated axes to test; a rotation matrix column comes
-    // straight from the quaternion, so only those two are built
-    const float qx = body->quaternion.x;
-    const float qy = body->quaternion.y;
-    const float qz = body->quaternion.z;
-    const float qw = body->quaternion.w;
-    Float3 &p1 = out_points[1];
-    Float3 &p2 = out_points[2];
-    // the smallest extent's index, ties going to the later axis but z only when strictly smallest (a cube tests x and z)
+    // the two largest extents pick the two rotated axes to test, along the rotation's columns. the smallest extent's
+    // index, ties going to the later axis but z only when strictly smallest (a cube tests x and z)
+    const float ex = extents[0], ey = extents[1], ez = extents[2];
     const int lowest = ex < ey ? (ez < ex ? 2 : 0) : (ez < ey ? 2 : 1);
-    if (lowest == 0) {
-        // x is smallest: y and z axes
-        p1.x = com.x + 2.0f * (qx * qy - qw * qz) * ey;
-        p1.y = com.y + (1.0f - 2.0f * (qx * qx + qz * qz)) * ey;
-        p1.z = com.z + 2.0f * (qy * qz + qw * qx) * ey;
-        p2.x = com.x + 2.0f * (qx * qz + qw * qy) * ez;
-        p2.y = com.y + 2.0f * (qy * qz - qw * qx) * ez;
-        p2.z = com.z + (1.0f - 2.0f * (qx * qx + qy * qy)) * ez;
-    } else if (lowest == 1) {
-        // y is smallest: x and z axes
-        p1.x = com.x + (1.0f - 2.0f * (qy * qy + qz * qz)) * ex;
-        p1.y = com.y + 2.0f * (qx * qy + qw * qz) * ex;
-        p1.z = com.z + 2.0f * (qx * qz - qw * qy) * ex;
-        p2.x = com.x + 2.0f * (qx * qz + qw * qy) * ez;
-        p2.y = com.y + 2.0f * (qy * qz - qw * qx) * ez;
-        p2.z = com.z + (1.0f - 2.0f * (qx * qx + qy * qy)) * ez;
-    } else {
-        // z is smallest: x and y axes
-        p1.x = com.x + (1.0f - 2.0f * (qy * qy + qz * qz)) * ex;
-        p1.y = com.y + 2.0f * (qx * qy + qw * qz) * ex;
-        p1.z = com.z + 2.0f * (qx * qz - qw * qy) * ex;
-        p2.x = com.x + 2.0f * (qx * qy - qw * qz) * ey;
-        p2.y = com.y + (1.0f - 2.0f * (qx * qx + qz * qz)) * ey;
-        p2.z = com.z + 2.0f * (qy * qz + qw * qx) * ey;
-    }
+    const int first = lowest == 0 ? 1 : 0;
+    const int second = lowest == 2 ? 1 : 2;
+    out_points[1] = vec3f::scale_and_add(com, rotation_axis(body->quaternion, first), extents[first]);
+    out_points[2] = vec3f::scale_and_add(com, rotation_axis(body->quaternion, second), extents[second]);
 }
 
-void reset_sleep_test_spheres(MotionProperties &motion_properties, const Float3 points[3]) {
+void reset_sleep_test_spheres(MotionProperties &motion_properties, const Vec3f points[3]) {
     for (int i = 0; i < 3; i++) {
-        motion_properties.sleep_test_spheres[i].center = points[i];
+        vec3f::store(motion_properties.sleep_test_spheres[i].center, points[i]);
         motion_properties.sleep_test_spheres[i].radius = 0.0f;
     }
     motion_properties.sleep_test_timer = 0.0f;
@@ -90,14 +70,14 @@ bool update_sleep_state(RigidBody *body, float delta_time, float max_movement, f
     }
 
     // get current test points
-    Float3 points[3];
+    Vec3f points[3];
     get_sleep_test_points(points, body);
 
     // check if any sphere exceeds max movement
     for (int i = 0; i < 3; i++) {
         Spheref &sphere = mp.sleep_test_spheres[i];
 
-        encapsulate_point(sphere, vec3f::load(points[i]));
+        encapsulate_point(sphere, points[i]);
 
         // if exceeded threshold, reset and return cannot sleep
         if (sphere.radius > max_movement) {
@@ -116,7 +96,7 @@ void reset_sleep_timer(RigidBody *body) {
         return;
     }
 
-    Float3 points[3];
+    Vec3f points[3];
     get_sleep_test_points(points, body);
     reset_sleep_test_spheres(body->motion_properties, points);
 }
@@ -164,8 +144,8 @@ void sleep(Bodies &bodies, RigidBody *body) {
     if (body->active_index == INACTIVE_BODY_INDEX) return;
     remove_body_from_active_bodies(bodies, body);
 
-    body->motion_properties.linear_velocity = {0.0f, 0.0f, 0.0f};
-    body->motion_properties.angular_velocity = {0.0f, 0.0f, 0.0f};
+    body->motion_properties.linear_velocity = vec3f::zero();
+    body->motion_properties.angular_velocity = vec3f::zero();
 
     BodyActivationListener *listener = bodies.activation_listener;
     if (listener != nullptr && listener->on_body_deactivated != nullptr) listener->on_body_deactivated(*listener, body->id, body->user_data);

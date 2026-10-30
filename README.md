@@ -478,21 +478,21 @@ int main() {
     World *world = world::create(settings);
 
     // a static floor with its top at y = 0
-    Ref<Shape> floor_shape = box::create({.half_extents = {20.0f, 0.5f, 20.0f}});
+    Ref<Shape> floor_shape = box::create({.half_extents = vec3f::make(20.0f, 0.5f, 20.0f)});
     rigid_body::create(*world, {
         .shape = floor_shape,
         .object_layer = not_moving,
         .motion_type = MotionType::STATIC,
-        .position = {0.0f, -0.5f, 0.0f},
+        .position = vec3f::make(0.0f, -0.5f, 0.0f),
     });
 
     // a box and a ball, dropped onto it
-    Ref<Shape> box_shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> box_shape = box::create({.half_extents = vec3f::splat(0.5f)});
     RigidBody *box = rigid_body::create(*world, {
         .shape = box_shape,
         .object_layer = moving,
         .motion_type = MotionType::DYNAMIC,
-        .position = {0.0f, 4.0f, 0.0f},
+        .position = vec3f::make(0.0f, 4.0f, 0.0f),
     });
 
     Ref<Shape> ball_shape = sphere::create({.radius = 0.5f});
@@ -500,12 +500,12 @@ int main() {
         .shape = ball_shape,
         .object_layer = moving,
         .motion_type = MotionType::DYNAMIC,
-        .position = {0.2f, 6.0f, 0.0f},
+        .position = vec3f::make(0.2f, 6.0f, 0.0f),
     });
 
     // two seconds at 60 steps a second
     for (int i = 0; i < 120; i++) world::step(*world, 1.0f / 60.0f);
-    printf("box at y %.2f, ball at y %.2f\n", box->position.y, ball->position.y);
+    printf("box at y %.2f, ball at y %.2f\n", vec3f::y(box->position), vec3f::y(ball->position));
 
     // the world frees its bodies. your shapes are freed once nothing uses them
     world::destroy(world);
@@ -530,10 +530,13 @@ The rest of this guide leaves out the includes, `using namespace tumble;` and th
   in `tumble/physics/body/rigid_body.h`.
 - Enums are scoped, such as `MotionType::DYNAMIC` and `ShapeType::BOX`.
 - A function that changes a world takes the world first: `rigid_body::set_position(world, body, ...)`.
-- Settings structs hold storage types: `Float3`, `Float4` and plain floats. They work with designated initializers,
-  which C++20 requires in declaration order.
-- Functions take register types such as `Vec3f` and `Quatf`. Make them with functions like `vec3f::make` and
-  `quatf::set_axis_angle`, or load them from storage with `vec3f::load`.
+- Vectors, rotations and matrices are SIMD register types: `Vec3f`, `Quatf`, `Mat4f`, `AABox`, `Plane` and
+  `Transform`. Functions take them, and bodies, shapes and settings hold them, as in Jolt.
+- Make them with functions like `vec3f::make`, `vec3f::splat` and `quatf::set_axis_angle`. Read a component with
+  `vec3f::x` and the like.
+- Settings structs work with designated initializers, which C++20 requires in declaration order.
+- Packed storage types such as `Float3`, `Float4` and `Box3f` are for arrays and buffers. Convert with `vec3f::load`
+  and `vec3f::store`.
 - Units are metres, kilograms, seconds and radians.
 - Values free their memory when they go out of scope. This covers settings, filters, collectors and debug draws.
 - `world::create` makes a world and `world::destroy` frees it, with its bodies and constraints.
@@ -679,7 +682,7 @@ most games. `world::create` copies the settings, so you can free them right afte
 ```cpp
 ObjectLayers layers;
 WorldSettings settings = make_settings(layers);
-settings.gravity = {0.0f, -20.0f, 0.0f};
+settings.gravity = vec3f::make(0.0f, -20.0f, 0.0f);
 settings.solver.velocity_iterations = 8;
 settings.sleeping.time_before_sleep = 1.0f;
 World *world = world::create(settings);
@@ -835,7 +838,7 @@ RigidBody *crate = rigid_body::create(*world, {
     .shape = box_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {0.0f, 2.0f, 0.0f},
+    .position = vec3f::make(0.0f, 2.0f, 0.0f),
     .friction = 0.6f,
 });
 
@@ -860,7 +863,7 @@ RigidBody *platform = rigid_body::create(*world, {
     .shape = box_shape,
     .object_layer = moving,
     .motion_type = MotionType::KINEMATIC,
-    .position = {4.0f, 1.0f, 0.0f},
+    .position = vec3f::make(4.0f, 1.0f, 0.0f),
 });
 
 // a body can change its motion type. `wake` wakes a body that keeps moving
@@ -878,8 +881,8 @@ rigid_body::set_transform(*world, body, vec3f::make(0.0f, 0.5f, 0.0f), quatf::id
 
 // read the pose from the body's fields. position is the shape's origin, and
 // center_of_mass_position is its centre of mass
-const Float3 &position = body->position;
-printf("at %.2f %.2f %.2f\n", position.x, position.y, position.z);
+const Vec3f position = body->position;
+printf("at %.2f %.2f %.2f\n", vec3f::x(position), vec3f::y(position), vec3f::z(position));
 ```
 
 Setting a position teleports the body and skips the simulation in between. Nothing it passes through stops it. To move
@@ -938,7 +941,7 @@ RigidBody *light = rigid_body::create(*world, {
     .shape = box_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {3.0f, 0.5f, 3.0f},
+    .position = vec3f::make(3.0f, 0.5f, 3.0f),
     .mass = 10.0f,
 });
 
@@ -949,7 +952,7 @@ RigidBody *given = rigid_body::create(*world, {
     .shape = box_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {-3.0f, 0.5f, 3.0f},
+    .position = vec3f::make(-3.0f, 0.5f, 3.0f),
     .mass_properties_override = &heavy,
 });
 ```
@@ -978,7 +981,7 @@ RigidBody *puck = rigid_body::create(*world, {
     .shape = box_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {6.0f, 3.0f, 0.0f},
+    .position = vec3f::make(6.0f, 3.0f, 0.0f),
     .allowed_degrees_of_freedom = dof::TRANSLATION_X | dof::TRANSLATION_Y,
     .gravity_factor = 0.0f,
     .linear_damping = 0.0f,
@@ -1032,7 +1035,7 @@ RigidBody *lift = rigid_body::create(*world, {
     .shape = box_shape,
     .object_layer = moving,
     .motion_type = MotionType::KINEMATIC,
-    .position = {-6.0f, 0.5f, 0.0f},
+    .position = vec3f::make(-6.0f, 0.5f, 0.0f),
 });
 
 const float step_time = 1.0f / 60.0f;
@@ -1067,7 +1070,7 @@ RigidBody *pellet = rigid_body::create(*world, {
     .shape = pellet_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {10.0f, 5.0f, 0.0f},
+    .position = vec3f::make(10.0f, 5.0f, 0.0f),
     .motion_quality = MotionQuality::LINEAR_CAST,
 });
 rigid_body::set_linear_velocity(*world, pellet, vec3f::make(0.0f, -200.0f, 0.0f));
@@ -1095,7 +1098,7 @@ RigidBody *tagged = rigid_body::create(*world, {
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
     .user_data = 42,
-    .position = {0.0f, 0.5f, 6.0f},
+    .position = vec3f::make(0.0f, 0.5f, 6.0f),
 });
 tagged->user_data = 43;
 ```
@@ -1112,7 +1115,7 @@ RigidBody *player = rigid_body::create(*world, {
     .shape = box_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {-10.0f, 0.5f, 0.0f},
+    .position = vec3f::make(-10.0f, 0.5f, 0.0f),
     .collision_groups = PLAYERS,
     .collision_mask = ~PROJECTILES,
 });
@@ -1122,7 +1125,7 @@ RigidBody *shot = rigid_body::create(*world, {
     .shape = box_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {-10.0f, 3.0f, 0.0f},
+    .position = vec3f::make(-10.0f, 3.0f, 0.0f),
     .collision_groups = PROJECTILES,
     .collision_mask = ~PLAYERS,
 });
@@ -1149,7 +1152,7 @@ RigidBody *bouncy = rigid_body::create(*world, {
     .shape = box_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {12.0f, 4.0f, 0.0f},
+    .position = vec3f::make(12.0f, 4.0f, 0.0f),
     .friction = 0.9f,
     .restitution = 0.8f,
     .restitution_combine_mode = MaterialCombineMode::MAX,
@@ -1189,7 +1192,7 @@ RigidBody *trigger = rigid_body::create(*world, {
     .shape = box_shape,
     .object_layer = moving,
     .motion_type = MotionType::KINEMATIC,
-    .position = {14.0f, 0.5f, 0.0f},
+    .position = vec3f::make(14.0f, 0.5f, 0.0f),
     .sensor = true,
 });
 ```
@@ -1211,11 +1214,11 @@ RigidBody *trigger = rigid_body::create(*world, {
 ```cpp
 // a new shape updates the mass and bounds. constraints keep their anchors where they were on
 // the body
-Ref<Shape> bigger = box::create({.half_extents = {1.0f, 1.0f, 1.0f}});
+Ref<Shape> bigger = box::create({.half_extents = vec3f::splat(1.0f)});
 rigid_body::set_shape(*world, body, bigger, true);
 
 // after changing a shape in place, pass it to set_shape for each body that uses it
-shapes::as<BoxShape>(bigger).half_extents = {1.0f, 2.0f, 1.0f};
+shapes::as<BoxShape>(bigger).half_extents = vec3f::make(1.0f, 2.0f, 1.0f);
 box::update(bigger);
 rigid_body::set_shape(*world, body, bigger, true);
 ```
@@ -1270,7 +1273,7 @@ A shape's geometry is centred on its origin. The body's pose places it in the wo
 // the convex primitives, centred on their origin. a body takes its mass from their volume and
 // density
 Ref<Shape> ball = sphere::create({.radius = 0.5f});
-Ref<Shape> crate = box::create({.half_extents = {0.5f, 0.25f, 0.5f}, .density = 500.0f});
+Ref<Shape> crate = box::create({.half_extents = vec3f::make(0.5f, 0.25f, 0.5f), .density = 500.0f});
 
 // y is the long axis of a capsule and a cylinder. a capsule's radius is its convex radius
 Ref<Shape> pill = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.25f});
@@ -1283,13 +1286,13 @@ A box's or a cylinder's `convex_radius` rounds its edges a little. This makes co
 
 ```cpp
 // any point cloud. the shape builds its hull, and any number of bodies can share the shape
-const float points[] = {
-    -0.5f, 0.0f, -0.5f,
-    0.5f, 0.0f, -0.5f,
-    0.5f, 0.0f, 0.5f,
-    -0.5f, 0.0f, 0.5f,
-    0.0f, 0.8f, 0.0f,
-    0.1f, 0.2f, 0.1f,
+const Vec3f points[] = {
+    vec3f::make(-0.5f, 0.0f, -0.5f),
+    vec3f::make(0.5f, 0.0f, -0.5f),
+    vec3f::make(0.5f, 0.0f, 0.5f),
+    vec3f::make(-0.5f, 0.0f, 0.5f),
+    vec3f::make(0.0f, 0.8f, 0.0f),
+    vec3f::make(0.1f, 0.2f, 0.1f),
 };
 ConvexHullShape::BuildResult result;
 Ref<Shape> pyramid = convex_hull::create({.positions = points, .num_positions = 6}, &result);
@@ -1319,7 +1322,7 @@ Ref<Shape> heavy_pyramid = convex_hull::create({
 ```cpp
 // an infinite ground. the plane is point . normal + constant = 0, and the normal points out of
 // its front
-Ref<Shape> ground = plane::create({.plane = {{0.0f, 1.0f, 0.0f}, 0.0f}});
+Ref<Shape> ground = plane::create({.plane = plane3f::make(vec3f::axis_y(), 0.0f)});
 rigid_body::create(*world, {
     .shape = ground,
     .object_layer = not_moving,
@@ -1349,7 +1352,7 @@ rigid_body::create(*world, {
     .shape = ramp,
     .object_layer = not_moving,
     .motion_type = MotionType::STATIC,
-    .position = {20.0f, 0.0f, 0.0f},
+    .position = vec3f::make(20.0f, 0.0f, 0.0f),
 });
 ```
 
@@ -1378,26 +1381,27 @@ Use meshes for static bodies. A mesh is hollow. It has no volume, no inside and 
 
 ```cpp
 // several shapes as one body, each at its own pose. the compound holds its shapes
-const Float4 upright = {0.0f, 0.0f, 0.0f, 1.0f};
-const Float4 on_its_side = {0.0f, 0.0f, 0.70710678f, 0.70710678f};
+const Quatf upright = quatf::identity();
+const Quatf on_its_side = quatf::make(0.0f, 0.0f, 0.70710678f, 0.70710678f);
 const CompoundShapeSettings::Child dumbbell_parts[] = {
-    {.position = {-0.6f, 0.0f, 0.0f}, .quaternion = upright, .shape = ball},
-    {.position = {0.6f, 0.0f, 0.0f}, .quaternion = upright, .shape = ball},
-    {.position = {0.0f, 0.0f, 0.0f}, .quaternion = on_its_side, .shape = pill},
+    {.position = vec3f::make(-0.6f, 0.0f, 0.0f), .quaternion = upright, .shape = ball},
+    {.position = vec3f::make(0.6f, 0.0f, 0.0f), .quaternion = upright, .shape = ball},
+    {.position = vec3f::make(0.0f, 0.0f, 0.0f), .quaternion = on_its_side, .shape = pill},
 };
 Ref<Shape> dumbbell = compound::create({.children = dumbbell_parts, .num_children = 3});
 
 // a static compound is built once into a bvh. use it for many children that never change
 CompoundShapeSettings::Child fence_posts[16];
 for (uint32_t i = 0; i < 16; i++) {
-    fence_posts[i] = {.position = {(float)i, 0.4f, 0.0f}, .quaternion = upright, .shape = can};
+    fence_posts[i] = {.position = vec3f::make((float)i, 0.4f, 0.0f), .quaternion = upright,
+                      .shape = can};
 }
 Ref<Shape> fence = static_compound::create({.children = fence_posts, .num_children = 16});
 rigid_body::create(*world, {
     .shape = fence,
     .object_layer = not_moving,
     .motion_type = MotionType::STATIC,
-    .position = {-20.0f, 0.0f, 0.0f},
+    .position = vec3f::make(-20.0f, 0.0f, 0.0f),
 });
 ```
 
@@ -1420,15 +1424,15 @@ rigid_body::create(*world, {
 // move its centre of mass
 Ref<Shape> raised = transformed::create({
     .shape = crate,
-    .position = {0.0f, 1.0f, 0.0f},
-    .quaternion = {0.0f, 0.0f, 0.0f, 1.0f},
+    .position = vec3f::make(0.0f, 1.0f, 0.0f),
+    .quaternion = quatf::identity(),
 });
-Ref<Shape> big_ball = scaled::create({.shape = ball, .scale = {2.0f, 2.0f, 2.0f}});
+Ref<Shape> big_ball = scaled::create({.shape = ball, .scale = vec3f::splat(2.0f)});
 
 // a low centre of mass keeps a tall box upright
 Ref<Shape> ballasted = offset_center_of_mass::create({
     .shape = crate,
-    .offset = {0.0f, -0.2f, 0.0f},
+    .offset = vec3f::make(0.0f, -0.2f, 0.0f),
 });
 ```
 
@@ -1466,7 +1470,7 @@ RigidBody *ball = rigid_body::create(*world, {
     .shape = ball_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {0.0f, 2.0f, 0.0f},
+    .position = vec3f::make(0.0f, 2.0f, 0.0f),
     .restitution = 0.6f,
     .observes_contacts = true,
 });
@@ -1494,8 +1498,9 @@ void print_pairs(const World &world) {
         const uint32_t a = body_id::index(pair.a.body_id);
         const uint32_t b = body_id::index(pair.b.body_id);
         printf("%s: body %u touches body %u\n", pair.added ? "added" : "persisted", a, b);
-        printf("  at %.2f %.2f %.2f\n", pair.point.x, pair.point.y, pair.point.z);
-        printf("  %.2f m/s apart\n", pair.relative_velocity.y);
+        const Vec3f point = pair.point;
+        printf("  at %.2f %.2f %.2f\n", vec3f::x(point), vec3f::y(point), vec3f::z(point));
+        printf("  %.2f m/s apart\n", vec3f::y(pair.relative_velocity));
     }
     for (uint32_t i = 0; i < pairs.removed.length; i++) {
         const ContactPair &pair = pairs.pairs[pairs.removed[i]];
@@ -1600,11 +1605,7 @@ query::collide_point(*world, inside, collide_point::default_settings(), point, f
 Ref<Shape> blast = sphere::create({.radius = 2.0f});
 Filter filter = filter::create(world->settings.layers);
 CollideShapeCollector overlaps = collide_shape::create_collector(CollectorKind::ALL);
-const Transformf at = {
-    .position = {1.0f, 1.0f, 0.0f},
-    .quaternion = {0.0f, 0.0f, 0.0f, 1.0f},
-    .scale = {1.0f, 1.0f, 1.0f},
-};
+const Transform at = transform::make(vec3f::make(1.0f, 1.0f, 0.0f), quatf::identity());
 query::collide_shape(*world, overlaps, collide_shape::default_settings(), blast, at, filter);
 
 for (uint32_t i = 0; i < overlaps.hits.length; i++) {
@@ -1633,11 +1634,8 @@ for (uint32_t i = 0; i < overlaps.hits.length; i++) {
 Filter only_moving = filter::create(world->settings.layers);
 filter::disable_object_layer(only_moving, world->settings.layers, not_moving);
 CastShapeCollector sweep = cast_shape::create_collector(CollectorKind::CLOSEST);
-const Transformf start = {
-    .position = {-10.0f, 0.5f, 0.0f},
-    .quaternion = {0.0f, 0.0f, 0.0f, 1.0f},
-    .scale = {0.25f, 0.25f, 0.25f},
-};
+const Transform start =
+    transform::make(vec3f::make(-10.0f, 0.5f, 0.0f), quatf::identity(), vec3f::splat(0.25f));
 const Vec3f path = vec3f::make(20.0f, 0.0f, 0.0f);
 query::cast_shape(*world, sweep, cast_shape::default_settings(), blast, start, path, only_moving);
 
@@ -1757,21 +1755,21 @@ RigidBody *frame = rigid_body::create(*world, {
     .shape = nothing,
     .object_layer = not_moving,
     .motion_type = MotionType::STATIC,
-    .position = {0.0f, 1.0f, 0.0f},
+    .position = vec3f::make(0.0f, 1.0f, 0.0f),
 });
 RigidBody *door = rigid_body::create(*world, {
     .shape = door_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {0.5f, 1.0f, 0.0f},
+    .position = vec3f::make(0.5f, 1.0f, 0.0f),
 });
 const ConstraintId hinge_id = hinge_constraint::create(*world, frame, door, {
-    .point_a = {0.0f, 1.0f, 0.0f},
-    .point_b = {0.0f, 1.0f, 0.0f},
-    .hinge_axis_a = {0.0f, 1.0f, 0.0f},
-    .hinge_axis_b = {0.0f, 1.0f, 0.0f},
-    .normal_axis_a = {1.0f, 0.0f, 0.0f},
-    .normal_axis_b = {1.0f, 0.0f, 0.0f},
+    .point_a = vec3f::make(0.0f, 1.0f, 0.0f),
+    .point_b = vec3f::make(0.0f, 1.0f, 0.0f),
+    .hinge_axis_a = vec3f::make(0.0f, 1.0f, 0.0f),
+    .hinge_axis_b = vec3f::make(0.0f, 1.0f, 0.0f),
+    .normal_axis_a = vec3f::make(1.0f, 0.0f, 0.0f),
+    .normal_axis_b = vec3f::make(1.0f, 0.0f, 0.0f),
     .limits_min = 0.0f,
     .limits_max = 0.5f * scalar::PI,
     .motor_settings = {.min_torque_limit = -100.0f, .max_torque_limit = 100.0f},
@@ -1798,17 +1796,17 @@ RigidBody *anchor = rigid_body::create(*world, {
     .shape = nothing,
     .object_layer = not_moving,
     .motion_type = MotionType::STATIC,
-    .position = {10.0f, 5.0f, 0.0f},
+    .position = vec3f::make(10.0f, 5.0f, 0.0f),
 });
 RigidBody *bob = rigid_body::create(*world, {
     .shape = ball_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {12.0f, 5.0f, 0.0f},
+    .position = vec3f::make(12.0f, 5.0f, 0.0f),
 });
 point_constraint::create(*world, anchor, bob, {
-    .point_a = {10.0f, 5.0f, 0.0f},
-    .point_b = {10.0f, 5.0f, 0.0f},
+    .point_a = vec3f::make(10.0f, 5.0f, 0.0f),
+    .point_b = vec3f::make(10.0f, 5.0f, 0.0f),
 });
 ```
 
@@ -1820,11 +1818,11 @@ RigidBody *jumper = rigid_body::create(*world, {
     .shape = ball_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {14.0f, 5.0f, 0.0f},
+    .position = vec3f::make(14.0f, 5.0f, 0.0f),
 });
 distance_constraint::create(*world, anchor, jumper, {
-    .point_a = {10.0f, 5.0f, 0.0f},
-    .point_b = {14.0f, 5.0f, 0.0f},
+    .point_a = vec3f::make(10.0f, 5.0f, 0.0f),
+    .point_b = vec3f::make(14.0f, 5.0f, 0.0f),
     .min_distance = 0.0f,
     .max_distance = 3.0f,
     .spring_settings = {
@@ -1845,19 +1843,19 @@ RigidBody *rail = rigid_body::create(*world, {
     .shape = nothing,
     .object_layer = not_moving,
     .motion_type = MotionType::STATIC,
-    .position = {20.0f, 0.0f, 0.0f},
+    .position = vec3f::make(20.0f, 0.0f, 0.0f),
 });
 RigidBody *platform = rigid_body::create(*world, {
     .shape = block_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {20.0f, 0.0f, 0.0f},
+    .position = vec3f::make(20.0f, 0.0f, 0.0f),
 });
 const ConstraintId lift_id = slider_constraint::create(*world, rail, platform, {
-    .slider_axis_a = {0.0f, 1.0f, 0.0f},
-    .slider_axis_b = {0.0f, 1.0f, 0.0f},
-    .normal_axis_a = {1.0f, 0.0f, 0.0f},
-    .normal_axis_b = {1.0f, 0.0f, 0.0f},
+    .slider_axis_a = vec3f::make(0.0f, 1.0f, 0.0f),
+    .slider_axis_b = vec3f::make(0.0f, 1.0f, 0.0f),
+    .normal_axis_a = vec3f::make(1.0f, 0.0f, 0.0f),
+    .normal_axis_b = vec3f::make(1.0f, 0.0f, 0.0f),
     .auto_detect_point = true,
     .limits_min = 0.0f,
     .limits_max = 5.0f,
@@ -1877,13 +1875,13 @@ RigidBody *left = rigid_body::create(*world, {
     .shape = block_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {30.0f, 3.0f, 0.0f},
+    .position = vec3f::make(30.0f, 3.0f, 0.0f),
 });
 RigidBody *right = rigid_body::create(*world, {
     .shape = block_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {31.0f, 3.0f, 0.0f},
+    .position = vec3f::make(31.0f, 3.0f, 0.0f),
 });
 fixed_constraint::create(*world, left, right, {.auto_detect_point = true});
 ```
@@ -1897,21 +1895,21 @@ RigidBody *torso = rigid_body::create(*world, {
     .shape = nothing,
     .object_layer = not_moving,
     .motion_type = MotionType::STATIC,
-    .position = {40.0f, 3.0f, 0.0f},
+    .position = vec3f::make(40.0f, 3.0f, 0.0f),
 });
 RigidBody *arm = rigid_body::create(*world, {
     .shape = ball_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {40.5f, 3.0f, 0.0f},
+    .position = vec3f::make(40.5f, 3.0f, 0.0f),
 });
 swing_twist_constraint::create(*world, torso, arm, {
-    .point_a = {40.0f, 3.0f, 0.0f},
-    .point_b = {40.0f, 3.0f, 0.0f},
-    .twist_axis_a = {1.0f, 0.0f, 0.0f},
-    .plane_axis_a = {0.0f, 0.0f, 1.0f},
-    .twist_axis_b = {1.0f, 0.0f, 0.0f},
-    .plane_axis_b = {0.0f, 0.0f, 1.0f},
+    .point_a = vec3f::make(40.0f, 3.0f, 0.0f),
+    .point_b = vec3f::make(40.0f, 3.0f, 0.0f),
+    .twist_axis_a = vec3f::make(1.0f, 0.0f, 0.0f),
+    .plane_axis_a = vec3f::make(0.0f, 0.0f, 1.0f),
+    .twist_axis_b = vec3f::make(1.0f, 0.0f, 0.0f),
+    .plane_axis_b = vec3f::make(0.0f, 0.0f, 1.0f),
     .normal_half_cone_angle = 0.25f * scalar::PI,
     .plane_half_cone_angle = 0.25f * scalar::PI,
     .twist_min_angle = -scalar::PI / 6.0f,
@@ -1933,10 +1931,10 @@ swing_twist_constraint::create(*world, torso, arm, {
 
 ```cpp
 cone_constraint::create(*world, cone_anchor, cone_arm, {
-    .point_a = {40.0f, 6.0f, 0.0f},
-    .twist_axis_a = {1.0f, 0.0f, 0.0f},
-    .point_b = {40.0f, 6.0f, 0.0f},
-    .twist_axis_b = {1.0f, 0.0f, 0.0f},
+    .point_a = vec3f::make(40.0f, 6.0f, 0.0f),
+    .twist_axis_a = vec3f::make(1.0f, 0.0f, 0.0f),
+    .point_b = vec3f::make(40.0f, 6.0f, 0.0f),
+    .twist_axis_b = vec3f::make(1.0f, 0.0f, 0.0f),
     .half_cone_angle = 0.25f * scalar::PI,
 });
 ```
@@ -1950,18 +1948,18 @@ RigidBody *base = rigid_body::create(*world, {
     .shape = nothing,
     .object_layer = not_moving,
     .motion_type = MotionType::STATIC,
-    .position = {50.0f, 3.0f, 0.0f},
+    .position = vec3f::make(50.0f, 3.0f, 0.0f),
 });
 RigidBody *cart = rigid_body::create(*world, {
     .shape = block_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {50.0f, 3.0f, 0.0f},
+    .position = vec3f::make(50.0f, 3.0f, 0.0f),
 });
 
 SixDOFConstraintSettings rails;
-rails.point_a = {50.0f, 3.0f, 0.0f};
-rails.point_b = {50.0f, 3.0f, 0.0f};
+rails.point_a = vec3f::make(50.0f, 3.0f, 0.0f);
+rails.point_b = vec3f::make(50.0f, 3.0f, 0.0f);
 for (uint32_t axis = 0; axis < SixDOFConstraint::Axis::NUM; axis++) {
     rails.limit_min[axis] = 0.0f;
     rails.limit_max[axis] = 0.0f;
@@ -2020,7 +2018,7 @@ character, so other bodies, queries and contact pairs can see it.
 Ref<Shape> standing_capsule = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
 Ref<Shape> standing = transformed::create({
     .shape = standing_capsule,
-    .position = {0.0f, 0.8f, 0.0f},
+    .position = vec3f::make(0.0f, 0.8f, 0.0f),
 });
 
 // the inner body represents the character in the world. rigid bodies and queries see it, and
@@ -2105,7 +2103,7 @@ printf("%s\n", on_ground ? "on the ground" : "not on the ground");
 Ref<Shape> crouching_capsule = capsule::create({.half_height_of_cylinder = 0.2f, .radius = 0.3f});
 Ref<Shape> crouching = transformed::create({
     .shape = crouching_capsule,
-    .position = {0.0f, 0.5f, 0.0f},
+    .position = vec3f::make(0.0f, 0.5f, 0.0f),
 });
 
 const bool crouched = kcc::set_shape(*world, *character, crouching, filter, &listener, 0.01f);
@@ -2171,12 +2169,12 @@ The JS package's characters use policies only. A listener's callbacks would have
 // can edit the contacts between collide and solve. here the character jumps up through a
 // one-way platform. from below, the loop discards the platform's contacts and the sweep's hit
 // on it
-Ref<Shape> platform_shape = box::create({.half_extents = {1.5f, 0.1f, 1.5f}});
+Ref<Shape> platform_shape = box::create({.half_extents = vec3f::make(1.5f, 0.1f, 1.5f)});
 RigidBody *platform = rigid_body::create(*world, {
     .shape = platform_shape,
     .object_layer = not_moving,
     .motion_type = MotionType::STATIC,
-    .position = {vec3f::x(character->position), 1.8f, 0.0f},
+    .position = vec3f::make(vec3f::x(character->position), 1.8f, 0.0f),
 });
 const auto from_below = [&](const KCC::Contact &contact) {
     return contact.body_id == platform->id && vec3f::y(contact.contact_normal) < 0.5f;
@@ -2287,7 +2285,7 @@ constexpr ShapeType SHAPE_ELLIPSOID = ShapeType::USER_1;
 
 struct EllipsoidShape : Shape {
     static constexpr ShapeType TYPE = SHAPE_ELLIPSOID;
-    Float3 radii;
+    Vec3f radii;
     float density;
 };
 ```
@@ -2301,7 +2299,7 @@ Vec3f ellipsoid_support(Support &support, Vec3f direction) {
     const Vec3f local = support::to_local_direction(support, direction);
     const EllipsoidShape &ellipsoid = *static_cast<const EllipsoidShape *>(support.user.data);
     const Vec3f scale = vec3f::abs(support.user.scale);
-    const Vec3f radii = vec3f::multiply(vec3f::load(ellipsoid.radii), scale);
+    const Vec3f radii = vec3f::multiply(ellipsoid.radii, scale);
 
     const Vec3f stretched = vec3f::multiply(radii, local);
     const float length = vec3f::length(stretched);
@@ -2326,22 +2324,20 @@ void ellipsoid_set_support(Support &out, const Shape *shape, SupportFunctionMode
 ```cpp
 void ellipsoid_mass_properties(MassProperties &out, const Shape *shape) {
     const EllipsoidShape &ellipsoid = shapes::as<EllipsoidShape>(shape);
-    const float a = ellipsoid.radii.x;
-    const float b = ellipsoid.radii.y;
-    const float c = ellipsoid.radii.z;
+    const float a = vec3f::x(ellipsoid.radii);
+    const float b = vec3f::y(ellipsoid.radii);
+    const float c = vec3f::z(ellipsoid.radii);
     out.mass = 4.0f / 3.0f * scalar::PI * a * b * c * ellipsoid.density;
     const float k = out.mass / 5.0f;
-    out.inertia = {{
-        k * (b * b + c * c), 0.0f, 0.0f, 0.0f,
-        0.0f, k * (a * a + c * c), 0.0f, 0.0f,
-        0.0f, 0.0f, k * (a * a + b * b), 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f,
-    }};
+    out.inertia = mat4f::from_scaling(vec3f::make(
+        k * (b * b + c * c),
+        k * (a * a + c * c),
+        k * (a * a + b * b)));
 }
 
 // the gradient of x^2/a^2 + y^2/b^2 + z^2/c^2 at the point
 void ellipsoid_surface_normal(SurfaceNormalResult &io, const Shape *shape, SubShapeId) {
-    const Vec3f radii = vec3f::load(shapes::as<EllipsoidShape>(shape).radii);
+    const Vec3f radii = shapes::as<EllipsoidShape>(shape).radii;
     const Vec3f gradient = vec3f::divide(io.position, vec3f::multiply(radii, radii));
     const bool at_centre = vec3f::squared_length(gradient) <= 0.0f;
     io.normal = at_centre ? vec3f::axis_y() : vec3f::normalize(gradient);
@@ -2355,22 +2351,22 @@ void ellipsoid_supporting_face(SupportingFaceResult &io, Vec3f, const Shape *, S
 int32_t ellipsoid_material(const Shape *shape, SubShapeId) { return shape->material_id; }
 
 float ellipsoid_inner_radius(const Shape *shape) {
-    const Float3 &r = shapes::as<EllipsoidShape>(shape).radii;
-    return scalar::min(r.x, scalar::min(r.y, r.z));
+    const Vec3f r = shapes::as<EllipsoidShape>(shape).radii;
+    return scalar::min(vec3f::x(r), scalar::min(vec3f::y(r), vec3f::z(r)));
 }
 
 void ellipsoid_collide_point(
         CollidePointCollector &collector, const CollidePointSettings &, Vec3f point,
-        const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
+        const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform) {
     // move the point into the shape's space. it is inside when the scaled coordinates fall within
     // the unit sphere
-    const Vec3f offset = vec3f::subtract(point, vec3f::load(transform.position));
-    const Quatf inverse_rotation = quatf::conjugate(quatf::load(transform.quaternion));
+    const Vec3f offset = vec3f::subtract(point, transform.position);
+    const Quatf inverse_rotation = quatf::conjugate(transform.quaternion);
     const Vec3f local = vec3f::transform_quat(offset, inverse_rotation);
 
     const EllipsoidShape &ellipsoid = shapes::as<EllipsoidShape>(shape);
-    const Vec3f scale = vec3f::abs(vec3f::load(transform.scale));
-    const Vec3f radii = vec3f::multiply(vec3f::load(ellipsoid.radii), scale);
+    const Vec3f scale = vec3f::abs(transform.scale);
+    const Vec3f radii = vec3f::multiply(ellipsoid.radii, scale);
     if (vec3f::squared_length(vec3f::divide(local, radii)) > 1.0f) return;
 
     CollidePointHit hit = collide_point::create_hit();
@@ -2380,12 +2376,11 @@ void ellipsoid_collide_point(
 }
 
 // three rings, one in each axis plane
-void ellipsoid_draw(DebugDraw &out, const Shape *shape, const Transformf &transform, Vec3f color) {
+void ellipsoid_draw(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
     const EllipsoidShape &ellipsoid = shapes::as<EllipsoidShape>(shape);
-    const Vec3f scale = vec3f::load(transform.scale);
-    const Vec3f radii = vec3f::multiply(vec3f::load(ellipsoid.radii), scale);
-    const Quatf rotation = quatf::load(transform.quaternion);
-    const Vec3f centre = vec3f::load(transform.position);
+    const Vec3f radii = vec3f::multiply(ellipsoid.radii, transform.scale);
+    const Quatf rotation = transform.quaternion;
+    const Vec3f centre = transform.position;
 
     for (int plane = 0; plane < 3; plane++) {
         Vec3f previous = vec3f::zero();
@@ -2431,14 +2426,14 @@ ShapeDef ellipsoid_def() {
 }
 
 /** a shape of the type: its own fields, and the bounds, centre of mass and volume of every shape */
-Shape *create_ellipsoid(Float3 radii, float density) {
+Shape *create_ellipsoid(Vec3f radii, float density) {
     EllipsoidShape *shape = shapes::allocate<EllipsoidShape>();
     if (shape == nullptr) return nullptr;
     shape->radii = radii;
     shape->density = density;
-    shape->aabb = {{-radii.x, -radii.y, -radii.z}, {radii.x, radii.y, radii.z}};
-    shape->center_of_mass = {0.0f, 0.0f, 0.0f};
-    shape->volume = 4.0f / 3.0f * scalar::PI * radii.x * radii.y * radii.z;
+    shape->aabb = aabox::make(vec3f::negate(radii), radii);
+    shape->center_of_mass = vec3f::zero();
+    shape->volume = 4.0f / 3.0f * scalar::PI * vec3f::x(radii) * vec3f::y(radii) * vec3f::z(radii);
     shape->material_id = -1;
     return shape;
 }
@@ -2454,16 +2449,16 @@ dispatch::init(&def, 1);
 
 ```cpp
 // an egg, 0.3 m wide and 0.5 m tall, dropped on its side. it rolls to rest on its long axis
-Ref<Shape> egg_shape = create_ellipsoid({0.3f, 0.5f, 0.3f}, 1000.0f);
+Ref<Shape> egg_shape = create_ellipsoid(vec3f::make(0.3f, 0.5f, 0.3f), 1000.0f);
 RigidBody *body = rigid_body::create(*world, {
     .shape = egg_shape,
     .object_layer = moving,
     .motion_type = MotionType::DYNAMIC,
-    .position = {0.0f, 2.0f, 0.0f},
-    .quaternion = {0.0f, 0.0f, 0.38268343f, 0.92387953f},
+    .position = vec3f::make(0.0f, 2.0f, 0.0f),
+    .quaternion = quatf::make(0.0f, 0.0f, 0.38268343f, 0.92387953f),
 });
 for (int i = 0; i < 300; i++) world::step(*world, 1.0f / 60.0f);
-printf("the egg rests at y %.2f\n", body->position.y);
+printf("the egg rests at y %.2f\n", vec3f::y(body->position));
 ```
 
 The voxel sample is a custom shape over a grid of cells:
@@ -2511,7 +2506,7 @@ debug::joints(buffers, *world, {});
 
 // a shape at any pose, such as a preview of where something would go
 const Vec3f preview_position = vec3f::make(3.0f, 0.5f, 0.0f);
-const Float3 green = {0.0f, 1.0f, 0.0f};
+const Vec3f green = vec3f::make(0.0f, 1.0f, 0.0f);
 debug::shape(buffers, ball_shape, preview_position, quatf::identity(), {.color = green});
 draw_lines(buffers);
 printf("%u lines\n", buffers.line_count);

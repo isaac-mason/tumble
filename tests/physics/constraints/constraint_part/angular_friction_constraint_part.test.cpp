@@ -10,7 +10,7 @@
 static Mat4f inverse_inertia(const Float3 &inv_inertia_diagonal, Quatf rotation) {
     MotionProperties motion_properties = motion_properties::create();
     motion_properties.inv_mass = 1.0f;
-    motion_properties.inv_inertia_diagonal = inv_inertia_diagonal;
+    motion_properties.inv_inertia_diagonal = vec3f::load(inv_inertia_diagonal);
     return motion_properties::get_world_inverse_inertia(motion_properties, rotation, motion_properties::STEP_STAMP_NONE);
 }
 

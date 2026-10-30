@@ -26,9 +26,9 @@ static Shape *shared_empty_shape(Bodies &bodies) {
 static void make_rigid_body(RigidBody *body) {
     body->id = body_id::INVALID_BODY_ID;
     body->user_data = 0;
-    body->position = {0.0f, 0.0f, 0.0f};
-    body->quaternion = {0.0f, 0.0f, 0.0f, 1.0f};
-    body->center_of_mass_position = {0.0f, 0.0f, 0.0f};
+    body->position = vec3f::zero();
+    body->quaternion = quatf::identity();
+    body->center_of_mass_position = vec3f::zero();
     body->mass_properties = mass_properties::create();
     body->mass_properties_override = RigidBody::MassPropertiesOverride::CALCULATE_MASS_AND_INERTIA;
     body->motion_properties = motion_properties::create();
@@ -45,7 +45,7 @@ static void make_rigid_body(RigidBody *body) {
     body->collide_kinematic_vs_non_dynamic = false;
     body->observes_contacts = false;
     body->shape = nullptr;
-    aabox::store(body->aabb, aabox::empty());
+    body->aabb = aabox::empty();
     body->object_layer = 0;
     body->broadphase_layer = -1;
     body->broadphase_node = -1;
@@ -62,7 +62,7 @@ static void set_rigid_body(RigidBody *body, Bodies &bodies, const RigidBodySetti
 
     body->position = o.position;
     body->quaternion = o.quaternion;
-    body->center_of_mass_position = {0.0f, 0.0f, 0.0f};
+    body->center_of_mass_position = vec3f::zero();
 
     // handle mass properties with three-tier precedence:
     // 1. mass_properties_override (full control)
@@ -86,16 +86,16 @@ static void set_rigid_body(RigidBody *body, Bodies &bodies, const RigidBodySetti
     MotionProperties &mp = body->motion_properties;
 
     // reset velocities and accumulators (important for pooled bodies)
-    mp.linear_velocity = {0.0f, 0.0f, 0.0f};
-    mp.angular_velocity = {0.0f, 0.0f, 0.0f};
+    mp.linear_velocity = vec3f::zero();
+    mp.angular_velocity = vec3f::zero();
     mp.force = {0.0f, 0.0f, 0.0f};
     mp.torque = {0.0f, 0.0f, 0.0f};
 
     // reset mass state and memos a previous body in this slot may have left behind.
     // update_shape only sets mass for non-static bodies, so statics rely on this
     mp.inv_mass = 0.0f;
-    mp.inv_inertia_diagonal = {0.0f, 0.0f, 0.0f};
-    mp.inertia_rotation = {0.0f, 0.0f, 0.0f, 1.0f};
+    mp.inv_inertia_diagonal = vec3f::zero();
+    mp.inertia_rotation = quatf::identity();
     mp.sleep_test_timer = 0.0f;
     mp.world_inverse_inertia_stamp = motion_properties::STEP_STAMP_NONE;
 
@@ -133,7 +133,7 @@ static void set_rigid_body(RigidBody *body, Bodies &bodies, const RigidBodySetti
     // a body with no shape holds the pool's shared empty shape, as a removed body does (nothing per body to free)
     body->shape = o.shape != nullptr ? o.shape : shared_empty_shape(bodies);
 
-    aabox::store(body->aabb, aabox::empty());
+    body->aabb = aabox::empty();
 
     body->object_layer = o.object_layer;
     body->broadphase_layer = -1;
@@ -212,43 +212,40 @@ bool remove(World &world, RigidBody *body) {
     body->shape = shared_empty_shape(bodies);
 
     bodies::remove_slot(bodies, body->id);
+    body->id = body_id::INVALID_BODY_ID;
     return true;
 }
 
 RigidBody *get(const World &world, BodyId body_id) { return bodies::get(world.bodies, body_id); }
 
-Float4x4 &get_inverse_inertia(Float4x4 &out, RigidBody *body) {
-    if (body->motion_type != MotionType::DYNAMIC) {
-        return mat4f::store(out, mat4f::zero());
-    }
-    return mat4f::store(out, motion_properties::get_world_inverse_inertia(body->motion_properties, quatf::load(body->quaternion),
-                                                                          motion_properties::STEP_STAMP_NONE));
+Mat4f get_inverse_inertia(RigidBody *body) {
+    if (body->motion_type != MotionType::DYNAMIC) return mat4f::zero();
+    return motion_properties::get_world_inverse_inertia(body->motion_properties, body->quaternion, motion_properties::STEP_STAMP_NONE);
 }
 
 void update_center_of_mass_position(RigidBody *body) {
     // the shape-local center of mass, rotated to world space and translated to the body's position
-    const Vec3f rotated = vec3f::transform_quat(vec3f::load(body->shape->center_of_mass), quatf::load(body->quaternion));
-    vec3f::store(body->center_of_mass_position, vec3f::add(rotated, vec3f::load(body->position)));
+    const Vec3f rotated = vec3f::transform_quat(body->shape->center_of_mass, body->quaternion);
+    body->center_of_mass_position = vec3f::add(rotated, body->position);
 }
 
 void update_aabb(RigidBody *body) {
-    const AABox shape_aabb = aabox::load(body->shape->aabb);
-    Box3f &out = body->aabb;
+    const AABox shape_aabb = body->shape->aabb;
 
     // empty input -> empty output (preserve the sentinel rather than producing a bogus transformed
     // box from negative extents)
     if (aabox::is_empty(shape_aabb)) {
-        aabox::store(out, aabox::empty());
+        body->aabb = aabox::empty();
         return;
     }
 
     // centre and half-extents through the body's rotation and translation: the transformed extent of an axis is the sum
     // of the absolute contributions of each source axis
-    const Mat4f transform = mat4f::from_rotation_translation(quatf::load(body->quaternion), vec3f::load(body->position));
+    const Mat4f transform = mat4f::from_rotation_translation(body->quaternion, body->position);
     const Mat4f absolute_rotation = {{v4f::abs(transform.c[0]), v4f::abs(transform.c[1]), v4f::abs(transform.c[2]), transform.c[3]}};
     const Vec3f center = mat4f::multiply_vec3(transform, aabox::center(shape_aabb));
     const Vec3f extents = mat4f::multiply3x3_vec(absolute_rotation, aabox::extents(shape_aabb));
-    aabox::store(out, aabox::make(vec3f::subtract(center, extents), vec3f::add(center, extents)));
+    body->aabb = aabox::make(vec3f::subtract(center, extents), vec3f::add(center, extents));
 }
 
 static void update_body_shape(RigidBody *body) {
@@ -289,18 +286,18 @@ static void update_body_shape(RigidBody *body) {
 
 void set_shape(World &world, RigidBody *body, Shape *shape, bool wake) {
     // from the body, not the shape, which after a change in place already has its new centre of mass
-    const Vec3f previous_center_of_mass = vec3f::load(body->shape_center_of_mass);
+    const Vec3f previous_center_of_mass = body->shape_center_of_mass;
     body->shape = shape;
     update_body_shape(body);
     // the pair cache would rebuild last step's contacts, made with the old shape
     pairs::invalidate_body_cache(world.pairs, *body);
-    constraints::notify_shape_changed(world.constraints, *body, vec3f::subtract(vec3f::load(body->shape->center_of_mass), previous_center_of_mass));
+    constraints::notify_shape_changed(world.constraints, *body, vec3f::subtract(body->shape->center_of_mass, previous_center_of_mass));
     notify_bounds_changed(world, body);
     if (wake) sleep::wake(world.bodies, body);
 }
 
 void set_position(World &world, RigidBody *body, Vec3f position, bool wake) {
-    vec3f::store(body->position, position);
+    body->position = position;
     update_center_of_mass_position(body);
     update_aabb(body);
     notify_bounds_changed(world, body);
@@ -308,7 +305,7 @@ void set_position(World &world, RigidBody *body, Vec3f position, bool wake) {
 }
 
 void set_quaternion(World &world, RigidBody *body, Quatf quaternion, bool wake) {
-    quatf::store(body->quaternion, quaternion);
+    body->quaternion = quaternion;
     body->motion_properties.world_inverse_inertia_stamp = motion_properties::STEP_STAMP_NONE;
     update_center_of_mass_position(body);
     update_aabb(body);
@@ -317,8 +314,8 @@ void set_quaternion(World &world, RigidBody *body, Quatf quaternion, bool wake) 
 }
 
 void set_transform(World &world, RigidBody *body, Vec3f position, Quatf quaternion, bool wake) {
-    vec3f::store(body->position, position);
-    quatf::store(body->quaternion, quaternion);
+    body->position = position;
+    body->quaternion = quaternion;
     body->motion_properties.world_inverse_inertia_stamp = motion_properties::STEP_STAMP_NONE;
     update_center_of_mass_position(body);
     update_aabb(body);
@@ -373,7 +370,7 @@ void add_torque(World &world, RigidBody *body, Vec3f torque, bool wake) {
 void add_force_at_position(World &world, RigidBody *body, Vec3f force, Vec3f world_position, bool wake) {
     if (body->motion_type != MotionType::DYNAMIC) return;
     motion_properties::add_force_at_position(body->motion_properties, force, world_position,
-                                             vec3f::load(body->center_of_mass_position));
+                                             body->center_of_mass_position);
     if (wake) sleep::wake(world.bodies, body);
 }
 
@@ -387,13 +384,13 @@ void add_impulse(World &world, RigidBody *body, Vec3f impulse) {
 void add_impulse_at_position(World &world, RigidBody *body, Vec3f impulse, Vec3f world_position) {
     if (body->motion_type != MotionType::DYNAMIC) return;
     motion_properties::add_impulse_at_position(body->motion_properties, impulse, world_position,
-                                               vec3f::load(body->center_of_mass_position), quatf::load(body->quaternion));
+                                               body->center_of_mass_position, body->quaternion);
     sleep::wake(world.bodies, body);
 }
 
 void add_angular_impulse(World &world, RigidBody *body, Vec3f impulse) {
     if (body->motion_type != MotionType::DYNAMIC) return;
-    motion_properties::add_angular_impulse(body->motion_properties, impulse, quatf::load(body->quaternion));
+    motion_properties::add_angular_impulse(body->motion_properties, impulse, body->quaternion);
     sleep::wake(world.bodies, body);
 }
 
@@ -429,13 +426,13 @@ void clear_forces(RigidBody *body) {
 void move_kinematic(World &world, RigidBody *body, Vec3f target_position, Quatf target_quaternion, float delta_time) {
     // calculate center of mass at target situation
     const Quatf target_rotation = target_quaternion;
-    const Vec3f new_com = vec3f::add(target_position, vec3f::transform_quat(vec3f::load(body->shape->center_of_mass), target_rotation));
+    const Vec3f new_com = vec3f::add(target_position, vec3f::transform_quat(body->shape->center_of_mass, target_rotation));
 
     // calculate delta position (from current com to new com)
-    const Vec3f delta_position = vec3f::subtract(new_com, vec3f::load(body->center_of_mass_position));
+    const Vec3f delta_position = vec3f::subtract(new_com, body->center_of_mass_position);
 
     // calculate delta rotation: delta_rotation = target_rotation * current_rotation^-1
-    const Quatf delta_rotation = quatf::multiply(target_rotation, quatf::conjugate(quatf::load(body->quaternion)));
+    const Quatf delta_rotation = quatf::multiply(target_rotation, quatf::conjugate(body->quaternion));
 
     motion_properties::move_kinematic(body->motion_properties, delta_position, delta_rotation, delta_time);
     sleep::wake(world.bodies, body);
@@ -445,18 +442,14 @@ int32_t get_material(const RigidBody *body, SubShapeId sub_shape_id) { return sh
 
 Vec3f get_world_space_surface_normal(const RigidBody *body, SubShapeId sub_shape_id, Vec3f world_position) {
     // transform world position to local space (relative to shape origin)
-    const Quatf rotation = quatf::load(body->quaternion);
-    const Vec3f local_position = vec3f::transform_quat(vec3f::subtract(world_position, vec3f::load(body->position)), quatf::conjugate(rotation));
+    const Quatf rotation = body->quaternion;
+    const Vec3f local_position = vec3f::transform_quat(vec3f::subtract(world_position, body->position), quatf::conjugate(rotation));
 
     // get normal in local space
     const Vec3f normal = shapes::get_shape_surface_normal(body->shape, local_position, sub_shape_id);
 
     // transform normal to world space (rotation only, no translation)
     return vec3f::transform_quat(normal, rotation);
-}
-
-Float3 &get_surface_normal(Float3 &out, const RigidBody *body, const Float3 &world_position, SubShapeId sub_shape_id) {
-    return vec3f::store(out, get_world_space_surface_normal(body, sub_shape_id, vec3f::load(world_position)));
 }
 
 GetLeafShapeResult create_get_leaf_shape_result() { return {nullptr, sub_shape::EMPTY_SUB_SHAPE_ID}; }
@@ -486,14 +479,14 @@ Vec3f get_velocity_at_point_com(const RigidBody *body, Vec3f point_relative_to_c
         const MotionProperties &mp = body->motion_properties;
 
         // v_point = v_linear + w x r
-        return vec3f::add(vec3f::load(mp.linear_velocity), vec3f::cross(vec3f::load(mp.angular_velocity), point_relative_to_com));
+        return vec3f::add(mp.linear_velocity, vec3f::cross(mp.angular_velocity, point_relative_to_com));
     }
 
     return vec3f::zero();
 }
 
 Vec3f get_velocity_at_point(const RigidBody *body, Vec3f world_point) {
-    return get_velocity_at_point_com(body, vec3f::subtract(world_point, vec3f::load(body->center_of_mass_position)));
+    return get_velocity_at_point_com(body, vec3f::subtract(world_point, body->center_of_mass_position));
 }
 
 void sleep(World &world, RigidBody *body) { sleep::sleep(world.bodies, body); }

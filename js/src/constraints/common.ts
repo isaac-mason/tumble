@@ -1,5 +1,4 @@
 import * as Low from '../generated/tumble.js';
-import type { Quat, Vec2, Vec3 } from '../math.js';
 import { type Given, over } from '../settings.js';
 
 /** a constraint in a world: its index, type and sequence in one number, so the id of a removed constraint names nothing */
@@ -131,10 +130,6 @@ export function created(id: ConstraintId): ConstraintId {
     if (id === INVALID_CONSTRAINT_ID) Low.getWasm().check();
     return id;
 }
-
-export const vec2: Vec2 = [0, 0];
-export const vec3: Vec3 = [0, 0, 0];
-export const quat: Quat = [0, 0, 0, 1];
 
 // each type: create(world, bodyA, bodyB, settings) gives the id, throwing when a body id names no body. its setters and
 // readers return false, or 0 for one number, when the id names no constraint of the type. a change wakes neither body

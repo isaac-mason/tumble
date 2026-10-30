@@ -99,13 +99,10 @@ void test_triangle_mesh_data_accessors(TestCtx &ctx) {
 void test_triangle_mesh_data_aabb_and_centroid(TestCtx &ctx) {
     TriangleMeshShape::Data *data = make_two_triangles();
 
-    Box3f aabb;
-    triangle_mesh_data::calculate_triangle_aabb(aabb, *data, 0);
-    CHECK(ctx, aabb.min.x == 0 && aabb.min.y == 0 && aabb.min.z == 0);
-    CHECK(ctx, aabb.max.x == 2 && aabb.max.y == 3 && aabb.max.z == 0);
-    triangle_mesh_data::calculate_triangle_aabb(aabb, *data, 1);
-    CHECK(ctx, aabb.min.x == 0 && aabb.min.y == -1 && aabb.min.z == 0);
-    CHECK(ctx, aabb.max.x == 2 && aabb.max.y == 0 && aabb.max.z == 4);
+    AABox aabb = triangle_mesh_data::calculate_triangle_aabb(*data, 0);
+    CHECK(ctx, near3(aabb.min, 0, 0, 0, 0) && near3(aabb.max, 2, 3, 0, 0));
+    aabb = triangle_mesh_data::calculate_triangle_aabb(*data, 1);
+    CHECK(ctx, near3(aabb.min, 0, -1, 0, 0) && near3(aabb.max, 2, 0, 4, 0));
 
     Vec3f centroid = triangle_mesh_data::calculate_triangle_centroid(*data, 0);
     CHECK_NEAR(ctx, vec3f::x(centroid), 2.0f / 3.0f, 1e-6f);

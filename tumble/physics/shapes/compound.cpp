@@ -43,13 +43,13 @@ const collections::Array<CompoundShape::Child> &children_of(const Shape *shape) 
                                                  : shapes::as<StaticCompoundShape>(shape).data->children;
 }
 
-void child_transform(Transformf &out, const Transformf &parent, const CompoundShape::Child &child) {
-    Vec3f translation = vec3f::multiply(vec3f::load(child.position), vec3f::load(parent.scale));
-    translation = vec3f::transform_quat(translation, quatf::load(parent.quaternion));
-    vec3f::store(out.position, vec3f::add(vec3f::load(parent.position), translation));
-    quatf::store(out.quaternion, quatf::multiply(quatf::load(parent.quaternion), quatf::load(child.quaternion)));
+void child_transform(Transform &out, const Transform &parent, const CompoundShape::Child &child) {
+    Vec3f translation = vec3f::multiply(vec3f::load(child.position), parent.scale);
+    translation = vec3f::transform_quat(translation, parent.quaternion);
+    out.position = vec3f::add(parent.position, translation);
+    out.quaternion = quatf::multiply(parent.quaternion, quatf::load(child.quaternion));
     // the child sees the scale in its own space
-    vec3f::store(out.scale, shapes::transform_scale(quatf::load(child.quaternion), vec3f::load(parent.scale)));
+    out.scale = shapes::transform_scale(quatf::load(child.quaternion), parent.scale);
 }
 
 static float compute_compound_volume(const collections::Array<CompoundShape::Child> &children) {
@@ -59,12 +59,12 @@ static float compute_compound_volume(const collections::Array<CompoundShape::Chi
     return total_volume;
 }
 
-static Box3f &compute_compound_local_bounds(Box3f &out, const collections::Array<CompoundShape::Child> &children) {
+static AABox compute_compound_local_bounds(const collections::Array<CompoundShape::Child> &children) {
     AABox bounds = aabox::empty();
 
     for (uint32_t i = 0; i < children.length; i++) {
         const CompoundShape::Child &child = children[i];
-        const AABox child_aabb = aabox::load(child.shape->aabb);
+        const AABox child_aabb = child.shape->aabb;
         const Quatf rotation = quatf::load(child.quaternion);
         const Vec3f position = vec3f::load(child.position);
 
@@ -79,12 +79,12 @@ static Box3f &compute_compound_local_bounds(Box3f &out, const collections::Array
             }
         }
     }
-    return aabox::store(out, bounds);
+    return bounds;
 }
 
 /** the child's centre of mass in the compound's space: position + rotate(quaternion, child centre of mass) */
 static Vec3f child_center_of_mass(const CompoundShape::Child &child) {
-    const Vec3f rotated = vec3f::transform_quat(vec3f::load(child.shape->center_of_mass), quatf::load(child.quaternion));
+    const Vec3f rotated = vec3f::transform_quat(child.shape->center_of_mass, quatf::load(child.quaternion));
     return vec3f::add(rotated, vec3f::load(child.position));
 }
 
@@ -113,7 +113,7 @@ static void compute_compound_child_bounds(collections::Array<Box3f> &out, const 
     for (uint32_t child_index = 0; child_index < children.length; child_index++) {
         const CompoundShape::Child &child = children[child_index];
         const Mat4f transform = mat4f::from_rotation_translation(quatf::load(child.quaternion), vec3f::load(child.position));
-        aabox::store(out[child_index], aabox::transform_mat4(aabox::load(child.shape->aabb), transform));
+        aabox::store(out[child_index], aabox::transform_mat4(child.shape->aabb, transform));
     }
 }
 
@@ -132,32 +132,32 @@ static AABox divide_box_by_scale(const AABox &box, Vec3f scale) {
 }
 
 /** the bounds of a posed shape in the unscaled space of a posed compound, grown by `expand` on every side */
-static AABox bounds_in_compound_space(const Shape *shape, const Transformf &transform, const Transformf &compound_transform, float expand) {
-    Quatf inv_quat = quatf::conjugate(quatf::load(compound_transform.quaternion));
-    Vec3f local_position = vec3f::subtract(vec3f::load(transform.position), vec3f::load(compound_transform.position));
+static AABox bounds_in_compound_space(const Shape *shape, const Transform &transform, const Transform &compound_transform, float expand) {
+    Quatf inv_quat = quatf::conjugate(compound_transform.quaternion);
+    Vec3f local_position = vec3f::subtract(transform.position, compound_transform.position);
     local_position = vec3f::transform_quat(local_position, inv_quat);
-    const Quatf local_quaternion = quatf::multiply(inv_quat, quatf::load(transform.quaternion));
+    const Quatf local_quaternion = quatf::multiply(inv_quat, transform.quaternion);
 
-    const Mat4f aabb_transform = mat4f::from_rotation_translation_scale(local_quaternion, local_position, vec3f::load(transform.scale));
-    const AABox bounds = aabox::expand_by_margin(aabox::transform_mat4(aabox::load(shape->aabb), aabb_transform), expand);
-    return divide_box_by_scale(bounds, vec3f::load(compound_transform.scale));
+    const Mat4f aabb_transform = mat4f::from_rotation_translation_scale(local_quaternion, local_position, transform.scale);
+    const AABox bounds = aabox::expand_by_margin(aabox::transform_mat4(shape->aabb, aabb_transform), expand);
+    return divide_box_by_scale(bounds, compound_transform.scale);
 }
 
 void update(Shape *shape) {
     const collections::Array<CompoundShape::Child> &children = children_of(shape);
     if (shape->type == ShapeType::COMPOUND) compute_compound_child_bounds(shapes::as<CompoundShape>(shape).data->child_bounds, children);
-    compute_compound_local_bounds(shape->aabb, children);
-    vec3f::store(shape->center_of_mass, compute_compound_center_of_mass(children));
+    shape->aabb = compute_compound_local_bounds(children);
+    shape->center_of_mass = compute_compound_center_of_mass(children);
     shape->volume = compute_compound_volume(children);
 }
 
 void compute_mass_properties(MassProperties &out, const Shape *shape) {
     const collections::Array<CompoundShape::Child> &children = children_of(shape);
     out.mass = 0.0f;
-    mat4f::store(out.inertia, mat4f::zero());
+    out.inertia = mat4f::zero();
 
     if (children.length == 0) {
-        out.inertia.m[15] = 1.0f;
+        out.inertia.c[3] = v4f::set_lane<3>(out.inertia.c[3], 1.0f);
         return;
     }
 
@@ -170,7 +170,7 @@ void compute_mass_properties(MassProperties &out, const Shape *shape) {
         shapes::compute_mass_properties(child_mass, child.shape);
 
         // child centre of mass relative to the compound's
-        const Vec3f child_com_relative = vec3f::subtract(child_center_of_mass(child), vec3f::load(shape->center_of_mass));
+        const Vec3f child_com_relative = vec3f::subtract(child_center_of_mass(child), shape->center_of_mass);
 
         out.mass += child_mass.mass;
 
@@ -179,10 +179,10 @@ void compute_mass_properties(MassProperties &out, const Shape *shape) {
         mass_properties::rotate(rotated_inertia, child_mass, child_rotation);
         mass_properties::translate(rotated_inertia, rotated_inertia, child_com_relative);
 
-        for (uint32_t j = 0; j < 15; j++) out.inertia.m[j] += rotated_inertia.inertia.m[j];
+        out.inertia = mat4f::add(out.inertia, rotated_inertia.inertia);
     }
 
-    out.inertia.m[15] = 1.0f;
+    out.inertia.c[3] = v4f::set_lane<3>(out.inertia.c[3], 1.0f);
 }
 
 void get_surface_normal(SurfaceNormalResult &io, const Shape *shape, SubShapeId sub_shape_id) {
@@ -289,17 +289,17 @@ void get_sub_shape_transformed_shape(GetSubShapeTransformedShapeResult &out, con
 /* cast ray */
 
 void cast_ray_vs_compound(CastRayCollector &collector, const CastRaySettings &settings, const Rayf &ray,
-                          const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
+                          const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform) {
     const collections::Array<CompoundShape::Child> &children = shapes::as<CompoundShape>(shape).data->children;
     const collections::Array<Box3f> &child_bounds = shapes::as<CompoundShape>(shape).data->child_bounds;
 
     // the ray in the compound's unscaled space, where the child bounds are
-    Quatf inv_quat = quatf::conjugate(quatf::load(transform.quaternion));
-    Vec3f local_origin = vec3f::subtract(ray.origin, vec3f::load(transform.position));
+    Quatf inv_quat = quatf::conjugate(transform.quaternion);
+    Vec3f local_origin = vec3f::subtract(ray.origin, transform.position);
     local_origin = vec3f::transform_quat(local_origin, inv_quat);
-    local_origin = vec3f::divide(local_origin, vec3f::load(transform.scale));
+    local_origin = vec3f::divide(local_origin, transform.scale);
     Vec3f local_direction = vec3f::transform_quat(ray.direction, inv_quat);
-    local_direction = vec3f::divide(local_direction, vec3f::load(transform.scale));
+    local_direction = vec3f::divide(local_direction, transform.scale);
     const Vec3f inv_displacement = vec3f::make(cast_utils::safe_reciprocal(vec3f::x(local_direction) * ray.length),
                                                cast_utils::safe_reciprocal(vec3f::y(local_direction) * ray.length),
                                                cast_utils::safe_reciprocal(vec3f::z(local_direction) * ray.length));
@@ -315,7 +315,7 @@ void cast_ray_vs_compound(CastRayCollector &collector, const CastRaySettings &se
         SubShapeIdBuilder child_sub_shape_id;
         sub_shape::push_index(child_sub_shape_id, sub_shape_id, child_index, children.length);
 
-        Transformf child_world;
+        Transform child_world;
         child_transform(child_world, transform, child);
 
         shapes::def_of(child.shape).cast_ray(collector, settings, ray, child.shape, child_sub_shape_id, child_world);
@@ -326,15 +326,15 @@ void cast_ray_vs_compound(CastRayCollector &collector, const CastRaySettings &se
 
 void collide_point_vs_compound(CollidePointCollector &collector, const CollidePointSettings &settings,
                                Vec3f point, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                               const Transformf &transform_b) {
+                               const Transform &transform_b) {
     const collections::Array<CompoundShape::Child> &children = shapes::as<CompoundShape>(shape_b).data->children;
     const collections::Array<Box3f> &child_bounds = shapes::as<CompoundShape>(shape_b).data->child_bounds;
 
     // the point in the compound's unscaled space, where the child bounds are
-    Quatf inv_quat = quatf::conjugate(quatf::load(transform_b.quaternion));
-    Vec3f local_point = vec3f::subtract(point, vec3f::load(transform_b.position));
+    Quatf inv_quat = quatf::conjugate(transform_b.quaternion);
+    Vec3f local_point = vec3f::subtract(point, transform_b.position);
     local_point = vec3f::transform_quat(local_point, inv_quat);
-    local_point = vec3f::divide(local_point, vec3f::load(transform_b.scale));
+    local_point = vec3f::divide(local_point, transform_b.scale);
 
     for (uint32_t child_index = 0; child_index < children.length; child_index++) {
         if (collide_point::should_early_out(collector)) break;
@@ -347,7 +347,7 @@ void collide_point_vs_compound(CollidePointCollector &collector, const CollidePo
         SubShapeIdBuilder child_sub_shape_id;
         sub_shape::push_index(child_sub_shape_id, sub_shape_id_b, child_index, children.length);
 
-        Transformf child_world;
+        Transform child_world;
         child_transform(child_world, transform_b, child);
 
         shapes::def_of(child.shape).collide_point(collector, settings, point, child.shape, child_sub_shape_id, child_world);
@@ -357,8 +357,8 @@ void collide_point_vs_compound(CollidePointCollector &collector, const CollidePo
 /* collide shape */
 
 void collide_compound_vs_shape(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                               const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                               const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                               const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                               const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     const collections::Array<CompoundShape::Child> &children = shapes::as<CompoundShape>(shape_a).data->children;
     const collections::Array<Box3f> &child_bounds = shapes::as<CompoundShape>(shape_a).data->child_bounds;
 
@@ -376,7 +376,7 @@ void collide_compound_vs_shape(CollideShapeCollector &collector, const CollideSh
         SubShapeIdBuilder child_sub_shape_id;
         sub_shape::push_index(child_sub_shape_id, sub_shape_id_a, child_index, children.length);
 
-        Transformf child_world;
+        Transform child_world;
         child_transform(child_world, transform_a, child);
 
         const CollideShapeVsShapeFn fn = shapes::collide_fn(child.shape->type, shape_b->type);
@@ -385,8 +385,8 @@ void collide_compound_vs_shape(CollideShapeCollector &collector, const CollideSh
 }
 
 void collide_shape_vs_compound(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                               const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                               const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                               const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                               const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     const collections::Array<CompoundShape::Child> &children = shapes::as<CompoundShape>(shape_b).data->children;
     const collections::Array<Box3f> &child_bounds = shapes::as<CompoundShape>(shape_b).data->child_bounds;
 
@@ -404,7 +404,7 @@ void collide_shape_vs_compound(CollideShapeCollector &collector, const CollideSh
         SubShapeIdBuilder child_sub_shape_id;
         sub_shape::push_index(child_sub_shape_id, sub_shape_id_b, child_index, children.length);
 
-        Transformf child_world;
+        Transform child_world;
         child_transform(child_world, transform_b, child);
 
         const CollideShapeVsShapeFn fn = shapes::collide_fn(shape_a->type, child.shape->type);
@@ -415,8 +415,8 @@ void collide_shape_vs_compound(CollideShapeCollector &collector, const CollideSh
 /* cast shape */
 
 void cast_compound_vs_shape(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *shape_a,
-                            const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
-                            const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                            const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a, Vec3f displacement_a,
+                            const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     const collections::Array<CompoundShape::Child> &children = shapes::as<CompoundShape>(shape_a).data->children;
 
     for (uint32_t child_index = 0; child_index < children.length; child_index++) {
@@ -427,7 +427,7 @@ void cast_compound_vs_shape(CastShapeCollector &collector, const CastShapeSettin
         SubShapeIdBuilder child_sub_shape_id;
         sub_shape::push_index(child_sub_shape_id, sub_shape_id_a, child_index, children.length);
 
-        Transformf child_world;
+        Transform child_world;
         child_transform(child_world, transform_a, child);
 
         // the displacement is world space, the same for every child
@@ -439,8 +439,8 @@ void cast_compound_vs_shape(CastShapeCollector &collector, const CastShapeSettin
 }
 
 void cast_shape_vs_compound(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *shape_a,
-                            const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
-                            const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                            const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a, Vec3f displacement_a,
+                            const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     const collections::Array<CompoundShape::Child> &children = shapes::as<CompoundShape>(shape_b).data->children;
     const collections::Array<Box3f> &child_bounds = shapes::as<CompoundShape>(shape_b).data->child_bounds;
 
@@ -449,9 +449,9 @@ void cast_shape_vs_compound(CastShapeCollector &collector, const CastShapeSettin
     const AABox query_bounds = bounds_in_compound_space(shape_a, transform_a, transform_b, 0.0f);
     const Vec3f center = aabox::center(query_bounds);
     const Vec3f extent =
-        vec3f::add(aabox::extents(query_bounds), vec3f::divide(vec3f::splat(settings.extra_convex_radius), vec3f::abs(vec3f::load(transform_b.scale))));
-    const Quatf inv_quat = quatf::conjugate(quatf::load(transform_b.quaternion));
-    const Vec3f local_displacement = vec3f::divide(vec3f::transform_quat(displacement_a, inv_quat), vec3f::load(transform_b.scale));
+        vec3f::add(aabox::extents(query_bounds), vec3f::divide(vec3f::splat(settings.extra_convex_radius), vec3f::abs(transform_b.scale)));
+    const Quatf inv_quat = quatf::conjugate(transform_b.quaternion);
+    const Vec3f local_displacement = vec3f::divide(vec3f::transform_quat(displacement_a, inv_quat), transform_b.scale);
     const Vec3f inv_displacement = vec3f::make(cast_utils::safe_reciprocal(vec3f::x(local_displacement)), cast_utils::safe_reciprocal(vec3f::y(local_displacement)),
                                                cast_utils::safe_reciprocal(vec3f::z(local_displacement)));
 
@@ -468,7 +468,7 @@ void cast_shape_vs_compound(CastShapeCollector &collector, const CastShapeSettin
         SubShapeIdBuilder child_sub_shape_id;
         sub_shape::push_index(child_sub_shape_id, sub_shape_id_b, child_index, children.length);
 
-        Transformf child_world;
+        Transform child_world;
         child_transform(child_world, transform_b, child);
 
         const CastShapeVsShapeFn fn = shapes::cast_fn(shape_a->type, child.shape->type);

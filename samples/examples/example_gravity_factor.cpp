@@ -39,21 +39,21 @@ static void init(App &app) {
     app.world = app::create_world(state.layers);
 
     RigidBodySettings floor;
-    floor.shape = app::keep(app, box::create({.half_extents = {20.0f, 0.5f, 10.0f}}));
+    floor.shape = app::keep(app, box::create({.half_extents = vec3f::make(20.0f, 0.5f, 10.0f)}));
     floor.object_layer = state.layers.not_moving;
     floor.motion_type = MotionType::STATIC;
-    floor.position = {0.0f, -0.5f, 0.0f};
+    floor.position = vec3f::make(0.0f, -0.5f, 0.0f);
     floor.restitution = 0.3f;
     floor.friction = 0.5f;
     rigid_body::create(*app.world, floor);
 
-    Shape *cube = app::keep(app, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}));
+    Shape *cube = app::keep(app, box::create({.half_extents = vec3f::splat(0.5f)}));
     for (int i = 0; i < BOX_COUNT; i++) {
         RigidBodySettings settings;
         settings.shape = cube;
         settings.object_layer = state.layers.moving;
         settings.motion_type = MotionType::DYNAMIC;
-        settings.position = {x_of(i), START_HEIGHT, 0.0f};
+        settings.position = vec3f::make(x_of(i), START_HEIGHT, 0.0f);
         settings.gravity_factor = gravity_factor_of(i);
         settings.restitution = 0.3f;
         settings.friction = 0.5f;
@@ -67,8 +67,8 @@ static void step(App &app, float) {
     bool all_settled = true;
     for (int i = 0; i < BOX_COUNT; i++) {
         const RigidBody *box = state.boxes[i];
-        const bool on_floor = box->position.y < 1.5f && scalar::abs(box->motion_properties.linear_velocity.y) < 0.1f;
-        all_settled = all_settled && (on_floor || box->position.y < -5.0f);
+        const bool on_floor = vec3f::y(box->position) < 1.5f && scalar::abs(vec3f::y(box->motion_properties.linear_velocity)) < 0.1f;
+        all_settled = all_settled && (on_floor || vec3f::y(box->position) < -5.0f);
     }
     if (all_settled && ++state.settled_steps > RESET_STEPS) drop(app);
 }
@@ -78,7 +78,8 @@ static void ui(App &app) {
     for (int i = 0; i < BOX_COUNT; i++) {
         char text[16];
         snprintf(text, sizeof(text), "g x%.1f", gravity_factor_of(i));
-        const Float3 &at = state.boxes[i]->position;
+        Float3 at;
+        vec3f::store(at, state.boxes[i]->position);
         app::label(app, {at.x, at.y + 1.5f, at.z}, text, {2.0f, 1.0f, 0.44f});
     }
 }

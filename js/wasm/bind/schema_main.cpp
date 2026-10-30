@@ -79,6 +79,14 @@ void put_type(Out &o, const bind::TypeRef &t) {
             put_str(o, t.scalar);
             if (t.bits) put(o, ",\"bits\":true");
             break;
+        case bind::BASE_ARRAY:
+            put(o, "\"array\",\"element\":");
+            put_type(o, t.element());
+            put(o, ",\"data\":");
+            put_u32(o, t.data_offset);
+            put(o, ",\"length\":");
+            put_u32(o, t.length_offset);
+            break;
         case bind::BASE_STRUCT: {
             const bool value = t.is_value();
             const char *kind = t.pointers == 2 ? "ptr-array"
@@ -161,12 +169,31 @@ void describe(Out &out, const Counts &from, const Counts &to) {
         put_bool(out, s.is_value);
         put(out, ",\"tuple\":");
         put_bool(out, s.is_tuple);
+        put(out, ",\"lanes\":");
+        put_bool(out, s.is_lanes);
         put(out, ",\"size\":");
         put_u32(out, s.size);
         put(out, ",\"align\":");
         put_u32(out, s.align);
         put(out, ",\"doc\":");
         put_opt_str(out, s.doc);
+        put(out, ",\"idLookup\":");
+        if (s.has_id_lookup) {
+            const bind::IdLookup &l = s.id_lookup;
+            put(out, "{\"root\":");
+            put_str(out, l.root());
+            put(out, ",\"data\":");
+            put_u32(out, l.data);
+            put(out, ",\"length\":");
+            put_u32(out, l.length);
+            put(out, ",\"id\":");
+            put_u32(out, l.id);
+            put(out, ",\"indexMask\":");
+            put_u32(out, l.index_mask);
+            put(out, "}");
+        } else {
+            put(out, "null");
+        }
         put(out, ",\"fields\":[");
         for (uint32_t j = 0; j < s.field_count; j++) {
             const bind::FieldDesc &f = s.fields[j];

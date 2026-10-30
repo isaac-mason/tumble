@@ -103,11 +103,14 @@ static void init(App &app) {
     state.shape_b = OPTION_BOX;
     state.convex_radius_mode = 1;
     state.shapes[OPTION_SPHERE] = app::keep(app, sphere::create({.radius = 1.0f}));
-    state.shapes[OPTION_BOX] = app::keep(app, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}));
+    state.shapes[OPTION_BOX] = app::keep(app, box::create({.half_extents = vec3f::splat(1.0f)}));
     state.shapes[OPTION_CAPSULE] = app::keep(app, capsule::create({.half_height_of_cylinder = 1.0f, .radius = 1.0f}));
     state.shapes[OPTION_TRIANGLE] = nullptr;
     Model suzanne = model::load("suzi.glb");
-    state.shapes[OPTION_CONVEX_HULL] = app::keep(app, convex_hull::create({.positions = suzanne.positions.data, .num_positions = suzanne.positions.length / 3, .convex_radius = 0.0f}));
+    collections::Array<Vec3f> suzanne_points = model::points(suzanne);
+    state.shapes[OPTION_CONVEX_HULL] =
+        app::keep(app, convex_hull::create({.positions = suzanne_points.data, .num_positions = suzanne_points.length, .convex_radius = 0.0f}));
+    suzanne_points.release();
     model::release(suzanne);
     setup();
     camera::look_at(app.camera, {5.0f, 5.0f, 5.0f}, {0.0f, 0.0f, 0.0f});

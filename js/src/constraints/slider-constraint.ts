@@ -1,6 +1,6 @@
 import type { BodyId } from '../body.js';
 import * as Low from '../generated/tumble.js';
-import { copied, type Vec2, type Vec3 } from '../math.js';
+import type { Vec2, Vec3 } from '../math.js';
 import { defaultsOf, type Given, over } from '../settings.js';
 import type { World } from '../world.js';
 import {
@@ -15,8 +15,6 @@ import {
     type MotorState,
     readMotor,
     type SpringSettings,
-    vec2,
-    vec3,
     writeMotor,
 } from './common.js';
 
@@ -107,7 +105,7 @@ export function setTargetPosition(world: World, constraint: ConstraintId, positi
 }
 
 export function getTotalLambdaPosition(out: Vec2, world: World, constraint: ConstraintId): boolean {
-    return copied(out, vec2, Low.SliderConstraint.getTotalLambdaPosition(vec2, world, constraint));
+    return Low.SliderConstraint.getTotalLambdaPosition(out, world, constraint);
 }
 
 export function getTotalLambdaPositionLimits(world: World, constraint: ConstraintId): number {
@@ -115,7 +113,7 @@ export function getTotalLambdaPositionLimits(world: World, constraint: Constrain
 }
 
 export function getTotalLambdaRotation(out: Vec3, world: World, constraint: ConstraintId): boolean {
-    return copied(out, vec3, Low.SliderConstraint.getTotalLambdaRotation(vec3, world, constraint));
+    return Low.SliderConstraint.getTotalLambdaRotation(out, world, constraint);
 }
 
 export function getTotalLambdaMotor(world: World, constraint: ConstraintId): number {

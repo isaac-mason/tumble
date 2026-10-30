@@ -27,21 +27,21 @@ int main() {
     world_settings::enable_collision(settings, moving, moving);
     world_settings::enable_collision(settings, moving, not_moving);
     World *world = world::create(settings);
-    Ref<Shape> ground_shape = box::create({.half_extents = {5.0f, 0.5f, 5.0f}});
+    Ref<Shape> ground_shape = box::create({.half_extents = vec3f::make(5.0f, 0.5f, 5.0f)});
     Ref<Shape> ball_shape = sphere::create({.radius = 0.5f});
     RigidBody *ground = rigid_body::create(*world, {
         .shape = ground_shape,
         .object_layer = not_moving,
         .motion_type = MotionType::STATIC,
-        .position = {0.0f, -0.5f, 0.0f},
+        .position = vec3f::make(0.0f, -0.5f, 0.0f),
     });
     RigidBody *ball = rigid_body::create(*world, {
         .shape = ball_shape,
         .object_layer = moving,
         .motion_type = MotionType::DYNAMIC,
-        .position = {0.0f, 0.5f, 0.0f},
+        .position = vec3f::make(0.0f, 0.5f, 0.0f),
     });
-    point_constraint::create(*world, ground, ball, {.point_a = {0.0f, 1.0f, 0.0f}, .point_b = {0.0f, 1.0f, 0.0f}});
+    point_constraint::create(*world, ground, ball, {.point_a = vec3f::make(0.0f, 1.0f, 0.0f), .point_b = vec3f::make(0.0f, 1.0f, 0.0f)});
     world::step(*world, 1.0f / 60.0f);
 
     /* SNIPPET_START: draw */
@@ -62,7 +62,7 @@ int main() {
 
     // a shape at any pose, such as a preview of where something would go
     const Vec3f preview_position = vec3f::make(3.0f, 0.5f, 0.0f);
-    const Float3 green = {0.0f, 1.0f, 0.0f};
+    const Vec3f green = vec3f::make(0.0f, 1.0f, 0.0f);
     debug::shape(buffers, ball_shape, preview_position, quatf::identity(), {.color = green});
     draw_lines(buffers);
     printf("%u lines\n", buffers.line_count);

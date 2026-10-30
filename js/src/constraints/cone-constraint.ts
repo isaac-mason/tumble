@@ -1,9 +1,9 @@
 import type { BodyId } from '../body.js';
 import * as Low from '../generated/tumble.js';
-import { copied, type Vec3 } from '../math.js';
+import type { Vec3 } from '../math.js';
 import { defaultsOf, over } from '../settings.js';
 import type { World } from '../world.js';
-import { type Common, type ConstraintId, created, expect, expectCommon, PI, vec3 } from './common.js';
+import { type Common, type ConstraintId, created, expect, expectCommon, PI } from './common.js';
 
 export type ConeConstraintSettings = {
     pointA?: Vec3;
@@ -44,7 +44,7 @@ export function getCosHalfConeAngle(world: World, constraint: ConstraintId): num
 }
 
 export function getTotalLambdaPosition(out: Vec3, world: World, constraint: ConstraintId): boolean {
-    return copied(out, vec3, Low.ConeConstraint.getTotalLambdaPosition(vec3, world, constraint));
+    return Low.ConeConstraint.getTotalLambdaPosition(out, world, constraint);
 }
 
 export function getTotalLambdaRotation(world: World, constraint: ConstraintId): number {

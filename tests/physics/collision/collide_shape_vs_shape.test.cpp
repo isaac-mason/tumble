@@ -14,8 +14,8 @@
 static const SubShapeIdBuilder NO_SUB_SHAPE = {sub_shape::EMPTY_SUB_SHAPE_ID, 0};
 
 /** collides a against b through the collide table, as the narrowphase dispatches it */
-static void collide(CollideShapeCollector &collector, const CollideShapeSettings &settings, const Shape *a, const Transformf &transform_a,
-                    const Shape *b, const Transformf &transform_b) {
+static void collide(CollideShapeCollector &collector, const CollideShapeSettings &settings, const Shape *a, const Transform &transform_a,
+                    const Shape *b, const Transform &transform_b) {
     const CollideShapeVsShapeFn fn = shapes::collide_fn(a->type, b->type);
     if (fn != nullptr) fn(collector, settings, a, NO_SUB_SHAPE, transform_a, b, NO_SUB_SHAPE, transform_b);
 }
@@ -23,14 +23,14 @@ static void collide(CollideShapeCollector &collector, const CollideShapeSettings
 /** the hits of a at the origin against b at `position`, into a fresh all collector the caller releases */
 static CollideShapeCollector hits_at(const Shape *a, const Shape *b, const Float3 &position,
                                      const CollideShapeSettings &settings = collide_shape::default_settings(),
-                                     const Transformf &transform_a = pose({0, 0, 0})) {
+                                     const Transform &transform_a = pose({0, 0, 0})) {
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
     collide(collector, settings, a, transform_a, b, pose(position));
     return collector;
 }
 
 /** the single penetration of a at the origin against b at `position`, or -1 when there is not exactly one hit */
-static float penetration_at(const Shape *a, const Shape *b, const Float3 &position, const Transformf &transform_a = pose({0, 0, 0}),
+static float penetration_at(const Shape *a, const Shape *b, const Float3 &position, const Transform &transform_a = pose({0, 0, 0}),
                             const Float4 &rotation_b = {0, 0, 0, 1}) {
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
     collide(collector, collide_shape::default_settings(), a, transform_a, b, pose(position, rotation_b));
@@ -44,7 +44,7 @@ static uint32_t hit_count_at(const Shape *a, const Shape *b, const Float3 &posit
     return count;
 }
 
-static Shape *hull(const float *positions, uint32_t count, float convex_radius) {
+static Shape *hull(const Vec3f *positions, uint32_t count, float convex_radius) {
     return convex_hull::create({.positions = positions, .num_positions = count, .convex_radius = convex_radius});
 }
 
@@ -79,9 +79,9 @@ void test_collide_shape_vs_shape_sphere_vs_sphere(TestCtx &ctx) {
 
 void test_collide_shape_vs_shape_box_vs_box(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> unit = box::create({.half_extents = {1, 1, 1}});
-    Ref<Shape> big = box::create({.half_extents = {2, 2, 2}});
-    Ref<Shape> small = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> unit = box::create({.half_extents = vec3f::splat(1.0f)});
+    Ref<Shape> big = box::create({.half_extents = vec3f::splat(2.0f)});
+    Ref<Shape> small = box::create({.half_extents = vec3f::splat(0.5f)});
 
     CHECK(ctx, hit_count_at(unit, unit, {10, 0, 0}) == 0);
     CHECK_NEAR(ctx, penetration_at(unit, unit, {1.5f, 0, 0}), 0.5f, 1e-4f);
@@ -108,7 +108,7 @@ void test_collide_shape_vs_shape_box_vs_box(TestCtx &ctx) {
 void test_collide_shape_vs_shape_sphere_vs_box(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> ball = sphere::create({.radius = 1.0f});
-    Ref<Shape> unit = box::create({.half_extents = {1, 1, 1}});
+    Ref<Shape> unit = box::create({.half_extents = vec3f::splat(1.0f)});
 
     CHECK(ctx, hit_count_at(ball, unit, {10, 0, 0}) == 0);
     CHECK_NEAR(ctx, penetration_at(ball, unit, {1.5f, 0, 0}), 0.5f, 1e-5f);
@@ -122,7 +122,7 @@ void test_collide_shape_vs_shape_sphere_vs_box(TestCtx &ctx) {
 void test_collide_shape_vs_shape_supporting_faces(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> ball = sphere::create({.radius = 1.0f});
-    Ref<Shape> unit = box::create({.half_extents = {1, 1, 1}});
+    Ref<Shape> unit = box::create({.half_extents = vec3f::splat(1.0f)});
     CollideShapeSettings with_faces = collide_shape::default_settings();
     with_faces.collect_faces = true;
 
@@ -167,8 +167,9 @@ void test_collide_shape_vs_shape_supporting_faces(TestCtx &ctx) {
 
 void test_collide_shape_vs_shape_convex_hulls(TestCtx &ctx) {
     dispatch::init();
-    const float box_points[] = {-1, -1, -1, 1, -1, -1, -1, -1, 1, 1, -1, 1, -1, 1, -1, 1, 1, -1, -1, 1, 1, 1, 1, 1};
-    const float tetrahedron_points[] = {-1, 0, -1, 0, 0, 1, 1, 0, -1, 0, -1, 0};
+    const Vec3f box_points[] = {vec3f::make(-1, -1, -1), vec3f::make(1, -1, -1), vec3f::make(-1, -1, 1), vec3f::make(1, -1, 1),
+                                vec3f::make(-1, 1, -1),  vec3f::make(1, 1, -1),  vec3f::make(-1, 1, 1),  vec3f::make(1, 1, 1)};
+    const Vec3f tetrahedron_points[] = {vec3f::make(-1, 0, -1), vec3f::make(0, 0, 1), vec3f::make(1, 0, -1), vec3f::make(0, -1, 0)};
     Ref<Shape> sharp = hull(box_points, 8, 0.0f);
     Ref<Shape> rounded = hull(box_points, 8, 0.1f);
     Ref<Shape> tetrahedron = hull(tetrahedron_points, 4, 0.0f);
@@ -185,8 +186,8 @@ void test_collide_shape_vs_shape_convex_hulls(TestCtx &ctx) {
     CHECK_NEAR(ctx, penetration_at(sharp, vertex_ball, {2, 2, 2}), 0.01f, 1e-4f);
 
     // vs boxes: overlapping by 0.5; a small box at [0, 0.6] inside, out the near way by 1
-    Ref<Shape> unit = box::create({.half_extents = {1, 1, 1}});
-    Ref<Shape> small = box::create({.half_extents = {0.3f, 0.3f, 0.3f}});
+    Ref<Shape> unit = box::create({.half_extents = vec3f::splat(1.0f)});
+    Ref<Shape> small = box::create({.half_extents = vec3f::splat(0.3f)});
     CHECK_NEAR(ctx, penetration_at(sharp, unit, {1.5f, 0, 0}), 0.5f, 1e-3f);
     CHECK_NEAR(ctx, penetration_at(sharp, small, {0.3f, 0.3f, 0.3f}), 1.0f, 1e-3f);
 
@@ -209,7 +210,7 @@ void test_collide_shape_vs_shape_convex_hulls(TestCtx &ctx) {
 void test_collide_shape_vs_shape_cylinders(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> ball = sphere::create({.radius = 1.0f});
-    Ref<Shape> unit = box::create({.half_extents = {1, 1, 1}});
+    Ref<Shape> unit = box::create({.half_extents = vec3f::splat(1.0f)});
     Ref<Shape> tall = cylinder::create({.half_height = 2.0f, .radius = 1.0f});
     Ref<Shape> thin = cylinder::create({.half_height = 1.0f, .radius = 0.5f});
 
@@ -229,7 +230,7 @@ void test_collide_shape_vs_shape_reversed_pair_materials(TestCtx &ctx) {
     // sphere vs box runs the specialised handler; box vs sphere runs it reversed, and the hit's sub shape ids must follow
     // the shape order like its points do, so each names its own shape's material
     Ref<Shape> ball = sphere::create({.radius = 1.0f, .material_id = 3});
-    Ref<Shape> unit = box::create({.half_extents = {1, 1, 1}, .material_id = 5});
+    Ref<Shape> unit = box::create({.half_extents = vec3f::splat(1.0f), .material_id = 5});
     CollideShapeSettings with_faces = collide_shape::default_settings();
     with_faces.collect_faces = true;
 
@@ -281,7 +282,7 @@ static void init_counting(CountingCollector &counting, CollectorKind kind) {
 
 void test_collide_shape_vs_shape_closest_collector_early_out(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> unit = box::create({.half_extents = {1, 1, 1}});
+    Ref<Shape> unit = box::create({.half_extents = vec3f::splat(1.0f)});
     CountingCollector counting;
     init_counting(counting, CollectorKind::CLOSEST);
     // unit boxes overlapping along x by the given penetration depth

@@ -14,7 +14,7 @@ constexpr float SPHERE_RADIUS = 0.5f;
 
 /** a 10 x 1 x 10 static slab with its top face at y = 0 */
 RigidBody *add_ground(ContactScene &scene, const ContactBodySettings &settings = {}) {
-    return add_contact_body(scene, box::create({.half_extents = {5.0f, 0.5f, 5.0f}}), MotionType::STATIC, {0.0f, -0.5f, 0.0f}, settings);
+    return add_contact_body(scene, box::create({.half_extents = vec3f::make(5.0f, 0.5f, 5.0f)}), MotionType::STATIC, {0.0f, -0.5f, 0.0f}, settings);
 }
 
 /** a sphere resting on y = 0, touching at the origin */
@@ -51,7 +51,7 @@ struct BoxOnGround {
 BoxOnGround make_box_on_ground(ContactScene &scene) {
     BoxOnGround out;
     out.ground = add_ground(scene);
-    out.box = add_contact_body(scene, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}), MotionType::DYNAMIC, {0.0f, 0.5f, 0.0f});
+    out.box = add_contact_body(scene, box::create({.half_extents = vec3f::splat(0.5f)}), MotionType::DYNAMIC, {0.0f, 0.5f, 0.0f});
     const Float3 corners[4] = {{-0.5f, 0.0f, -0.5f}, {0.5f, 0.0f, -0.5f}, {0.5f, 0.0f, 0.5f}, {-0.5f, 0.0f, 0.5f}};
     out.manifold = touching_manifold(corners, 4, {0.0f, 1.0f, 0.0f});
     return out;
@@ -97,7 +97,7 @@ void test_contact_constraints_box_resting_removes_approach_and_warm_starts(TestC
 
     // step 1: the box comes down at 1 m/s onto the ground
     begin_contact_step(scene);
-    box->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
+    box->motion_properties.linear_velocity = vec3f::make(0.0f, -1.0f, 0.0f);
     CHECK(ctx, add_contact(scene, scenario.ground, box, scenario.manifold));
     CHECK(ctx, scene.world->contact_constraints.count == 1);
     CHECK(ctx, scene.world->events.contacts_added.length == 1 && scene.world->events.contacts_persisted.length == 0);
@@ -113,8 +113,8 @@ void test_contact_constraints_box_resting_removes_approach_and_warm_starts(TestC
     solve_contact_velocities(scene, 10);
 
     // the approach is gone, the box neither bounces nor turns, and the impulse is the momentum it had
-    CHECK_NEAR(ctx, box->motion_properties.linear_velocity.y, 0.0f, 1e-3f);
-    CHECK_NEAR(ctx, vec3f::length(vec3f::load(box->motion_properties.angular_velocity)), 0.0f, 1e-3f);
+    CHECK_NEAR(ctx, vec3f::y(box->motion_properties.linear_velocity), 0.0f, 1e-3f);
+    CHECK_NEAR(ctx, vec3f::length(box->motion_properties.angular_velocity), 0.0f, 1e-3f);
     CHECK_NEAR(ctx, sum_normal_lambdas(constraint), mass * 1.0f, 1.0f);
     // four coplanar points over-determine the three dofs, so the split between them is the solver's, but it carries
     // no moment about the box's centre
@@ -133,17 +133,17 @@ void test_contact_constraints_box_resting_removes_approach_and_warm_starts(TestC
 
     // step 2: the same approach again; the stored impulses carry over and warm start alone stops the box
     begin_contact_step(scene);
-    box->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
-    box->motion_properties.angular_velocity = {0.0f, 0.0f, 0.0f};
+    box->motion_properties.linear_velocity = vec3f::make(0.0f, -1.0f, 0.0f);
+    box->motion_properties.angular_velocity = vec3f::zero();
     CHECK(ctx, add_contact(scene, scenario.ground, box, scenario.manifold));
     CHECK(ctx, scene.world->events.contacts_added.length == 0 && scene.world->events.contacts_persisted.length == 1);
     CHECK_NEAR(ctx, sum_normal_lambdas(scene.world->contact_constraints.pool[0]), lambda_step_1, 1e-3f);
 
     contact_constraints::warm_start_velocity_constraints(scene.world->contact_constraints, scene.world->bodies, all_contact_indices(scene), 1.0f);
-    CHECK_NEAR(ctx, box->motion_properties.linear_velocity.y, 0.0f, 1e-3f);
+    CHECK_NEAR(ctx, vec3f::y(box->motion_properties.linear_velocity), 0.0f, 1e-3f);
     contact_constraints::solve_velocity_constraints_for_island(scene.world->contact_constraints, scene.world->bodies, all_contact_indices(scene));
-    CHECK_NEAR(ctx, box->motion_properties.linear_velocity.y, 0.0f, 1e-3f);
-    CHECK_NEAR(ctx, vec3f::length(vec3f::load(box->motion_properties.angular_velocity)), 0.0f, 1e-3f);
+    CHECK_NEAR(ctx, vec3f::y(box->motion_properties.linear_velocity), 0.0f, 1e-3f);
+    CHECK_NEAR(ctx, vec3f::length(box->motion_properties.angular_velocity), 0.0f, 1e-3f);
     CHECK_NEAR(ctx, sum_normal_lambdas(scene.world->contact_constraints.pool[0]), lambda_step_1, 1.0f);
 
     release_contact_scene(scene);
@@ -168,12 +168,12 @@ void test_contact_constraints_event_carries_the_manifold(TestCtx &ctx) {
     CHECK(ctx, event.body_id_a == scenario.ground->id && event.body_id_b == scenario.box->id);
     CHECK(ctx, event.body_index_a == scenario.ground->index && event.body_index_b == scenario.box->index);
     CHECK(ctx, event.material_id_a == 3 && event.material_id_b == 7);
-    CHECK_NEAR(ctx, event.normal.y, 1.0f, 1e-6f);
+    CHECK_NEAR(ctx, vec3f::y(event.normal), 1.0f, 1e-6f);
     CHECK_NEAR(ctx, event.penetration, 0.01f, 1e-7f);
     CHECK(ctx, event.num_points == 4);
     for (uint32_t i = 0; i < 4; i++) {
-        CHECK(ctx, vec3f::exact_equals(vec3f::load(event.points_a[i]), scenario.manifold.relative_contact_points_on_a[i]));
-        CHECK(ctx, vec3f::exact_equals(vec3f::load(event.points_b[i]), scenario.manifold.relative_contact_points_on_b[i]));
+        CHECK(ctx, vec3f::exact_equals(event.points_a[i], scenario.manifold.relative_contact_points_on_a[i]));
+        CHECK(ctx, vec3f::exact_equals(event.points_b[i], scenario.manifold.relative_contact_points_on_b[i]));
     }
     CHECK(ctx, event.contact_index == scene.world->contact_constraints.pool[0].contact_index);
 
@@ -187,20 +187,20 @@ void test_contact_constraints_restitution_bounces_less_gravity(TestCtx &ctx) {
 
     // restitution combines by max: 0.5. the bounce takes back the velocity gravity added this step
     begin_contact_step(scene);
-    ball->motion_properties.linear_velocity = {0.0f, -5.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(0.0f, -5.0f, 0.0f);
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
     CHECK_NEAR(ctx, scene.world->contact_constraints.pool[0].restitution, 0.5f, 1e-7f);
     solve_contact_velocities(scene, 10);
-    CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.y, 0.5f * (5.0f - 9.81f * CONTACT_SCENE_DELTA_TIME), 1e-4f);
+    CHECK_NEAR(ctx, vec3f::y(ball->motion_properties.linear_velocity), 0.5f * (5.0f - 9.81f * CONTACT_SCENE_DELTA_TIME), 1e-4f);
     CHECK_NEAR(ctx, scene.world->contact_constraints.pool[0].contact_points[0].normal_constraint.total_lambda,
                ball_mass(ball) * (5.0f + 0.5f * (5.0f - 9.81f * CONTACT_SCENE_DELTA_TIME)), 0.1f);
 
     // below min_velocity_for_restitution (1 m/s) there is no bounce
     begin_contact_step(scene);
-    ball->motion_properties.linear_velocity = {0.0f, -0.5f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(0.0f, -0.5f, 0.0f);
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
     solve_contact_velocities(scene, 10);
-    CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.y, 0.0f, 1e-5f);
+    CHECK_NEAR(ctx, vec3f::y(ball->motion_properties.linear_velocity), 0.0f, 1e-5f);
 
     release_contact_scene(scene);
 }
@@ -218,16 +218,16 @@ void test_contact_constraints_speculative_contact_allows_closing_the_gap(TestCtx
     gap.relative_contact_points_on_b[0] = vec3f::make(0.0f, 0.01f, 0.0f);
 
     begin_contact_step(scene);
-    ball->motion_properties.linear_velocity = {0.0f, -0.4f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(0.0f, -0.4f, 0.0f);
     CHECK(ctx, add_contact(scene, ground, ball, gap));
     solve_contact_velocities(scene, 10);
-    CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.y, -0.4f, 1e-6f);
+    CHECK_NEAR(ctx, vec3f::y(ball->motion_properties.linear_velocity), -0.4f, 1e-6f);
 
     begin_contact_step(scene);
-    ball->motion_properties.linear_velocity = {0.0f, -2.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(0.0f, -2.0f, 0.0f);
     CHECK(ctx, add_contact(scene, ground, ball, gap));
     solve_contact_velocities(scene, 10);
-    CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.y, -0.01f / CONTACT_SCENE_DELTA_TIME, 1e-4f);
+    CHECK_NEAR(ctx, vec3f::y(ball->motion_properties.linear_velocity), -0.01f / CONTACT_SCENE_DELTA_TIME, 1e-4f);
 
     release_contact_scene(scene);
 }
@@ -240,16 +240,16 @@ void test_contact_constraints_friction_slides_at_the_cone(TestCtx &ctx) {
     // mu = sqrt(0.5 * 0.5). stopping the slip would take 2 m/s / (1/m + r^2/I) = 4/7 m, more than mu * (normal impulse
     // m * 1 m/s), so the ball slides and friction takes exactly mu * 1 m/s off its centre
     begin_contact_step(scene);
-    ball->motion_properties.linear_velocity = {2.0f, -1.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(2.0f, -1.0f, 0.0f);
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
     CHECK_NEAR(ctx, scene.world->contact_constraints.pool[0].friction, 0.5f, 1e-6f);
     solve_contact_velocities(scene, 10);
 
-    CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.y, 0.0f, 1e-5f);
-    CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.x, 1.5f, 1e-4f);
-    CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.z, 0.0f, 1e-6f);
+    CHECK_NEAR(ctx, vec3f::y(ball->motion_properties.linear_velocity), 0.0f, 1e-5f);
+    CHECK_NEAR(ctx, vec3f::x(ball->motion_properties.linear_velocity), 1.5f, 1e-4f);
+    CHECK_NEAR(ctx, vec3f::z(ball->motion_properties.linear_velocity), 0.0f, 1e-6f);
     // the friction torque spins it up: dw = (r x J) / I, r = (0, -0.5, 0), J = (-0.5 m, 0, 0), I = 2/5 m r^2
-    CHECK_NEAR(ctx, ball->motion_properties.angular_velocity.z, -(0.5f * 0.5f) / (0.4f * 0.25f), 1e-3f);
+    CHECK_NEAR(ctx, vec3f::z(ball->motion_properties.angular_velocity), -(0.5f * 0.5f) / (0.4f * 0.25f), 1e-3f);
 
     release_contact_scene(scene);
 }
@@ -261,12 +261,12 @@ void test_contact_constraints_friction_sticks_inside_the_cone(TestCtx &ctx) {
 
     // mu = 1 covers the 4/7 m it takes, so the contact point stops: v = 2 - 4/7 and the ball rolls
     begin_contact_step(scene);
-    ball->motion_properties.linear_velocity = {2.0f, -1.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(2.0f, -1.0f, 0.0f);
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
     solve_contact_velocities(scene, 10);
 
     CHECK_NEAR(ctx, vec3f::length(vec3f::load(ball_contact_velocity(ball))), 0.0f, 1e-4f);
-    CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.x, 10.0f / 7.0f, 1e-4f);
+    CHECK_NEAR(ctx, vec3f::x(ball->motion_properties.linear_velocity), 10.0f / 7.0f, 1e-4f);
 
     release_contact_scene(scene);
 }
@@ -277,13 +277,13 @@ void test_contact_constraints_sensor_reports_without_impulse(TestCtx &ctx) {
     RigidBody *ball = add_ball(scene, {.sensor = true});
 
     begin_contact_step(scene);
-    ball->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(0.0f, -1.0f, 0.0f);
     CHECK(ctx, !add_contact(scene, ground, ball, ball_manifold()));
     CHECK(ctx, scene.world->contact_constraints.count == 0);
     CHECK(ctx, scene.world->events.contacts_added.length == 1);
     CHECK(ctx, scene.world->events.contacts_added[0].body_id_b == ball->id);
     solve_contact_velocities(scene, 10);
-    CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.y, -1.0f, 0.0f);
+    CHECK_NEAR(ctx, vec3f::y(ball->motion_properties.linear_velocity), -1.0f, 0.0f);
 
     // the contact is cached with no impulse, so the next step reports it persisted
     Contacts::Contact &contact = scene.world->contacts.contacts[(uint32_t)scene.world->events.contacts_added[0].contact_index];
@@ -300,18 +300,18 @@ void test_contact_constraints_sensor_reports_without_impulse(TestCtx &ctx) {
 void test_contact_constraints_kinematic_pushes_dynamic(TestCtx &ctx) {
     ContactScene scene = make_contact_scene();
     RigidBody *platform =
-        add_contact_body(scene, box::create({.half_extents = {5.0f, 0.5f, 5.0f}}), MotionType::KINEMATIC, {0.0f, -0.5f, 0.0f});
+        add_contact_body(scene, box::create({.half_extents = vec3f::make(5.0f, 0.5f, 5.0f)}), MotionType::KINEMATIC, {0.0f, -0.5f, 0.0f});
     RigidBody *ball = add_ball(scene);
 
     // a kinematic and a static pair makes no constraint; a kinematic rising under a ball carries it up
     begin_contact_step(scene);
-    platform->motion_properties.linear_velocity = {0.0f, 1.0f, 0.0f};
+    platform->motion_properties.linear_velocity = vec3f::make(0.0f, 1.0f, 0.0f);
     CHECK(ctx, add_contact(scene, platform, ball, ball_manifold()));
     solve_contact_velocities(scene, 10);
-    CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.y, 1.0f, 1e-5f);
-    CHECK_NEAR(ctx, platform->motion_properties.linear_velocity.y, 1.0f, 0.0f);
+    CHECK_NEAR(ctx, vec3f::y(ball->motion_properties.linear_velocity), 1.0f, 1e-5f);
+    CHECK_NEAR(ctx, vec3f::y(platform->motion_properties.linear_velocity), 1.0f, 0.0f);
 
-    RigidBody *wall = add_contact_body(scene, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}), MotionType::STATIC, {0.0f, 0.0f, 4.0f});
+    RigidBody *wall = add_contact_body(scene, box::create({.half_extents = vec3f::splat(1.0f)}), MotionType::STATIC, {0.0f, 0.0f, 4.0f});
     begin_contact_step(scene);
     CHECK(ctx, !add_contact(scene, platform, wall, ball_manifold()));
     CHECK(ctx, scene.world->contact_constraints.count == 0 && scene.world->events.contacts_added.length == 1);
@@ -334,17 +334,17 @@ void test_contact_constraints_position_solve_pushes_out_by_baumgarte(TestCtx &ct
 
     begin_contact_step(scene);
     CHECK(ctx, add_contact(scene, ground, ball, sunk));
-    const float before = ball->center_of_mass_position.y;
+    const float before = vec3f::y(ball->center_of_mass_position);
     const WorldSettings::Solver &solver = scene.world->settings.solver;
     CHECK(ctx, contact_constraints::solve_position_constraints_for_island(scene.world->contact_constraints, scene.world->bodies, all_contact_indices(scene),
                                                                           solver.penetration_slop, solver.baumgarte_factor,
                                                                           solver.max_penetration_distance));
-    CHECK_NEAR(ctx, ball->center_of_mass_position.y - before, solver.baumgarte_factor * (0.1f - solver.penetration_slop), 1e-5f);
+    CHECK_NEAR(ctx, vec3f::y(ball->center_of_mass_position) - before, solver.baumgarte_factor * (0.1f - solver.penetration_slop), 1e-5f);
 
     // within the slop nothing moves
     begin_contact_step(scene);
     sunk.relative_contact_points_on_b[0] = vec3f::make(0.0f, -0.01f, 0.0f);
-    ball->center_of_mass_position.y = SPHERE_RADIUS;
+    ball->center_of_mass_position = vec3f::make(vec3f::x(ball->center_of_mass_position), SPHERE_RADIUS, vec3f::z(ball->center_of_mass_position));
     CHECK(ctx, add_contact(scene, ground, ball, sunk));
     CHECK(ctx, !contact_constraints::solve_position_constraints_for_island(scene.world->contact_constraints, scene.world->bodies,
                                                                            all_contact_indices(scene), solver.penetration_slop,
@@ -359,7 +359,7 @@ void test_contact_constraints_from_cache_carries_the_manifold(TestCtx &ctx) {
     RigidBody *box = scenario.box;
 
     begin_contact_step(scene);
-    box->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
+    box->motion_properties.linear_velocity = vec3f::make(0.0f, -1.0f, 0.0f);
     CHECK(ctx, add_contact(scene, scenario.ground, box, scenario.manifold));
     solve_contact_velocities(scene, 10);
     const float lambda_step_1 = sum_normal_lambdas(scene.world->contact_constraints.pool[0]);
@@ -368,8 +368,8 @@ void test_contact_constraints_from_cache_carries_the_manifold(TestCtx &ctx) {
 
     // the pair barely moved: the cached manifold builds the constraint, warm started, with no narrowphase
     begin_contact_step(scene);
-    box->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
-    box->motion_properties.angular_velocity = {0.0f, 0.0f, 0.0f};
+    box->motion_properties.linear_velocity = vec3f::make(0.0f, -1.0f, 0.0f);
+    box->motion_properties.angular_velocity = vec3f::zero();
     Contacts::Contact &contact = scene.world->contacts.contacts[(uint32_t)contact_index];
     CHECK(ctx, contact_constraints::add_contact_constraint_from_cache(scene.world->contact_constraints, scene.world->contacts, *scenario.ground, *box,
                                                                       contact, scene.world->settings, scene.world->events, CONTACT_SCENE_DELTA_TIME,
@@ -378,15 +378,15 @@ void test_contact_constraints_from_cache_carries_the_manifold(TestCtx &ctx) {
     CHECK(ctx, scene.world->events.contacts_persisted.length == 1 && scene.world->events.contacts_added.length == 0);
     const ContactEvent &event = scene.world->events.contacts_persisted[0];
     CHECK(ctx, event.num_points == 4 && event.material_id_a == -1 && event.material_id_b == -1);
-    CHECK_NEAR(ctx, event.normal.y, 1.0f, 1e-6f);
+    CHECK_NEAR(ctx, vec3f::y(event.normal), 1.0f, 1e-6f);
     CHECK_NEAR(ctx, event.penetration, 0.0f, 1e-6f);
     for (uint32_t i = 0; i < 4; i++) {
-        CHECK_NEAR(ctx, vec3f::distance(vec3f::load(event.points_a[i]), scenario.manifold.relative_contact_points_on_a[i]), 0.0f, 1e-6f);
+        CHECK_NEAR(ctx, vec3f::distance(event.points_a[i], scenario.manifold.relative_contact_points_on_a[i]), 0.0f, 1e-6f);
     }
     CHECK_NEAR(ctx, sum_normal_lambdas(scene.world->contact_constraints.pool[0]), lambda_step_1, 1e-3f);
 
     contact_constraints::warm_start_velocity_constraints(scene.world->contact_constraints, scene.world->bodies, all_contact_indices(scene), 1.0f);
-    CHECK_NEAR(ctx, box->motion_properties.linear_velocity.y, 0.0f, 1e-3f);
+    CHECK_NEAR(ctx, vec3f::y(box->motion_properties.linear_velocity), 0.0f, 1e-3f);
 
     release_contact_scene(scene);
 }
@@ -409,8 +409,8 @@ void test_contact_constraints_from_cache_keeps_the_materials(TestCtx &ctx) {
     // the narrowphase's manifold: the ball as a against the floor, from the collision's one hit
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
     const SubShapeIdBuilder no_sub_shape = {sub_shape::EMPTY_SUB_SHAPE_ID, 0};
-    const Transformf ball_pose = {ball->position, ball->quaternion, {1, 1, 1}};
-    const Transformf floor_pose = {floor->position, floor->quaternion, {1, 1, 1}};
+    const Transform ball_pose = transform::make(ball->position, ball->quaternion);
+    const Transform floor_pose = transform::make(floor->position, floor->quaternion);
     narrowphase::collide_shape_vs_shape(collector, collide_shape::default_settings(), ball->shape, no_sub_shape, ball_pose, floor->shape,
                                         no_sub_shape, floor_pose);
     CHECK(ctx, collector.hits.length == 1);
@@ -466,13 +466,13 @@ void test_contact_constraints_change_conveyor(TestCtx &ctx) {
     // frictionless as built, so the parts are off; the caller turns friction on and moves the belt's surface at 2 m/s along +x.
     // the relative surface velocity is body 2's surface relative to body 1's, so the belt (a) moving gives -2
     begin_contact_step(scene);
-    ball->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(0.0f, -1.0f, 0.0f);
     CHECK(ctx, add_contact(scene, belt, ball, ball_manifold()));
     CHECK(ctx, !contact_constraint_part::is_active(scene.world->contact_constraints.pool[0].friction_constraint_1));
 
     ContactSettings settings = default_contact_settings();
     settings.combined_friction = 1.0f;
-    settings.relative_linear_surface_velocity = {-2.0f, 0.0f, 0.0f};
+    settings.relative_linear_surface_velocity = vec3f::make(-2.0f, 0.0f, 0.0f);
     change_first(scene, settings);
     apply_changes(scene);
     CHECK(ctx, scene.world->contact_constraints.count == 1);
@@ -484,8 +484,8 @@ void test_contact_constraints_change_conveyor(TestCtx &ctx) {
     const Float3 contact_velocity = ball_contact_velocity(ball);
     CHECK_NEAR(ctx, contact_velocity.x, 2.0f, 1e-4f);
     CHECK_NEAR(ctx, contact_velocity.z, 0.0f, 1e-5f);
-    CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.y, 0.0f, 1e-5f);
-    CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.x, 2.0f * 2.0f / 7.0f, 1e-4f);
+    CHECK_NEAR(ctx, vec3f::y(ball->motion_properties.linear_velocity), 0.0f, 1e-5f);
+    CHECK_NEAR(ctx, vec3f::x(ball->motion_properties.linear_velocity), 2.0f * 2.0f / 7.0f, 1e-4f);
 
     release_contact_scene(scene);
 }
@@ -497,18 +497,18 @@ void test_contact_constraints_change_restitution_and_mass_scale(TestCtx &ctx) {
 
     // built with no restitution; the caller asks for 0.5 and the normal bias is rebuilt to bounce
     begin_contact_step(scene);
-    ball->motion_properties.linear_velocity = {0.0f, -5.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(0.0f, -5.0f, 0.0f);
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
     ContactSettings settings = default_contact_settings();
     settings.combined_restitution = 0.5f;
     change_first(scene, settings);
     apply_changes(scene);
     solve_contact_velocities(scene, 10);
-    CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.y, 0.5f * (5.0f - 9.81f * CONTACT_SCENE_DELTA_TIME), 1e-4f);
+    CHECK_NEAR(ctx, vec3f::y(ball->motion_properties.linear_velocity), 0.5f * (5.0f - 9.81f * CONTACT_SCENE_DELTA_TIME), 1e-4f);
 
     // half the inverse mass: the ball counts double, so stopping it takes twice the impulse
     begin_contact_step(scene);
-    ball->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(0.0f, -1.0f, 0.0f);
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
     settings = default_contact_settings();
     settings.inv_mass_scale_2 = 0.5f;
@@ -539,15 +539,15 @@ void test_contact_constraints_reject_drops_and_zeroes_the_cache(TestCtx &ctx) {
     const ContactManifold other_manifold = touching_manifold(&other_point, 1, {0.0f, 1.0f, 0.0f});
 
     begin_contact_step(scene);
-    ball->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(0.0f, -1.0f, 0.0f);
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
     solve_contact_velocities(scene, 10);
     end_contact_step(scene);
 
     // persisted with last step's impulse, plus a second contact; the caller rejects the first
     begin_contact_step(scene);
-    ball->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
-    other->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(0.0f, -1.0f, 0.0f);
+    other->motion_properties.linear_velocity = vec3f::make(0.0f, -1.0f, 0.0f);
     CHECK(ctx, add_contact(scene, ground, ball, ball_manifold()));
     CHECK(ctx, add_contact(scene, ground, other, other_manifold));
     CHECK(ctx, scene.world->contact_constraints.count == 2);
@@ -568,8 +568,8 @@ void test_contact_constraints_reject_drops_and_zeroes_the_cache(TestCtx &ctx) {
 
     // nothing holds the rejected ball up
     solve_contact_velocities(scene, 10);
-    CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.y, -1.0f, 0.0f);
-    CHECK_NEAR(ctx, other->motion_properties.linear_velocity.y, 0.0f, 1e-5f);
+    CHECK_NEAR(ctx, vec3f::y(ball->motion_properties.linear_velocity), -1.0f, 0.0f);
+    CHECK_NEAR(ctx, vec3f::y(other->motion_properties.linear_velocity), 0.0f, 1e-5f);
 
     // changed to a sensor, it drops the constraint likewise
     begin_contact_step(scene);

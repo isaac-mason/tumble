@@ -33,16 +33,11 @@ struct Hash {
         real(vec3f::y(v));
         real(vec3f::z(v));
     }
-    void float3(const Float3 &f) {
-        real(f.x);
-        real(f.y);
-        real(f.z);
-    }
-    void float4(const Float4 &f) {
-        real(f.x);
-        real(f.y);
-        real(f.z);
-        real(f.w);
+    void quat(Quatf q) {
+        real(quatf::x(q));
+        real(quatf::y(q));
+        real(quatf::z(q));
+        real(quatf::w(q));
     }
 };
 
@@ -149,7 +144,7 @@ const KCC::Listener *listener_of(Rules &rules) {
     }
     KCC::Policy &policy = rules.policy;
     policy.defaults.slide_on_walkable = !rules.slide_prevention;
-    set_body(policy, rules.conveyor, {.surface_linear_velocity = {2.0f, 0.0f, 0.0f}});
+    set_body(policy, rules.conveyor, {.surface_linear_velocity = vec3f::make(2.0f, 0.0f, 0.0f)});
     set_body(policy, rules.unpushable, {.can_receive_impulses = false});
     set_body(policy, rules.ignored, {.ignore = true});
     set_body(policy, rules.cannot_push_character, {.can_push_character = false});
@@ -213,10 +208,10 @@ void hash_frame(Hash &hash, const World &world, const KCC &character) {
         const RigidBody *body = bodies.pool[i];
         if (body == nullptr || bodies.sequences[i] == bodies::SLOT_FREE) continue;
         hash.word(body->id);
-        hash.float3(body->position);
-        hash.float4(body->quaternion);
-        hash.float3(body->motion_properties.linear_velocity);
-        hash.float3(body->motion_properties.angular_velocity);
+        hash.vec3(body->position);
+        hash.quat(body->quaternion);
+        hash.vec3(body->motion_properties.linear_velocity);
+        hash.vec3(body->motion_properties.angular_velocity);
     }
 }
 
@@ -270,13 +265,13 @@ void toolkit_update(World &world, KCC &character, float delta_time, Vec3f gravit
     toolkit_move(world, character, delta_time, gravity, listener, filter);
 
     if (kcc::is_supported(character)) ground_to_air = false;
-    if (ground_to_air && vec3f::squared_length(vec3f::load(settings.stick_to_floor_step_down)) > 1e-12f) {
+    if (ground_to_air && vec3f::squared_length(settings.stick_to_floor_step_down) > 1e-12f) {
         const Vec3f step = vec3f::subtract(character.position, old_position);
         if (vec3f::dot(step, character.up) / delta_time <= 1e-6f) {
-            kcc::stick_to_floor(world, character, vec3f::load(settings.stick_to_floor_step_down), filter, listener);
+            kcc::stick_to_floor(world, character, settings.stick_to_floor_step_down, filter, listener);
         }
     }
-    if (vec3f::squared_length(vec3f::load(settings.walk_stairs_step_up)) > 1e-12f) {
+    if (vec3f::squared_length(settings.walk_stairs_step_up) > 1e-12f) {
         Vec3f desired_step = vec3f::scale(desired_velocity, delta_time);
         desired_step = vec3f::scale_and_add(desired_step, character.up, -vec3f::dot(desired_step, character.up));
         const float desired_length = vec3f::length(desired_step);
@@ -306,8 +301,8 @@ void toolkit_update(World &world, KCC &character, float delta_time, Vec3f gravit
                 }
                 const Vec3f step_forward = vec3f::scale(direction, scalar::max(settings.walk_stairs_min_step_forward, desired_length - achieved_length));
                 const Vec3f step_forward_test = vec3f::scale(direction, settings.walk_stairs_step_forward_test);
-                kcc::walk_stairs(world, character, delta_time, vec3f::load(settings.walk_stairs_step_up), step_forward, step_forward_test,
-                                 vec3f::load(settings.walk_stairs_step_down_extra), filter, listener);
+                kcc::walk_stairs(world, character, delta_time, settings.walk_stairs_step_up, step_forward, step_forward_test,
+                                 settings.walk_stairs_step_down_extra, filter, listener);
             }
         }
     }
@@ -336,8 +331,8 @@ void frame(Golden &golden, World &world, KCC &character, Vec3f input, const KCCU
 
 RigidBody *add_static_box(WorldScene &scene, const Float3 &half_extents, const Float3 &position, const Float4 &quaternion = IDENTITY) {
     RigidBodySettings settings =
-        body_settings(box::create({.half_extents = half_extents}), scene.not_moving, MotionType::STATIC, position);
-    settings.quaternion = quaternion;
+        body_settings(box::create({.half_extents = vec3f::load(half_extents)}), scene.not_moving, MotionType::STATIC, position);
+    settings.quaternion = quatf::load(quaternion);
     return rigid_body::create(*scene.world, settings);
 }
 
@@ -347,7 +342,7 @@ Float4 about_z(float angle) { return {0.0f, 0.0f, scalar::sin(0.5f * angle), sca
 Ref<KCC> make_character(WorldScene &scene, const Float3 &position, bool inner_body = false) {
     KCCSettings settings;
     settings.shape = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f});
-    settings.shape_offset = {0.0f, 0.8f, 0.0f};
+    settings.shape_offset = vec3f::make(0.0f, 0.8f, 0.0f);
     settings.max_slope_angle = 45.0f * scalar::DEGREES_TO_RADIANS;
     if (inner_body) {
         settings.inner_rigid_body_shape = settings.shape;
@@ -477,8 +472,8 @@ void test_kcc_golden_platforms(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     World &world = *scene.world;
     add_static_box(scene, {50.0f, 0.5f, 50.0f}, {0.0f, -0.5f, 0.0f});
-    RigidBody *mover = add_body(scene, box::create({.half_extents = {2.0f, 0.25f, 2.0f}}), MotionType::KINEMATIC, {0.0f, 1.0f, 0.0f});
-    RigidBody *turner = add_body(scene, box::create({.half_extents = {3.0f, 0.25f, 3.0f}}), MotionType::KINEMATIC, {8.0f, 1.0f, 0.0f});
+    RigidBody *mover = add_body(scene, box::create({.half_extents = vec3f::make(2.0f, 0.25f, 2.0f)}), MotionType::KINEMATIC, {0.0f, 1.0f, 0.0f});
+    RigidBody *turner = add_body(scene, box::create({.half_extents = vec3f::make(3.0f, 0.25f, 3.0f)}), MotionType::KINEMATIC, {8.0f, 1.0f, 0.0f});
     rigid_body::set_linear_velocity(world, mover, vec3f::make(1.0f, 0.0f, 0.5f));
     rigid_body::set_angular_velocity(world, turner, vec3f::make(0.0f, 1.0f, 0.0f));
     step_world(world);
@@ -514,11 +509,11 @@ void test_kcc_golden_pushing_and_standing_on_dynamics(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     add_static_box(scene, {50.0f, 0.5f, 50.0f}, {0.0f, -0.5f, 0.0f});
     RigidBody *crate =
-        add_body(scene, box::create({.half_extents = {0.4f, 0.4f, 0.4f}, .density = 20.0f}), MotionType::DYNAMIC, {1.5f, 0.4f, 0.1f});
+        add_body(scene, box::create({.half_extents = vec3f::splat(0.4f), .density = 20.0f}), MotionType::DYNAMIC, {1.5f, 0.4f, 0.1f});
     RigidBody *small_crate =
-        add_body(scene, box::create({.half_extents = {0.3f, 0.3f, 0.3f}, .density = 20.0f}), MotionType::DYNAMIC, {2.5f, 0.3f, -0.2f});
+        add_body(scene, box::create({.half_extents = vec3f::splat(0.3f), .density = 20.0f}), MotionType::DYNAMIC, {2.5f, 0.3f, -0.2f});
     RigidBody *slab =
-        add_body(scene, box::create({.half_extents = {1.0f, 0.15f, 1.0f}, .density = 50.0f}), MotionType::DYNAMIC, {-3.0f, 0.15f, 0.0f});
+        add_body(scene, box::create({.half_extents = vec3f::make(1.0f, 0.15f, 1.0f), .density = 50.0f}), MotionType::DYNAMIC, {-3.0f, 0.15f, 0.0f});
     for (int i = 0; i < 30; i++) step_world(*scene.world);
 
     Ref<KCC> character = make_character(scene, {0.0f, 0.0f, 0.0f}, true);
@@ -529,8 +524,8 @@ void test_kcc_golden_pushing_and_standing_on_dynamics(TestCtx &ctx) {
         const Vec3f input = i < 150 ? vec3f::make(2.0f, 0.0f, 0.0f) : i < 300 ? vec3f::make(-3.0f, 0.0f, 0.0f) : vec3f::make(0.0f, 0.0f, 0.0f);
         frame(golden, *scene.world, *character, input, settings, filter, nullptr);
     }
-    CHECK(ctx, crate->position.x > 4.5f);
-    CHECK(ctx, small_crate->position.x > 5.5f);
+    CHECK(ctx, vec3f::x(crate->position) > 4.5f);
+    CHECK(ctx, vec3f::x(small_crate->position) > 5.5f);
     CHECK(ctx, character->ground.body_id == slab->id);
     CHECK_NEAR(ctx, y_of(*character), 0.3f, 0.01f);
     check_golden(ctx, "pushing_and_standing_on_dynamics", golden.physics.value, 0x971acf3bu);
@@ -612,7 +607,7 @@ void test_kcc_golden_crouch_teleport_and_a_sensor(TestCtx &ctx) {
     // a ceiling from y 1.25, under the standing shape's top at 1.6
     add_static_box(scene, {1.0f, 0.2f, 2.0f}, {4.0f, 1.45f, 0.0f});
     RigidBodySettings sensor_settings =
-        body_settings(box::create({.half_extents = {0.5f, 1.0f, 2.0f}}), scene.not_moving, MotionType::STATIC, {-3.0f, 1.0f, 0.0f});
+        body_settings(box::create({.half_extents = vec3f::make(0.5f, 1.0f, 2.0f)}), scene.not_moving, MotionType::STATIC, {-3.0f, 1.0f, 0.0f});
     sensor_settings.sensor = true;
     Rules rules;
     rules.watched = rigid_body::create(world, sensor_settings)->id;
@@ -620,9 +615,9 @@ void test_kcc_golden_crouch_teleport_and_a_sensor(TestCtx &ctx) {
 
     // each shape's origin at the feet, as the docs give them, so they swap freely
     Ref<Shape> standing = transformed::create({.shape = capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f}),
-                                                   .position = {0.0f, 0.8f, 0.0f}});
+                                                   .position = vec3f::make(0.0f, 0.8f, 0.0f)});
     Ref<Shape> crouching = transformed::create({.shape = capsule::create({.half_height_of_cylinder = 0.2f, .radius = 0.3f}),
-                                                    .position = {0.0f, 0.5f, 0.0f}});
+                                                    .position = vec3f::make(0.0f, 0.5f, 0.0f)});
     KCCSettings character_settings;
     character_settings.shape = standing;
     character_settings.max_slope_angle = 45.0f * scalar::DEGREES_TO_RADIANS;
@@ -691,10 +686,10 @@ void test_kcc_golden_unpushable_crate(TestCtx &ctx) {
     add_static_box(scene, {50.0f, 0.5f, 50.0f}, {0.0f, -0.5f, 0.0f});
     Rules rules;
     RigidBody *unpushable =
-        add_body(scene, box::create({.half_extents = {0.4f, 0.4f, 0.4f}, .density = 10.0f}), MotionType::DYNAMIC, {1.5f, 0.4f, 0.0f});
+        add_body(scene, box::create({.half_extents = vec3f::splat(0.4f), .density = 10.0f}), MotionType::DYNAMIC, {1.5f, 0.4f, 0.0f});
     rules.unpushable = unpushable->id;
     RigidBody *pushable =
-        add_body(scene, box::create({.half_extents = {0.4f, 0.4f, 0.4f}, .density = 10.0f}), MotionType::DYNAMIC, {1.5f, 0.4f, 2.0f});
+        add_body(scene, box::create({.half_extents = vec3f::splat(0.4f), .density = 10.0f}), MotionType::DYNAMIC, {1.5f, 0.4f, 2.0f});
     for (int i = 0; i < 30; i++) step_world(*scene.world);
 
     Ref<KCC> character = make_character(scene, {0.0f, 0.0f, 0.0f});
@@ -707,8 +702,8 @@ void test_kcc_golden_unpushable_crate(TestCtx &ctx) {
         // held at the unpushable crate's face
         if (i == 89) CHECK_NEAR(ctx, x_of(*character), 0.78f, 0.01f);
     }
-    CHECK_NEAR(ctx, unpushable->position.x, 1.5f, 1e-3f);
-    CHECK(ctx, pushable->position.x > 3.5f);
+    CHECK_NEAR(ctx, vec3f::x(unpushable->position), 1.5f, 1e-3f);
+    CHECK(ctx, vec3f::x(pushable->position) > 3.5f);
     check_golden(ctx, "unpushable_crate", golden.physics.value, 0x38806201u);
     check_golden(ctx, "unpushable_crate log", golden.log.value, 0x5da92f11u);
     release(scene, character);
@@ -739,9 +734,9 @@ void test_kcc_golden_pusher_that_cannot_push(TestCtx &ctx) {
     World &world = *scene.world;
     add_static_box(scene, {50.0f, 0.5f, 50.0f}, {0.0f, -0.5f, 0.0f});
     Rules rules;
-    RigidBody *pusher = add_body(scene, box::create({.half_extents = {0.3f, 0.8f, 1.0f}}), MotionType::KINEMATIC, {3.0f, 0.8f, 0.0f});
+    RigidBody *pusher = add_body(scene, box::create({.half_extents = vec3f::make(0.3f, 0.8f, 1.0f)}), MotionType::KINEMATIC, {3.0f, 0.8f, 0.0f});
     rules.cannot_push_character = pusher->id;
-    RigidBody *other = add_body(scene, box::create({.half_extents = {0.3f, 0.8f, 1.0f}}), MotionType::KINEMATIC, {-3.0f, 0.8f, 3.0f});
+    RigidBody *other = add_body(scene, box::create({.half_extents = vec3f::make(0.3f, 0.8f, 1.0f)}), MotionType::KINEMATIC, {-3.0f, 0.8f, 3.0f});
     rigid_body::set_linear_velocity(world, pusher, vec3f::make(-1.0f, 0.0f, 0.0f));
     rigid_body::set_linear_velocity(world, other, vec3f::make(1.0f, 0.0f, 0.0f));
     step_world(world);

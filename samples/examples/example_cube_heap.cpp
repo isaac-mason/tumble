@@ -23,8 +23,10 @@ static void spawn(App &app) {
     settings.shape = state.cube;
     settings.object_layer = state.layers.moving;
     settings.motion_type = MotionType::DYNAMIC;
-    settings.position = {seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA), seeded::range(state.random, 0.0f, SPAWN_HEIGHT),
-                         seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA)};
+    const float x = seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA);
+    const float y = seeded::range(state.random, 0.0f, SPAWN_HEIGHT);
+    const float z = seeded::range(state.random, -SPAWN_AREA, SPAWN_AREA);
+    settings.position = vec3f::make(x, y, z);
     settings.friction = 0.5f;
     settings.mass = 1.0f;
     state.cubes.push(rigid_body::create(*app.world, settings));
@@ -42,12 +44,12 @@ static void init(App &app) {
     // strong gravity, for a livelier heap
     app.world = app::create_world(state.layers, {0.0f, -50.0f, 0.0f});
     RigidBodySettings ground;
-    ground.shape = app::keep(app, plane::create({.plane = {{0.0f, 1.0f, 0.0f}, 0.0f}, .half_extent = 50.0f}));
+    ground.shape = app::keep(app, plane::create({.plane = plane3f::make(vec3f::axis_y(), 0.0f), .half_extent = 50.0f}));
     ground.object_layer = state.layers.not_moving;
     ground.motion_type = MotionType::STATIC;
     ground.friction = 0.5f;
     rigid_body::create(*app.world, ground);
-    state.cube = app::keep(app, box::create({.half_extents = {0.25f, 0.25f, 0.25f}, .convex_radius = 0.05f}));
+    state.cube = app::keep(app, box::create({.half_extents = vec3f::splat(0.25f), .convex_radius = 0.05f}));
     match_count(app);
     camera::look_at(app.camera, {8.0f, 8.0f, 12.0f}, {0.0f, 1.5f, 0.0f});
 }

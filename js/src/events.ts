@@ -6,27 +6,14 @@ import type { World } from './world.js';
 /** how a contact is solved: its combined material, and the scales and surface velocities a hook may change */
 export type ContactSettings = Low.ContactSettings;
 
-/** a contact the narrowphase made or kept, with its manifold: up to four points on each body, the normal from a to b */
-export type ContactEvent = {
-    bodyA: BodyId;
-    bodyB: BodyId;
-    userDataA: number;
-    userDataB: number;
-    subShapeA: number;
-    subShapeB: number;
-    /** -1 for none */
-    materialA: number;
-    materialB: number;
-    normal: Vec3;
-    penetration: number;
-    /** how many of pointsA and pointsB are the contact's */
-    points: number;
-    pointsA: Vec3[];
-    pointsB: Vec3[];
-};
+/**
+ * a contact the narrowphase made or kept, with its manifold: up to four points on each body (numPoints of them), the
+ * normal from a to b. materialIdA and materialIdB are -1 for none
+ */
+export type ContactEvent = Omit<Low.ContactEvent, 'settings' | 'rejected' | 'settingsChanged'>;
 
 /** a contact that was there last step and is gone; its bodies may be gone too */
-export type ContactRemovedEvent = { bodyA: BodyId; bodyB: BodyId; subShapeA: number; subShapeB: number };
+export type ContactRemovedEvent = Low.ContactRemovedEvent;
 
 /**
  * what a step tells you, and asks you, as it runs. every hook is optional, and a step with no pair or contact hook runs
@@ -54,78 +41,13 @@ export type Listener = {
     onBodyDeactivated?: (body: BodyId) => void;
 };
 
-const TWO_32 = 0x100000000;
-
-const pair = Low.PairEvent.create();
 const activation = Low.ActivationEvent.create();
+const pair = Low.PairEvent.create();
+/** read from the world's buffers where they lie; its settings are what a hook is given to change */
 const contact = Low.ContactEvent.create();
 const removed = Low.ContactRemovedEvent.create();
-
-const contactEvent: ContactEvent = {
-    bodyA: 0,
-    bodyB: 0,
-    userDataA: 0,
-    userDataB: 0,
-    subShapeA: 0,
-    subShapeB: 0,
-    materialA: -1,
-    materialB: -1,
-    normal: [0, 0, 0],
-    penetration: 0,
-    points: 0,
-    pointsA: [
-        [0, 0, 0],
-        [0, 0, 0],
-        [0, 0, 0],
-        [0, 0, 0],
-    ],
-    pointsB: [
-        [0, 0, 0],
-        [0, 0, 0],
-        [0, 0, 0],
-        [0, 0, 0],
-    ],
-};
-const removedEvent: ContactRemovedEvent = { bodyA: 0, bodyB: 0, subShapeA: 0, subShapeB: 0 };
-/** the settings a hook changes, and what they were, so only a real change goes to the step */
-const settings = Low.ContactSettings.create();
+/** a contact's settings as the step has them, to tell whether a hook changed them */
 const settingsBefore = Low.ContactSettings.create();
-
-function copyVec3(out: Vec3, from: Vec3): void {
-    out[0] = from[0];
-    out[1] = from[1];
-    out[2] = from[2];
-}
-
-function copyContact(): void {
-    contactEvent.bodyA = contact.bodyA;
-    contactEvent.bodyB = contact.bodyB;
-    contactEvent.userDataA = contact.userDataAHigh * TWO_32 + contact.userDataALow;
-    contactEvent.userDataB = contact.userDataBHigh * TWO_32 + contact.userDataBLow;
-    contactEvent.subShapeA = contact.subShapeA;
-    contactEvent.subShapeB = contact.subShapeB;
-    contactEvent.materialA = contact.materialA;
-    contactEvent.materialB = contact.materialB;
-    copyVec3(contactEvent.normal, contact.normal);
-    contactEvent.penetration = contact.penetration;
-    contactEvent.points = contact.numPoints;
-    for (let i = 0; i < contact.numPoints; i++) {
-        copyVec3(contactEvent.pointsA[i]!, contact.pointsA[i]!);
-        copyVec3(contactEvent.pointsB[i]!, contact.pointsB[i]!);
-    }
-}
-
-function copySettings(out: ContactSettings, from: ContactSettings): void {
-    out.combinedFriction = from.combinedFriction;
-    out.combinedRestitution = from.combinedRestitution;
-    out.isSensor = from.isSensor;
-    out.invMassScale1 = from.invMassScale1;
-    out.invMassScale2 = from.invMassScale2;
-    out.invInertiaScale1 = from.invInertiaScale1;
-    out.invInertiaScale2 = from.invInertiaScale2;
-    copyVec3(out.relativeLinearSurfaceVelocity, from.relativeLinearSurfaceVelocity);
-    copyVec3(out.relativeAngularSurfaceVelocity, from.relativeAngularSurfaceVelocity);
-}
 
 function sameVec3(a: Vec3, b: Vec3): boolean {
     return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
@@ -154,49 +76,46 @@ function fail(error: unknown): void {
     failure = error;
 }
 
-/** the contact just read through a settings hook, changed in the step when the hook changed them */
-function changeSettings(
-    world: World,
-    persisted: boolean,
-    index: number,
-    hook: (contact: ContactEvent, settings: ContactSettings) => void,
-): void {
-    copySettings(settings, contact.settings);
-    copySettings(settingsBefore, contact.settings);
+/** the contact just read from `address` through a settings hook, its settings written back when the hook changed them */
+function changeSettings(address: number, hook: (contact: ContactEvent, settings: ContactSettings) => void): void {
     try {
-        hook(contactEvent, settings);
+        hook(contact, contact.settings);
     } catch (error) {
         fail(error);
         return;
     }
-    if (sameSettings(settings, settingsBefore)) return;
-    if (persisted) Low.Events.changeContactPersisted(world, index, settings);
-    else Low.Events.changeContactAdded(world, index, settings);
+    if (sameSettings(contact.settings, Low.ContactEvent.readSettings(settingsBefore, address))) return;
+    Low.ContactEvent.writeSettings(address, contact.settings);
+    Low.ContactEvent.setSettingsChanged(address, true);
 }
 
-/** the contact just read, at `index` of the added or the persisted, through the validate hook and a settings hook */
-function handleContact(
-    world: World,
+/** the step's added or persisted contacts, each read where it lies, through the validate hook and a settings hook */
+function handleContacts(
+    events: Low.WorldEvents,
     persisted: boolean,
-    index: number,
     validate: Listener['onContactValidate'],
     hook: ((contact: ContactEvent, settings: ContactSettings) => void) | undefined,
 ): void {
-    copyContact();
-    if (validate !== undefined) {
-        let keep = true;
-        try {
-            keep = validate(contactEvent);
-        } catch (error) {
-            fail(error);
+    const count = persisted ? Low.WorldEvents.contactsPersistedLength(events) : Low.WorldEvents.contactsAddedLength(events);
+    for (let i = 0; i < count && !failed; i++) {
+        const address = persisted
+            ? Low.WorldEvents.contactsPersistedAddress(events, i)
+            : Low.WorldEvents.contactsAddedAddress(events, i);
+        Low.ContactEvent.read(contact, address);
+        if (validate !== undefined) {
+            let keep = true;
+            try {
+                keep = validate(contact);
+            } catch (error) {
+                fail(error);
+            }
+            if (!keep) {
+                Low.ContactEvent.setRejected(address, true);
+                continue;
+            }
         }
-        if (!keep) {
-            if (persisted) Low.Events.rejectContactPersisted(world, index);
-            else Low.Events.rejectContactAdded(world, index);
-            return;
-        }
+        if (hook !== undefined && !failed) changeSettings(address, hook);
     }
-    if (hook !== undefined && !failed) changeSettings(world, persisted, index, hook);
 }
 
 /** a step, its hooks run between its phases */
@@ -213,52 +132,43 @@ export function stepWith(world: World, listener: Listener | undefined, deltaTime
         Low.World.step(world, deltaTime);
     } else {
         Low.World.stepBegin(world, deltaTime);
+        const events = Low.World.events(world);
         // each find appends the pairs of the bodies the last narrowphase woke
         let pairsRead = 0;
         do {
             Low.World.findPairs(world);
             if (onBodyPairValidate !== undefined) {
-                for (const pairs = Low.Events.pairs(world); pairsRead < pairs && !failed; pairsRead++) {
-                    Low.Events.readPair(pair, world, pairsRead);
+                for (const count = Low.WorldEvents.pairsLength(events); pairsRead < count && !failed; pairsRead++) {
+                    const address = Low.WorldEvents.pairsAddress(events, pairsRead);
+                    Low.PairEvent.read(pair, address);
                     let collide = true;
                     try {
-                        collide = onBodyPairValidate(pair.bodyA, pair.bodyB);
+                        collide = onBodyPairValidate(pair.bodyIdA, pair.bodyIdB);
                     } catch (error) {
                         fail(error);
                     }
-                    if (!collide) Low.Events.rejectPair(world, pairsRead);
+                    if (!collide) Low.PairEvent.setRejected(address, true);
                 }
             }
             Low.World.narrowphase(world);
-        } while (Low.World.woken(world) > 0);
+        } while (Low.WorldEvents.woken(events) > 0);
 
-        const added = Low.Events.contactsAdded(world);
         if (onContactValidate !== undefined || onContactAdded !== undefined) {
-            for (let i = 0; i < added && !failed; i++) {
-                Low.Events.readContactAdded(contact, world, i);
-                handleContact(world, false, i, onContactValidate, onContactAdded);
-            }
+            handleContacts(events, false, onContactValidate, onContactAdded);
         }
         if (onContactValidate !== undefined || onContactPersisted !== undefined) {
-            const persisted = Low.Events.contactsPersisted(world);
-            for (let i = 0; i < persisted && !failed; i++) {
-                Low.Events.readContactPersisted(contact, world, i);
-                handleContact(world, true, i, onContactValidate, onContactPersisted);
-            }
+            handleContacts(events, true, onContactValidate, onContactPersisted);
         }
         Low.World.solve(world);
         Low.World.stepEnd(world);
     }
     if (onContactRemoved !== undefined) {
-        const count = Low.Events.contactsRemoved(world);
+        const events = Low.World.events(world);
+        const count = Low.WorldEvents.contactsRemovedLength(events);
         for (let i = 0; i < count && !failed; i++) {
-            Low.Events.readContactRemoved(removed, world, i);
-            removedEvent.bodyA = removed.bodyA;
-            removedEvent.bodyB = removed.bodyB;
-            removedEvent.subShapeA = removed.subShapeA;
-            removedEvent.subShapeB = removed.subShapeB;
+            Low.WorldEvents.readContactsRemoved(removed, events, i);
             try {
-                onContactRemoved(removedEvent);
+                onContactRemoved(removed);
             } catch (error) {
                 fail(error);
             }

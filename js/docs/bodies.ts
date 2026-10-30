@@ -233,8 +233,8 @@ const zone = rigidBody.create(world, {
 const entered: number[] = [];
 const sensing: Listener = {
     onContactAdded(contact) {
-        if (contact.bodyA === zone) entered.push(contact.bodyB);
-        else if (contact.bodyB === zone) entered.push(contact.bodyA);
+        if (contact.bodyIdA === zone) entered.push(contact.bodyIdB);
+        else if (contact.bodyIdB === zone) entered.push(contact.bodyIdA);
     },
 };
 /* SNIPPET_END: sensors */

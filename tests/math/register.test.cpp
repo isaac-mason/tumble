@@ -295,7 +295,7 @@ void test_register_plane_matches_storage(TestCtx &ctx) {
         const Plane loaded = plane3f::load(plane);
         Float3 o;
 
-        bad += !same3(loaded.normal, plane.normal) || !same(loaded.constant, plane.constant);
+        bad += !same3(plane3f::normal(loaded), plane.normal) || !same(plane3f::constant(loaded), plane.constant);
         bad += !same(plane3f::distance_to_point(loaded, L(p)), plane3f::distance_to_point(plane, p));
         bad += !same3(plane3f::project_point(loaded, L(p)), plane3f::project_point(o, plane, p));
     }

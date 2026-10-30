@@ -1,6 +1,6 @@
-import { type BodyId, INVALID_BODY_ID, type MaterialCombineMode, type MotionQuality, type MotionType } from './body.js';
+import { type BodyId, INVALID_BODY_ID, type MaterialCombineMode, type MotionQuality, MotionType } from './body.js';
 import * as Low from './generated/tumble.js';
-import { type Box3, copied, type Quat, type Vec3 } from './math.js';
+import type { Box3, Quat, Vec3 } from './math.js';
 import type { MassProperties, Shape } from './shapes/shapes.js';
 import type { World } from './world.js';
 
@@ -48,13 +48,8 @@ export type RigidBodySettings = {
     massPropertiesOverride?: MassProperties;
 };
 
-const TWO_32 = 0x100000000;
-
 let defaults: Low.BodySettings | null = null;
 const native: Low.BodySettings = Low.BodySettings.create();
-const vec3: Vec3 = [0, 0, 0];
-const quat: Quat = [0, 0, 0, 1];
-const box3: Box3 = { min: [0, 0, 0], max: [0, 0, 0] };
 
 function nativeSettings(settings: RigidBodySettings): Low.BodySettings {
     if (defaults === null) defaults = Low.RigidBody.defaultSettings(Low.BodySettings.create());
@@ -63,20 +58,9 @@ function nativeSettings(settings: RigidBodySettings): Low.BodySettings {
     native.quaternion = [...(settings.quaternion ?? defaults.quaternion)];
     const target = native as unknown as Record<string, unknown>;
     for (const [key, value] of Object.entries(settings)) {
-        if (
-            value === undefined ||
-            key === 'userData' ||
-            key === 'massPropertiesOverride' ||
-            key === 'position' ||
-            key === 'quaternion'
-        ) {
-            continue;
-        }
+        if (value === undefined || key === 'massPropertiesOverride' || key === 'position' || key === 'quaternion') continue;
         target[key] = value;
     }
-    const userData = settings.userData ?? 0;
-    native.userDataLow = userData >>> 0;
-    native.userDataHigh = Math.floor(userData / TWO_32);
     const override = settings.massPropertiesOverride;
     native.hasMassProperties = override !== undefined;
     if (override !== undefined) native.massProperties = override;
@@ -99,72 +83,100 @@ export function remove(world: World, body: BodyId): boolean {
 
 /** whether the id names a body in the world */
 export function exists(world: World, body: BodyId): boolean {
-    return Low.RigidBody.exists(world, body);
+    return Low.RigidBody.get(world, body) !== null;
 }
 
-// readers: out, then the world, then the body; false (out as it was) when the id names no body
+// readers: out, then the world, then the body; false (out as it was) when the id names no body. read from the body
+// where it lies, but for getVelocityAtPoint and getMaterial
 
 /** the shape's origin, world space */
 export function getPosition(out: Vec3, world: World, body: BodyId): boolean {
-    return copied(out, vec3, Low.RigidBody.getPosition(vec3, world, body));
+    const record = Low.RigidBody.get(world, body);
+    if (record === null) return false;
+    Low.RigidBody.readPosition(out, record);
+    return true;
 }
 
 export function getQuaternion(out: Quat, world: World, body: BodyId): boolean {
-    return copied(out, quat, Low.RigidBody.getQuaternion(quat, world, body));
+    const record = Low.RigidBody.get(world, body);
+    if (record === null) return false;
+    Low.RigidBody.readQuaternion(out, record);
+    return true;
 }
 
 export function getTransform(outPosition: Vec3, outQuaternion: Quat, world: World, body: BodyId): boolean {
-    if (!Low.RigidBody.getTransform(vec3, quat, world, body)) return false;
-    copied(outPosition, vec3, true);
-    copied(outQuaternion, quat, true);
+    const record = Low.RigidBody.get(world, body);
+    if (record === null) return false;
+    Low.RigidBody.readPosition(outPosition, record);
+    Low.RigidBody.readQuaternion(outQuaternion, record);
     return true;
 }
 
 export function getCenterOfMassPosition(out: Vec3, world: World, body: BodyId): boolean {
-    return copied(out, vec3, Low.RigidBody.getCenterOfMassPosition(vec3, world, body));
+    const record = Low.RigidBody.get(world, body);
+    if (record === null) return false;
+    Low.RigidBody.readCenterOfMassPosition(out, record);
+    return true;
 }
 
 export function getLinearVelocity(out: Vec3, world: World, body: BodyId): boolean {
-    return copied(out, vec3, Low.RigidBody.getLinearVelocity(vec3, world, body));
+    const record = Low.RigidBody.get(world, body);
+    if (record === null) return false;
+    Low.MotionProperties.readLinearVelocity(out, Low.RigidBody.motionProperties(record));
+    return true;
 }
 
 export function getAngularVelocity(out: Vec3, world: World, body: BodyId): boolean {
-    return copied(out, vec3, Low.RigidBody.getAngularVelocity(vec3, world, body));
+    const record = Low.RigidBody.get(world, body);
+    if (record === null) return false;
+    Low.MotionProperties.readAngularVelocity(out, Low.RigidBody.motionProperties(record));
+    return true;
 }
 
 /** the velocity of a world point carried with the body */
 export function getVelocityAtPoint(out: Vec3, world: World, body: BodyId, point: Vec3): boolean {
-    return copied(out, vec3, Low.RigidBody.getVelocityAtPoint(vec3, world, body, point));
+    return Low.RigidBody.getVelocityAtPoint(out, world, body, point);
 }
 
 /** world space bounds */
 export function getBounds(out: Box3, world: World, body: BodyId): boolean {
-    if (!Low.RigidBody.getAabb(box3, world, body)) return false;
-    copied(out.min, box3.min, true);
-    copied(out.max, box3.max, true);
+    const record = Low.RigidBody.get(world, body);
+    if (record === null) return false;
+    Low.RigidBody.readAabb(out, record);
     return true;
 }
 
 /** kg; 0 for a static or kinematic body, or an id naming no body */
 export function getMass(world: World, body: BodyId): number {
-    return Low.RigidBody.getMass(world, body);
+    const record = Low.RigidBody.get(world, body);
+    if (record === null) return 0;
+    const inverseMass = Low.MotionProperties.invMass(Low.RigidBody.motionProperties(record));
+    // a float division, as the wasm's
+    return inverseMass > 0 ? Math.fround(1 / inverseMass) : 0;
 }
 
+/** STATIC for an id naming no body */
 export function getMotionType(world: World, body: BodyId): MotionType {
-    return Low.RigidBody.getMotionType(world, body) as MotionType;
+    const record = Low.RigidBody.get(world, body);
+    return record === null ? MotionType.STATIC : (Low.RigidBody.motionType(record) as MotionType);
 }
 
+/** 0 for an id naming no body */
 export function getObjectLayer(world: World, body: BodyId): number {
-    return Low.RigidBody.getObjectLayer(world, body);
+    const record = Low.RigidBody.get(world, body);
+    return record === null ? 0 : Low.RigidBody.objectLayer(record);
 }
 
+/** 0 for an id naming no body */
 export function getUserData(world: World, body: BodyId): number {
-    return Low.RigidBody.getUserDataHigh(world, body) * TWO_32 + Low.RigidBody.getUserDataLow(world, body);
+    const record = Low.RigidBody.get(world, body);
+    return record === null ? 0 : Low.RigidBody.userData(record);
 }
 
 /** null for an id naming no body */
 export function getShape(world: World, body: BodyId): Shape | null {
-    return Low.RigidBody.getShape(world, body);
+    const record = Low.RigidBody.get(world, body);
+    return record === null ? null : Low.RigidBody.shape(record);
 }
 
 /** the material id of the part of the body's shape a hit's or a contact's sub shape id names; -1 for none */
@@ -172,8 +184,14 @@ export function getMaterial(world: World, body: BodyId, subShapeId: number): num
     return Low.RigidBody.getMaterial(world, body, subShapeId);
 }
 
+/** a dynamic or kinematic body off the active list */
 export function isSleeping(world: World, body: BodyId): boolean {
-    return Low.RigidBody.isSleeping(world, body);
+    const record = Low.RigidBody.get(world, body);
+    return (
+        record !== null &&
+        Low.RigidBody.motionType(record) !== MotionType.STATIC &&
+        Low.RigidBody.activeIndex(record) === Low.INACTIVE_BODY_INDEX
+    );
 }
 
 // writers: false when the id names no body
@@ -269,13 +287,22 @@ export function wake(world: World, body: BodyId): boolean {
 }
 
 export function setUserData(world: World, body: BodyId, userData: number): boolean {
-    return Low.RigidBody.setUserData(world, body, userData >>> 0, Math.floor(userData / TWO_32));
+    const record = Low.RigidBody.get(world, body);
+    if (record === null) return false;
+    Low.RigidBody.setUserData(record, userData);
+    return true;
 }
 
 export function setFriction(world: World, body: BodyId, friction: number): boolean {
-    return Low.RigidBody.setFriction(world, body, friction);
+    const record = Low.RigidBody.get(world, body);
+    if (record === null) return false;
+    Low.RigidBody.setFriction(record, friction);
+    return true;
 }
 
 export function setRestitution(world: World, body: BodyId, restitution: number): boolean {
-    return Low.RigidBody.setRestitution(world, body, restitution);
+    const record = Low.RigidBody.get(world, body);
+    if (record === null) return false;
+    Low.RigidBody.setRestitution(record, restitution);
+    return true;
 }

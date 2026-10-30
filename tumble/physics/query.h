@@ -21,15 +21,15 @@ void cast_ray(World &world, CastRayCollector &collector, const CastRaySettings &
 
 /** sweeps the shape at the pose along the displacement */
 void cast_shape(World &world, CastShapeCollector &collector, const CastShapeSettings &settings,
-                const Shape *shape, const Transformf &transform, Vec3f displacement, const Filter &filter);
+                const Shape *shape, const Transform &transform, Vec3f displacement, const Filter &filter);
 
 void collide_shape(World &world, CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                   const Shape *shape, const Transformf &transform, const Filter &filter);
+                   const Shape *shape, const Transform &transform, const Filter &filter);
 
 /** collide_shape through the internal edge removing wrapper, flushed per body */
 void collide_shape_with_internal_edge_removal(World &world, CollideShapeCollector &collector,
                                               const CollideShapeSettings &settings, const Shape *shape,
-                                              const Transformf &transform, const Filter &filter);
+                                              const Transform &transform, const Filter &filter);
 
 void collide_point(World &world, CollidePointCollector &collector, const CollidePointSettings &settings,
                    Vec3f point, const Filter &filter);

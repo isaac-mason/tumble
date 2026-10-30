@@ -44,7 +44,7 @@ RigidBody *make_body(Scene &scene, const Float3 &position = {0, 0, 0}, MotionTyp
     return rigid_body::create(*scene.world, {.shape = scene.sphere,
                                              .object_layer = motion_type == MotionType::STATIC ? scene.not_moving : scene.moving,
                                              .motion_type = motion_type,
-                                             .position = position});
+                                             .position = vec3f::load(position)});
 }
 
 uint32_t active_contact_count(const Contacts &contacts) { return contacts.contacts.length - contacts.free_indices.length; }
@@ -79,9 +79,13 @@ bool chains_consistent(const World &world, const int32_t *records, uint32_t num_
     return true;
 }
 
+bool removed_event_is(const ContactRemovedEvent &event, BodyId a, BodyId b, uint32_t sub_shape_a, uint32_t sub_shape_b) {
+    return event.body_id_a == a && event.body_id_b == b && event.sub_shape_id_a == sub_shape_a && event.sub_shape_id_b == sub_shape_b;
+}
+
 bool removed_event_is(const ContactRemovedEvent &event, const RigidBody *a, const RigidBody *b, uint32_t sub_shape_a,
                       uint32_t sub_shape_b) {
-    return event.body_id_a == a->id && event.body_id_b == b->id && event.sub_shape_id_a == sub_shape_a && event.sub_shape_id_b == sub_shape_b;
+    return removed_event_is(event, a->id, b->id, sub_shape_a, sub_shape_b);
 }
 
 /** the pair phase alone */
@@ -366,13 +370,16 @@ void test_contacts_lifecycle_under_found_pair(TestCtx &ctx) {
     contacts::create_contact(world.contacts, world.pairs, record, *a, *b, 0, 0);
     pairs::purge_body_pairs(world.pairs, world.contacts, world.bodies, *ball, world.events);
     broadphase::remove_body(world.broadphase, ball);
+    // a removed body's record holds no id
+    const BodyId id_a = a->id;
+    const BodyId id_b = b->id;
     rigid_body::remove(world, ball);
     CHECK(ctx, world.pairs.record_count == 0 && active_contact_count(world.contacts) == 0);
     CHECK(ctx, world.events.contacts_removed.length == 0 && world.contacts.pending_contact_removed.length == 4);
 
     // the next step's flush reports it, with the removed body's id
     contacts::flush_pending_contact_removed(world.contacts, world.events);
-    CHECK(ctx, world.events.contacts_removed.length == 1 && removed_event_is(world.events.contacts_removed[0], a, b, 0, 0));
+    CHECK(ctx, world.events.contacts_removed.length == 1 && removed_event_is(world.events.contacts_removed[0], id_a, id_b, 0, 0));
     CHECK(ctx, world.contacts.pending_contact_removed.length == 0);
 
     // a flush with nothing queued reports nothing

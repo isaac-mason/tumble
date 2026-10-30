@@ -65,7 +65,7 @@ static void spawn_ball(App &app) {
     settings.shape = state.ball;
     settings.object_layer = state.layers.moving;
     settings.motion_type = MotionType::DYNAMIC;
-    settings.position = {0.0f, SPAWN_HEIGHT, 0.0f};
+    settings.position = vec3f::make(0.0f, SPAWN_HEIGHT, 0.0f);
     settings.restitution = 0.6f;
     settings.friction = 0.4f;
     RigidBody *ball = rigid_body::create(*app.world, settings);
@@ -85,28 +85,27 @@ static void init(App &app) {
     app.world = app::create_world(state.layers);
 
     RigidBodySettings ground;
-    ground.shape = app::keep(app, box::create({.half_extents = {50.0f, 0.5f, 50.0f}}));
+    ground.shape = app::keep(app, box::create({.half_extents = vec3f::make(50.0f, 0.5f, 50.0f)}));
     ground.object_layer = state.layers.not_moving;
     ground.motion_type = MotionType::STATIC;
-    ground.position = {0.0f, -0.5f, 0.0f};
+    ground.position = vec3f::make(0.0f, -0.5f, 0.0f);
     ground.restitution = 0.2f;
     ground.friction = 0.5f;
     app::set_color(app, rigid_body::create(*app.world, ground), hex(0x666666));
 
     // maxwell the cat, as the hull of its body's vertices
     Model maxwell = model::load("maxwell.glb");
-    collections::Array<float> points = {};
-    const uint32_t vertices = maxwell.positions.length / 3 < MAXWELL_BODY_VERTICES ? maxwell.positions.length / 3 : MAXWELL_BODY_VERTICES;
-    for (uint32_t i = 0; i < vertices * 3; i++) points.push(maxwell.positions[i] * MAXWELL_SCALE);
+    collections::Array<Vec3f> points = model::points(maxwell, MAXWELL_BODY_VERTICES);
+    for (uint32_t i = 0; i < points.length; i++) points[i] = vec3f::scale(points[i], MAXWELL_SCALE);
     model::release(maxwell);
-    Shape *hull = convex_hull::create({.positions = points.data, .num_positions = points.length / 3});
+    Shape *hull = convex_hull::create({.positions = points.data, .num_positions = points.length});
     points.release();
     if (hull != nullptr) {
         RigidBodySettings settings;
         settings.shape = app::keep(app, hull);
         settings.object_layer = state.layers.moving;
         settings.motion_type = MotionType::KINEMATIC;
-        settings.position = {0.0f, 3.0f, 0.0f};
+        settings.position = vec3f::make(0.0f, 3.0f, 0.0f);
         settings.restitution = 0.5f;
         settings.friction = 0.3f;
         state.maxwell = rigid_body::create(*app.world, settings);
@@ -122,8 +121,9 @@ static void init(App &app) {
 static void step(App &app, float delta_time) {
     // balls that rolled away start again from the top
     for (uint32_t i = 0; i < state.balls.length; i++) {
-        const Float3 &position = state.balls[i]->position;
-        if (position.x * position.x + position.z * position.z > RESPAWN_RADIUS * RESPAWN_RADIUS) reset_ball(app, state.balls[i]);
+        const Vec3f position = state.balls[i]->position;
+        const float x = vec3f::x(position), z = vec3f::z(position);
+        if (x * x + z * z > RESPAWN_RADIUS * RESPAWN_RADIUS) reset_ball(app, state.balls[i]);
     }
 
     // side to side along x, spinning about y

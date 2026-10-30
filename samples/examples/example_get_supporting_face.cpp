@@ -39,13 +39,16 @@ static void init(App &app) {
     state.shape = 0;
     state.direction_point = {1.0f, 0.0f, 0.0f};
     state.arrow_length = 2.0f;
-    state.shapes[0] = app::keep(app, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}));
-    Shape *unit_box = app::keep(app, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}));
-    state.shapes[1] = app::keep(app, scaled::create({.shape = unit_box, .scale = {2.0f, 1.0f, 1.0f}}));
-    Shape *turned_box = app::keep(app, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}));
+    state.shapes[0] = app::keep(app, box::create({.half_extents = vec3f::splat(1.0f)}));
+    Shape *unit_box = app::keep(app, box::create({.half_extents = vec3f::splat(1.0f)}));
+    state.shapes[1] = app::keep(app, scaled::create({.shape = unit_box, .scale = vec3f::make(2.0f, 1.0f, 1.0f)}));
+    Shape *turned_box = app::keep(app, box::create({.half_extents = vec3f::splat(1.0f)}));
     const float half_turn = scalar::PI / 8.0f;
-    state.shapes[2] = app::keep(app, transformed::create({.shape = turned_box, .position = {0.0f, 0.0f, 0.0f}, .quaternion = {0.0f, 0.0f, sinf(half_turn), cosf(half_turn)}}));
-    const float octahedron[] = {0.0f, 1.5f, 0.0f, 0.0f, -1.5f, 0.0f, 1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, -1.0f};
+    state.shapes[2] = app::keep(app, transformed::create({.shape = turned_box,
+                                                          .position = vec3f::zero(),
+                                                          .quaternion = quatf::make(0.0f, 0.0f, sinf(half_turn), cosf(half_turn))}));
+    const Vec3f octahedron[] = {vec3f::make(0.0f, 1.5f, 0.0f), vec3f::make(0.0f, -1.5f, 0.0f), vec3f::make(1.0f, 0.0f, 0.0f),
+                                vec3f::make(-1.0f, 0.0f, 0.0f), vec3f::make(0.0f, 0.0f, 1.0f), vec3f::make(0.0f, 0.0f, -1.0f)};
     state.shapes[3] = app::keep(app, convex_hull::create({.positions = octahedron, .num_positions = 6, .convex_radius = 0.0f}));
     camera::look_at(app.camera, {4.0f, 4.0f, 4.0f}, {0.0f, 0.0f, 0.0f});
 }

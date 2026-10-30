@@ -2,6 +2,7 @@
 // js/wasm/generated/exports.cpp (see js/wasm/bind/bind.h). every field of a value that crosses is exposed: the bytes of one
 // that is not would be what the scratch held before.
 
+#include "tumble/physics/body/sleep.h"
 #include "tumble/util/error.h"
 #include "wasm/adapters.h"
 #include "wasm/bind/bind.h"
@@ -9,6 +10,19 @@
 using namespace tumble;
 using bind::GROWS;
 using bind::names;
+
+/** a Ref is its pointer, so a field holding one reads as the handle */
+template <typename T>
+struct bind::TypeOf<Ref<T>> {
+    static_assert(sizeof(Ref<T>) == sizeof(T *));
+    static TypeRef get() { return TypeOf<T *>::get(); }
+};
+
+/** a field holding one is read where it lies: its length and its elements */
+template <typename E>
+struct bind::TypeOf<collections::Array<E>> {
+    static TypeRef get() { return bind::array_of<collections::Array<E>, E>(); }
+};
 
 
 TUMBLE_BINDINGS {
@@ -34,6 +48,12 @@ TUMBLE_BINDINGS {
     TUPLE_AS(Float3, "Vec3").field(FIELD(Float3, x)).field(FIELD(Float3, y)).field(FIELD(Float3, z));
     TUPLE_AS(Float4, "Quat").field(FIELD(Float4, x)).field(FIELD(Float4, y)).field(FIELD(Float4, z)).field(FIELD(Float4, w));
     TUPLE_AS(Float4x4, "Mat4").field(FIELD(Float4x4, m));
+    LANES_AS(Vec3f, "Vec3f", 3);
+    LANES_AS(Quatf, "Quatf", 4);
+    LANES_AS(Mat4f, "Mat4f", 16);
+    VALUE(AABox).field(FIELD(AABox, min)).field(FIELD(AABox, max));
+    LANES_AS(Plane, "Planef", 4);
+    VALUE(Transform).field(FIELD(Transform, position)).field(FIELD(Transform, quaternion)).field(FIELD(Transform, scale));
     VALUE_AS(Box3f, "Box3").field(FIELD(Box3f, min)).field(FIELD(Box3f, max));
     VALUE_AS(MassProperties, "MassProperties")
         .field(FIELD(MassProperties, mass), "kg.")
@@ -80,7 +100,7 @@ TUMBLE_BINDINGS {
         .field(FIELD(WorldSettings, solver), bind::WRITABLE)
         .field(FIELD(WorldSettings, sleeping), bind::WRITABLE)
         .field(FIELD(WorldSettings, ccd), bind::WRITABLE);
-    RECORD(World);
+    RECORD(World).field(FIELD(World, events));
     RECORD_AS(Shape, "Shape");
 
     bind::fn(b, BIND(adapters::world_settings::create), GROWS);
@@ -97,7 +117,6 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::world::narrowphase), names("world"), GROWS);
     bind::fn(b, BIND(adapters::world::solve), names("world"), GROWS);
     bind::fn(b, BIND(adapters::world::step_end), names("world"), GROWS);
-    bind::fn(b, BIND(adapters::world::woken), names("world"));
     bind::fn(b, BIND(adapters::world::set_materials), names("world", "frictionRestitution", "count"), GROWS);
     bind::fn(b, BIND(adapters::world::get_gravity), names("out", "world"));
     bind::fn(b, BIND(adapters::world::set_gravity), names("world", "gravity"));
@@ -112,53 +131,45 @@ TUMBLE_BINDINGS {
         .field(FIELD(ContactSettings, inv_inertia_scale_2))
         .field(FIELD(ContactSettings, relative_linear_surface_velocity))
         .field(FIELD(ContactSettings, relative_angular_surface_velocity));
-    VALUE_AS(adapters::PairEvent, "PairEvent")
-        .field(FIELD(adapters::PairEvent, body_a))
-        .field(FIELD(adapters::PairEvent, body_b))
-        .field(FIELD(adapters::PairEvent, user_data_a_low))
-        .field(FIELD(adapters::PairEvent, user_data_a_high))
-        .field(FIELD(adapters::PairEvent, user_data_b_low))
-        .field(FIELD(adapters::PairEvent, user_data_b_high));
-    VALUE_AS(adapters::ContactEvent, "ContactEvent")
-        .field(FIELD(adapters::ContactEvent, body_a))
-        .field(FIELD(adapters::ContactEvent, body_b))
-        .field(FIELD(adapters::ContactEvent, user_data_a_low))
-        .field(FIELD(adapters::ContactEvent, user_data_a_high))
-        .field(FIELD(adapters::ContactEvent, user_data_b_low))
-        .field(FIELD(adapters::ContactEvent, user_data_b_high))
-        .field(FIELD(adapters::ContactEvent, sub_shape_a))
-        .field(FIELD(adapters::ContactEvent, sub_shape_b))
-        .field(FIELD(adapters::ContactEvent, material_a))
-        .field(FIELD(adapters::ContactEvent, material_b))
-        .field(FIELD(adapters::ContactEvent, normal))
-        .field(FIELD(adapters::ContactEvent, penetration))
-        .field(FIELD(adapters::ContactEvent, num_points))
-        .field(FIELD(adapters::ContactEvent, points_a))
-        .field(FIELD(adapters::ContactEvent, points_b))
-        .field(FIELD(adapters::ContactEvent, settings));
-    VALUE_AS(adapters::ContactRemovedEvent, "ContactRemovedEvent")
-        .field(FIELD(adapters::ContactRemovedEvent, body_a))
-        .field(FIELD(adapters::ContactRemovedEvent, body_b))
-        .field(FIELD(adapters::ContactRemovedEvent, sub_shape_a))
-        .field(FIELD(adapters::ContactRemovedEvent, sub_shape_b));
-    bind::fn(b, BIND(adapters::events::pairs), names("world"));
-    bind::fn(b, BIND(adapters::events::read_pair), names("out", "world", "index"));
-    bind::fn(b, BIND(adapters::events::contacts_added), names("world"));
-    bind::fn(b, BIND(adapters::events::read_contact_added), names("out", "world", "index"));
-    bind::fn(b, BIND(adapters::events::contacts_persisted), names("world"));
-    bind::fn(b, BIND(adapters::events::read_contact_persisted), names("out", "world", "index"));
-    bind::fn(b, BIND(adapters::events::contacts_removed), names("world"));
-    bind::fn(b, BIND(adapters::events::read_contact_removed), names("out", "world", "index"));
-    bind::fn(b, BIND(adapters::events::reject_pair), names("world", "index"));
-    bind::fn(b, BIND(adapters::events::reject_contact_added), names("world", "index"));
-    bind::fn(b, BIND(adapters::events::reject_contact_persisted), names("world", "index"));
-    bind::fn(b, BIND(adapters::events::change_contact_added), names("world", "index", "settings"));
-    bind::fn(b, BIND(adapters::events::change_contact_persisted), names("world", "index", "settings"));
+    // a step's events, read and rejected or changed where they lie, in the world's own buffers
+    VALUE(PairEvent)
+        .field(FIELD(PairEvent, body_id_a))
+        .field(FIELD(PairEvent, body_id_b))
+        .field(FIELD(PairEvent, user_data_a))
+        .field(FIELD(PairEvent, user_data_b))
+        .field(FIELD(PairEvent, rejected), bind::WRITABLE);
+    VALUE(ContactEvent)
+        .field(FIELD(ContactEvent, body_id_a))
+        .field(FIELD(ContactEvent, body_id_b))
+        .field(FIELD(ContactEvent, user_data_a))
+        .field(FIELD(ContactEvent, user_data_b))
+        .field(FIELD(ContactEvent, sub_shape_id_a))
+        .field(FIELD(ContactEvent, sub_shape_id_b))
+        .field(FIELD(ContactEvent, material_id_a))
+        .field(FIELD(ContactEvent, material_id_b))
+        .field(FIELD(ContactEvent, normal))
+        .field(FIELD(ContactEvent, penetration))
+        .field(FIELD(ContactEvent, num_points))
+        .field(FIELD(ContactEvent, points_a))
+        .field(FIELD(ContactEvent, points_b))
+        .field(FIELD(ContactEvent, settings), bind::WRITABLE)
+        .field(FIELD(ContactEvent, rejected), bind::WRITABLE)
+        .field(FIELD(ContactEvent, settings_changed), bind::WRITABLE);
+    VALUE(ContactRemovedEvent)
+        .field(FIELD(ContactRemovedEvent, body_id_a))
+        .field(FIELD(ContactRemovedEvent, body_id_b))
+        .field(FIELD(ContactRemovedEvent, sub_shape_id_a))
+        .field(FIELD(ContactRemovedEvent, sub_shape_id_b));
+    RECORD(WorldEvents)
+        .field(FIELD(WorldEvents, pairs))
+        .field(FIELD(WorldEvents, contacts_added))
+        .field(FIELD(WorldEvents, contacts_persisted))
+        .field(FIELD(WorldEvents, contacts_removed))
+        .field(FIELD(WorldEvents, woken), "the bodies the last narrowphase woke, whose pairs are not found yet.");
 
     VALUE_AS(adapters::ActivationEvent, "ActivationEvent")
         .field(FIELD(adapters::ActivationEvent, body))
-        .field(FIELD(adapters::ActivationEvent, user_data_low))
-        .field(FIELD(adapters::ActivationEvent, user_data_high))
+        .field(FIELD(adapters::ActivationEvent, user_data))
         .field(FIELD(adapters::ActivationEvent, activated));
     bind::fn(b, BIND(adapters::activation::events), names("world"));
     bind::fn(b, BIND(adapters::activation::read_event), names("out", "world", "index"));
@@ -205,8 +216,7 @@ TUMBLE_BINDINGS {
         .field(FIELD(adapters::BodySettings, shape))
         .field(FIELD(adapters::BodySettings, object_layer))
         .field(FIELD(adapters::BodySettings, motion_type))
-        .field(FIELD(adapters::BodySettings, user_data_low))
-        .field(FIELD(adapters::BodySettings, user_data_high))
+        .field(FIELD(adapters::BodySettings, user_data))
         .field(FIELD(adapters::BodySettings, position))
         .field(FIELD(adapters::BodySettings, quaternion))
         .field(FIELD(adapters::BodySettings, motion_quality))
@@ -234,26 +244,32 @@ TUMBLE_BINDINGS {
         .field(FIELD(adapters::BodySettings, has_mass_properties))
         .field(FIELD(adapters::BodySettings, mass_properties));
 
+    RECORD(MotionProperties)
+        .field(FIELD(MotionProperties, linear_velocity))
+        .field(FIELD(MotionProperties, angular_velocity))
+        .field(FIELD(MotionProperties, inv_mass));
+    // a body found by its id and its fields read where they lie, with no call
+    RECORD(RigidBody)
+        .id_lookup(&World::bodies, &Bodies::pool, &RigidBody::id, body_id::BODY_INDEX_MASK)
+        .field(FIELD(RigidBody, position))
+        .field(FIELD(RigidBody, quaternion))
+        .field(FIELD(RigidBody, center_of_mass_position))
+        .field(FIELD(RigidBody, user_data), bind::WRITABLE)
+        .field(FIELD(RigidBody, shape))
+        .field(FIELD(RigidBody, motion_type))
+        .field(FIELD(RigidBody, motion_properties))
+        .field(FIELD(RigidBody, friction), bind::WRITABLE)
+        .field(FIELD(RigidBody, restitution), bind::WRITABLE)
+        .field(FIELD(RigidBody, aabb))
+        .field(FIELD(RigidBody, object_layer))
+        .field(FIELD(RigidBody, active_index));
+    bind::constant(b, "INACTIVE_BODY_INDEX", sleep::INACTIVE_BODY_INDEX, "a body's active index off the active list");
+
     bind::fn(b, BIND(adapters::rigid_body::default_settings), names("out"));
     bind::fn(b, BIND(adapters::rigid_body::create), names("world", "settings"), GROWS);
     bind::fn(b, BIND(adapters::rigid_body::remove), names("world", "body"));
-    bind::fn(b, BIND(adapters::rigid_body::exists), names("world", "body"));
-    bind::fn(b, BIND(adapters::rigid_body::get_position), names("out", "world", "body"));
-    bind::fn(b, BIND(adapters::rigid_body::get_quaternion), names("out", "world", "body"));
-    bind::fn(b, BIND(adapters::rigid_body::get_transform), names("outPosition", "outQuaternion", "world", "body"));
-    bind::fn(b, BIND(adapters::rigid_body::get_center_of_mass_position), names("out", "world", "body"));
-    bind::fn(b, BIND(adapters::rigid_body::get_linear_velocity), names("out", "world", "body"));
-    bind::fn(b, BIND(adapters::rigid_body::get_angular_velocity), names("out", "world", "body"));
     bind::fn(b, BIND(adapters::rigid_body::get_velocity_at_point), names("out", "world", "body", "point"));
-    bind::fn(b, BIND(adapters::rigid_body::get_aabb), names("out", "world", "body"));
-    bind::fn(b, BIND(adapters::rigid_body::get_mass), names("world", "body"));
-    bind::fn(b, BIND(adapters::rigid_body::get_motion_type), names("world", "body"));
-    bind::fn(b, BIND(adapters::rigid_body::get_object_layer), names("world", "body"));
-    bind::fn(b, BIND(adapters::rigid_body::get_user_data_low), names("world", "body"));
-    bind::fn(b, BIND(adapters::rigid_body::get_user_data_high), names("world", "body"));
-    bind::fn(b, BIND(adapters::rigid_body::get_shape), names("world", "body"));
     bind::fn(b, BIND(adapters::rigid_body::get_material), names("world", "body", "subShapeId"));
-    bind::fn(b, BIND(adapters::rigid_body::is_sleeping), names("world", "body"));
     bind::fn(b, BIND(adapters::rigid_body::set_position), names("world", "body", "position", "wake"), GROWS);
     bind::fn(b, BIND(adapters::rigid_body::set_quaternion), names("world", "body", "quaternion", "wake"), GROWS);
     bind::fn(b, BIND(adapters::rigid_body::set_transform), names("world", "body", "position", "quaternion", "wake"), GROWS);
@@ -273,9 +289,6 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::rigid_body::move_kinematic), names("world", "body", "position", "quaternion", "deltaTime"), GROWS);
     bind::fn(b, BIND(adapters::rigid_body::sleep), names("world", "body"));
     bind::fn(b, BIND(adapters::rigid_body::wake), names("world", "body"), GROWS);
-    bind::fn(b, BIND(adapters::rigid_body::set_user_data), names("world", "body", "low", "high"));
-    bind::fn(b, BIND(adapters::rigid_body::set_friction), names("world", "body", "friction"));
-    bind::fn(b, BIND(adapters::rigid_body::set_restitution), names("world", "body", "restitution"));
 
     bind::enumeration<uint32_t>(b, "ShapeType")
         .value("SPHERE", ShapeType::SPHERE)
@@ -357,15 +370,15 @@ TUMBLE_BINDINGS {
         .value("AUTO", ConvexHullShape::BakeSupportAdjacency::AUTO, "when the hull has many vertices.")
         .value("NEVER", ConvexHullShape::BakeSupportAdjacency::NEVER)
         .value("ALWAYS", ConvexHullShape::BakeSupportAdjacency::ALWAYS);
-    VALUE_AS(ConvexHullShapeSettings, "ConvexHullSettings")
-        .field(FIELD(ConvexHullShapeSettings, positions))
-        .field(FIELD(ConvexHullShapeSettings, num_positions))
-        .field(FIELD(ConvexHullShapeSettings, convex_radius))
-        .field(FIELD(ConvexHullShapeSettings, hull_tolerance))
-        .field(FIELD(ConvexHullShapeSettings, max_error_convex_radius))
-        .field(FIELD(ConvexHullShapeSettings, bake_support_adjacency))
-        .field(FIELD(ConvexHullShapeSettings, density))
-        .field(FIELD(ConvexHullShapeSettings, material_id));
+    VALUE_AS(adapters::ConvexHullSettings, "ConvexHullSettings")
+        .field(FIELD(adapters::ConvexHullSettings, positions), "xyz per point.")
+        .field(FIELD(adapters::ConvexHullSettings, num_positions))
+        .field(FIELD(adapters::ConvexHullSettings, convex_radius))
+        .field(FIELD(adapters::ConvexHullSettings, hull_tolerance))
+        .field(FIELD(adapters::ConvexHullSettings, max_error_convex_radius))
+        .field(FIELD(adapters::ConvexHullSettings, bake_support_adjacency))
+        .field(FIELD(adapters::ConvexHullSettings, density))
+        .field(FIELD(adapters::ConvexHullSettings, material_id));
     VALUE_AS(adapters::ConvexHullCreate, "ConvexHullCreate")
         .field(FIELD(adapters::ConvexHullCreate, shape))
         .field(FIELD(adapters::ConvexHullCreate, result));
@@ -714,7 +727,7 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::query::cast_ray),
              names("world", "kind", "earlyOutFraction", "settings", "origin", "direction", "length", "filter", "collisionGroups", "collisionMask"),
              GROWS);
-    bind::fn(b, BIND(adapters::query::read_cast_ray_hit), names("out", "index"));
+    bind::fn(b, BIND(adapters::query::cast_ray_hits));
 
     VALUE_AS(adapters::CastShapeSettings, "CastShapeSettings")
         .field(FIELD(adapters::CastShapeSettings, collide_with_backfaces_triangles))
@@ -774,7 +787,7 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::query::default_collide_point_settings), names("out"));
     bind::fn(b, BIND(adapters::query::collide_point), names("world", "kind", "settings", "point", "filter", "collisionGroups", "collisionMask"),
              GROWS);
-    bind::fn(b, BIND(adapters::query::read_collide_point_hit), names("out", "index"));
+    bind::fn(b, BIND(adapters::query::collide_point_hits));
 
     RECORD(KCC::Policy);
     VALUE_AS(KCC::BodyPolicy, "KCCBodyPolicy")
@@ -827,8 +840,7 @@ TUMBLE_BINDINGS {
         .field(FIELD(adapters::KCCSettings, enhanced_internal_edge_removal))
         .field(FIELD(adapters::KCCSettings, has_supporting_volume_plane))
         .field(FIELD(adapters::KCCSettings, supporting_volume_plane))
-        .field(FIELD(adapters::KCCSettings, user_data_low))
-        .field(FIELD(adapters::KCCSettings, user_data_high))
+        .field(FIELD(adapters::KCCSettings, user_data))
         .field(FIELD(adapters::KCCSettings, observes_contacts))
         .field(FIELD(adapters::KCCSettings, inner_rigid_body_shape))
         .field(FIELD(adapters::KCCSettings, inner_rigid_body_object_layer));
@@ -1002,13 +1014,11 @@ TUMBLE_BINDINGS {
         .field(FIELD(adapters::ContactPair, handle))
         .field(FIELD(adapters::ContactPair, body_a))
         .field(FIELD(adapters::ContactPair, sub_shape_a))
-        .field(FIELD(adapters::ContactPair, user_data_a_low))
-        .field(FIELD(adapters::ContactPair, user_data_a_high))
+        .field(FIELD(adapters::ContactPair, user_data_a))
         .field(FIELD(adapters::ContactPair, sensor_a))
         .field(FIELD(adapters::ContactPair, body_b))
         .field(FIELD(adapters::ContactPair, sub_shape_b))
-        .field(FIELD(adapters::ContactPair, user_data_b_low))
-        .field(FIELD(adapters::ContactPair, user_data_b_high))
+        .field(FIELD(adapters::ContactPair, user_data_b))
         .field(FIELD(adapters::ContactPair, sensor_b))
         .field(FIELD(adapters::ContactPair, point))
         .field(FIELD(adapters::ContactPair, normal))

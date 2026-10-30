@@ -25,28 +25,27 @@ static bool vertex_is(const SupportingFace &face, uint32_t i, float x, float y, 
 void test_box_create(TestCtx &ctx) {
     dispatch::init();
 
-    Ref<Shape> b = box::create({.half_extents = {1.0f, 2.0f, 3.0f}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::make(1.0f, 2.0f, 3.0f)});
     CHECK(ctx, b != nullptr);
     CHECK(ctx, b->type == ShapeType::BOX);
-    CHECK(ctx, shapes::as<BoxShape>(b).half_extents.x == 1.0f && shapes::as<BoxShape>(b).half_extents.y == 2.0f && shapes::as<BoxShape>(b).half_extents.z == 3.0f);
+    CHECK(ctx, near3(shapes::as<BoxShape>(b).half_extents, 1.0f, 2.0f, 3.0f, 0.0f));
     CHECK(ctx, shapes::as<BoxShape>(b).density == 1000.0f && b->material_id == -1);
     CHECK(ctx, shapes::as<BoxShape>(b).convex_radius == support::DEFAULT_CONVEX_RADIUS);
 
     // bounds are +- the half extents, the centre of mass the origin
-    CHECK(ctx, b->aabb.min.x == -1.0f && b->aabb.min.y == -2.0f && b->aabb.min.z == -3.0f);
-    CHECK(ctx, b->aabb.max.x == 1.0f && b->aabb.max.y == 2.0f && b->aabb.max.z == 3.0f);
-    CHECK(ctx, vec3f::exact_equals(vec3f::load(b->center_of_mass), vec3f::zero()));
+    CHECK(ctx, near3(b->aabb.min, -1.0f, -2.0f, -3.0f, 0.0f) && near3(b->aabb.max, 1.0f, 2.0f, 3.0f, 0.0f));
+    CHECK(ctx, vec3f::exact_equals(b->center_of_mass, vec3f::zero()));
 
     // volume 8abc
     CHECK(ctx, b->volume == 48.0f);
 
     // update after a change recomputes bounds and volume
-    shapes::as<BoxShape>(b).half_extents = {0.5f, 0.5f, 2.0f};
+    shapes::as<BoxShape>(b).half_extents = vec3f::make(0.5f, 0.5f, 2.0f);
     box::update(b);
-    CHECK(ctx, b->volume == 4.0f && b->aabb.max.z == 2.0f && b->aabb.min.x == -0.5f);
+    CHECK(ctx, b->volume == 4.0f && vec3f::z(b->aabb.max) == 2.0f && vec3f::x(b->aabb.min) == -0.5f);
     b = nullptr;
 
-    Ref<Shape> dense = box::create({.half_extents = {1.0f, 1.0f, 1.0f}, .density = 250.0f, .material_id = 7});
+    Ref<Shape> dense = box::create({.half_extents = vec3f::splat(1.0f), .density = 250.0f, .material_id = 7});
     CHECK(ctx, shapes::as<BoxShape>(dense).density == 250.0f && dense->material_id == 7);
     dense = nullptr;
 }
@@ -55,23 +54,23 @@ void test_box_convex_radius_clamp(TestCtx &ctx) {
     dispatch::init();
 
     // fits: kept
-    Ref<Shape> b = box::create({.half_extents = {0.5f, 1.0f, 2.0f}, .convex_radius = 0.1f});
+    Ref<Shape> b = box::create({.half_extents = vec3f::make(0.5f, 1.0f, 2.0f), .convex_radius = 0.1f});
     CHECK(ctx, shapes::as<BoxShape>(b).convex_radius == 0.1f);
     b = nullptr;
     // oversized: clamped to the smallest half extent
-    b = box::create({.half_extents = {0.02f, 1.0f, 2.0f}, .convex_radius = 1.0f});
+    b = box::create({.half_extents = vec3f::make(0.02f, 1.0f, 2.0f), .convex_radius = 1.0f});
     CHECK(ctx, shapes::as<BoxShape>(b).convex_radius == 0.02f);
     b = nullptr;
     // the default clamps too
-    b = box::create({.half_extents = {0.01f, 1.0f, 2.0f}});
+    b = box::create({.half_extents = vec3f::make(0.01f, 1.0f, 2.0f)});
     CHECK(ctx, shapes::as<BoxShape>(b).convex_radius == 0.01f);
     b = nullptr;
     // zero sized
-    b = box::create({.half_extents = {0.0f, 0.0f, 0.0f}, .convex_radius = 1.0f});
+    b = box::create({.half_extents = vec3f::zero(), .convex_radius = 1.0f});
     CHECK(ctx, shapes::as<BoxShape>(b).convex_radius == 0.0f && b->volume == 0.0f);
     b = nullptr;
     // exactly the smallest half extent
-    b = box::create({.half_extents = {0.3f, 1.0f, 2.0f}, .convex_radius = 0.3f});
+    b = box::create({.half_extents = vec3f::make(0.3f, 1.0f, 2.0f), .convex_radius = 0.3f});
     CHECK(ctx, shapes::as<BoxShape>(b).convex_radius == 0.3f);
     b = nullptr;
 }
@@ -80,18 +79,19 @@ void test_box_mass_properties(TestCtx &ctx) {
     dispatch::init();
 
     // unit cube of half extent 1: mass 8 * density
-    Ref<Shape> cube = box::create({.half_extents = {1.0f, 1.0f, 1.0f}});
+    Ref<Shape> cube = box::create({.half_extents = vec3f::splat(1.0f)});
     MassProperties props = mass_properties::create();
     box::compute_mass_properties(props, cube);
     CHECK_NEAR(ctx, props.mass, 8000.0f, 1e-2f);
     cube = nullptr;
 
     // full extents (2, 4, 6) at density 10: m = 480, I = m/12 (b^2 + c^2) and so on
-    Ref<Shape> b = box::create({.half_extents = {1.0f, 2.0f, 3.0f}, .density = 10.0f});
+    Ref<Shape> b = box::create({.half_extents = vec3f::make(1.0f, 2.0f, 3.0f), .density = 10.0f});
     box::compute_mass_properties(props, b);
     const float m = 480.0f;
     CHECK_NEAR(ctx, props.mass, m, 1e-3f);
-    const float *inertia = props.inertia.m;
+    const Float4x4 inertia_elements = elements(props.inertia);
+    const float *inertia = inertia_elements.m;
     CHECK_NEAR(ctx, inertia[0], m / 12.0f * (16.0f + 36.0f), 1e-2f);
     CHECK_NEAR(ctx, inertia[5], m / 12.0f * (4.0f + 36.0f), 1e-2f);
     CHECK_NEAR(ctx, inertia[10], m / 12.0f * (4.0f + 16.0f), 1e-2f);
@@ -102,7 +102,7 @@ void test_box_mass_properties(TestCtx &ctx) {
 
 void test_box_inner_radius(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> b = box::create({.half_extents = {2.0f, 0.75f, 3.0f}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::make(2.0f, 0.75f, 3.0f)});
     CHECK(ctx, box::get_inner_radius(b) == 0.75f);
     b = nullptr;
 }
@@ -111,7 +111,7 @@ void test_box_surface_normal(TestCtx &ctx) {
     dispatch::init();
 
     SurfaceNormalResult io;
-    Ref<Shape> wide = box::create({.half_extents = {2.0f, 1.0f, 1.0f}});
+    Ref<Shape> wide = box::create({.half_extents = vec3f::make(2.0f, 1.0f, 1.0f)});
     // just outside +x
     io.position = vec3f::make(2.1f, 0.0f, 0.0f);
     box::get_surface_normal(io, wide, sub_shape::EMPTY_SUB_SHAPE_ID);
@@ -126,14 +126,14 @@ void test_box_surface_normal(TestCtx &ctx) {
     CHECK(ctx, vec3f::exact_equals(io.normal, vec3f::make(0.0f, 0.0f, -1.0f)));
     wide = nullptr;
 
-    Ref<Shape> tall = box::create({.half_extents = {1.0f, 2.0f, 1.0f}});
+    Ref<Shape> tall = box::create({.half_extents = vec3f::make(1.0f, 2.0f, 1.0f)});
     io.position = vec3f::make(0.0f, -2.1f, 0.0f);
     box::get_surface_normal(io, tall, sub_shape::EMPTY_SUB_SHAPE_ID);
     CHECK(ctx, vec3f::exact_equals(io.normal, vec3f::make(0.0f, -1.0f, 0.0f)));
     tall = nullptr;
 
     // near a corner, the axis with the smallest distance to its face wins
-    Ref<Shape> cube = box::create({.half_extents = {1.0f, 1.0f, 1.0f}});
+    Ref<Shape> cube = box::create({.half_extents = vec3f::splat(1.0f)});
     io.position = vec3f::make(1.1f, 0.5f, 0.5f);
     box::get_surface_normal(io, cube, sub_shape::EMPTY_SUB_SHAPE_ID);
     CHECK(ctx, vec3f::exact_equals(io.normal, vec3f::make(1.0f, 0.0f, 0.0f)));
@@ -145,7 +145,7 @@ void test_box_supporting_face(TestCtx &ctx) {
 
     SupportingFaceResult io;
     const Float3 unit = {1.0f, 1.0f, 1.0f};
-    Ref<Shape> b = box::create({.half_extents = {1.0f, 2.0f, 3.0f}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::make(1.0f, 2.0f, 3.0f)});
 
     // the face opposing -y is the top: four vertices at y = 2, ccw seen from outside
     box_face(io, b, {0.0f, -1.0f, 0.0f}, unit);
@@ -199,7 +199,7 @@ void test_box_supporting_face(TestCtx &ctx) {
 void test_box_set_support(TestCtx &ctx) {
     dispatch::init();
 
-    Ref<Shape> b = box::create({.half_extents = {1.0f, 2.0f, 3.0f}, .convex_radius = 0.04f});
+    Ref<Shape> b = box::create({.half_extents = vec3f::make(1.0f, 2.0f, 3.0f), .convex_radius = 0.04f});
     Support s = support::create();
 
     // include: the full box, nothing reported
@@ -230,7 +230,7 @@ void test_box_set_support(TestCtx &ctx) {
     b = nullptr;
 
     // the core never goes negative
-    Ref<Shape> flat = box::create({.half_extents = {0.0f, 1.0f, 1.0f}});
+    Ref<Shape> flat = box::create({.half_extents = vec3f::make(0.0f, 1.0f, 1.0f)});
     box::set_support(s, flat, SupportFunctionMode::EXCLUDE_CONVEX_RADIUS, vec3f::make(1.0f, 1.0f, 1.0f));
     CHECK(ctx, s.convex_radius == 0.0f && vec3f::x(s.box.half_extents) == 0.0f && vec3f::y(s.box.half_extents) == 1.0f);
     flat = nullptr;
@@ -241,8 +241,8 @@ void test_box_set_support(TestCtx &ctx) {
 void test_box_material(TestCtx &ctx) {
     dispatch::init();
     // a convex shape is one leaf: the empty sub shape id names its own material
-    Ref<Shape> painted = box::create({.half_extents = {1, 2, 3}, .material_id = 6});
-    Ref<Shape> plain = box::create({.half_extents = {1, 2, 3}});
+    Ref<Shape> painted = box::create({.half_extents = vec3f::make(1, 2, 3), .material_id = 6});
+    Ref<Shape> plain = box::create({.half_extents = vec3f::make(1, 2, 3)});
     CHECK(ctx, shapes::get_shape_material(painted, sub_shape::EMPTY_SUB_SHAPE_ID) == 6);
     CHECK(ctx, shapes::get_shape_material(plain, sub_shape::EMPTY_SUB_SHAPE_ID) == -1);
     CHECK(ctx, shapes::def_of(painted).get_material == convex::get_convex_material);

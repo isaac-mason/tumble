@@ -58,8 +58,8 @@ static bool has_dynamic_mass(const RigidBody &body_a, const RigidBody &body_b, c
  * velocity at r_a (relative linear + relative angular x r_a) projected onto the tangent
  */
 static float calculate_friction_bias(const ContactSettings &settings, Vec3f r_a, Vec3f tangent) {
-    const Vec3f surface_velocity = vec3f::add(vec3f::load(settings.relative_linear_surface_velocity),
-                                              vec3f::cross(vec3f::load(settings.relative_angular_surface_velocity), r_a));
+    const Vec3f surface_velocity =
+        vec3f::add(settings.relative_linear_surface_velocity, vec3f::cross(settings.relative_angular_surface_velocity, r_a));
     return vec3f::dot(tangent, surface_velocity);
 }
 
@@ -149,7 +149,7 @@ struct ContactInertia {
 /** the scaled world inverse inertia of a dynamic body, memoised per body per step (step_stamp) before the scale */
 static Mat4f scaled_world_inverse_inertia(RigidBody &body, float scale, uint32_t step_stamp) {
     if (body.motion_type != MotionType::DYNAMIC) return mat4f::zero();
-    const Mat4f world_inverse_inertia = motion_properties::get_world_inverse_inertia(body.motion_properties, quatf::load(body.quaternion), step_stamp);
+    const Mat4f world_inverse_inertia = motion_properties::get_world_inverse_inertia(body.motion_properties, body.quaternion, step_stamp);
     return scale == 1.0f ? world_inverse_inertia : mat4f::multiply_scalar(world_inverse_inertia, scale);
 }
 
@@ -214,7 +214,7 @@ static void calculate_friction_constraint_properties(ContactConstraints::Constra
     if (num_points > 1) {
         angular_friction_constraint_part::calculate_constraint_properties<TYPE_A, TYPE_B>(
             constraint.angular_friction_constraint, inertia.inv_inertia_a, inertia.inv_inertia_b, normal,
-            vec3f::dot(vec3f::load(settings.relative_angular_surface_velocity), normal));
+            vec3f::dot(settings.relative_angular_surface_velocity, normal));
     } else {
         angular_friction_constraint_part::deactivate(constraint.angular_friction_constraint);
     }
@@ -282,7 +282,7 @@ static void setup_contact_point(ContactConstraints::Constraint &constraint, uint
 
     const Vec3f normal = vec3f::load(constraint.normal);
     const float normal_velocity_bias = calculate_normal_velocity_bias<TYPE_A, TYPE_B>(
-        body_a, body_b, penetration, normal, r_a, r_b, settings.combined_restitution, delta_time, vec3f::load(world_settings.gravity),
+        body_a, body_b, penetration, normal, r_a, r_b, settings.combined_restitution, delta_time, world_settings.gravity,
         world_settings.solver.min_velocity_for_restitution);
 
     contact_constraint_part::calculate_constraint_properties<TYPE_A, TYPE_B>(point.normal_constraint, constraint.inv_mass_a,
@@ -402,16 +402,16 @@ static void append_contact_event(WorldEvents &events, bool persisted, int32_t co
     event.sub_shape_id_b = sub_shape_id_b;
     event.material_id_a = material_id_a;
     event.material_id_b = material_id_b;
-    vec3f::store(event.normal, normal);
+    event.normal = normal;
     event.penetration = penetration;
     event.num_points = num_points;
     for (uint32_t i = 0; i < manifold::MAX_CONTACT_POINTS; i++) {
         if (i < num_points) {
-            event.points_a[i] = points_a[i];
-            event.points_b[i] = points_b[i];
+            event.points_a[i] = vec3f::load(points_a[i]);
+            event.points_b[i] = vec3f::load(points_b[i]);
         } else {
-            event.points_a[i] = {0.0f, 0.0f, 0.0f};
-            event.points_b[i] = {0.0f, 0.0f, 0.0f};
+            event.points_a[i] = vec3f::zero();
+            event.points_b[i] = vec3f::zero();
         }
     }
     (persisted ? events.contacts_persisted : events.contacts_added).push(event);
@@ -459,8 +459,8 @@ bool add_contact_constraint(ContactConstraints &contact_constraints, Contacts &c
     Contacts::CachedManifold &write = contacts::get_write_manifold(*contact, contacts);
 
     // rotation matrices for both bodies, transposed for the inverse rotation
-    const Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
+    const Mat4f rotation_a = mat4f::from_quat(body_a.quaternion);
+    const Mat4f rotation_b = mat4f::from_quat(body_b.quaternion);
 
     // the world space normal into body b's local space
     const Vec3f world_space_normal = contact_manifold.world_space_normal;
@@ -470,8 +470,8 @@ bool add_contact_constraint(ContactConstraints &contact_constraints, Contacts &c
     // each body's centre of mass relative to the base offset: the manifold's points go to body space and to moment arms
     // without passing through world space
     const Vec3f base_offset = contact_manifold.base_offset;
-    const Vec3f com_minus_base_a = vec3f::subtract(vec3f::load(body_a.center_of_mass_position), base_offset);
-    const Vec3f com_minus_base_b = vec3f::subtract(vec3f::load(body_b.center_of_mass_position), base_offset);
+    const Vec3f com_minus_base_a = vec3f::subtract(body_a.center_of_mass_position, base_offset);
+    const Vec3f com_minus_base_b = vec3f::subtract(body_b.center_of_mass_position, base_offset);
 
     // world points (for the event) and body-local points: local = rot^T point - rot^T (centre of mass - base offset)
     Float3 positions_a[manifold::MAX_CONTACT_POINTS];
@@ -593,15 +593,15 @@ bool add_contact_constraint_from_cache(ContactConstraints &contact_constraints, 
     write.angular_friction_lambda = read.angular_friction_lambda;
     write.flags |= Contacts::CachedManifoldFlags::MANIFOLD_FLAG_CONTACT_PERSISTED;
 
-    const Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
+    const Mat4f rotation_a = mat4f::from_quat(body_a.quaternion);
+    const Mat4f rotation_b = mat4f::from_quat(body_b.quaternion);
 
     // the normal is cached in b's local space
     const Vec3f world_space_normal = vec3f::normalize(mat4f::multiply3x3_vec(rotation_b, vec3f::load(read.contact_normal)));
 
     // world positions of the cached body-local points under the current transforms
-    const Vec3f center_of_mass_a = vec3f::load(body_a.center_of_mass_position);
-    const Vec3f center_of_mass_b = vec3f::load(body_b.center_of_mass_position);
+    const Vec3f center_of_mass_a = body_a.center_of_mass_position;
+    const Vec3f center_of_mass_b = body_b.center_of_mass_position;
     Float3 positions_a[manifold::MAX_CONTACT_POINTS];
     Float3 positions_b[manifold::MAX_CONTACT_POINTS];
     for (uint32_t i = 0; i < num_points; i++) {
@@ -678,9 +678,9 @@ void apply_contact_settings(ContactConstraints &contact_constraints, uint32_t co
 
     // the parts keep their total lambdas, the warm start the build gave them; friction the build left off (no friction at
     // build time) starts from the cached impulses instead, as it would have had the settings been there when it was built
-    const Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
-    const Vec3f delta_com = vec3f::subtract(vec3f::load(body_a.center_of_mass_position), vec3f::load(body_b.center_of_mass_position));
+    const Mat4f rotation_a = mat4f::from_quat(body_a.quaternion);
+    const Mat4f rotation_b = mat4f::from_quat(body_b.quaternion);
+    const Vec3f delta_com = vec3f::subtract(body_a.center_of_mass_position, body_b.center_of_mass_position);
     const Vec3f normal = vec3f::load(constraint.normal);
     Vec3f r_as[manifold::MAX_CONTACT_POINTS];
     Vec3f r_bs[manifold::MAX_CONTACT_POINTS];
@@ -775,15 +775,15 @@ struct Velocities {
 template <MotionType TYPE_A, MotionType TYPE_B>
 inline void get_velocities(Velocities &out, const MotionProperties &motion_properties_a, const MotionProperties &motion_properties_b) {
     if constexpr (TYPE_A != MotionType::STATIC) {
-        out.linear_a = vec3f::load(motion_properties_a.linear_velocity);
-        out.angular_a = vec3f::load(motion_properties_a.angular_velocity);
+        out.linear_a = motion_properties_a.linear_velocity;
+        out.angular_a = motion_properties_a.angular_velocity;
     } else {
         out.linear_a = vec3f::zero();
         out.angular_a = vec3f::zero();
     }
     if constexpr (TYPE_B != MotionType::STATIC) {
-        out.linear_b = vec3f::load(motion_properties_b.linear_velocity);
-        out.angular_b = vec3f::load(motion_properties_b.angular_velocity);
+        out.linear_b = motion_properties_b.linear_velocity;
+        out.angular_b = motion_properties_b.angular_velocity;
     } else {
         out.linear_b = vec3f::zero();
         out.angular_b = vec3f::zero();
@@ -794,14 +794,14 @@ inline void get_velocities(Velocities &out, const MotionProperties &motion_prope
 template <MotionType TYPE_A, MotionType TYPE_B>
 inline void set_velocities(MotionProperties &motion_properties_a, MotionProperties &motion_properties_b, const Velocities &velocities) {
     if constexpr (TYPE_A == MotionType::DYNAMIC) {
-        vec3f::store(motion_properties_a.linear_velocity,
-                     motion_properties::apply_translation_dof_constraint(velocities.linear_a, motion_properties_a.allowed_degrees_of_freedom));
-        vec3f::store(motion_properties_a.angular_velocity, velocities.angular_a);
+        motion_properties_a.linear_velocity =
+            motion_properties::apply_translation_dof_constraint(velocities.linear_a, motion_properties_a.allowed_degrees_of_freedom);
+        motion_properties_a.angular_velocity = velocities.angular_a;
     }
     if constexpr (TYPE_B == MotionType::DYNAMIC) {
-        vec3f::store(motion_properties_b.linear_velocity,
-                     motion_properties::apply_translation_dof_constraint(velocities.linear_b, motion_properties_b.allowed_degrees_of_freedom));
-        vec3f::store(motion_properties_b.angular_velocity, velocities.angular_b);
+        motion_properties_b.linear_velocity =
+            motion_properties::apply_translation_dof_constraint(velocities.linear_b, motion_properties_b.allowed_degrees_of_freedom);
+        motion_properties_b.angular_velocity = velocities.angular_b;
     }
 }
 
@@ -1011,11 +1011,11 @@ static bool solve_position_constraint(ContactConstraints::Constraint &constraint
     const Vec3f normal = vec3f::load(constraint.normal);
 
     // the bodies may have moved since the last iteration
-    const Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
+    const Mat4f rotation_a = mat4f::from_quat(body_a.quaternion);
+    const Mat4f rotation_b = mat4f::from_quat(body_b.quaternion);
 
     // a's centre of mass relative to b's
-    const Vec3f delta_com = vec3f::subtract(vec3f::load(body_a.center_of_mass_position), vec3f::load(body_b.center_of_mass_position));
+    const Vec3f delta_com = vec3f::subtract(body_a.center_of_mass_position, body_b.center_of_mass_position);
 
     // world inverse inertia, built on the first penetrating point: a constraint whose points are all separated
     // (speculative contacts) skips it entirely

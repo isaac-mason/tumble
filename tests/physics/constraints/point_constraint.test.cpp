@@ -15,7 +15,7 @@ void test_point_constraint_create(TestCtx &ctx) {
     // world space: the points become body space offsets from each center of mass
     const ConstraintId id = point_constraint::create(
         *scene.world, a, b,
-        {.point_a = {2.0f, 2.0f, 3.0f}, .point_b = {3.0f, 2.0f, 3.0f}, .constraint_priority = 3, .num_velocity_steps_override = 7});
+        {.point_a = vec3f::make(2.0f, 2.0f, 3.0f), .point_b = vec3f::make(3.0f, 2.0f, 3.0f), .constraint_priority = 3, .num_velocity_steps_override = 7});
     CHECK(ctx, id != constraint_id::INVALID_CONSTRAINT_ID);
     CHECK(ctx, constraint_id::type(id) == ConstraintType::POINT && constraint_id::index(id) == 0);
     PointConstraint *constraint = point_constraint::get(*scene.world, id);
@@ -41,7 +41,7 @@ void test_point_constraint_create(TestCtx &ctx) {
     // local space: the points are taken as given
     const ConstraintId local_id = point_constraint::create(
         *scene.world, a, b,
-        {.point_a = {0.5f, 0.0f, 0.0f}, .point_b = {0.0f, 0.25f, 0.0f}, .space = ConstraintSpace::LOCAL});
+        {.point_a = vec3f::make(0.5f, 0.0f, 0.0f), .point_b = vec3f::make(0.0f, 0.25f, 0.0f), .space = ConstraintSpace::LOCAL});
     PointConstraint *local = point_constraint::get(*scene.world, local_id);
     CHECK(ctx, vec3f::exact_equals(local->local_space_position1, vec3f::make(0.5f, 0.0f, 0.0f)));
     CHECK(ctx, vec3f::exact_equals(local->local_space_position2, vec3f::make(0.0f, 0.25f, 0.0f)));
@@ -94,8 +94,8 @@ void test_point_constraint_total_lambda(TestCtx &ctx) {
     const PointConstraint *constraint = point_constraint::get(*scene.world, id);
     const float mass = 1.0f / body->motion_properties.inv_mass;
     CHECK_NEAR(ctx, scalar::abs(vec3f::y(point_constraint::get_total_lambda(*constraint))), mass * 9.81f * dt, mass * 9.81f * dt * 1e-3f);
-    CHECK(ctx, vec3f::length(vec3f::load(body->center_of_mass_position)) < 1e-4f);
-    CHECK(ctx, vec3f::length(vec3f::load(body->motion_properties.linear_velocity)) < 1e-4f);
+    CHECK(ctx, vec3f::length(body->center_of_mass_position) < 1e-4f);
+    CHECK(ctx, vec3f::length(body->motion_properties.linear_velocity) < 1e-4f);
     release_constraint_scene(scene);
 }
 
@@ -104,7 +104,7 @@ void test_point_constraint_holds_anchor(TestCtx &ctx) {
     ConstraintScene scene = make_constraint_scene();
     RigidBody *pivot = add_body(scene, MotionType::STATIC, {0.0f, 10.0f, 0.0f});
     RigidBody *ball = add_body(scene, MotionType::DYNAMIC, {2.0f, 10.0f, 0.0f});
-    const Float3 anchor = {0.0f, 10.0f, 0.0f};
+    const Vec3f anchor = vec3f::make(0.0f, 10.0f, 0.0f);
     const ConstraintId id =
         point_constraint::create(*scene.world, pivot, ball, {.point_a = anchor, .point_b = anchor});
     scene.ids.push(id);
@@ -116,13 +116,13 @@ void test_point_constraint_holds_anchor(TestCtx &ctx) {
     for (int i = 0; i < 120; i++) {
         step_constraint_scene(scene, dt, vec3f::load(GRAVITY));
         const Vec3f on_ball = world_point(ball, constraint->local_space_position2);
-        worst = scalar::max(worst, vec3f::distance(on_ball, vec3f::load(anchor)));
-        lowest = scalar::min(lowest, ball->center_of_mass_position.y);
+        worst = scalar::max(worst, vec3f::distance(on_ball, anchor));
+        lowest = scalar::min(lowest, vec3f::y(ball->center_of_mass_position));
     }
     // the ball swings down through the bottom of its arc, its attachment on the pivot throughout
     CHECK(ctx, lowest < 8.1f);
     CHECK(ctx, worst < 1e-2f);
-    CHECK_NEAR(ctx, vec3f::distance(vec3f::load(ball->center_of_mass_position), vec3f::load(anchor)), 2.0f, 1e-2f);
+    CHECK_NEAR(ctx, vec3f::distance(ball->center_of_mass_position, anchor), 2.0f, 1e-2f);
     release_constraint_scene(scene);
 }
 
@@ -132,15 +132,14 @@ void test_point_constraint_joins_two_dynamic_bodies(TestCtx &ctx) {
     ConstraintScene pair = make_constraint_scene();
     RigidBody *a = add_body(pair, MotionType::DYNAMIC, {-0.5f, 0.0f, 0.0f});
     RigidBody *b = add_body(pair, MotionType::DYNAMIC, {0.5f, 0.0f, 0.0f});
-    a->motion_properties.linear_velocity = {-3.0f, 1.0f, 0.0f};
-    b->motion_properties.linear_velocity = {3.0f, 1.0f, 0.0f};
-    const ConstraintId pair_id =
-        point_constraint::create(*pair.world, a, b, {.point_a = {0.0f, 0.0f, 0.0f}, .point_b = {0.0f, 0.0f, 0.0f}});
+    a->motion_properties.linear_velocity = vec3f::make(-3.0f, 1.0f, 0.0f);
+    b->motion_properties.linear_velocity = vec3f::make(3.0f, 1.0f, 0.0f);
+    const ConstraintId pair_id = point_constraint::create(*pair.world, a, b, {.point_a = vec3f::zero(), .point_b = vec3f::zero()});
     pair.ids.push(pair_id);
     const PointConstraint *joint = point_constraint::get(*pair.world, pair_id);
     for (int i = 0; i < 60; i++) step_constraint_scene(pair, dt, vec3f::zero());
     CHECK(ctx, vec3f::distance(world_point(a, joint->local_space_position1), world_point(b, joint->local_space_position2)) < 1e-2f);
-    const Vec3f momentum = vec3f::add(vec3f::load(a->motion_properties.linear_velocity), vec3f::load(b->motion_properties.linear_velocity));
+    const Vec3f momentum = vec3f::add(a->motion_properties.linear_velocity, b->motion_properties.linear_velocity);
     CHECK(ctx, vec3f::distance(momentum, vec3f::make(0.0f, 2.0f, 0.0f)) < 1e-3f);
     release_constraint_scene(pair);
 }

@@ -17,7 +17,7 @@ struct GroundScene {
 GroundScene make_scene(TestCtx &ctx) {
     GroundScene s = {};
     s.scene = make_world_scene(ctx);
-    s.ground = add_body(s.scene, box::create({.half_extents = {10.0f, 0.5f, 10.0f}}), MotionType::STATIC, {0.0f, 0.5f, 0.0f});
+    s.ground = add_body(s.scene, box::create({.half_extents = vec3f::make(10.0f, 0.5f, 10.0f)}), MotionType::STATIC, {0.0f, 0.5f, 0.0f});
     return s;
 }
 
@@ -26,7 +26,7 @@ void release_scene(GroundScene &s) { release_world_scene(s.scene); }
 /** a dynamic box that never sleeps, observing its contacts unless `observes` is false */
 RigidBody *add_box(GroundScene &s, float half_extent, const Float3 &position, uint64_t user_data, bool observes = true) {
     RigidBodySettings settings =
-        body_settings(box::create({.half_extents = {half_extent, half_extent, half_extent}}), s.scene.moving, MotionType::DYNAMIC, position);
+        body_settings(box::create({.half_extents = vec3f::splat(half_extent)}), s.scene.moving, MotionType::DYNAMIC, position);
     settings.user_data = user_data;
     settings.allow_sleeping = false;
     settings.observes_contacts = observes;
@@ -93,7 +93,7 @@ void test_contact_pairs_sides_carry_their_bodies_and_user_data(TestCtx &ctx) {
     CHECK(ctx, box_side.user_data == 0x200000009ull && sub_shape::is_empty(box_side.sub_shape_id) && !box_side.is_sensor);
     CHECK(ctx, ground_side.body_id == s.ground->id && ground_side.user_data == 0);
     // the normal runs a to b, so it points from the box down when the box is a
-    CHECK(ctx, pair.a.body_id == box->id ? pair.normal.y < -0.9f : pair.normal.y > 0.9f);
+    CHECK(ctx, pair.a.body_id == box->id ? vec3f::y(pair.normal) < -0.9f : vec3f::y(pair.normal) > 0.9f);
     release_scene(s);
 }
 
@@ -246,7 +246,7 @@ void test_contact_pairs_a_character_records_through_its_inner_body(TestCtx &ctx)
     GroundScene s = make_scene(ctx);
     World &world = *s.scene.world;
     // a wall whose face is at x = 0.5, the character touching it from the left
-    RigidBody *wall = add_body(s.scene, box::create({.half_extents = {0.5f, 2.0f, 2.0f}}), MotionType::STATIC, {1.0f, 2.0f, 0.0f});
+    RigidBody *wall = add_body(s.scene, box::create({.half_extents = vec3f::make(0.5f, 2.0f, 2.0f)}), MotionType::STATIC, {1.0f, 2.0f, 0.0f});
     Ref<KCC> character = add_character(s, 0.2f, true, true);
     Filter filter = filter::create(world.settings.layers);
     step_world(world);
@@ -259,10 +259,10 @@ void test_contact_pairs_a_character_records_through_its_inner_body(TestCtx &ctx)
     if (with_wall != nullptr) {
         // the character is side a, its inner body's user data on it; the normal runs from it into the wall
         CHECK(ctx, with_wall->added && with_wall->a.sub_shape_id == sub_shape::EMPTY_SUB_SHAPE_ID && with_wall->a.user_data == 0xc0ffeeull);
-        CHECK(ctx, with_wall->normal.x > 0.99f);
-        CHECK_NEAR(ctx, with_wall->point.x, 0.5f, 0.02f);
+        CHECK(ctx, vec3f::x(with_wall->normal) > 0.99f);
+        CHECK_NEAR(ctx, vec3f::x(with_wall->point), 0.5f, 0.02f);
     }
-    if (with_ground != nullptr) CHECK(ctx, with_ground->normal.y < -0.99f);
+    if (with_ground != nullptr) CHECK(ctx, vec3f::y(with_ground->normal) < -0.99f);
 
     // the next frame finds them again: persisted, the handles kept
     const uint32_t wall_handle = with_wall != nullptr ? (uint32_t)(with_wall - pairs.pairs.data) : 0;

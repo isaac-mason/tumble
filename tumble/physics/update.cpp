@@ -4,6 +4,7 @@
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
+#include "tumble/math/transform.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/body/motion_properties.h"
 #include "tumble/physics/body/rigid_body_step.h"
@@ -24,12 +25,12 @@ namespace update {
 static constexpr uint32_t MAX_REDUCTION_MANIFOLDS = 32;
 
 /** the body's pose as the narrowphase takes it: the shape origin, unscaled */
-static Transformf body_transform(const RigidBody &body) { return {body.position, body.quaternion, {1.0f, 1.0f, 1.0f}}; }
+static Transform body_transform(const RigidBody &body) { return transform::make(body.position, body.quaternion); }
 
 /** integrates forces into velocities (a = F/m + g, v += a dt), applies damping and the velocity clamps and the dof masks */
 static void acceleration_integration_update(World &world, float delta_time) {
     const float gravity_enabled = world.settings.gravity_enabled ? 1.0f : 0.0f;
-    const Vec3f gravity = vec3f::load(world.settings.gravity);
+    const Vec3f gravity = world.settings.gravity;
     for (uint32_t i = 0; i < world.bodies.active_body_count; i++) {
         RigidBody *body = world.bodies.pool[world.bodies.active_body_indices[i]];
         if (body->motion_type != MotionType::DYNAMIC || rigid_body::is_sleeping(*body)) continue;
@@ -39,28 +40,28 @@ static void acceleration_integration_update(World &world, float delta_time) {
         // linear acceleration: a = F/m + g, then integrate: v += a * dt
         const float gravity_scale = gravity_enabled * mp.gravity_factor;
         const Vec3f acceleration = vec3f::scale_and_add(vec3f::scale(vec3f::load(mp.force), mp.inv_mass), gravity, gravity_scale);
-        Vec3f linear_velocity = vec3f::scale_and_add(vec3f::load(mp.linear_velocity), acceleration, delta_time);
+        Vec3f linear_velocity = vec3f::scale_and_add(mp.linear_velocity, acceleration, delta_time);
 
         // linear damping: v *= max(0, 1 - damping * dt)
         linear_velocity = vec3f::scale(linear_velocity, scalar::max(0.0f, 1.0f - mp.linear_damping * delta_time));
 
-        vec3f::store(mp.linear_velocity, motion_properties::apply_translation_dof_constraint(
-                                             motion_properties::clamp_length(linear_velocity, mp.max_linear_velocity), mp.allowed_degrees_of_freedom));
+        mp.linear_velocity = motion_properties::apply_translation_dof_constraint(motion_properties::clamp_length(linear_velocity, mp.max_linear_velocity),
+                                                                                 mp.allowed_degrees_of_freedom);
 
         // angular acceleration: w += I^-1 t dt. gravity applies no torque, so most bodies have none and skip this; the
         // vector form rotates t into inertia space and back without building the world inverse inertia
-        Vec3f angular_velocity = vec3f::load(mp.angular_velocity);
+        Vec3f angular_velocity = mp.angular_velocity;
         if (mp.torque.x != 0.0f || mp.torque.y != 0.0f || mp.torque.z != 0.0f) {
             const Vec3f angular_delta =
-                motion_properties::multiply_world_space_inverse_inertia_by_vector(mp, quatf::load(body->quaternion), vec3f::load(mp.torque));
+                motion_properties::multiply_world_space_inverse_inertia_by_vector(mp, body->quaternion, vec3f::load(mp.torque));
             angular_velocity = vec3f::scale_and_add(angular_velocity, angular_delta, delta_time);
         }
 
         // angular damping: w *= max(0, 1 - damping * dt)
         angular_velocity = vec3f::scale(angular_velocity, scalar::max(0.0f, 1.0f - mp.angular_damping * delta_time));
 
-        vec3f::store(mp.angular_velocity, motion_properties::apply_rotation_dof_constraint(
-                                              motion_properties::clamp_length(angular_velocity, mp.max_angular_velocity), mp.allowed_degrees_of_freedom));
+        mp.angular_velocity = motion_properties::apply_rotation_dof_constraint(motion_properties::clamp_length(angular_velocity, mp.max_angular_velocity),
+                                                                               mp.allowed_degrees_of_freedom);
     }
 }
 
@@ -155,7 +156,7 @@ static void start_manifold(ContactManifold &m, Vec3f base_offset, Vec3f world_sp
 static void reduction_add_hit(CollideShapeCollector &collector, const CollideShapeHit &hit) {
     NarrowphaseContext &context = *static_cast<NarrowphaseContext *>(collector.context);
     const World &world = *context.world;
-    const Vec3f base_offset = vec3f::load(context.body_a->position);
+    const Vec3f base_offset = context.body_a->position;
     const float normal_threshold = world.settings.narrowphase.normal_cos_max_delta_rotation;
 
     Vec3f world_space_normal = vec3f::normalize(hit.penetration_axis);
@@ -239,7 +240,7 @@ static void non_reduction_add_hit(CollideShapeCollector &collector, const Collid
 
     ContactManifold &m = narrowphase_temp_manifold;
     Vec3f world_space_normal = vec3f::normalize(hit.penetration_axis);
-    start_manifold(m, vec3f::load(context.body_a->position), world_space_normal, hit);
+    start_manifold(m, context.body_a->position, world_space_normal, hit);
     manifold::manifold_between_two_faces(m, hit.point_a, hit.point_b, hit.penetration_axis, max_contact_distance(world), hit.face_a,
                                          hit.face_b);
 
@@ -272,7 +273,7 @@ static bool narrowphase_pair(World &world, RigidBody &body_a, RigidBody &body_b,
     settings.collide_only_with_active_edges = narrowphase_settings.collide_only_with_active_edges;
     settings.internal_edge_removal_vertex_tolerance_sq = narrowphase_settings.internal_edge_removal_vertex_tolerance_sq;
     // the active edges direction from the relative linear velocity
-    settings.active_edge_movement_direction = vec3f::subtract(vec3f::load(body_a.motion_properties.linear_velocity), vec3f::load(body_b.motion_properties.linear_velocity));
+    settings.active_edge_movement_direction = vec3f::subtract(body_a.motion_properties.linear_velocity, body_b.motion_properties.linear_velocity);
     settings.max_separation_distance = body_a.sensor || body_b.sensor ? 0.0f : narrowphase_settings.speculative_contact_distance;
 
     const bool use_manifold_reduction =
@@ -284,8 +285,8 @@ static bool narrowphase_pair(World &world, RigidBody &body_a, RigidBody &body_b,
     collector.custom_add_hit = use_manifold_reduction ? reduction_add_hit : non_reduction_add_hit;
     collector.context = &context;
 
-    const Transformf transform_a = body_transform(body_a);
-    const Transformf transform_b = body_transform(body_b);
+    const Transform transform_a = body_transform(body_a);
+    const Transform transform_b = body_transform(body_b);
     if (body_a.enhanced_internal_edge_removal || body_b.enhanced_internal_edge_removal) {
         narrowphase::collide_shape_vs_shape_with_internal_edge_removal(collector, settings, body_a.shape, sub_shape::builder(), transform_a,
                                                                        body_b.shape, sub_shape::builder(), transform_b);
@@ -300,12 +301,12 @@ static bool narrowphase_pair(World &world, RigidBody &body_a, RigidBody &body_b,
 
 /** body b's centre of mass relative to a in a's frame, and inv(ra) * rb */
 static void compute_body_pair_delta(Vec3f &out_delta_position, Quatf &out_delta_rotation, const RigidBody &body_a, const RigidBody &body_b) {
-    const Quatf inv_rotation_a = quatf::invert(quatf::load(body_a.quaternion));
+    const Quatf inv_rotation_a = quatf::invert(body_a.quaternion);
 
-    Vec3f difference = vec3f::subtract(vec3f::load(body_b.center_of_mass_position), vec3f::load(body_a.center_of_mass_position));
+    Vec3f difference = vec3f::subtract(body_b.center_of_mass_position, body_a.center_of_mass_position);
     out_delta_position = vec3f::transform_quat(difference, inv_rotation_a);
 
-    out_delta_rotation = quatf::multiply(inv_rotation_a, quatf::load(body_b.quaternion));
+    out_delta_rotation = quatf::multiply(inv_rotation_a, body_b.quaternion);
 }
 
 /**
@@ -464,14 +465,14 @@ static void velocity_integration_update(World &world, float delta_time) {
         }
 
         // rotate first, which helps long thin bodies: q' = rotation(w dt) * q
-        const Vec3f rotation_vector = vec3f::scale(vec3f::load(mp.angular_velocity), delta_time);
+        const Vec3f rotation_vector = vec3f::scale(mp.angular_velocity, delta_time);
         const float angle = vec3f::length(rotation_vector);
         if (angle > 1e-6f) {
             const Quatf rotation = quatf::set_axis_angle(vec3f::scale(rotation_vector, 1.0f / angle), angle);
-            quatf::store(body->quaternion, quatf::normalize(quatf::multiply(rotation, quatf::load(body->quaternion))));
+            body->quaternion = quatf::normalize(quatf::multiply(rotation, body->quaternion));
         }
 
-        const Vec3f displacement = vec3f::scale(vec3f::load(mp.linear_velocity), delta_time);
+        const Vec3f displacement = vec3f::scale(mp.linear_velocity, delta_time);
 
         // ccd only for dynamic linear cast bodies that are not sensors: a kinematic body cannot be stopped by a collision
         bool update_position = true;
@@ -492,7 +493,7 @@ static void velocity_integration_update(World &world, float delta_time) {
                 world.ccd.ccd_bodies.push(ccd_body);
                 body->ccd_body_index = (int32_t)(world.ccd.ccd_bodies.length - 1);
 
-                rigid_body::set_quaternion(world, body, quatf::load(body->quaternion), false);
+                rigid_body::set_quaternion(world, body, body->quaternion, false);
 
                 // the position waits for the ccd resolution
                 update_position = false;
@@ -511,7 +512,7 @@ static void velocity_integration_update(World &world, float delta_time) {
 /** a body's motion still to come this step: a dynamic linear cast body has not moved yet, anything else (kinematic too) has */
 static void calculate_body_motion(Vec3f &out, const RigidBody &body, float delta_time) {
     if (body.motion_type == MotionType::DYNAMIC && body.motion_properties.motion_quality == MotionQuality::LINEAR_CAST) {
-        out = vec3f::scale(vec3f::load(body.motion_properties.linear_velocity), delta_time);
+        out = vec3f::scale(body.motion_properties.linear_velocity, delta_time);
         return;
     }
     out = vec3f::zero();
@@ -602,9 +603,9 @@ static void visit_ccd_body(BodyVisitor *visitor, RigidBody *body_b) {
 
     // a ray from a's position along the relative displacement against b's bounds grown by a's half extent. the ray's
     // length is 1, so the slab values and the cap are both sweep fractions
-    const Vec3f extent = vec3f::scale(aabox::size(aabox::load(body_a.aabb)), 0.5f);
-    const AABox expanded = aabox::expand_by_extents(aabox::load(body_b->aabb), extent);
-    const Rayf ray = {vec3f::load(body_a.position), relative_displacement, 1.0f};
+    const Vec3f extent = vec3f::scale(aabox::size(body_a.aabb), 0.5f);
+    const AABox expanded = aabox::expand_by_extents(body_b->aabb, extent);
+    const Rayf ray = {body_a.position, relative_displacement, 1.0f};
     if (!cast_utils::ray_hits_box3(ray, expanded)) return;
 
     sweep.body_b = body_b;
@@ -684,18 +685,18 @@ static void on_ccd_contact_added(World &world, RigidBody &body_a, RigidBody &bod
     event.sub_shape_id_b = ordered_manifold->sub_shape_id_b;
     event.material_id_a = shapes::get_shape_material(ordered_a->shape, ordered_manifold->sub_shape_id_a);
     event.material_id_b = shapes::get_shape_material(ordered_b->shape, ordered_manifold->sub_shape_id_b);
-    vec3f::store(event.normal, ordered_manifold->world_space_normal);
+    event.normal = ordered_manifold->world_space_normal;
     event.penetration = ordered_manifold->penetration_depth;
     // an unpruned ccd manifold reports its first MAX_CONTACT_POINTS
     event.num_points = ordered_manifold->num_contact_points < manifold::MAX_CONTACT_POINTS ? ordered_manifold->num_contact_points
                                                                                     : manifold::MAX_CONTACT_POINTS;
     for (uint32_t i = 0; i < manifold::MAX_CONTACT_POINTS; i++) {
         if (i < event.num_points) {
-            vec3f::store(event.points_a[i], manifold::get_world_space_contact_point_on_a(*ordered_manifold, i));
-            vec3f::store(event.points_b[i], manifold::get_world_space_contact_point_on_b(*ordered_manifold, i));
+            event.points_a[i] = manifold::get_world_space_contact_point_on_a(*ordered_manifold, i);
+            event.points_b[i] = manifold::get_world_space_contact_point_on_b(*ordered_manifold, i);
         } else {
-            vec3f::store(event.points_a[i], vec3f::zero());
-            vec3f::store(event.points_b[i], vec3f::zero());
+            event.points_a[i] = vec3f::zero();
+            event.points_b[i] = vec3f::zero();
         }
     }
     event.settings = contact_settings;
@@ -712,8 +713,7 @@ static void find_ccd_contacts(World &world, float delta_time) {
         CCD::Body &ccd_body = world.ccd.ccd_bodies[i];
         RigidBody &body_a = *world.bodies.pool[ccd_body.body_index];
 
-        Box3f swept_aabb;
-        aabox::store(swept_aabb, ccd::compute_swept_aabb(body_a, ccd_body.delta_position));
+        const AABox swept_aabb = ccd::compute_swept_aabb(body_a, ccd_body.delta_position);
 
         CCDSweep sweep;
         sweep.world = &world;
@@ -738,7 +738,7 @@ static void find_ccd_contacts(World &world, float delta_time) {
             // of mass at the start of the sweep
             ContactManifold &contact_manifold = narrowphase_manifolds[0];
             manifold::reset(contact_manifold);
-            contact_manifold.base_offset = vec3f::load(body_a.center_of_mass_position);
+            contact_manifold.base_offset = body_a.center_of_mass_position;
             manifold::manifold_between_two_faces(contact_manifold, hit.point_a, hit.point_b, hit.penetration_axis,
                                                  world.settings.narrowphase.manifold_tolerance, hit.face_a, hit.face_b);
             contact_manifold.sub_shape_id_a = hit.sub_shape_id_a;
@@ -771,7 +771,7 @@ static void find_ccd_contacts(World &world, float delta_time) {
 /** the world inverse inertia of a dynamic body at its rotation, scaled by a contact's inverse inertia scale */
 static Mat4f scaled_inverse_inertia(const RigidBody &body, float scale) {
     const Mat4f inverse_inertia =
-        motion_properties::get_inverse_inertia_for_rotation(body.motion_properties, mat4f::from_quat(quatf::load(body.quaternion)));
+        motion_properties::get_inverse_inertia_for_rotation(body.motion_properties, mat4f::from_quat(body.quaternion));
     return scale == 1.0f ? inverse_inertia : mat4f::multiply_scalar(inverse_inertia, scale);
 }
 
@@ -787,9 +787,9 @@ static void resolve_ccd_contact(World &world, const CCD::Body &ccd_body, RigidBo
     const Vec3f contact_point = ccd_body.contact_point;
     const Vec3f contact_normal = ccd_body.contact_normal;
     const Vec3f body_a_position_at_hit =
-        vec3f::scale_and_add(vec3f::load(body_a.center_of_mass_position), ccd_body.delta_position, ccd_body.fraction);
+        vec3f::scale_and_add(body_a.center_of_mass_position, ccd_body.delta_position, ccd_body.fraction);
     const Vec3f r1_plus_u = vec3f::subtract(contact_point, body_a_position_at_hit);
-    const Vec3f r2 = vec3f::subtract(contact_point, vec3f::load(body_b.center_of_mass_position));
+    const Vec3f r2 = vec3f::subtract(contact_point, body_b.center_of_mass_position);
 
     const Vec3f v1 = rigid_body::get_velocity_at_point_com(&body_a, r1_plus_u);
     const Vec3f v2 = TYPE_B != MotionType::STATIC ? rigid_body::get_velocity_at_point_com(&body_b, r2) : vec3f::zero();
@@ -812,13 +812,13 @@ static void resolve_ccd_contact(World &world, const CCD::Body &ccd_body, RigidBo
         inv_inertia_b = scaled_inverse_inertia(body_b, settings.inv_inertia_scale_2);
     }
 
-    Vec3f linear_velocity_a = vec3f::load(body_a.motion_properties.linear_velocity);
-    Vec3f angular_velocity_a = vec3f::load(body_a.motion_properties.angular_velocity);
+    Vec3f linear_velocity_a = body_a.motion_properties.linear_velocity;
+    Vec3f angular_velocity_a = body_a.motion_properties.angular_velocity;
     Vec3f linear_velocity_b = vec3f::zero();
     Vec3f angular_velocity_b = vec3f::zero();
     if constexpr (TYPE_B != MotionType::STATIC) {
-        linear_velocity_b = vec3f::load(body_b.motion_properties.linear_velocity);
-        angular_velocity_b = vec3f::load(body_b.motion_properties.angular_velocity);
+        linear_velocity_b = body_b.motion_properties.linear_velocity;
+        angular_velocity_b = body_b.motion_properties.angular_velocity;
     }
 
     ContactConstraintPart normal_constraint = {};
@@ -916,8 +916,8 @@ static void resolve_ccd_contacts(World &world) {
 
         // to the impact with the penetration allowance, or as far as an earlier hit by another body allows (only dynamic
         // bodies make ccd bodies, kinematic ones already moved in velocity integration)
-        const Vec3f position = vec3f::scale_and_add(vec3f::load(body_a.position), ccd_body.delta_position, ccd_body.fraction_plus_slop);
-        rigid_body::set_transform(world, &body_a, position, quatf::load(body_a.quaternion), false);
+        const Vec3f position = vec3f::scale_and_add(body_a.position, ccd_body.delta_position, ccd_body.fraction_plus_slop);
+        rigid_body::set_transform(world, &body_a, position, body_a.quaternion, false);
     }
 }
 

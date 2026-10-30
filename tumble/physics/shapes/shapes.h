@@ -75,8 +75,8 @@ constexpr float DEFAULT_SHAPE_DENSITY = 1000.0f;
 struct Shape {
     ShapeType type;
     /** local bounds */
-    Box3f aabb;
-    Float3 center_of_mass;
+    AABox aabb;
+    Vec3f center_of_mass;
     float volume;
     /** the surface material a hit on this shape reports; -1 for none. a mesh carries its own per triangle */
     int32_t material_id;
@@ -185,23 +185,23 @@ typedef void (*GetSubShapeTransformedShapeFn)(GetSubShapeTransformedShapeResult 
 /** fills a support for a convex shape in `mode` at `scale`; the convex narrowphase's one view of a shape */
 typedef void (*SetSupportFn)(Support &out, const Shape *shape, SupportFunctionMode mode, Vec3f scale);
 typedef void (*CastRayFn)(CastRayCollector &collector, const CastRaySettings &settings, const Rayf &ray,
-                          const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform);
+                          const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform);
 typedef void (*CollidePointFn)(CollidePointCollector &collector, const CollidePointSettings &settings,
                                Vec3f point, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                               const Transformf &transform_b);
+                               const Transform &transform_b);
 
 /** collides a against b; the pair's entry in the collide table */
 typedef void (*CollideShapeVsShapeFn)(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                                      const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                                      const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                                      const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                                      const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 /** sweeps a by `displacement_a` against b; the pair's entry in the cast table */
 typedef void (*CastShapeVsShapeFn)(CastShapeCollector &collector, const CastShapeSettings &settings,
-                                   const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
+                                   const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                                    Vec3f displacement_a, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                                   const Transformf &transform_b);
+                                   const Transform &transform_b);
 
 /** appends the shape's wireframe at `transform` (scale included) to `out`, through debug::line */
-typedef void (*ShapeDrawFn)(DebugDraw &out, const Shape *shape, const Transformf &transform, Vec3f color);
+typedef void (*ShapeDrawFn)(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color);
 
 /** frees a shape of the def's type, and lets go of what it holds; called by release_ref when no Ref holds it */
 typedef void (*ShapeDestroyFn)(Shape *shape);

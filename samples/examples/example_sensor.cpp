@@ -30,19 +30,19 @@ static void init(App &app) {
 
     // a kinematic sensor swept side to side
     RigidBodySettings sensor;
-    sensor.shape = app::keep(app, box::create({.half_extents = {1.5f, 1.0f, 1.5f}}));
+    sensor.shape = app::keep(app, box::create({.half_extents = vec3f::make(1.5f, 1.0f, 1.5f)}));
     sensor.object_layer = state.layers.moving;
     sensor.motion_type = MotionType::KINEMATIC;
-    sensor.position = {-8.0f, 1.0f, 0.0f};
+    sensor.position = vec3f::make(-8.0f, 1.0f, 0.0f);
     sensor.sensor = true;
     state.sensor = rigid_body::create(*app.world, sensor);
 
-    Shape *cube = app::keep(app, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}));
+    Shape *cube = app::keep(app, box::create({.half_extents = vec3f::splat(0.5f)}));
     RigidBodySettings dynamic_box;
     dynamic_box.shape = cube;
     dynamic_box.object_layer = state.layers.moving;
     dynamic_box.motion_type = MotionType::DYNAMIC;
-    dynamic_box.position = {-2.0f, 1.0f, 0.0f};
+    dynamic_box.position = vec3f::make(-2.0f, 1.0f, 0.0f);
     dynamic_box.restitution = 0.3f;
     dynamic_box.friction = 0.5f;
     rigid_body::create(*app.world, dynamic_box);
@@ -50,7 +50,7 @@ static void init(App &app) {
     RigidBodySettings static_box = dynamic_box;
     static_box.object_layer = state.layers.not_moving;
     static_box.motion_type = MotionType::STATIC;
-    static_box.position = {2.0f, 1.0f, 0.0f};
+    static_box.position = vec3f::make(2.0f, 1.0f, 0.0f);
     rigid_body::create(*app.world, static_box);
 
     // no ground here
@@ -74,7 +74,7 @@ static void update(App &app, float) {
     for (uint32_t i = 0; i < events.contacts_added.length; i++) state.intersecting = state.intersecting || touches_sensor(events.contacts_added[i]);
     for (uint32_t i = 0; i < events.contacts_persisted.length; i++) state.intersecting = state.intersecting || touches_sensor(events.contacts_persisted[i]);
 
-    app::label(app, {state.sensor->position.x, 3.5f, 0.0f}, state.intersecting ? "hit" : "no hit", {4.0f, 1.0f, 0.5f, hex(0x5f5f5f),
+    app::label(app, {vec3f::x(state.sensor->position), 3.5f, 0.0f}, state.intersecting ? "hit" : "no hit", {4.0f, 1.0f, 0.5f, hex(0x5f5f5f),
           state.intersecting ? hex(0x4caf50) : hex(0xf44336)});
 }
 

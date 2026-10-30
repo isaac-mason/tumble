@@ -34,7 +34,7 @@ World *create_world(Layers &out, Float3 gravity) {
     out.not_moving = world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
     world_settings::enable_collision(settings, out.moving, out.moving);
     world_settings::enable_collision(settings, out.moving, out.not_moving);
-    settings.gravity = gravity;
+    settings.gravity = vec3f::load(gravity);
     World *world = world::create(settings);
     return world;
 }
@@ -56,8 +56,16 @@ Shape *keep(App &app, Shape *shape) {
     return shape;
 }
 
+/** the body's pose as the renderer keeps it */
+static BodyPose stored_pose(const RigidBody &body) {
+    BodyPose out;
+    vec3f::store(out.position, body.position);
+    quatf::store(out.quaternion, body.quaternion);
+    return out;
+}
+
 BodyPose pose(const App &app, const RigidBody &body) {
-    const BodyPose now = {body.position, body.quaternion};
+    const BodyPose now = stored_pose(body);
     const uint32_t index = body.index;
     if (app.alpha >= 1.0f || index >= app.step_poses.length || app.step_sequences[index] != app.world->bodies.sequences[index]) return now;
     const BodyPose &before = app.step_poses[index];
@@ -66,7 +74,7 @@ BodyPose pose(const App &app, const RigidBody &body) {
 
 void snap(App &app, const RigidBody &body) {
     if (body.index >= app.step_poses.length) return;
-    app.step_poses[body.index] = {body.position, body.quaternion};
+    app.step_poses[body.index] = stored_pose(body);
     app.step_sequences[body.index] = app.world->bodies.sequences[body.index];
 }
 
@@ -284,7 +292,7 @@ static void take_step_poses(App &app) {
     for (uint32_t i = 0; i < bodies.pool.length; i++) {
         app.step_sequences[i] = bodies.sequences[i];
         if (bodies.sequences[i] == bodies::SLOT_FREE) continue;
-        app.step_poses[i] = {bodies.pool[i]->position, bodies.pool[i]->quaternion};
+        app::snap(app, *bodies.pool[i]);
     }
 }
 

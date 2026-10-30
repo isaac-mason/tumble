@@ -7,9 +7,9 @@
 import type { Instance } from '../module.js';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x6dc71a4e;
+export const SCHEMA_HASH = 0x71b6ca48;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
-export const SCRATCH_BYTES = 368;
+export const SCRATCH_BYTES = 400;
 
 /** the address of an object the wasm owns, typed by what it is; 0 never occurs, null stands for no object. */
 export type Handle<Name extends string> = number & { readonly [HANDLE_OF]: Name };
@@ -55,6 +55,9 @@ export const ACTIVE_BODY_ROW_CENTER_OF_MASS_POSITION = 32;
 export const ACTIVE_BODY_ROW_LINEAR_VELOCITY = 44;
 
 export const ACTIVE_BODY_ROW_ANGULAR_VELOCITY = 56;
+
+/** a body's active index off the active list */
+export const INACTIVE_BODY_INDEX = 0xffffffff;
 
 /** a cast collector's early out fraction before any hit */
 export const INITIAL_EARLY_OUT_FRACTION = 1.0000001192092896;
@@ -509,6 +512,349 @@ export const Mat4 = {
     },
 };
 
+export type Vec3f = [x: number, y: number, z: number];
+export const Vec3f = {
+    size: 16,
+    create(): Vec3f {
+        return [0, 0, 0];
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: Vec3f, address: number): Vec3f {
+        const mem = wasm.mem;
+        out[0] = mem.f32[(address + 0) >> 2]!;
+        out[1] = mem.f32[(address + 4) >> 2]!;
+        out[2] = mem.f32[(address + 8) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: Vec3f): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value[0];
+        mem.f32[(address + 4) >> 2] = value[1];
+        mem.f32[(address + 8) >> 2] = value[2];
+        mem.f32[(address + 12) >> 2] = value[2];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: Vec3f): void {
+        view.setFloat32(offset + 0, value[0], true);
+        view.setFloat32(offset + 4, value[1], true);
+        view.setFloat32(offset + 8, value[2], true);
+        view.setFloat32(offset + 12, value[2], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: Vec3f, view: DataView, offset: number): Vec3f {
+        out[0] = view.getFloat32(offset + 0, true);
+        out[1] = view.getFloat32(offset + 4, true);
+        out[2] = view.getFloat32(offset + 8, true);
+        return out;
+    },
+};
+
+export type Quatf = [x: number, y: number, z: number, w: number];
+export const Quatf = {
+    size: 16,
+    create(): Quatf {
+        return [0, 0, 0, 0];
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: Quatf, address: number): Quatf {
+        const mem = wasm.mem;
+        out[0] = mem.f32[(address + 0) >> 2]!;
+        out[1] = mem.f32[(address + 4) >> 2]!;
+        out[2] = mem.f32[(address + 8) >> 2]!;
+        out[3] = mem.f32[(address + 12) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: Quatf): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value[0];
+        mem.f32[(address + 4) >> 2] = value[1];
+        mem.f32[(address + 8) >> 2] = value[2];
+        mem.f32[(address + 12) >> 2] = value[3];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: Quatf): void {
+        view.setFloat32(offset + 0, value[0], true);
+        view.setFloat32(offset + 4, value[1], true);
+        view.setFloat32(offset + 8, value[2], true);
+        view.setFloat32(offset + 12, value[3], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: Quatf, view: DataView, offset: number): Quatf {
+        out[0] = view.getFloat32(offset + 0, true);
+        out[1] = view.getFloat32(offset + 4, true);
+        out[2] = view.getFloat32(offset + 8, true);
+        out[3] = view.getFloat32(offset + 12, true);
+        return out;
+    },
+};
+
+export type Mat4f = [
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+];
+export const Mat4f = {
+    size: 64,
+    create(): Mat4f {
+        return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: Mat4f, address: number): Mat4f {
+        const mem = wasm.mem;
+        out[0] = mem.f32[(address + 0) >> 2]!;
+        out[1] = mem.f32[(address + 4) >> 2]!;
+        out[2] = mem.f32[(address + 8) >> 2]!;
+        out[3] = mem.f32[(address + 12) >> 2]!;
+        out[4] = mem.f32[(address + 16) >> 2]!;
+        out[5] = mem.f32[(address + 20) >> 2]!;
+        out[6] = mem.f32[(address + 24) >> 2]!;
+        out[7] = mem.f32[(address + 28) >> 2]!;
+        out[8] = mem.f32[(address + 32) >> 2]!;
+        out[9] = mem.f32[(address + 36) >> 2]!;
+        out[10] = mem.f32[(address + 40) >> 2]!;
+        out[11] = mem.f32[(address + 44) >> 2]!;
+        out[12] = mem.f32[(address + 48) >> 2]!;
+        out[13] = mem.f32[(address + 52) >> 2]!;
+        out[14] = mem.f32[(address + 56) >> 2]!;
+        out[15] = mem.f32[(address + 60) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: Mat4f): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value[0];
+        mem.f32[(address + 4) >> 2] = value[1];
+        mem.f32[(address + 8) >> 2] = value[2];
+        mem.f32[(address + 12) >> 2] = value[3];
+        mem.f32[(address + 16) >> 2] = value[4];
+        mem.f32[(address + 20) >> 2] = value[5];
+        mem.f32[(address + 24) >> 2] = value[6];
+        mem.f32[(address + 28) >> 2] = value[7];
+        mem.f32[(address + 32) >> 2] = value[8];
+        mem.f32[(address + 36) >> 2] = value[9];
+        mem.f32[(address + 40) >> 2] = value[10];
+        mem.f32[(address + 44) >> 2] = value[11];
+        mem.f32[(address + 48) >> 2] = value[12];
+        mem.f32[(address + 52) >> 2] = value[13];
+        mem.f32[(address + 56) >> 2] = value[14];
+        mem.f32[(address + 60) >> 2] = value[15];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: Mat4f): void {
+        view.setFloat32(offset + 0, value[0], true);
+        view.setFloat32(offset + 4, value[1], true);
+        view.setFloat32(offset + 8, value[2], true);
+        view.setFloat32(offset + 12, value[3], true);
+        view.setFloat32(offset + 16, value[4], true);
+        view.setFloat32(offset + 20, value[5], true);
+        view.setFloat32(offset + 24, value[6], true);
+        view.setFloat32(offset + 28, value[7], true);
+        view.setFloat32(offset + 32, value[8], true);
+        view.setFloat32(offset + 36, value[9], true);
+        view.setFloat32(offset + 40, value[10], true);
+        view.setFloat32(offset + 44, value[11], true);
+        view.setFloat32(offset + 48, value[12], true);
+        view.setFloat32(offset + 52, value[13], true);
+        view.setFloat32(offset + 56, value[14], true);
+        view.setFloat32(offset + 60, value[15], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: Mat4f, view: DataView, offset: number): Mat4f {
+        out[0] = view.getFloat32(offset + 0, true);
+        out[1] = view.getFloat32(offset + 4, true);
+        out[2] = view.getFloat32(offset + 8, true);
+        out[3] = view.getFloat32(offset + 12, true);
+        out[4] = view.getFloat32(offset + 16, true);
+        out[5] = view.getFloat32(offset + 20, true);
+        out[6] = view.getFloat32(offset + 24, true);
+        out[7] = view.getFloat32(offset + 28, true);
+        out[8] = view.getFloat32(offset + 32, true);
+        out[9] = view.getFloat32(offset + 36, true);
+        out[10] = view.getFloat32(offset + 40, true);
+        out[11] = view.getFloat32(offset + 44, true);
+        out[12] = view.getFloat32(offset + 48, true);
+        out[13] = view.getFloat32(offset + 52, true);
+        out[14] = view.getFloat32(offset + 56, true);
+        out[15] = view.getFloat32(offset + 60, true);
+        return out;
+    },
+};
+
+export type AABox = { min: Vec3f; max: Vec3f };
+export const AABox = {
+    size: 32,
+    create(): AABox {
+        return { min: Vec3f.create(), max: Vec3f.create() };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: AABox, address: number): AABox {
+        const mem = wasm.mem;
+        out.min[0] = mem.f32[(address + 0) >> 2]!;
+        out.min[1] = mem.f32[(address + 4) >> 2]!;
+        out.min[2] = mem.f32[(address + 8) >> 2]!;
+        out.max[0] = mem.f32[(address + 16) >> 2]!;
+        out.max[1] = mem.f32[(address + 20) >> 2]!;
+        out.max[2] = mem.f32[(address + 24) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: AABox): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.min[0];
+        mem.f32[(address + 4) >> 2] = value.min[1];
+        mem.f32[(address + 8) >> 2] = value.min[2];
+        mem.f32[(address + 12) >> 2] = value.min[2];
+        mem.f32[(address + 16) >> 2] = value.max[0];
+        mem.f32[(address + 20) >> 2] = value.max[1];
+        mem.f32[(address + 24) >> 2] = value.max[2];
+        mem.f32[(address + 28) >> 2] = value.max[2];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: AABox): void {
+        view.setFloat32(offset + 0, value.min[0], true);
+        view.setFloat32(offset + 4, value.min[1], true);
+        view.setFloat32(offset + 8, value.min[2], true);
+        view.setFloat32(offset + 12, value.min[2], true);
+        view.setFloat32(offset + 16, value.max[0], true);
+        view.setFloat32(offset + 20, value.max[1], true);
+        view.setFloat32(offset + 24, value.max[2], true);
+        view.setFloat32(offset + 28, value.max[2], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: AABox, view: DataView, offset: number): AABox {
+        out.min[0] = view.getFloat32(offset + 0, true);
+        out.min[1] = view.getFloat32(offset + 4, true);
+        out.min[2] = view.getFloat32(offset + 8, true);
+        out.max[0] = view.getFloat32(offset + 16, true);
+        out.max[1] = view.getFloat32(offset + 20, true);
+        out.max[2] = view.getFloat32(offset + 24, true);
+        return out;
+    },
+};
+
+export type Planef = [x: number, y: number, z: number, w: number];
+export const Planef = {
+    size: 16,
+    create(): Planef {
+        return [0, 0, 0, 0];
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: Planef, address: number): Planef {
+        const mem = wasm.mem;
+        out[0] = mem.f32[(address + 0) >> 2]!;
+        out[1] = mem.f32[(address + 4) >> 2]!;
+        out[2] = mem.f32[(address + 8) >> 2]!;
+        out[3] = mem.f32[(address + 12) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: Planef): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value[0];
+        mem.f32[(address + 4) >> 2] = value[1];
+        mem.f32[(address + 8) >> 2] = value[2];
+        mem.f32[(address + 12) >> 2] = value[3];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: Planef): void {
+        view.setFloat32(offset + 0, value[0], true);
+        view.setFloat32(offset + 4, value[1], true);
+        view.setFloat32(offset + 8, value[2], true);
+        view.setFloat32(offset + 12, value[3], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: Planef, view: DataView, offset: number): Planef {
+        out[0] = view.getFloat32(offset + 0, true);
+        out[1] = view.getFloat32(offset + 4, true);
+        out[2] = view.getFloat32(offset + 8, true);
+        out[3] = view.getFloat32(offset + 12, true);
+        return out;
+    },
+};
+
+export type Transform = { position: Vec3f; quaternion: Quatf; scale: Vec3f };
+export const Transform = {
+    size: 48,
+    create(): Transform {
+        return { position: Vec3f.create(), quaternion: Quatf.create(), scale: Vec3f.create() };
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: Transform, address: number): Transform {
+        const mem = wasm.mem;
+        out.position[0] = mem.f32[(address + 0) >> 2]!;
+        out.position[1] = mem.f32[(address + 4) >> 2]!;
+        out.position[2] = mem.f32[(address + 8) >> 2]!;
+        out.quaternion[0] = mem.f32[(address + 16) >> 2]!;
+        out.quaternion[1] = mem.f32[(address + 20) >> 2]!;
+        out.quaternion[2] = mem.f32[(address + 24) >> 2]!;
+        out.quaternion[3] = mem.f32[(address + 28) >> 2]!;
+        out.scale[0] = mem.f32[(address + 32) >> 2]!;
+        out.scale[1] = mem.f32[(address + 36) >> 2]!;
+        out.scale[2] = mem.f32[(address + 40) >> 2]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: Transform): void {
+        const mem = wasm.mem;
+        mem.f32[(address + 0) >> 2] = value.position[0];
+        mem.f32[(address + 4) >> 2] = value.position[1];
+        mem.f32[(address + 8) >> 2] = value.position[2];
+        mem.f32[(address + 12) >> 2] = value.position[2];
+        mem.f32[(address + 16) >> 2] = value.quaternion[0];
+        mem.f32[(address + 20) >> 2] = value.quaternion[1];
+        mem.f32[(address + 24) >> 2] = value.quaternion[2];
+        mem.f32[(address + 28) >> 2] = value.quaternion[3];
+        mem.f32[(address + 32) >> 2] = value.scale[0];
+        mem.f32[(address + 36) >> 2] = value.scale[1];
+        mem.f32[(address + 40) >> 2] = value.scale[2];
+        mem.f32[(address + 44) >> 2] = value.scale[2];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: Transform): void {
+        view.setFloat32(offset + 0, value.position[0], true);
+        view.setFloat32(offset + 4, value.position[1], true);
+        view.setFloat32(offset + 8, value.position[2], true);
+        view.setFloat32(offset + 12, value.position[2], true);
+        view.setFloat32(offset + 16, value.quaternion[0], true);
+        view.setFloat32(offset + 20, value.quaternion[1], true);
+        view.setFloat32(offset + 24, value.quaternion[2], true);
+        view.setFloat32(offset + 28, value.quaternion[3], true);
+        view.setFloat32(offset + 32, value.scale[0], true);
+        view.setFloat32(offset + 36, value.scale[1], true);
+        view.setFloat32(offset + 40, value.scale[2], true);
+        view.setFloat32(offset + 44, value.scale[2], true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: Transform, view: DataView, offset: number): Transform {
+        out.position[0] = view.getFloat32(offset + 0, true);
+        out.position[1] = view.getFloat32(offset + 4, true);
+        out.position[2] = view.getFloat32(offset + 8, true);
+        out.quaternion[0] = view.getFloat32(offset + 16, true);
+        out.quaternion[1] = view.getFloat32(offset + 20, true);
+        out.quaternion[2] = view.getFloat32(offset + 24, true);
+        out.quaternion[3] = view.getFloat32(offset + 28, true);
+        out.scale[0] = view.getFloat32(offset + 32, true);
+        out.scale[1] = view.getFloat32(offset + 36, true);
+        out.scale[2] = view.getFloat32(offset + 40, true);
+        return out;
+    },
+};
+
 export type Box3 = { min: Vec3; max: Vec3 };
 export const Box3 = {
     size: 24,
@@ -557,94 +903,94 @@ export const Box3 = {
     },
 };
 
-export type MassProperties = { mass: number; inertia: Mat4 };
+export type MassProperties = { mass: number; inertia: Mat4f };
 export const MassProperties = {
-    size: 68,
+    size: 80,
     create(): MassProperties {
-        return { mass: 0, inertia: Mat4.create() };
+        return { mass: 0, inertia: Mat4f.create() };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: MassProperties, address: number): MassProperties {
         const mem = wasm.mem;
         out.mass = mem.f32[(address + 0) >> 2]!;
-        out.inertia[0] = mem.f32[(address + 4) >> 2]!;
-        out.inertia[1] = mem.f32[(address + 8) >> 2]!;
-        out.inertia[2] = mem.f32[(address + 12) >> 2]!;
-        out.inertia[3] = mem.f32[(address + 16) >> 2]!;
-        out.inertia[4] = mem.f32[(address + 20) >> 2]!;
-        out.inertia[5] = mem.f32[(address + 24) >> 2]!;
-        out.inertia[6] = mem.f32[(address + 28) >> 2]!;
-        out.inertia[7] = mem.f32[(address + 32) >> 2]!;
-        out.inertia[8] = mem.f32[(address + 36) >> 2]!;
-        out.inertia[9] = mem.f32[(address + 40) >> 2]!;
-        out.inertia[10] = mem.f32[(address + 44) >> 2]!;
-        out.inertia[11] = mem.f32[(address + 48) >> 2]!;
-        out.inertia[12] = mem.f32[(address + 52) >> 2]!;
-        out.inertia[13] = mem.f32[(address + 56) >> 2]!;
-        out.inertia[14] = mem.f32[(address + 60) >> 2]!;
-        out.inertia[15] = mem.f32[(address + 64) >> 2]!;
+        out.inertia[0] = mem.f32[(address + 16) >> 2]!;
+        out.inertia[1] = mem.f32[(address + 20) >> 2]!;
+        out.inertia[2] = mem.f32[(address + 24) >> 2]!;
+        out.inertia[3] = mem.f32[(address + 28) >> 2]!;
+        out.inertia[4] = mem.f32[(address + 32) >> 2]!;
+        out.inertia[5] = mem.f32[(address + 36) >> 2]!;
+        out.inertia[6] = mem.f32[(address + 40) >> 2]!;
+        out.inertia[7] = mem.f32[(address + 44) >> 2]!;
+        out.inertia[8] = mem.f32[(address + 48) >> 2]!;
+        out.inertia[9] = mem.f32[(address + 52) >> 2]!;
+        out.inertia[10] = mem.f32[(address + 56) >> 2]!;
+        out.inertia[11] = mem.f32[(address + 60) >> 2]!;
+        out.inertia[12] = mem.f32[(address + 64) >> 2]!;
+        out.inertia[13] = mem.f32[(address + 68) >> 2]!;
+        out.inertia[14] = mem.f32[(address + 72) >> 2]!;
+        out.inertia[15] = mem.f32[(address + 76) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
     write(address: number, value: MassProperties): void {
         const mem = wasm.mem;
         mem.f32[(address + 0) >> 2] = value.mass;
-        mem.f32[(address + 4) >> 2] = value.inertia[0];
-        mem.f32[(address + 8) >> 2] = value.inertia[1];
-        mem.f32[(address + 12) >> 2] = value.inertia[2];
-        mem.f32[(address + 16) >> 2] = value.inertia[3];
-        mem.f32[(address + 20) >> 2] = value.inertia[4];
-        mem.f32[(address + 24) >> 2] = value.inertia[5];
-        mem.f32[(address + 28) >> 2] = value.inertia[6];
-        mem.f32[(address + 32) >> 2] = value.inertia[7];
-        mem.f32[(address + 36) >> 2] = value.inertia[8];
-        mem.f32[(address + 40) >> 2] = value.inertia[9];
-        mem.f32[(address + 44) >> 2] = value.inertia[10];
-        mem.f32[(address + 48) >> 2] = value.inertia[11];
-        mem.f32[(address + 52) >> 2] = value.inertia[12];
-        mem.f32[(address + 56) >> 2] = value.inertia[13];
-        mem.f32[(address + 60) >> 2] = value.inertia[14];
-        mem.f32[(address + 64) >> 2] = value.inertia[15];
+        mem.f32[(address + 16) >> 2] = value.inertia[0];
+        mem.f32[(address + 20) >> 2] = value.inertia[1];
+        mem.f32[(address + 24) >> 2] = value.inertia[2];
+        mem.f32[(address + 28) >> 2] = value.inertia[3];
+        mem.f32[(address + 32) >> 2] = value.inertia[4];
+        mem.f32[(address + 36) >> 2] = value.inertia[5];
+        mem.f32[(address + 40) >> 2] = value.inertia[6];
+        mem.f32[(address + 44) >> 2] = value.inertia[7];
+        mem.f32[(address + 48) >> 2] = value.inertia[8];
+        mem.f32[(address + 52) >> 2] = value.inertia[9];
+        mem.f32[(address + 56) >> 2] = value.inertia[10];
+        mem.f32[(address + 60) >> 2] = value.inertia[11];
+        mem.f32[(address + 64) >> 2] = value.inertia[12];
+        mem.f32[(address + 68) >> 2] = value.inertia[13];
+        mem.f32[(address + 72) >> 2] = value.inertia[14];
+        mem.f32[(address + 76) >> 2] = value.inertia[15];
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: MassProperties): void {
         view.setFloat32(offset + 0, value.mass, true);
-        view.setFloat32(offset + 4, value.inertia[0], true);
-        view.setFloat32(offset + 8, value.inertia[1], true);
-        view.setFloat32(offset + 12, value.inertia[2], true);
-        view.setFloat32(offset + 16, value.inertia[3], true);
-        view.setFloat32(offset + 20, value.inertia[4], true);
-        view.setFloat32(offset + 24, value.inertia[5], true);
-        view.setFloat32(offset + 28, value.inertia[6], true);
-        view.setFloat32(offset + 32, value.inertia[7], true);
-        view.setFloat32(offset + 36, value.inertia[8], true);
-        view.setFloat32(offset + 40, value.inertia[9], true);
-        view.setFloat32(offset + 44, value.inertia[10], true);
-        view.setFloat32(offset + 48, value.inertia[11], true);
-        view.setFloat32(offset + 52, value.inertia[12], true);
-        view.setFloat32(offset + 56, value.inertia[13], true);
-        view.setFloat32(offset + 60, value.inertia[14], true);
-        view.setFloat32(offset + 64, value.inertia[15], true);
+        view.setFloat32(offset + 16, value.inertia[0], true);
+        view.setFloat32(offset + 20, value.inertia[1], true);
+        view.setFloat32(offset + 24, value.inertia[2], true);
+        view.setFloat32(offset + 28, value.inertia[3], true);
+        view.setFloat32(offset + 32, value.inertia[4], true);
+        view.setFloat32(offset + 36, value.inertia[5], true);
+        view.setFloat32(offset + 40, value.inertia[6], true);
+        view.setFloat32(offset + 44, value.inertia[7], true);
+        view.setFloat32(offset + 48, value.inertia[8], true);
+        view.setFloat32(offset + 52, value.inertia[9], true);
+        view.setFloat32(offset + 56, value.inertia[10], true);
+        view.setFloat32(offset + 60, value.inertia[11], true);
+        view.setFloat32(offset + 64, value.inertia[12], true);
+        view.setFloat32(offset + 68, value.inertia[13], true);
+        view.setFloat32(offset + 72, value.inertia[14], true);
+        view.setFloat32(offset + 76, value.inertia[15], true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: MassProperties, view: DataView, offset: number): MassProperties {
         out.mass = view.getFloat32(offset + 0, true);
-        out.inertia[0] = view.getFloat32(offset + 4, true);
-        out.inertia[1] = view.getFloat32(offset + 8, true);
-        out.inertia[2] = view.getFloat32(offset + 12, true);
-        out.inertia[3] = view.getFloat32(offset + 16, true);
-        out.inertia[4] = view.getFloat32(offset + 20, true);
-        out.inertia[5] = view.getFloat32(offset + 24, true);
-        out.inertia[6] = view.getFloat32(offset + 28, true);
-        out.inertia[7] = view.getFloat32(offset + 32, true);
-        out.inertia[8] = view.getFloat32(offset + 36, true);
-        out.inertia[9] = view.getFloat32(offset + 40, true);
-        out.inertia[10] = view.getFloat32(offset + 44, true);
-        out.inertia[11] = view.getFloat32(offset + 48, true);
-        out.inertia[12] = view.getFloat32(offset + 52, true);
-        out.inertia[13] = view.getFloat32(offset + 56, true);
-        out.inertia[14] = view.getFloat32(offset + 60, true);
-        out.inertia[15] = view.getFloat32(offset + 64, true);
+        out.inertia[0] = view.getFloat32(offset + 16, true);
+        out.inertia[1] = view.getFloat32(offset + 20, true);
+        out.inertia[2] = view.getFloat32(offset + 24, true);
+        out.inertia[3] = view.getFloat32(offset + 28, true);
+        out.inertia[4] = view.getFloat32(offset + 32, true);
+        out.inertia[5] = view.getFloat32(offset + 36, true);
+        out.inertia[6] = view.getFloat32(offset + 40, true);
+        out.inertia[7] = view.getFloat32(offset + 44, true);
+        out.inertia[8] = view.getFloat32(offset + 48, true);
+        out.inertia[9] = view.getFloat32(offset + 52, true);
+        out.inertia[10] = view.getFloat32(offset + 56, true);
+        out.inertia[11] = view.getFloat32(offset + 60, true);
+        out.inertia[12] = view.getFloat32(offset + 64, true);
+        out.inertia[13] = view.getFloat32(offset + 68, true);
+        out.inertia[14] = view.getFloat32(offset + 72, true);
+        out.inertia[15] = view.getFloat32(offset + 76, true);
         return out;
     },
 };
@@ -935,11 +1281,11 @@ export type ContactSettings = {
     invMassScale2: number;
     invInertiaScale1: number;
     invInertiaScale2: number;
-    relativeLinearSurfaceVelocity: Vec3;
-    relativeAngularSurfaceVelocity: Vec3;
+    relativeLinearSurfaceVelocity: Vec3f;
+    relativeAngularSurfaceVelocity: Vec3f;
 };
 export const ContactSettings = {
-    size: 52,
+    size: 64,
     create(): ContactSettings {
         return {
             combinedFriction: 0,
@@ -949,8 +1295,8 @@ export const ContactSettings = {
             invMassScale2: 0,
             invInertiaScale1: 0,
             invInertiaScale2: 0,
-            relativeLinearSurfaceVelocity: Vec3.create(),
-            relativeAngularSurfaceVelocity: Vec3.create(),
+            relativeLinearSurfaceVelocity: Vec3f.create(),
+            relativeAngularSurfaceVelocity: Vec3f.create(),
         };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
@@ -963,12 +1309,12 @@ export const ContactSettings = {
         out.invMassScale2 = mem.f32[(address + 16) >> 2]!;
         out.invInertiaScale1 = mem.f32[(address + 20) >> 2]!;
         out.invInertiaScale2 = mem.f32[(address + 24) >> 2]!;
-        out.relativeLinearSurfaceVelocity[0] = mem.f32[(address + 28) >> 2]!;
-        out.relativeLinearSurfaceVelocity[1] = mem.f32[(address + 32) >> 2]!;
-        out.relativeLinearSurfaceVelocity[2] = mem.f32[(address + 36) >> 2]!;
-        out.relativeAngularSurfaceVelocity[0] = mem.f32[(address + 40) >> 2]!;
-        out.relativeAngularSurfaceVelocity[1] = mem.f32[(address + 44) >> 2]!;
-        out.relativeAngularSurfaceVelocity[2] = mem.f32[(address + 48) >> 2]!;
+        out.relativeLinearSurfaceVelocity[0] = mem.f32[(address + 32) >> 2]!;
+        out.relativeLinearSurfaceVelocity[1] = mem.f32[(address + 36) >> 2]!;
+        out.relativeLinearSurfaceVelocity[2] = mem.f32[(address + 40) >> 2]!;
+        out.relativeAngularSurfaceVelocity[0] = mem.f32[(address + 48) >> 2]!;
+        out.relativeAngularSurfaceVelocity[1] = mem.f32[(address + 52) >> 2]!;
+        out.relativeAngularSurfaceVelocity[2] = mem.f32[(address + 56) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -981,12 +1327,14 @@ export const ContactSettings = {
         mem.f32[(address + 16) >> 2] = value.invMassScale2;
         mem.f32[(address + 20) >> 2] = value.invInertiaScale1;
         mem.f32[(address + 24) >> 2] = value.invInertiaScale2;
-        mem.f32[(address + 28) >> 2] = value.relativeLinearSurfaceVelocity[0];
-        mem.f32[(address + 32) >> 2] = value.relativeLinearSurfaceVelocity[1];
-        mem.f32[(address + 36) >> 2] = value.relativeLinearSurfaceVelocity[2];
-        mem.f32[(address + 40) >> 2] = value.relativeAngularSurfaceVelocity[0];
-        mem.f32[(address + 44) >> 2] = value.relativeAngularSurfaceVelocity[1];
-        mem.f32[(address + 48) >> 2] = value.relativeAngularSurfaceVelocity[2];
+        mem.f32[(address + 32) >> 2] = value.relativeLinearSurfaceVelocity[0];
+        mem.f32[(address + 36) >> 2] = value.relativeLinearSurfaceVelocity[1];
+        mem.f32[(address + 40) >> 2] = value.relativeLinearSurfaceVelocity[2];
+        mem.f32[(address + 44) >> 2] = value.relativeLinearSurfaceVelocity[2];
+        mem.f32[(address + 48) >> 2] = value.relativeAngularSurfaceVelocity[0];
+        mem.f32[(address + 52) >> 2] = value.relativeAngularSurfaceVelocity[1];
+        mem.f32[(address + 56) >> 2] = value.relativeAngularSurfaceVelocity[2];
+        mem.f32[(address + 60) >> 2] = value.relativeAngularSurfaceVelocity[2];
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: ContactSettings): void {
@@ -997,12 +1345,14 @@ export const ContactSettings = {
         view.setFloat32(offset + 16, value.invMassScale2, true);
         view.setFloat32(offset + 20, value.invInertiaScale1, true);
         view.setFloat32(offset + 24, value.invInertiaScale2, true);
-        view.setFloat32(offset + 28, value.relativeLinearSurfaceVelocity[0], true);
-        view.setFloat32(offset + 32, value.relativeLinearSurfaceVelocity[1], true);
-        view.setFloat32(offset + 36, value.relativeLinearSurfaceVelocity[2], true);
-        view.setFloat32(offset + 40, value.relativeAngularSurfaceVelocity[0], true);
-        view.setFloat32(offset + 44, value.relativeAngularSurfaceVelocity[1], true);
-        view.setFloat32(offset + 48, value.relativeAngularSurfaceVelocity[2], true);
+        view.setFloat32(offset + 32, value.relativeLinearSurfaceVelocity[0], true);
+        view.setFloat32(offset + 36, value.relativeLinearSurfaceVelocity[1], true);
+        view.setFloat32(offset + 40, value.relativeLinearSurfaceVelocity[2], true);
+        view.setFloat32(offset + 44, value.relativeLinearSurfaceVelocity[2], true);
+        view.setFloat32(offset + 48, value.relativeAngularSurfaceVelocity[0], true);
+        view.setFloat32(offset + 52, value.relativeAngularSurfaceVelocity[1], true);
+        view.setFloat32(offset + 56, value.relativeAngularSurfaceVelocity[2], true);
+        view.setFloat32(offset + 60, value.relativeAngularSurfaceVelocity[2], true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: ContactSettings, view: DataView, offset: number): ContactSettings {
@@ -1013,413 +1363,452 @@ export const ContactSettings = {
         out.invMassScale2 = view.getFloat32(offset + 16, true);
         out.invInertiaScale1 = view.getFloat32(offset + 20, true);
         out.invInertiaScale2 = view.getFloat32(offset + 24, true);
-        out.relativeLinearSurfaceVelocity[0] = view.getFloat32(offset + 28, true);
-        out.relativeLinearSurfaceVelocity[1] = view.getFloat32(offset + 32, true);
-        out.relativeLinearSurfaceVelocity[2] = view.getFloat32(offset + 36, true);
-        out.relativeAngularSurfaceVelocity[0] = view.getFloat32(offset + 40, true);
-        out.relativeAngularSurfaceVelocity[1] = view.getFloat32(offset + 44, true);
-        out.relativeAngularSurfaceVelocity[2] = view.getFloat32(offset + 48, true);
+        out.relativeLinearSurfaceVelocity[0] = view.getFloat32(offset + 32, true);
+        out.relativeLinearSurfaceVelocity[1] = view.getFloat32(offset + 36, true);
+        out.relativeLinearSurfaceVelocity[2] = view.getFloat32(offset + 40, true);
+        out.relativeAngularSurfaceVelocity[0] = view.getFloat32(offset + 48, true);
+        out.relativeAngularSurfaceVelocity[1] = view.getFloat32(offset + 52, true);
+        out.relativeAngularSurfaceVelocity[2] = view.getFloat32(offset + 56, true);
         return out;
     },
 };
 
-export type PairEvent = {
-    bodyA: number;
-    bodyB: number;
-    userDataALow: number;
-    userDataAHigh: number;
-    userDataBLow: number;
-    userDataBHigh: number;
-};
+export type PairEvent = { bodyIdA: number; bodyIdB: number; userDataA: number; userDataB: number; rejected: boolean };
 export const PairEvent = {
-    size: 24,
+    size: 40,
     create(): PairEvent {
-        return { bodyA: 0, bodyB: 0, userDataALow: 0, userDataAHigh: 0, userDataBLow: 0, userDataBHigh: 0 };
+        return { bodyIdA: 0, bodyIdB: 0, userDataA: 0, userDataB: 0, rejected: false };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: PairEvent, address: number): PairEvent {
         const mem = wasm.mem;
-        out.bodyA = mem.u32[(address + 0) >> 2]!;
-        out.bodyB = mem.u32[(address + 4) >> 2]!;
-        out.userDataALow = mem.u32[(address + 8) >> 2]!;
-        out.userDataAHigh = mem.u32[(address + 12) >> 2]!;
-        out.userDataBLow = mem.u32[(address + 16) >> 2]!;
-        out.userDataBHigh = mem.u32[(address + 20) >> 2]!;
+        out.bodyIdA = mem.u32[(address + 8) >> 2]!;
+        out.bodyIdB = mem.u32[(address + 12) >> 2]!;
+        out.userDataA = mem.u32[(address + 16) >> 2]! + mem.u32[(address + 16 + 4) >> 2]! * 0x100000000;
+        out.userDataB = mem.u32[(address + 24) >> 2]! + mem.u32[(address + 24 + 4) >> 2]! * 0x100000000;
+        out.rejected = mem.u8[address + 36]! !== 0;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
     write(address: number, value: PairEvent): void {
         const mem = wasm.mem;
-        mem.u32[(address + 0) >> 2] = value.bodyA;
-        mem.u32[(address + 4) >> 2] = value.bodyB;
-        mem.u32[(address + 8) >> 2] = value.userDataALow;
-        mem.u32[(address + 12) >> 2] = value.userDataAHigh;
-        mem.u32[(address + 16) >> 2] = value.userDataBLow;
-        mem.u32[(address + 20) >> 2] = value.userDataBHigh;
+        mem.u32[(address + 8) >> 2] = value.bodyIdA;
+        mem.u32[(address + 12) >> 2] = value.bodyIdB;
+        mem.u32[(address + 16) >> 2] = value.userDataA >>> 0;
+        mem.u32[(address + 16 + 4) >> 2] = Math.floor(value.userDataA / 0x100000000);
+        mem.u32[(address + 24) >> 2] = value.userDataB >>> 0;
+        mem.u32[(address + 24 + 4) >> 2] = Math.floor(value.userDataB / 0x100000000);
+        mem.u8[address + 36] = value.rejected ? 1 : 0;
+    },
+    /** the field of the value at a byte address of the wasm's memory, set in place. */
+    setRejected(address: number, value: boolean): void {
+        const mem = wasm.mem;
+        mem.u8[address + 36] = value ? 1 : 0;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: PairEvent): void {
-        view.setUint32(offset + 0, value.bodyA, true);
-        view.setUint32(offset + 4, value.bodyB, true);
-        view.setUint32(offset + 8, value.userDataALow, true);
-        view.setUint32(offset + 12, value.userDataAHigh, true);
-        view.setUint32(offset + 16, value.userDataBLow, true);
-        view.setUint32(offset + 20, value.userDataBHigh, true);
+        view.setUint32(offset + 8, value.bodyIdA, true);
+        view.setUint32(offset + 12, value.bodyIdB, true);
+        view.setUint32(offset + 16, value.userDataA >>> 0, true);
+        view.setUint32(offset + 20, Math.floor(value.userDataA / 0x100000000), true);
+        view.setUint32(offset + 24, value.userDataB >>> 0, true);
+        view.setUint32(offset + 28, Math.floor(value.userDataB / 0x100000000), true);
+        view.setUint8(offset + 36, value.rejected ? 1 : 0);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: PairEvent, view: DataView, offset: number): PairEvent {
-        out.bodyA = view.getUint32(offset + 0, true);
-        out.bodyB = view.getUint32(offset + 4, true);
-        out.userDataALow = view.getUint32(offset + 8, true);
-        out.userDataAHigh = view.getUint32(offset + 12, true);
-        out.userDataBLow = view.getUint32(offset + 16, true);
-        out.userDataBHigh = view.getUint32(offset + 20, true);
+        out.bodyIdA = view.getUint32(offset + 8, true);
+        out.bodyIdB = view.getUint32(offset + 12, true);
+        out.userDataA = view.getUint32(offset + 16, true) + view.getUint32(offset + 20, true) * 0x100000000;
+        out.userDataB = view.getUint32(offset + 24, true) + view.getUint32(offset + 28, true) * 0x100000000;
+        out.rejected = view.getUint8(offset + 36) !== 0;
         return out;
     },
 };
 
 export type ContactEvent = {
-    bodyA: number;
-    bodyB: number;
-    userDataALow: number;
-    userDataAHigh: number;
-    userDataBLow: number;
-    userDataBHigh: number;
-    subShapeA: number;
-    subShapeB: number;
-    materialA: number;
-    materialB: number;
-    normal: Vec3;
+    bodyIdA: number;
+    bodyIdB: number;
+    userDataA: number;
+    userDataB: number;
+    subShapeIdA: number;
+    subShapeIdB: number;
+    materialIdA: number;
+    materialIdB: number;
+    normal: Vec3f;
     penetration: number;
     numPoints: number;
-    pointsA: Vec3[];
-    pointsB: Vec3[];
+    pointsA: Vec3f[];
+    pointsB: Vec3f[];
     settings: ContactSettings;
+    rejected: boolean;
+    settingsChanged: boolean;
 };
 export const ContactEvent = {
-    size: 208,
+    size: 304,
     create(): ContactEvent {
         return {
-            bodyA: 0,
-            bodyB: 0,
-            userDataALow: 0,
-            userDataAHigh: 0,
-            userDataBLow: 0,
-            userDataBHigh: 0,
-            subShapeA: 0,
-            subShapeB: 0,
-            materialA: 0,
-            materialB: 0,
-            normal: Vec3.create(),
+            bodyIdA: 0,
+            bodyIdB: 0,
+            userDataA: 0,
+            userDataB: 0,
+            subShapeIdA: 0,
+            subShapeIdB: 0,
+            materialIdA: 0,
+            materialIdB: 0,
+            normal: Vec3f.create(),
             penetration: 0,
             numPoints: 0,
-            pointsA: Array.from({ length: 4 }, () => Vec3.create()),
-            pointsB: Array.from({ length: 4 }, () => Vec3.create()),
+            pointsA: Array.from({ length: 4 }, () => Vec3f.create()),
+            pointsB: Array.from({ length: 4 }, () => Vec3f.create()),
             settings: ContactSettings.create(),
+            rejected: false,
+            settingsChanged: false,
         };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: ContactEvent, address: number): ContactEvent {
         const mem = wasm.mem;
-        out.bodyA = mem.u32[(address + 0) >> 2]!;
-        out.bodyB = mem.u32[(address + 4) >> 2]!;
-        out.userDataALow = mem.u32[(address + 8) >> 2]!;
-        out.userDataAHigh = mem.u32[(address + 12) >> 2]!;
-        out.userDataBLow = mem.u32[(address + 16) >> 2]!;
-        out.userDataBHigh = mem.u32[(address + 20) >> 2]!;
-        out.subShapeA = mem.u32[(address + 24) >> 2]!;
-        out.subShapeB = mem.u32[(address + 28) >> 2]!;
-        out.materialA = mem.i32[(address + 32) >> 2]!;
-        out.materialB = mem.i32[(address + 36) >> 2]!;
-        out.normal[0] = mem.f32[(address + 40) >> 2]!;
-        out.normal[1] = mem.f32[(address + 44) >> 2]!;
-        out.normal[2] = mem.f32[(address + 48) >> 2]!;
-        out.penetration = mem.f32[(address + 52) >> 2]!;
-        out.numPoints = mem.u32[(address + 56) >> 2]!;
-        out.pointsA[0]![0] = mem.f32[(address + 60) >> 2]!;
-        out.pointsA[0]![1] = mem.f32[(address + 64) >> 2]!;
-        out.pointsA[0]![2] = mem.f32[(address + 68) >> 2]!;
-        out.pointsA[1]![0] = mem.f32[(address + 72) >> 2]!;
-        out.pointsA[1]![1] = mem.f32[(address + 76) >> 2]!;
-        out.pointsA[1]![2] = mem.f32[(address + 80) >> 2]!;
-        out.pointsA[2]![0] = mem.f32[(address + 84) >> 2]!;
-        out.pointsA[2]![1] = mem.f32[(address + 88) >> 2]!;
-        out.pointsA[2]![2] = mem.f32[(address + 92) >> 2]!;
-        out.pointsA[3]![0] = mem.f32[(address + 96) >> 2]!;
-        out.pointsA[3]![1] = mem.f32[(address + 100) >> 2]!;
-        out.pointsA[3]![2] = mem.f32[(address + 104) >> 2]!;
-        out.pointsB[0]![0] = mem.f32[(address + 108) >> 2]!;
-        out.pointsB[0]![1] = mem.f32[(address + 112) >> 2]!;
-        out.pointsB[0]![2] = mem.f32[(address + 116) >> 2]!;
-        out.pointsB[1]![0] = mem.f32[(address + 120) >> 2]!;
-        out.pointsB[1]![1] = mem.f32[(address + 124) >> 2]!;
-        out.pointsB[1]![2] = mem.f32[(address + 128) >> 2]!;
-        out.pointsB[2]![0] = mem.f32[(address + 132) >> 2]!;
-        out.pointsB[2]![1] = mem.f32[(address + 136) >> 2]!;
-        out.pointsB[2]![2] = mem.f32[(address + 140) >> 2]!;
-        out.pointsB[3]![0] = mem.f32[(address + 144) >> 2]!;
-        out.pointsB[3]![1] = mem.f32[(address + 148) >> 2]!;
-        out.pointsB[3]![2] = mem.f32[(address + 152) >> 2]!;
-        out.settings.combinedFriction = mem.f32[(address + 156) >> 2]!;
-        out.settings.combinedRestitution = mem.f32[(address + 160) >> 2]!;
-        out.settings.isSensor = mem.u8[address + 164]! !== 0;
-        out.settings.invMassScale1 = mem.f32[(address + 168) >> 2]!;
-        out.settings.invMassScale2 = mem.f32[(address + 172) >> 2]!;
-        out.settings.invInertiaScale1 = mem.f32[(address + 176) >> 2]!;
-        out.settings.invInertiaScale2 = mem.f32[(address + 180) >> 2]!;
-        out.settings.relativeLinearSurfaceVelocity[0] = mem.f32[(address + 184) >> 2]!;
-        out.settings.relativeLinearSurfaceVelocity[1] = mem.f32[(address + 188) >> 2]!;
-        out.settings.relativeLinearSurfaceVelocity[2] = mem.f32[(address + 192) >> 2]!;
-        out.settings.relativeAngularSurfaceVelocity[0] = mem.f32[(address + 196) >> 2]!;
-        out.settings.relativeAngularSurfaceVelocity[1] = mem.f32[(address + 200) >> 2]!;
-        out.settings.relativeAngularSurfaceVelocity[2] = mem.f32[(address + 204) >> 2]!;
+        out.bodyIdA = mem.u32[(address + 12) >> 2]!;
+        out.bodyIdB = mem.u32[(address + 16) >> 2]!;
+        out.userDataA = mem.u32[(address + 24) >> 2]! + mem.u32[(address + 24 + 4) >> 2]! * 0x100000000;
+        out.userDataB = mem.u32[(address + 32) >> 2]! + mem.u32[(address + 32 + 4) >> 2]! * 0x100000000;
+        out.subShapeIdA = mem.u32[(address + 40) >> 2]!;
+        out.subShapeIdB = mem.u32[(address + 44) >> 2]!;
+        out.materialIdA = mem.i32[(address + 48) >> 2]!;
+        out.materialIdB = mem.i32[(address + 52) >> 2]!;
+        out.normal[0] = mem.f32[(address + 64) >> 2]!;
+        out.normal[1] = mem.f32[(address + 68) >> 2]!;
+        out.normal[2] = mem.f32[(address + 72) >> 2]!;
+        out.penetration = mem.f32[(address + 80) >> 2]!;
+        out.numPoints = mem.u32[(address + 84) >> 2]!;
+        out.pointsA[0]![0] = mem.f32[(address + 96) >> 2]!;
+        out.pointsA[0]![1] = mem.f32[(address + 100) >> 2]!;
+        out.pointsA[0]![2] = mem.f32[(address + 104) >> 2]!;
+        out.pointsA[1]![0] = mem.f32[(address + 112) >> 2]!;
+        out.pointsA[1]![1] = mem.f32[(address + 116) >> 2]!;
+        out.pointsA[1]![2] = mem.f32[(address + 120) >> 2]!;
+        out.pointsA[2]![0] = mem.f32[(address + 128) >> 2]!;
+        out.pointsA[2]![1] = mem.f32[(address + 132) >> 2]!;
+        out.pointsA[2]![2] = mem.f32[(address + 136) >> 2]!;
+        out.pointsA[3]![0] = mem.f32[(address + 144) >> 2]!;
+        out.pointsA[3]![1] = mem.f32[(address + 148) >> 2]!;
+        out.pointsA[3]![2] = mem.f32[(address + 152) >> 2]!;
+        out.pointsB[0]![0] = mem.f32[(address + 160) >> 2]!;
+        out.pointsB[0]![1] = mem.f32[(address + 164) >> 2]!;
+        out.pointsB[0]![2] = mem.f32[(address + 168) >> 2]!;
+        out.pointsB[1]![0] = mem.f32[(address + 176) >> 2]!;
+        out.pointsB[1]![1] = mem.f32[(address + 180) >> 2]!;
+        out.pointsB[1]![2] = mem.f32[(address + 184) >> 2]!;
+        out.pointsB[2]![0] = mem.f32[(address + 192) >> 2]!;
+        out.pointsB[2]![1] = mem.f32[(address + 196) >> 2]!;
+        out.pointsB[2]![2] = mem.f32[(address + 200) >> 2]!;
+        out.pointsB[3]![0] = mem.f32[(address + 208) >> 2]!;
+        out.pointsB[3]![1] = mem.f32[(address + 212) >> 2]!;
+        out.pointsB[3]![2] = mem.f32[(address + 216) >> 2]!;
+        out.settings.combinedFriction = mem.f32[(address + 224) >> 2]!;
+        out.settings.combinedRestitution = mem.f32[(address + 228) >> 2]!;
+        out.settings.isSensor = mem.u8[address + 232]! !== 0;
+        out.settings.invMassScale1 = mem.f32[(address + 236) >> 2]!;
+        out.settings.invMassScale2 = mem.f32[(address + 240) >> 2]!;
+        out.settings.invInertiaScale1 = mem.f32[(address + 244) >> 2]!;
+        out.settings.invInertiaScale2 = mem.f32[(address + 248) >> 2]!;
+        out.settings.relativeLinearSurfaceVelocity[0] = mem.f32[(address + 256) >> 2]!;
+        out.settings.relativeLinearSurfaceVelocity[1] = mem.f32[(address + 260) >> 2]!;
+        out.settings.relativeLinearSurfaceVelocity[2] = mem.f32[(address + 264) >> 2]!;
+        out.settings.relativeAngularSurfaceVelocity[0] = mem.f32[(address + 272) >> 2]!;
+        out.settings.relativeAngularSurfaceVelocity[1] = mem.f32[(address + 276) >> 2]!;
+        out.settings.relativeAngularSurfaceVelocity[2] = mem.f32[(address + 280) >> 2]!;
+        out.rejected = mem.u8[address + 288]! !== 0;
+        out.settingsChanged = mem.u8[address + 289]! !== 0;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
     write(address: number, value: ContactEvent): void {
         const mem = wasm.mem;
-        mem.u32[(address + 0) >> 2] = value.bodyA;
-        mem.u32[(address + 4) >> 2] = value.bodyB;
-        mem.u32[(address + 8) >> 2] = value.userDataALow;
-        mem.u32[(address + 12) >> 2] = value.userDataAHigh;
-        mem.u32[(address + 16) >> 2] = value.userDataBLow;
-        mem.u32[(address + 20) >> 2] = value.userDataBHigh;
-        mem.u32[(address + 24) >> 2] = value.subShapeA;
-        mem.u32[(address + 28) >> 2] = value.subShapeB;
-        mem.i32[(address + 32) >> 2] = value.materialA;
-        mem.i32[(address + 36) >> 2] = value.materialB;
-        mem.f32[(address + 40) >> 2] = value.normal[0];
-        mem.f32[(address + 44) >> 2] = value.normal[1];
-        mem.f32[(address + 48) >> 2] = value.normal[2];
-        mem.f32[(address + 52) >> 2] = value.penetration;
-        mem.u32[(address + 56) >> 2] = value.numPoints;
-        mem.f32[(address + 60) >> 2] = value.pointsA[0]![0];
-        mem.f32[(address + 64) >> 2] = value.pointsA[0]![1];
-        mem.f32[(address + 68) >> 2] = value.pointsA[0]![2];
-        mem.f32[(address + 72) >> 2] = value.pointsA[1]![0];
-        mem.f32[(address + 76) >> 2] = value.pointsA[1]![1];
-        mem.f32[(address + 80) >> 2] = value.pointsA[1]![2];
-        mem.f32[(address + 84) >> 2] = value.pointsA[2]![0];
-        mem.f32[(address + 88) >> 2] = value.pointsA[2]![1];
-        mem.f32[(address + 92) >> 2] = value.pointsA[2]![2];
-        mem.f32[(address + 96) >> 2] = value.pointsA[3]![0];
-        mem.f32[(address + 100) >> 2] = value.pointsA[3]![1];
-        mem.f32[(address + 104) >> 2] = value.pointsA[3]![2];
-        mem.f32[(address + 108) >> 2] = value.pointsB[0]![0];
-        mem.f32[(address + 112) >> 2] = value.pointsB[0]![1];
-        mem.f32[(address + 116) >> 2] = value.pointsB[0]![2];
-        mem.f32[(address + 120) >> 2] = value.pointsB[1]![0];
-        mem.f32[(address + 124) >> 2] = value.pointsB[1]![1];
-        mem.f32[(address + 128) >> 2] = value.pointsB[1]![2];
-        mem.f32[(address + 132) >> 2] = value.pointsB[2]![0];
-        mem.f32[(address + 136) >> 2] = value.pointsB[2]![1];
-        mem.f32[(address + 140) >> 2] = value.pointsB[2]![2];
-        mem.f32[(address + 144) >> 2] = value.pointsB[3]![0];
-        mem.f32[(address + 148) >> 2] = value.pointsB[3]![1];
-        mem.f32[(address + 152) >> 2] = value.pointsB[3]![2];
-        mem.f32[(address + 156) >> 2] = value.settings.combinedFriction;
-        mem.f32[(address + 160) >> 2] = value.settings.combinedRestitution;
-        mem.u8[address + 164] = value.settings.isSensor ? 1 : 0;
-        mem.f32[(address + 168) >> 2] = value.settings.invMassScale1;
-        mem.f32[(address + 172) >> 2] = value.settings.invMassScale2;
-        mem.f32[(address + 176) >> 2] = value.settings.invInertiaScale1;
-        mem.f32[(address + 180) >> 2] = value.settings.invInertiaScale2;
-        mem.f32[(address + 184) >> 2] = value.settings.relativeLinearSurfaceVelocity[0];
-        mem.f32[(address + 188) >> 2] = value.settings.relativeLinearSurfaceVelocity[1];
-        mem.f32[(address + 192) >> 2] = value.settings.relativeLinearSurfaceVelocity[2];
-        mem.f32[(address + 196) >> 2] = value.settings.relativeAngularSurfaceVelocity[0];
-        mem.f32[(address + 200) >> 2] = value.settings.relativeAngularSurfaceVelocity[1];
-        mem.f32[(address + 204) >> 2] = value.settings.relativeAngularSurfaceVelocity[2];
+        mem.u32[(address + 12) >> 2] = value.bodyIdA;
+        mem.u32[(address + 16) >> 2] = value.bodyIdB;
+        mem.u32[(address + 24) >> 2] = value.userDataA >>> 0;
+        mem.u32[(address + 24 + 4) >> 2] = Math.floor(value.userDataA / 0x100000000);
+        mem.u32[(address + 32) >> 2] = value.userDataB >>> 0;
+        mem.u32[(address + 32 + 4) >> 2] = Math.floor(value.userDataB / 0x100000000);
+        mem.u32[(address + 40) >> 2] = value.subShapeIdA;
+        mem.u32[(address + 44) >> 2] = value.subShapeIdB;
+        mem.i32[(address + 48) >> 2] = value.materialIdA;
+        mem.i32[(address + 52) >> 2] = value.materialIdB;
+        mem.f32[(address + 64) >> 2] = value.normal[0];
+        mem.f32[(address + 68) >> 2] = value.normal[1];
+        mem.f32[(address + 72) >> 2] = value.normal[2];
+        mem.f32[(address + 76) >> 2] = value.normal[2];
+        mem.f32[(address + 80) >> 2] = value.penetration;
+        mem.u32[(address + 84) >> 2] = value.numPoints;
+        mem.f32[(address + 96) >> 2] = value.pointsA[0]![0];
+        mem.f32[(address + 100) >> 2] = value.pointsA[0]![1];
+        mem.f32[(address + 104) >> 2] = value.pointsA[0]![2];
+        mem.f32[(address + 108) >> 2] = value.pointsA[0]![2];
+        mem.f32[(address + 112) >> 2] = value.pointsA[1]![0];
+        mem.f32[(address + 116) >> 2] = value.pointsA[1]![1];
+        mem.f32[(address + 120) >> 2] = value.pointsA[1]![2];
+        mem.f32[(address + 124) >> 2] = value.pointsA[1]![2];
+        mem.f32[(address + 128) >> 2] = value.pointsA[2]![0];
+        mem.f32[(address + 132) >> 2] = value.pointsA[2]![1];
+        mem.f32[(address + 136) >> 2] = value.pointsA[2]![2];
+        mem.f32[(address + 140) >> 2] = value.pointsA[2]![2];
+        mem.f32[(address + 144) >> 2] = value.pointsA[3]![0];
+        mem.f32[(address + 148) >> 2] = value.pointsA[3]![1];
+        mem.f32[(address + 152) >> 2] = value.pointsA[3]![2];
+        mem.f32[(address + 156) >> 2] = value.pointsA[3]![2];
+        mem.f32[(address + 160) >> 2] = value.pointsB[0]![0];
+        mem.f32[(address + 164) >> 2] = value.pointsB[0]![1];
+        mem.f32[(address + 168) >> 2] = value.pointsB[0]![2];
+        mem.f32[(address + 172) >> 2] = value.pointsB[0]![2];
+        mem.f32[(address + 176) >> 2] = value.pointsB[1]![0];
+        mem.f32[(address + 180) >> 2] = value.pointsB[1]![1];
+        mem.f32[(address + 184) >> 2] = value.pointsB[1]![2];
+        mem.f32[(address + 188) >> 2] = value.pointsB[1]![2];
+        mem.f32[(address + 192) >> 2] = value.pointsB[2]![0];
+        mem.f32[(address + 196) >> 2] = value.pointsB[2]![1];
+        mem.f32[(address + 200) >> 2] = value.pointsB[2]![2];
+        mem.f32[(address + 204) >> 2] = value.pointsB[2]![2];
+        mem.f32[(address + 208) >> 2] = value.pointsB[3]![0];
+        mem.f32[(address + 212) >> 2] = value.pointsB[3]![1];
+        mem.f32[(address + 216) >> 2] = value.pointsB[3]![2];
+        mem.f32[(address + 220) >> 2] = value.pointsB[3]![2];
+        mem.f32[(address + 224) >> 2] = value.settings.combinedFriction;
+        mem.f32[(address + 228) >> 2] = value.settings.combinedRestitution;
+        mem.u8[address + 232] = value.settings.isSensor ? 1 : 0;
+        mem.f32[(address + 236) >> 2] = value.settings.invMassScale1;
+        mem.f32[(address + 240) >> 2] = value.settings.invMassScale2;
+        mem.f32[(address + 244) >> 2] = value.settings.invInertiaScale1;
+        mem.f32[(address + 248) >> 2] = value.settings.invInertiaScale2;
+        mem.f32[(address + 256) >> 2] = value.settings.relativeLinearSurfaceVelocity[0];
+        mem.f32[(address + 260) >> 2] = value.settings.relativeLinearSurfaceVelocity[1];
+        mem.f32[(address + 264) >> 2] = value.settings.relativeLinearSurfaceVelocity[2];
+        mem.f32[(address + 268) >> 2] = value.settings.relativeLinearSurfaceVelocity[2];
+        mem.f32[(address + 272) >> 2] = value.settings.relativeAngularSurfaceVelocity[0];
+        mem.f32[(address + 276) >> 2] = value.settings.relativeAngularSurfaceVelocity[1];
+        mem.f32[(address + 280) >> 2] = value.settings.relativeAngularSurfaceVelocity[2];
+        mem.f32[(address + 284) >> 2] = value.settings.relativeAngularSurfaceVelocity[2];
+        mem.u8[address + 288] = value.rejected ? 1 : 0;
+        mem.u8[address + 289] = value.settingsChanged ? 1 : 0;
+    },
+    /** the field of the value at a byte address of the wasm's memory, read or written in place. */
+    readSettings(out: ContactSettings, address: number): ContactSettings {
+        return ContactSettings.read(out, address + 224);
+    },
+    writeSettings(address: number, value: ContactSettings): void {
+        ContactSettings.write(address + 224, value);
+    },
+    /** the field of the value at a byte address of the wasm's memory, set in place. */
+    setRejected(address: number, value: boolean): void {
+        const mem = wasm.mem;
+        mem.u8[address + 288] = value ? 1 : 0;
+    },
+    /** the field of the value at a byte address of the wasm's memory, set in place. */
+    setSettingsChanged(address: number, value: boolean): void {
+        const mem = wasm.mem;
+        mem.u8[address + 289] = value ? 1 : 0;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: ContactEvent): void {
-        view.setUint32(offset + 0, value.bodyA, true);
-        view.setUint32(offset + 4, value.bodyB, true);
-        view.setUint32(offset + 8, value.userDataALow, true);
-        view.setUint32(offset + 12, value.userDataAHigh, true);
-        view.setUint32(offset + 16, value.userDataBLow, true);
-        view.setUint32(offset + 20, value.userDataBHigh, true);
-        view.setUint32(offset + 24, value.subShapeA, true);
-        view.setUint32(offset + 28, value.subShapeB, true);
-        view.setInt32(offset + 32, value.materialA, true);
-        view.setInt32(offset + 36, value.materialB, true);
-        view.setFloat32(offset + 40, value.normal[0], true);
-        view.setFloat32(offset + 44, value.normal[1], true);
-        view.setFloat32(offset + 48, value.normal[2], true);
-        view.setFloat32(offset + 52, value.penetration, true);
-        view.setUint32(offset + 56, value.numPoints, true);
-        view.setFloat32(offset + 60, value.pointsA[0]![0], true);
-        view.setFloat32(offset + 64, value.pointsA[0]![1], true);
-        view.setFloat32(offset + 68, value.pointsA[0]![2], true);
-        view.setFloat32(offset + 72, value.pointsA[1]![0], true);
-        view.setFloat32(offset + 76, value.pointsA[1]![1], true);
-        view.setFloat32(offset + 80, value.pointsA[1]![2], true);
-        view.setFloat32(offset + 84, value.pointsA[2]![0], true);
-        view.setFloat32(offset + 88, value.pointsA[2]![1], true);
-        view.setFloat32(offset + 92, value.pointsA[2]![2], true);
-        view.setFloat32(offset + 96, value.pointsA[3]![0], true);
-        view.setFloat32(offset + 100, value.pointsA[3]![1], true);
-        view.setFloat32(offset + 104, value.pointsA[3]![2], true);
-        view.setFloat32(offset + 108, value.pointsB[0]![0], true);
-        view.setFloat32(offset + 112, value.pointsB[0]![1], true);
-        view.setFloat32(offset + 116, value.pointsB[0]![2], true);
-        view.setFloat32(offset + 120, value.pointsB[1]![0], true);
-        view.setFloat32(offset + 124, value.pointsB[1]![1], true);
-        view.setFloat32(offset + 128, value.pointsB[1]![2], true);
-        view.setFloat32(offset + 132, value.pointsB[2]![0], true);
-        view.setFloat32(offset + 136, value.pointsB[2]![1], true);
-        view.setFloat32(offset + 140, value.pointsB[2]![2], true);
-        view.setFloat32(offset + 144, value.pointsB[3]![0], true);
-        view.setFloat32(offset + 148, value.pointsB[3]![1], true);
-        view.setFloat32(offset + 152, value.pointsB[3]![2], true);
-        view.setFloat32(offset + 156, value.settings.combinedFriction, true);
-        view.setFloat32(offset + 160, value.settings.combinedRestitution, true);
-        view.setUint8(offset + 164, value.settings.isSensor ? 1 : 0);
-        view.setFloat32(offset + 168, value.settings.invMassScale1, true);
-        view.setFloat32(offset + 172, value.settings.invMassScale2, true);
-        view.setFloat32(offset + 176, value.settings.invInertiaScale1, true);
-        view.setFloat32(offset + 180, value.settings.invInertiaScale2, true);
-        view.setFloat32(offset + 184, value.settings.relativeLinearSurfaceVelocity[0], true);
-        view.setFloat32(offset + 188, value.settings.relativeLinearSurfaceVelocity[1], true);
-        view.setFloat32(offset + 192, value.settings.relativeLinearSurfaceVelocity[2], true);
-        view.setFloat32(offset + 196, value.settings.relativeAngularSurfaceVelocity[0], true);
-        view.setFloat32(offset + 200, value.settings.relativeAngularSurfaceVelocity[1], true);
-        view.setFloat32(offset + 204, value.settings.relativeAngularSurfaceVelocity[2], true);
+        view.setUint32(offset + 12, value.bodyIdA, true);
+        view.setUint32(offset + 16, value.bodyIdB, true);
+        view.setUint32(offset + 24, value.userDataA >>> 0, true);
+        view.setUint32(offset + 28, Math.floor(value.userDataA / 0x100000000), true);
+        view.setUint32(offset + 32, value.userDataB >>> 0, true);
+        view.setUint32(offset + 36, Math.floor(value.userDataB / 0x100000000), true);
+        view.setUint32(offset + 40, value.subShapeIdA, true);
+        view.setUint32(offset + 44, value.subShapeIdB, true);
+        view.setInt32(offset + 48, value.materialIdA, true);
+        view.setInt32(offset + 52, value.materialIdB, true);
+        view.setFloat32(offset + 64, value.normal[0], true);
+        view.setFloat32(offset + 68, value.normal[1], true);
+        view.setFloat32(offset + 72, value.normal[2], true);
+        view.setFloat32(offset + 76, value.normal[2], true);
+        view.setFloat32(offset + 80, value.penetration, true);
+        view.setUint32(offset + 84, value.numPoints, true);
+        view.setFloat32(offset + 96, value.pointsA[0]![0], true);
+        view.setFloat32(offset + 100, value.pointsA[0]![1], true);
+        view.setFloat32(offset + 104, value.pointsA[0]![2], true);
+        view.setFloat32(offset + 108, value.pointsA[0]![2], true);
+        view.setFloat32(offset + 112, value.pointsA[1]![0], true);
+        view.setFloat32(offset + 116, value.pointsA[1]![1], true);
+        view.setFloat32(offset + 120, value.pointsA[1]![2], true);
+        view.setFloat32(offset + 124, value.pointsA[1]![2], true);
+        view.setFloat32(offset + 128, value.pointsA[2]![0], true);
+        view.setFloat32(offset + 132, value.pointsA[2]![1], true);
+        view.setFloat32(offset + 136, value.pointsA[2]![2], true);
+        view.setFloat32(offset + 140, value.pointsA[2]![2], true);
+        view.setFloat32(offset + 144, value.pointsA[3]![0], true);
+        view.setFloat32(offset + 148, value.pointsA[3]![1], true);
+        view.setFloat32(offset + 152, value.pointsA[3]![2], true);
+        view.setFloat32(offset + 156, value.pointsA[3]![2], true);
+        view.setFloat32(offset + 160, value.pointsB[0]![0], true);
+        view.setFloat32(offset + 164, value.pointsB[0]![1], true);
+        view.setFloat32(offset + 168, value.pointsB[0]![2], true);
+        view.setFloat32(offset + 172, value.pointsB[0]![2], true);
+        view.setFloat32(offset + 176, value.pointsB[1]![0], true);
+        view.setFloat32(offset + 180, value.pointsB[1]![1], true);
+        view.setFloat32(offset + 184, value.pointsB[1]![2], true);
+        view.setFloat32(offset + 188, value.pointsB[1]![2], true);
+        view.setFloat32(offset + 192, value.pointsB[2]![0], true);
+        view.setFloat32(offset + 196, value.pointsB[2]![1], true);
+        view.setFloat32(offset + 200, value.pointsB[2]![2], true);
+        view.setFloat32(offset + 204, value.pointsB[2]![2], true);
+        view.setFloat32(offset + 208, value.pointsB[3]![0], true);
+        view.setFloat32(offset + 212, value.pointsB[3]![1], true);
+        view.setFloat32(offset + 216, value.pointsB[3]![2], true);
+        view.setFloat32(offset + 220, value.pointsB[3]![2], true);
+        view.setFloat32(offset + 224, value.settings.combinedFriction, true);
+        view.setFloat32(offset + 228, value.settings.combinedRestitution, true);
+        view.setUint8(offset + 232, value.settings.isSensor ? 1 : 0);
+        view.setFloat32(offset + 236, value.settings.invMassScale1, true);
+        view.setFloat32(offset + 240, value.settings.invMassScale2, true);
+        view.setFloat32(offset + 244, value.settings.invInertiaScale1, true);
+        view.setFloat32(offset + 248, value.settings.invInertiaScale2, true);
+        view.setFloat32(offset + 256, value.settings.relativeLinearSurfaceVelocity[0], true);
+        view.setFloat32(offset + 260, value.settings.relativeLinearSurfaceVelocity[1], true);
+        view.setFloat32(offset + 264, value.settings.relativeLinearSurfaceVelocity[2], true);
+        view.setFloat32(offset + 268, value.settings.relativeLinearSurfaceVelocity[2], true);
+        view.setFloat32(offset + 272, value.settings.relativeAngularSurfaceVelocity[0], true);
+        view.setFloat32(offset + 276, value.settings.relativeAngularSurfaceVelocity[1], true);
+        view.setFloat32(offset + 280, value.settings.relativeAngularSurfaceVelocity[2], true);
+        view.setFloat32(offset + 284, value.settings.relativeAngularSurfaceVelocity[2], true);
+        view.setUint8(offset + 288, value.rejected ? 1 : 0);
+        view.setUint8(offset + 289, value.settingsChanged ? 1 : 0);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: ContactEvent, view: DataView, offset: number): ContactEvent {
-        out.bodyA = view.getUint32(offset + 0, true);
-        out.bodyB = view.getUint32(offset + 4, true);
-        out.userDataALow = view.getUint32(offset + 8, true);
-        out.userDataAHigh = view.getUint32(offset + 12, true);
-        out.userDataBLow = view.getUint32(offset + 16, true);
-        out.userDataBHigh = view.getUint32(offset + 20, true);
-        out.subShapeA = view.getUint32(offset + 24, true);
-        out.subShapeB = view.getUint32(offset + 28, true);
-        out.materialA = view.getInt32(offset + 32, true);
-        out.materialB = view.getInt32(offset + 36, true);
-        out.normal[0] = view.getFloat32(offset + 40, true);
-        out.normal[1] = view.getFloat32(offset + 44, true);
-        out.normal[2] = view.getFloat32(offset + 48, true);
-        out.penetration = view.getFloat32(offset + 52, true);
-        out.numPoints = view.getUint32(offset + 56, true);
-        out.pointsA[0]![0] = view.getFloat32(offset + 60, true);
-        out.pointsA[0]![1] = view.getFloat32(offset + 64, true);
-        out.pointsA[0]![2] = view.getFloat32(offset + 68, true);
-        out.pointsA[1]![0] = view.getFloat32(offset + 72, true);
-        out.pointsA[1]![1] = view.getFloat32(offset + 76, true);
-        out.pointsA[1]![2] = view.getFloat32(offset + 80, true);
-        out.pointsA[2]![0] = view.getFloat32(offset + 84, true);
-        out.pointsA[2]![1] = view.getFloat32(offset + 88, true);
-        out.pointsA[2]![2] = view.getFloat32(offset + 92, true);
-        out.pointsA[3]![0] = view.getFloat32(offset + 96, true);
-        out.pointsA[3]![1] = view.getFloat32(offset + 100, true);
-        out.pointsA[3]![2] = view.getFloat32(offset + 104, true);
-        out.pointsB[0]![0] = view.getFloat32(offset + 108, true);
-        out.pointsB[0]![1] = view.getFloat32(offset + 112, true);
-        out.pointsB[0]![2] = view.getFloat32(offset + 116, true);
-        out.pointsB[1]![0] = view.getFloat32(offset + 120, true);
-        out.pointsB[1]![1] = view.getFloat32(offset + 124, true);
-        out.pointsB[1]![2] = view.getFloat32(offset + 128, true);
-        out.pointsB[2]![0] = view.getFloat32(offset + 132, true);
-        out.pointsB[2]![1] = view.getFloat32(offset + 136, true);
-        out.pointsB[2]![2] = view.getFloat32(offset + 140, true);
-        out.pointsB[3]![0] = view.getFloat32(offset + 144, true);
-        out.pointsB[3]![1] = view.getFloat32(offset + 148, true);
-        out.pointsB[3]![2] = view.getFloat32(offset + 152, true);
-        out.settings.combinedFriction = view.getFloat32(offset + 156, true);
-        out.settings.combinedRestitution = view.getFloat32(offset + 160, true);
-        out.settings.isSensor = view.getUint8(offset + 164) !== 0;
-        out.settings.invMassScale1 = view.getFloat32(offset + 168, true);
-        out.settings.invMassScale2 = view.getFloat32(offset + 172, true);
-        out.settings.invInertiaScale1 = view.getFloat32(offset + 176, true);
-        out.settings.invInertiaScale2 = view.getFloat32(offset + 180, true);
-        out.settings.relativeLinearSurfaceVelocity[0] = view.getFloat32(offset + 184, true);
-        out.settings.relativeLinearSurfaceVelocity[1] = view.getFloat32(offset + 188, true);
-        out.settings.relativeLinearSurfaceVelocity[2] = view.getFloat32(offset + 192, true);
-        out.settings.relativeAngularSurfaceVelocity[0] = view.getFloat32(offset + 196, true);
-        out.settings.relativeAngularSurfaceVelocity[1] = view.getFloat32(offset + 200, true);
-        out.settings.relativeAngularSurfaceVelocity[2] = view.getFloat32(offset + 204, true);
+        out.bodyIdA = view.getUint32(offset + 12, true);
+        out.bodyIdB = view.getUint32(offset + 16, true);
+        out.userDataA = view.getUint32(offset + 24, true) + view.getUint32(offset + 28, true) * 0x100000000;
+        out.userDataB = view.getUint32(offset + 32, true) + view.getUint32(offset + 36, true) * 0x100000000;
+        out.subShapeIdA = view.getUint32(offset + 40, true);
+        out.subShapeIdB = view.getUint32(offset + 44, true);
+        out.materialIdA = view.getInt32(offset + 48, true);
+        out.materialIdB = view.getInt32(offset + 52, true);
+        out.normal[0] = view.getFloat32(offset + 64, true);
+        out.normal[1] = view.getFloat32(offset + 68, true);
+        out.normal[2] = view.getFloat32(offset + 72, true);
+        out.penetration = view.getFloat32(offset + 80, true);
+        out.numPoints = view.getUint32(offset + 84, true);
+        out.pointsA[0]![0] = view.getFloat32(offset + 96, true);
+        out.pointsA[0]![1] = view.getFloat32(offset + 100, true);
+        out.pointsA[0]![2] = view.getFloat32(offset + 104, true);
+        out.pointsA[1]![0] = view.getFloat32(offset + 112, true);
+        out.pointsA[1]![1] = view.getFloat32(offset + 116, true);
+        out.pointsA[1]![2] = view.getFloat32(offset + 120, true);
+        out.pointsA[2]![0] = view.getFloat32(offset + 128, true);
+        out.pointsA[2]![1] = view.getFloat32(offset + 132, true);
+        out.pointsA[2]![2] = view.getFloat32(offset + 136, true);
+        out.pointsA[3]![0] = view.getFloat32(offset + 144, true);
+        out.pointsA[3]![1] = view.getFloat32(offset + 148, true);
+        out.pointsA[3]![2] = view.getFloat32(offset + 152, true);
+        out.pointsB[0]![0] = view.getFloat32(offset + 160, true);
+        out.pointsB[0]![1] = view.getFloat32(offset + 164, true);
+        out.pointsB[0]![2] = view.getFloat32(offset + 168, true);
+        out.pointsB[1]![0] = view.getFloat32(offset + 176, true);
+        out.pointsB[1]![1] = view.getFloat32(offset + 180, true);
+        out.pointsB[1]![2] = view.getFloat32(offset + 184, true);
+        out.pointsB[2]![0] = view.getFloat32(offset + 192, true);
+        out.pointsB[2]![1] = view.getFloat32(offset + 196, true);
+        out.pointsB[2]![2] = view.getFloat32(offset + 200, true);
+        out.pointsB[3]![0] = view.getFloat32(offset + 208, true);
+        out.pointsB[3]![1] = view.getFloat32(offset + 212, true);
+        out.pointsB[3]![2] = view.getFloat32(offset + 216, true);
+        out.settings.combinedFriction = view.getFloat32(offset + 224, true);
+        out.settings.combinedRestitution = view.getFloat32(offset + 228, true);
+        out.settings.isSensor = view.getUint8(offset + 232) !== 0;
+        out.settings.invMassScale1 = view.getFloat32(offset + 236, true);
+        out.settings.invMassScale2 = view.getFloat32(offset + 240, true);
+        out.settings.invInertiaScale1 = view.getFloat32(offset + 244, true);
+        out.settings.invInertiaScale2 = view.getFloat32(offset + 248, true);
+        out.settings.relativeLinearSurfaceVelocity[0] = view.getFloat32(offset + 256, true);
+        out.settings.relativeLinearSurfaceVelocity[1] = view.getFloat32(offset + 260, true);
+        out.settings.relativeLinearSurfaceVelocity[2] = view.getFloat32(offset + 264, true);
+        out.settings.relativeAngularSurfaceVelocity[0] = view.getFloat32(offset + 272, true);
+        out.settings.relativeAngularSurfaceVelocity[1] = view.getFloat32(offset + 276, true);
+        out.settings.relativeAngularSurfaceVelocity[2] = view.getFloat32(offset + 280, true);
+        out.rejected = view.getUint8(offset + 288) !== 0;
+        out.settingsChanged = view.getUint8(offset + 289) !== 0;
         return out;
     },
 };
 
-export type ContactRemovedEvent = { bodyA: number; bodyB: number; subShapeA: number; subShapeB: number };
+export type ContactRemovedEvent = { bodyIdA: number; bodyIdB: number; subShapeIdA: number; subShapeIdB: number };
 export const ContactRemovedEvent = {
     size: 16,
     create(): ContactRemovedEvent {
-        return { bodyA: 0, bodyB: 0, subShapeA: 0, subShapeB: 0 };
+        return { bodyIdA: 0, bodyIdB: 0, subShapeIdA: 0, subShapeIdB: 0 };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: ContactRemovedEvent, address: number): ContactRemovedEvent {
         const mem = wasm.mem;
-        out.bodyA = mem.u32[(address + 0) >> 2]!;
-        out.bodyB = mem.u32[(address + 4) >> 2]!;
-        out.subShapeA = mem.u32[(address + 8) >> 2]!;
-        out.subShapeB = mem.u32[(address + 12) >> 2]!;
+        out.bodyIdA = mem.u32[(address + 0) >> 2]!;
+        out.bodyIdB = mem.u32[(address + 4) >> 2]!;
+        out.subShapeIdA = mem.u32[(address + 8) >> 2]!;
+        out.subShapeIdB = mem.u32[(address + 12) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
     write(address: number, value: ContactRemovedEvent): void {
         const mem = wasm.mem;
-        mem.u32[(address + 0) >> 2] = value.bodyA;
-        mem.u32[(address + 4) >> 2] = value.bodyB;
-        mem.u32[(address + 8) >> 2] = value.subShapeA;
-        mem.u32[(address + 12) >> 2] = value.subShapeB;
+        mem.u32[(address + 0) >> 2] = value.bodyIdA;
+        mem.u32[(address + 4) >> 2] = value.bodyIdB;
+        mem.u32[(address + 8) >> 2] = value.subShapeIdA;
+        mem.u32[(address + 12) >> 2] = value.subShapeIdB;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: ContactRemovedEvent): void {
-        view.setUint32(offset + 0, value.bodyA, true);
-        view.setUint32(offset + 4, value.bodyB, true);
-        view.setUint32(offset + 8, value.subShapeA, true);
-        view.setUint32(offset + 12, value.subShapeB, true);
+        view.setUint32(offset + 0, value.bodyIdA, true);
+        view.setUint32(offset + 4, value.bodyIdB, true);
+        view.setUint32(offset + 8, value.subShapeIdA, true);
+        view.setUint32(offset + 12, value.subShapeIdB, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: ContactRemovedEvent, view: DataView, offset: number): ContactRemovedEvent {
-        out.bodyA = view.getUint32(offset + 0, true);
-        out.bodyB = view.getUint32(offset + 4, true);
-        out.subShapeA = view.getUint32(offset + 8, true);
-        out.subShapeB = view.getUint32(offset + 12, true);
+        out.bodyIdA = view.getUint32(offset + 0, true);
+        out.bodyIdB = view.getUint32(offset + 4, true);
+        out.subShapeIdA = view.getUint32(offset + 8, true);
+        out.subShapeIdB = view.getUint32(offset + 12, true);
         return out;
     },
 };
 
-export type ActivationEvent = { body: number; userDataLow: number; userDataHigh: number; activated: number };
+export type ActivationEvent = { body: number; userData: number; activated: number };
 export const ActivationEvent = {
-    size: 16,
+    size: 24,
     create(): ActivationEvent {
-        return { body: 0, userDataLow: 0, userDataHigh: 0, activated: 0 };
+        return { body: 0, userData: 0, activated: 0 };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: ActivationEvent, address: number): ActivationEvent {
         const mem = wasm.mem;
         out.body = mem.u32[(address + 0) >> 2]!;
-        out.userDataLow = mem.u32[(address + 4) >> 2]!;
-        out.userDataHigh = mem.u32[(address + 8) >> 2]!;
-        out.activated = mem.u32[(address + 12) >> 2]!;
+        out.userData = mem.u32[(address + 8) >> 2]! + mem.u32[(address + 8 + 4) >> 2]! * 0x100000000;
+        out.activated = mem.u32[(address + 16) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
     write(address: number, value: ActivationEvent): void {
         const mem = wasm.mem;
         mem.u32[(address + 0) >> 2] = value.body;
-        mem.u32[(address + 4) >> 2] = value.userDataLow;
-        mem.u32[(address + 8) >> 2] = value.userDataHigh;
-        mem.u32[(address + 12) >> 2] = value.activated;
+        mem.u32[(address + 8) >> 2] = value.userData >>> 0;
+        mem.u32[(address + 8 + 4) >> 2] = Math.floor(value.userData / 0x100000000);
+        mem.u32[(address + 16) >> 2] = value.activated;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: ActivationEvent): void {
         view.setUint32(offset + 0, value.body, true);
-        view.setUint32(offset + 4, value.userDataLow, true);
-        view.setUint32(offset + 8, value.userDataHigh, true);
-        view.setUint32(offset + 12, value.activated, true);
+        view.setUint32(offset + 8, value.userData >>> 0, true);
+        view.setUint32(offset + 12, Math.floor(value.userData / 0x100000000), true);
+        view.setUint32(offset + 16, value.activated, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: ActivationEvent, view: DataView, offset: number): ActivationEvent {
         out.body = view.getUint32(offset + 0, true);
-        out.userDataLow = view.getUint32(offset + 4, true);
-        out.userDataHigh = view.getUint32(offset + 8, true);
-        out.activated = view.getUint32(offset + 12, true);
+        out.userData = view.getUint32(offset + 8, true) + view.getUint32(offset + 12, true) * 0x100000000;
+        out.activated = view.getUint32(offset + 16, true);
         return out;
     },
 };
@@ -1428,8 +1817,7 @@ export type BodySettings = {
     shape: Shape | null;
     objectLayer: number;
     motionType: number;
-    userDataLow: number;
-    userDataHigh: number;
+    userData: number;
     position: Vec3;
     quaternion: Quat;
     motionQuality: number;
@@ -1458,14 +1846,13 @@ export type BodySettings = {
     massProperties: MassProperties;
 };
 export const BodySettings = {
-    size: 192,
+    size: 208,
     create(): BodySettings {
         return {
             shape: null,
             objectLayer: 0,
             motionType: 0,
-            userDataLow: 0,
-            userDataHigh: 0,
+            userData: 0,
             position: Vec3.create(),
             quaternion: Quat.create(),
             motionQuality: 0,
@@ -1500,55 +1887,54 @@ export const BodySettings = {
         out.shape = (mem.u32[(address + 0) >> 2]! || null) as Shape | null;
         out.objectLayer = mem.u32[(address + 4) >> 2]!;
         out.motionType = mem.u32[(address + 8) >> 2]!;
-        out.userDataLow = mem.u32[(address + 12) >> 2]!;
-        out.userDataHigh = mem.u32[(address + 16) >> 2]!;
-        out.position[0] = mem.f32[(address + 20) >> 2]!;
-        out.position[1] = mem.f32[(address + 24) >> 2]!;
-        out.position[2] = mem.f32[(address + 28) >> 2]!;
-        out.quaternion[0] = mem.f32[(address + 32) >> 2]!;
-        out.quaternion[1] = mem.f32[(address + 36) >> 2]!;
-        out.quaternion[2] = mem.f32[(address + 40) >> 2]!;
-        out.quaternion[3] = mem.f32[(address + 44) >> 2]!;
-        out.motionQuality = mem.u32[(address + 48) >> 2]!;
-        out.allowedDegreesOfFreedom = mem.u32[(address + 52) >> 2]!;
-        out.gravityFactor = mem.f32[(address + 56) >> 2]!;
-        out.linearDamping = mem.f32[(address + 60) >> 2]!;
-        out.angularDamping = mem.f32[(address + 64) >> 2]!;
-        out.maxLinearVelocity = mem.f32[(address + 68) >> 2]!;
-        out.maxAngularVelocity = mem.f32[(address + 72) >> 2]!;
-        out.numVelocityStepsOverride = mem.u32[(address + 76) >> 2]!;
-        out.numPositionStepsOverride = mem.u32[(address + 80) >> 2]!;
-        out.friction = mem.f32[(address + 84) >> 2]!;
-        out.restitution = mem.f32[(address + 88) >> 2]!;
-        out.frictionCombineMode = mem.u32[(address + 92) >> 2]!;
-        out.restitutionCombineMode = mem.u32[(address + 96) >> 2]!;
-        out.collisionGroups = mem.u32[(address + 100) >> 2]!;
-        out.collisionMask = mem.u32[(address + 104) >> 2]!;
-        out.useManifoldReduction = mem.u8[address + 108]! !== 0;
-        out.allowSleeping = mem.u8[address + 109]! !== 0;
-        out.sensor = mem.u8[address + 110]! !== 0;
-        out.enhancedInternalEdgeRemoval = mem.u8[address + 111]! !== 0;
-        out.collideKinematicVsNonDynamic = mem.u8[address + 112]! !== 0;
-        out.observesContacts = mem.u8[address + 113]! !== 0;
-        out.mass = mem.f32[(address + 116) >> 2]!;
-        out.hasMassProperties = mem.u8[address + 120]! !== 0;
-        out.massProperties.mass = mem.f32[(address + 124) >> 2]!;
-        out.massProperties.inertia[0] = mem.f32[(address + 128) >> 2]!;
-        out.massProperties.inertia[1] = mem.f32[(address + 132) >> 2]!;
-        out.massProperties.inertia[2] = mem.f32[(address + 136) >> 2]!;
-        out.massProperties.inertia[3] = mem.f32[(address + 140) >> 2]!;
-        out.massProperties.inertia[4] = mem.f32[(address + 144) >> 2]!;
-        out.massProperties.inertia[5] = mem.f32[(address + 148) >> 2]!;
-        out.massProperties.inertia[6] = mem.f32[(address + 152) >> 2]!;
-        out.massProperties.inertia[7] = mem.f32[(address + 156) >> 2]!;
-        out.massProperties.inertia[8] = mem.f32[(address + 160) >> 2]!;
-        out.massProperties.inertia[9] = mem.f32[(address + 164) >> 2]!;
-        out.massProperties.inertia[10] = mem.f32[(address + 168) >> 2]!;
-        out.massProperties.inertia[11] = mem.f32[(address + 172) >> 2]!;
-        out.massProperties.inertia[12] = mem.f32[(address + 176) >> 2]!;
-        out.massProperties.inertia[13] = mem.f32[(address + 180) >> 2]!;
-        out.massProperties.inertia[14] = mem.f32[(address + 184) >> 2]!;
-        out.massProperties.inertia[15] = mem.f32[(address + 188) >> 2]!;
+        out.userData = mem.u32[(address + 16) >> 2]! + mem.u32[(address + 16 + 4) >> 2]! * 0x100000000;
+        out.position[0] = mem.f32[(address + 24) >> 2]!;
+        out.position[1] = mem.f32[(address + 28) >> 2]!;
+        out.position[2] = mem.f32[(address + 32) >> 2]!;
+        out.quaternion[0] = mem.f32[(address + 36) >> 2]!;
+        out.quaternion[1] = mem.f32[(address + 40) >> 2]!;
+        out.quaternion[2] = mem.f32[(address + 44) >> 2]!;
+        out.quaternion[3] = mem.f32[(address + 48) >> 2]!;
+        out.motionQuality = mem.u32[(address + 52) >> 2]!;
+        out.allowedDegreesOfFreedom = mem.u32[(address + 56) >> 2]!;
+        out.gravityFactor = mem.f32[(address + 60) >> 2]!;
+        out.linearDamping = mem.f32[(address + 64) >> 2]!;
+        out.angularDamping = mem.f32[(address + 68) >> 2]!;
+        out.maxLinearVelocity = mem.f32[(address + 72) >> 2]!;
+        out.maxAngularVelocity = mem.f32[(address + 76) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 80) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 84) >> 2]!;
+        out.friction = mem.f32[(address + 88) >> 2]!;
+        out.restitution = mem.f32[(address + 92) >> 2]!;
+        out.frictionCombineMode = mem.u32[(address + 96) >> 2]!;
+        out.restitutionCombineMode = mem.u32[(address + 100) >> 2]!;
+        out.collisionGroups = mem.u32[(address + 104) >> 2]!;
+        out.collisionMask = mem.u32[(address + 108) >> 2]!;
+        out.useManifoldReduction = mem.u8[address + 112]! !== 0;
+        out.allowSleeping = mem.u8[address + 113]! !== 0;
+        out.sensor = mem.u8[address + 114]! !== 0;
+        out.enhancedInternalEdgeRemoval = mem.u8[address + 115]! !== 0;
+        out.collideKinematicVsNonDynamic = mem.u8[address + 116]! !== 0;
+        out.observesContacts = mem.u8[address + 117]! !== 0;
+        out.mass = mem.f32[(address + 120) >> 2]!;
+        out.hasMassProperties = mem.u8[address + 124]! !== 0;
+        out.massProperties.mass = mem.f32[(address + 128) >> 2]!;
+        out.massProperties.inertia[0] = mem.f32[(address + 144) >> 2]!;
+        out.massProperties.inertia[1] = mem.f32[(address + 148) >> 2]!;
+        out.massProperties.inertia[2] = mem.f32[(address + 152) >> 2]!;
+        out.massProperties.inertia[3] = mem.f32[(address + 156) >> 2]!;
+        out.massProperties.inertia[4] = mem.f32[(address + 160) >> 2]!;
+        out.massProperties.inertia[5] = mem.f32[(address + 164) >> 2]!;
+        out.massProperties.inertia[6] = mem.f32[(address + 168) >> 2]!;
+        out.massProperties.inertia[7] = mem.f32[(address + 172) >> 2]!;
+        out.massProperties.inertia[8] = mem.f32[(address + 176) >> 2]!;
+        out.massProperties.inertia[9] = mem.f32[(address + 180) >> 2]!;
+        out.massProperties.inertia[10] = mem.f32[(address + 184) >> 2]!;
+        out.massProperties.inertia[11] = mem.f32[(address + 188) >> 2]!;
+        out.massProperties.inertia[12] = mem.f32[(address + 192) >> 2]!;
+        out.massProperties.inertia[13] = mem.f32[(address + 196) >> 2]!;
+        out.massProperties.inertia[14] = mem.f32[(address + 200) >> 2]!;
+        out.massProperties.inertia[15] = mem.f32[(address + 204) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -1557,174 +1943,173 @@ export const BodySettings = {
         mem.u32[(address + 0) >> 2] = value.shape ?? 0;
         mem.u32[(address + 4) >> 2] = value.objectLayer;
         mem.u32[(address + 8) >> 2] = value.motionType;
-        mem.u32[(address + 12) >> 2] = value.userDataLow;
-        mem.u32[(address + 16) >> 2] = value.userDataHigh;
-        mem.f32[(address + 20) >> 2] = value.position[0];
-        mem.f32[(address + 24) >> 2] = value.position[1];
-        mem.f32[(address + 28) >> 2] = value.position[2];
-        mem.f32[(address + 32) >> 2] = value.quaternion[0];
-        mem.f32[(address + 36) >> 2] = value.quaternion[1];
-        mem.f32[(address + 40) >> 2] = value.quaternion[2];
-        mem.f32[(address + 44) >> 2] = value.quaternion[3];
-        mem.u32[(address + 48) >> 2] = value.motionQuality;
-        mem.u32[(address + 52) >> 2] = value.allowedDegreesOfFreedom;
-        mem.f32[(address + 56) >> 2] = value.gravityFactor;
-        mem.f32[(address + 60) >> 2] = value.linearDamping;
-        mem.f32[(address + 64) >> 2] = value.angularDamping;
-        mem.f32[(address + 68) >> 2] = value.maxLinearVelocity;
-        mem.f32[(address + 72) >> 2] = value.maxAngularVelocity;
-        mem.u32[(address + 76) >> 2] = value.numVelocityStepsOverride;
-        mem.u32[(address + 80) >> 2] = value.numPositionStepsOverride;
-        mem.f32[(address + 84) >> 2] = value.friction;
-        mem.f32[(address + 88) >> 2] = value.restitution;
-        mem.u32[(address + 92) >> 2] = value.frictionCombineMode;
-        mem.u32[(address + 96) >> 2] = value.restitutionCombineMode;
-        mem.u32[(address + 100) >> 2] = value.collisionGroups;
-        mem.u32[(address + 104) >> 2] = value.collisionMask;
-        mem.u8[address + 108] = value.useManifoldReduction ? 1 : 0;
-        mem.u8[address + 109] = value.allowSleeping ? 1 : 0;
-        mem.u8[address + 110] = value.sensor ? 1 : 0;
-        mem.u8[address + 111] = value.enhancedInternalEdgeRemoval ? 1 : 0;
-        mem.u8[address + 112] = value.collideKinematicVsNonDynamic ? 1 : 0;
-        mem.u8[address + 113] = value.observesContacts ? 1 : 0;
-        mem.f32[(address + 116) >> 2] = value.mass;
-        mem.u8[address + 120] = value.hasMassProperties ? 1 : 0;
-        mem.f32[(address + 124) >> 2] = value.massProperties.mass;
-        mem.f32[(address + 128) >> 2] = value.massProperties.inertia[0];
-        mem.f32[(address + 132) >> 2] = value.massProperties.inertia[1];
-        mem.f32[(address + 136) >> 2] = value.massProperties.inertia[2];
-        mem.f32[(address + 140) >> 2] = value.massProperties.inertia[3];
-        mem.f32[(address + 144) >> 2] = value.massProperties.inertia[4];
-        mem.f32[(address + 148) >> 2] = value.massProperties.inertia[5];
-        mem.f32[(address + 152) >> 2] = value.massProperties.inertia[6];
-        mem.f32[(address + 156) >> 2] = value.massProperties.inertia[7];
-        mem.f32[(address + 160) >> 2] = value.massProperties.inertia[8];
-        mem.f32[(address + 164) >> 2] = value.massProperties.inertia[9];
-        mem.f32[(address + 168) >> 2] = value.massProperties.inertia[10];
-        mem.f32[(address + 172) >> 2] = value.massProperties.inertia[11];
-        mem.f32[(address + 176) >> 2] = value.massProperties.inertia[12];
-        mem.f32[(address + 180) >> 2] = value.massProperties.inertia[13];
-        mem.f32[(address + 184) >> 2] = value.massProperties.inertia[14];
-        mem.f32[(address + 188) >> 2] = value.massProperties.inertia[15];
+        mem.u32[(address + 16) >> 2] = value.userData >>> 0;
+        mem.u32[(address + 16 + 4) >> 2] = Math.floor(value.userData / 0x100000000);
+        mem.f32[(address + 24) >> 2] = value.position[0];
+        mem.f32[(address + 28) >> 2] = value.position[1];
+        mem.f32[(address + 32) >> 2] = value.position[2];
+        mem.f32[(address + 36) >> 2] = value.quaternion[0];
+        mem.f32[(address + 40) >> 2] = value.quaternion[1];
+        mem.f32[(address + 44) >> 2] = value.quaternion[2];
+        mem.f32[(address + 48) >> 2] = value.quaternion[3];
+        mem.u32[(address + 52) >> 2] = value.motionQuality;
+        mem.u32[(address + 56) >> 2] = value.allowedDegreesOfFreedom;
+        mem.f32[(address + 60) >> 2] = value.gravityFactor;
+        mem.f32[(address + 64) >> 2] = value.linearDamping;
+        mem.f32[(address + 68) >> 2] = value.angularDamping;
+        mem.f32[(address + 72) >> 2] = value.maxLinearVelocity;
+        mem.f32[(address + 76) >> 2] = value.maxAngularVelocity;
+        mem.u32[(address + 80) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 84) >> 2] = value.numPositionStepsOverride;
+        mem.f32[(address + 88) >> 2] = value.friction;
+        mem.f32[(address + 92) >> 2] = value.restitution;
+        mem.u32[(address + 96) >> 2] = value.frictionCombineMode;
+        mem.u32[(address + 100) >> 2] = value.restitutionCombineMode;
+        mem.u32[(address + 104) >> 2] = value.collisionGroups;
+        mem.u32[(address + 108) >> 2] = value.collisionMask;
+        mem.u8[address + 112] = value.useManifoldReduction ? 1 : 0;
+        mem.u8[address + 113] = value.allowSleeping ? 1 : 0;
+        mem.u8[address + 114] = value.sensor ? 1 : 0;
+        mem.u8[address + 115] = value.enhancedInternalEdgeRemoval ? 1 : 0;
+        mem.u8[address + 116] = value.collideKinematicVsNonDynamic ? 1 : 0;
+        mem.u8[address + 117] = value.observesContacts ? 1 : 0;
+        mem.f32[(address + 120) >> 2] = value.mass;
+        mem.u8[address + 124] = value.hasMassProperties ? 1 : 0;
+        mem.f32[(address + 128) >> 2] = value.massProperties.mass;
+        mem.f32[(address + 144) >> 2] = value.massProperties.inertia[0];
+        mem.f32[(address + 148) >> 2] = value.massProperties.inertia[1];
+        mem.f32[(address + 152) >> 2] = value.massProperties.inertia[2];
+        mem.f32[(address + 156) >> 2] = value.massProperties.inertia[3];
+        mem.f32[(address + 160) >> 2] = value.massProperties.inertia[4];
+        mem.f32[(address + 164) >> 2] = value.massProperties.inertia[5];
+        mem.f32[(address + 168) >> 2] = value.massProperties.inertia[6];
+        mem.f32[(address + 172) >> 2] = value.massProperties.inertia[7];
+        mem.f32[(address + 176) >> 2] = value.massProperties.inertia[8];
+        mem.f32[(address + 180) >> 2] = value.massProperties.inertia[9];
+        mem.f32[(address + 184) >> 2] = value.massProperties.inertia[10];
+        mem.f32[(address + 188) >> 2] = value.massProperties.inertia[11];
+        mem.f32[(address + 192) >> 2] = value.massProperties.inertia[12];
+        mem.f32[(address + 196) >> 2] = value.massProperties.inertia[13];
+        mem.f32[(address + 200) >> 2] = value.massProperties.inertia[14];
+        mem.f32[(address + 204) >> 2] = value.massProperties.inertia[15];
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: BodySettings): void {
         view.setUint32(offset + 0, value.shape ?? 0, true);
         view.setUint32(offset + 4, value.objectLayer, true);
         view.setUint32(offset + 8, value.motionType, true);
-        view.setUint32(offset + 12, value.userDataLow, true);
-        view.setUint32(offset + 16, value.userDataHigh, true);
-        view.setFloat32(offset + 20, value.position[0], true);
-        view.setFloat32(offset + 24, value.position[1], true);
-        view.setFloat32(offset + 28, value.position[2], true);
-        view.setFloat32(offset + 32, value.quaternion[0], true);
-        view.setFloat32(offset + 36, value.quaternion[1], true);
-        view.setFloat32(offset + 40, value.quaternion[2], true);
-        view.setFloat32(offset + 44, value.quaternion[3], true);
-        view.setUint32(offset + 48, value.motionQuality, true);
-        view.setUint32(offset + 52, value.allowedDegreesOfFreedom, true);
-        view.setFloat32(offset + 56, value.gravityFactor, true);
-        view.setFloat32(offset + 60, value.linearDamping, true);
-        view.setFloat32(offset + 64, value.angularDamping, true);
-        view.setFloat32(offset + 68, value.maxLinearVelocity, true);
-        view.setFloat32(offset + 72, value.maxAngularVelocity, true);
-        view.setUint32(offset + 76, value.numVelocityStepsOverride, true);
-        view.setUint32(offset + 80, value.numPositionStepsOverride, true);
-        view.setFloat32(offset + 84, value.friction, true);
-        view.setFloat32(offset + 88, value.restitution, true);
-        view.setUint32(offset + 92, value.frictionCombineMode, true);
-        view.setUint32(offset + 96, value.restitutionCombineMode, true);
-        view.setUint32(offset + 100, value.collisionGroups, true);
-        view.setUint32(offset + 104, value.collisionMask, true);
-        view.setUint8(offset + 108, value.useManifoldReduction ? 1 : 0);
-        view.setUint8(offset + 109, value.allowSleeping ? 1 : 0);
-        view.setUint8(offset + 110, value.sensor ? 1 : 0);
-        view.setUint8(offset + 111, value.enhancedInternalEdgeRemoval ? 1 : 0);
-        view.setUint8(offset + 112, value.collideKinematicVsNonDynamic ? 1 : 0);
-        view.setUint8(offset + 113, value.observesContacts ? 1 : 0);
-        view.setFloat32(offset + 116, value.mass, true);
-        view.setUint8(offset + 120, value.hasMassProperties ? 1 : 0);
-        view.setFloat32(offset + 124, value.massProperties.mass, true);
-        view.setFloat32(offset + 128, value.massProperties.inertia[0], true);
-        view.setFloat32(offset + 132, value.massProperties.inertia[1], true);
-        view.setFloat32(offset + 136, value.massProperties.inertia[2], true);
-        view.setFloat32(offset + 140, value.massProperties.inertia[3], true);
-        view.setFloat32(offset + 144, value.massProperties.inertia[4], true);
-        view.setFloat32(offset + 148, value.massProperties.inertia[5], true);
-        view.setFloat32(offset + 152, value.massProperties.inertia[6], true);
-        view.setFloat32(offset + 156, value.massProperties.inertia[7], true);
-        view.setFloat32(offset + 160, value.massProperties.inertia[8], true);
-        view.setFloat32(offset + 164, value.massProperties.inertia[9], true);
-        view.setFloat32(offset + 168, value.massProperties.inertia[10], true);
-        view.setFloat32(offset + 172, value.massProperties.inertia[11], true);
-        view.setFloat32(offset + 176, value.massProperties.inertia[12], true);
-        view.setFloat32(offset + 180, value.massProperties.inertia[13], true);
-        view.setFloat32(offset + 184, value.massProperties.inertia[14], true);
-        view.setFloat32(offset + 188, value.massProperties.inertia[15], true);
+        view.setUint32(offset + 16, value.userData >>> 0, true);
+        view.setUint32(offset + 20, Math.floor(value.userData / 0x100000000), true);
+        view.setFloat32(offset + 24, value.position[0], true);
+        view.setFloat32(offset + 28, value.position[1], true);
+        view.setFloat32(offset + 32, value.position[2], true);
+        view.setFloat32(offset + 36, value.quaternion[0], true);
+        view.setFloat32(offset + 40, value.quaternion[1], true);
+        view.setFloat32(offset + 44, value.quaternion[2], true);
+        view.setFloat32(offset + 48, value.quaternion[3], true);
+        view.setUint32(offset + 52, value.motionQuality, true);
+        view.setUint32(offset + 56, value.allowedDegreesOfFreedom, true);
+        view.setFloat32(offset + 60, value.gravityFactor, true);
+        view.setFloat32(offset + 64, value.linearDamping, true);
+        view.setFloat32(offset + 68, value.angularDamping, true);
+        view.setFloat32(offset + 72, value.maxLinearVelocity, true);
+        view.setFloat32(offset + 76, value.maxAngularVelocity, true);
+        view.setUint32(offset + 80, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 84, value.numPositionStepsOverride, true);
+        view.setFloat32(offset + 88, value.friction, true);
+        view.setFloat32(offset + 92, value.restitution, true);
+        view.setUint32(offset + 96, value.frictionCombineMode, true);
+        view.setUint32(offset + 100, value.restitutionCombineMode, true);
+        view.setUint32(offset + 104, value.collisionGroups, true);
+        view.setUint32(offset + 108, value.collisionMask, true);
+        view.setUint8(offset + 112, value.useManifoldReduction ? 1 : 0);
+        view.setUint8(offset + 113, value.allowSleeping ? 1 : 0);
+        view.setUint8(offset + 114, value.sensor ? 1 : 0);
+        view.setUint8(offset + 115, value.enhancedInternalEdgeRemoval ? 1 : 0);
+        view.setUint8(offset + 116, value.collideKinematicVsNonDynamic ? 1 : 0);
+        view.setUint8(offset + 117, value.observesContacts ? 1 : 0);
+        view.setFloat32(offset + 120, value.mass, true);
+        view.setUint8(offset + 124, value.hasMassProperties ? 1 : 0);
+        view.setFloat32(offset + 128, value.massProperties.mass, true);
+        view.setFloat32(offset + 144, value.massProperties.inertia[0], true);
+        view.setFloat32(offset + 148, value.massProperties.inertia[1], true);
+        view.setFloat32(offset + 152, value.massProperties.inertia[2], true);
+        view.setFloat32(offset + 156, value.massProperties.inertia[3], true);
+        view.setFloat32(offset + 160, value.massProperties.inertia[4], true);
+        view.setFloat32(offset + 164, value.massProperties.inertia[5], true);
+        view.setFloat32(offset + 168, value.massProperties.inertia[6], true);
+        view.setFloat32(offset + 172, value.massProperties.inertia[7], true);
+        view.setFloat32(offset + 176, value.massProperties.inertia[8], true);
+        view.setFloat32(offset + 180, value.massProperties.inertia[9], true);
+        view.setFloat32(offset + 184, value.massProperties.inertia[10], true);
+        view.setFloat32(offset + 188, value.massProperties.inertia[11], true);
+        view.setFloat32(offset + 192, value.massProperties.inertia[12], true);
+        view.setFloat32(offset + 196, value.massProperties.inertia[13], true);
+        view.setFloat32(offset + 200, value.massProperties.inertia[14], true);
+        view.setFloat32(offset + 204, value.massProperties.inertia[15], true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: BodySettings, view: DataView, offset: number): BodySettings {
         out.shape = (view.getUint32(offset + 0, true) || null) as Shape | null;
         out.objectLayer = view.getUint32(offset + 4, true);
         out.motionType = view.getUint32(offset + 8, true);
-        out.userDataLow = view.getUint32(offset + 12, true);
-        out.userDataHigh = view.getUint32(offset + 16, true);
-        out.position[0] = view.getFloat32(offset + 20, true);
-        out.position[1] = view.getFloat32(offset + 24, true);
-        out.position[2] = view.getFloat32(offset + 28, true);
-        out.quaternion[0] = view.getFloat32(offset + 32, true);
-        out.quaternion[1] = view.getFloat32(offset + 36, true);
-        out.quaternion[2] = view.getFloat32(offset + 40, true);
-        out.quaternion[3] = view.getFloat32(offset + 44, true);
-        out.motionQuality = view.getUint32(offset + 48, true);
-        out.allowedDegreesOfFreedom = view.getUint32(offset + 52, true);
-        out.gravityFactor = view.getFloat32(offset + 56, true);
-        out.linearDamping = view.getFloat32(offset + 60, true);
-        out.angularDamping = view.getFloat32(offset + 64, true);
-        out.maxLinearVelocity = view.getFloat32(offset + 68, true);
-        out.maxAngularVelocity = view.getFloat32(offset + 72, true);
-        out.numVelocityStepsOverride = view.getUint32(offset + 76, true);
-        out.numPositionStepsOverride = view.getUint32(offset + 80, true);
-        out.friction = view.getFloat32(offset + 84, true);
-        out.restitution = view.getFloat32(offset + 88, true);
-        out.frictionCombineMode = view.getUint32(offset + 92, true);
-        out.restitutionCombineMode = view.getUint32(offset + 96, true);
-        out.collisionGroups = view.getUint32(offset + 100, true);
-        out.collisionMask = view.getUint32(offset + 104, true);
-        out.useManifoldReduction = view.getUint8(offset + 108) !== 0;
-        out.allowSleeping = view.getUint8(offset + 109) !== 0;
-        out.sensor = view.getUint8(offset + 110) !== 0;
-        out.enhancedInternalEdgeRemoval = view.getUint8(offset + 111) !== 0;
-        out.collideKinematicVsNonDynamic = view.getUint8(offset + 112) !== 0;
-        out.observesContacts = view.getUint8(offset + 113) !== 0;
-        out.mass = view.getFloat32(offset + 116, true);
-        out.hasMassProperties = view.getUint8(offset + 120) !== 0;
-        out.massProperties.mass = view.getFloat32(offset + 124, true);
-        out.massProperties.inertia[0] = view.getFloat32(offset + 128, true);
-        out.massProperties.inertia[1] = view.getFloat32(offset + 132, true);
-        out.massProperties.inertia[2] = view.getFloat32(offset + 136, true);
-        out.massProperties.inertia[3] = view.getFloat32(offset + 140, true);
-        out.massProperties.inertia[4] = view.getFloat32(offset + 144, true);
-        out.massProperties.inertia[5] = view.getFloat32(offset + 148, true);
-        out.massProperties.inertia[6] = view.getFloat32(offset + 152, true);
-        out.massProperties.inertia[7] = view.getFloat32(offset + 156, true);
-        out.massProperties.inertia[8] = view.getFloat32(offset + 160, true);
-        out.massProperties.inertia[9] = view.getFloat32(offset + 164, true);
-        out.massProperties.inertia[10] = view.getFloat32(offset + 168, true);
-        out.massProperties.inertia[11] = view.getFloat32(offset + 172, true);
-        out.massProperties.inertia[12] = view.getFloat32(offset + 176, true);
-        out.massProperties.inertia[13] = view.getFloat32(offset + 180, true);
-        out.massProperties.inertia[14] = view.getFloat32(offset + 184, true);
-        out.massProperties.inertia[15] = view.getFloat32(offset + 188, true);
+        out.userData = view.getUint32(offset + 16, true) + view.getUint32(offset + 20, true) * 0x100000000;
+        out.position[0] = view.getFloat32(offset + 24, true);
+        out.position[1] = view.getFloat32(offset + 28, true);
+        out.position[2] = view.getFloat32(offset + 32, true);
+        out.quaternion[0] = view.getFloat32(offset + 36, true);
+        out.quaternion[1] = view.getFloat32(offset + 40, true);
+        out.quaternion[2] = view.getFloat32(offset + 44, true);
+        out.quaternion[3] = view.getFloat32(offset + 48, true);
+        out.motionQuality = view.getUint32(offset + 52, true);
+        out.allowedDegreesOfFreedom = view.getUint32(offset + 56, true);
+        out.gravityFactor = view.getFloat32(offset + 60, true);
+        out.linearDamping = view.getFloat32(offset + 64, true);
+        out.angularDamping = view.getFloat32(offset + 68, true);
+        out.maxLinearVelocity = view.getFloat32(offset + 72, true);
+        out.maxAngularVelocity = view.getFloat32(offset + 76, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 80, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 84, true);
+        out.friction = view.getFloat32(offset + 88, true);
+        out.restitution = view.getFloat32(offset + 92, true);
+        out.frictionCombineMode = view.getUint32(offset + 96, true);
+        out.restitutionCombineMode = view.getUint32(offset + 100, true);
+        out.collisionGroups = view.getUint32(offset + 104, true);
+        out.collisionMask = view.getUint32(offset + 108, true);
+        out.useManifoldReduction = view.getUint8(offset + 112) !== 0;
+        out.allowSleeping = view.getUint8(offset + 113) !== 0;
+        out.sensor = view.getUint8(offset + 114) !== 0;
+        out.enhancedInternalEdgeRemoval = view.getUint8(offset + 115) !== 0;
+        out.collideKinematicVsNonDynamic = view.getUint8(offset + 116) !== 0;
+        out.observesContacts = view.getUint8(offset + 117) !== 0;
+        out.mass = view.getFloat32(offset + 120, true);
+        out.hasMassProperties = view.getUint8(offset + 124) !== 0;
+        out.massProperties.mass = view.getFloat32(offset + 128, true);
+        out.massProperties.inertia[0] = view.getFloat32(offset + 144, true);
+        out.massProperties.inertia[1] = view.getFloat32(offset + 148, true);
+        out.massProperties.inertia[2] = view.getFloat32(offset + 152, true);
+        out.massProperties.inertia[3] = view.getFloat32(offset + 156, true);
+        out.massProperties.inertia[4] = view.getFloat32(offset + 160, true);
+        out.massProperties.inertia[5] = view.getFloat32(offset + 164, true);
+        out.massProperties.inertia[6] = view.getFloat32(offset + 168, true);
+        out.massProperties.inertia[7] = view.getFloat32(offset + 172, true);
+        out.massProperties.inertia[8] = view.getFloat32(offset + 176, true);
+        out.massProperties.inertia[9] = view.getFloat32(offset + 180, true);
+        out.massProperties.inertia[10] = view.getFloat32(offset + 184, true);
+        out.massProperties.inertia[11] = view.getFloat32(offset + 188, true);
+        out.massProperties.inertia[12] = view.getFloat32(offset + 192, true);
+        out.massProperties.inertia[13] = view.getFloat32(offset + 196, true);
+        out.massProperties.inertia[14] = view.getFloat32(offset + 200, true);
+        out.massProperties.inertia[15] = view.getFloat32(offset + 204, true);
         return out;
     },
 };
 
-export type BoxSettings = { halfExtents: Vec3; convexRadius: number; density: number; materialId: number };
+export type BoxSettings = { halfExtents: Vec3f; convexRadius: number; density: number; materialId: number };
 export const BoxSettings = {
-    size: 24,
+    size: 32,
     create(): BoxSettings {
-        return { halfExtents: Vec3.create(), convexRadius: 0, density: 0, materialId: 0 };
+        return { halfExtents: Vec3f.create(), convexRadius: 0, density: 0, materialId: 0 };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: BoxSettings, address: number): BoxSettings {
@@ -1732,9 +2117,9 @@ export const BoxSettings = {
         out.halfExtents[0] = mem.f32[(address + 0) >> 2]!;
         out.halfExtents[1] = mem.f32[(address + 4) >> 2]!;
         out.halfExtents[2] = mem.f32[(address + 8) >> 2]!;
-        out.convexRadius = mem.f32[(address + 12) >> 2]!;
-        out.density = mem.f32[(address + 16) >> 2]!;
-        out.materialId = mem.i32[(address + 20) >> 2]!;
+        out.convexRadius = mem.f32[(address + 16) >> 2]!;
+        out.density = mem.f32[(address + 20) >> 2]!;
+        out.materialId = mem.i32[(address + 24) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -1743,27 +2128,29 @@ export const BoxSettings = {
         mem.f32[(address + 0) >> 2] = value.halfExtents[0];
         mem.f32[(address + 4) >> 2] = value.halfExtents[1];
         mem.f32[(address + 8) >> 2] = value.halfExtents[2];
-        mem.f32[(address + 12) >> 2] = value.convexRadius;
-        mem.f32[(address + 16) >> 2] = value.density;
-        mem.i32[(address + 20) >> 2] = value.materialId;
+        mem.f32[(address + 12) >> 2] = value.halfExtents[2];
+        mem.f32[(address + 16) >> 2] = value.convexRadius;
+        mem.f32[(address + 20) >> 2] = value.density;
+        mem.i32[(address + 24) >> 2] = value.materialId;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: BoxSettings): void {
         view.setFloat32(offset + 0, value.halfExtents[0], true);
         view.setFloat32(offset + 4, value.halfExtents[1], true);
         view.setFloat32(offset + 8, value.halfExtents[2], true);
-        view.setFloat32(offset + 12, value.convexRadius, true);
-        view.setFloat32(offset + 16, value.density, true);
-        view.setInt32(offset + 20, value.materialId, true);
+        view.setFloat32(offset + 12, value.halfExtents[2], true);
+        view.setFloat32(offset + 16, value.convexRadius, true);
+        view.setFloat32(offset + 20, value.density, true);
+        view.setInt32(offset + 24, value.materialId, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: BoxSettings, view: DataView, offset: number): BoxSettings {
         out.halfExtents[0] = view.getFloat32(offset + 0, true);
         out.halfExtents[1] = view.getFloat32(offset + 4, true);
         out.halfExtents[2] = view.getFloat32(offset + 8, true);
-        out.convexRadius = view.getFloat32(offset + 12, true);
-        out.density = view.getFloat32(offset + 16, true);
-        out.materialId = view.getInt32(offset + 20, true);
+        out.convexRadius = view.getFloat32(offset + 16, true);
+        out.density = view.getFloat32(offset + 20, true);
+        out.materialId = view.getInt32(offset + 24, true);
         return out;
     },
 };
@@ -1928,19 +2315,19 @@ export const Plane3 = {
     },
 };
 
-export type PlaneSettings = { plane: Plane3; halfExtent: number; materialId: number };
+export type PlaneSettings = { plane: Planef; halfExtent: number; materialId: number };
 export const PlaneSettings = {
-    size: 24,
+    size: 32,
     create(): PlaneSettings {
-        return { plane: Plane3.create(), halfExtent: 0, materialId: 0 };
+        return { plane: Planef.create(), halfExtent: 0, materialId: 0 };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: PlaneSettings, address: number): PlaneSettings {
         const mem = wasm.mem;
-        out.plane.normal[0] = mem.f32[(address + 0) >> 2]!;
-        out.plane.normal[1] = mem.f32[(address + 4) >> 2]!;
-        out.plane.normal[2] = mem.f32[(address + 8) >> 2]!;
-        out.plane.constant = mem.f32[(address + 12) >> 2]!;
+        out.plane[0] = mem.f32[(address + 0) >> 2]!;
+        out.plane[1] = mem.f32[(address + 4) >> 2]!;
+        out.plane[2] = mem.f32[(address + 8) >> 2]!;
+        out.plane[3] = mem.f32[(address + 12) >> 2]!;
         out.halfExtent = mem.f32[(address + 16) >> 2]!;
         out.materialId = mem.i32[(address + 20) >> 2]!;
         return out;
@@ -1948,28 +2335,28 @@ export const PlaneSettings = {
     /** writes the value at a byte address of the wasm's memory. */
     write(address: number, value: PlaneSettings): void {
         const mem = wasm.mem;
-        mem.f32[(address + 0) >> 2] = value.plane.normal[0];
-        mem.f32[(address + 4) >> 2] = value.plane.normal[1];
-        mem.f32[(address + 8) >> 2] = value.plane.normal[2];
-        mem.f32[(address + 12) >> 2] = value.plane.constant;
+        mem.f32[(address + 0) >> 2] = value.plane[0];
+        mem.f32[(address + 4) >> 2] = value.plane[1];
+        mem.f32[(address + 8) >> 2] = value.plane[2];
+        mem.f32[(address + 12) >> 2] = value.plane[3];
         mem.f32[(address + 16) >> 2] = value.halfExtent;
         mem.i32[(address + 20) >> 2] = value.materialId;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: PlaneSettings): void {
-        view.setFloat32(offset + 0, value.plane.normal[0], true);
-        view.setFloat32(offset + 4, value.plane.normal[1], true);
-        view.setFloat32(offset + 8, value.plane.normal[2], true);
-        view.setFloat32(offset + 12, value.plane.constant, true);
+        view.setFloat32(offset + 0, value.plane[0], true);
+        view.setFloat32(offset + 4, value.plane[1], true);
+        view.setFloat32(offset + 8, value.plane[2], true);
+        view.setFloat32(offset + 12, value.plane[3], true);
         view.setFloat32(offset + 16, value.halfExtent, true);
         view.setInt32(offset + 20, value.materialId, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: PlaneSettings, view: DataView, offset: number): PlaneSettings {
-        out.plane.normal[0] = view.getFloat32(offset + 0, true);
-        out.plane.normal[1] = view.getFloat32(offset + 4, true);
-        out.plane.normal[2] = view.getFloat32(offset + 8, true);
-        out.plane.constant = view.getFloat32(offset + 12, true);
+        out.plane[0] = view.getFloat32(offset + 0, true);
+        out.plane[1] = view.getFloat32(offset + 4, true);
+        out.plane[2] = view.getFloat32(offset + 8, true);
+        out.plane[3] = view.getFloat32(offset + 12, true);
         out.halfExtent = view.getFloat32(offset + 16, true);
         out.materialId = view.getInt32(offset + 20, true);
         return out;
@@ -2162,11 +2549,11 @@ export const TriangleMeshSettings = {
     },
 };
 
-export type CompoundChild = { position: Vec3; quaternion: Quat; shape: Shape | null };
+export type CompoundChild = { position: Vec3f; quaternion: Quatf; shape: Shape | null };
 export const CompoundChild = {
-    size: 32,
+    size: 48,
     create(): CompoundChild {
-        return { position: Vec3.create(), quaternion: Quat.create(), shape: null };
+        return { position: Vec3f.create(), quaternion: Quatf.create(), shape: null };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: CompoundChild, address: number): CompoundChild {
@@ -2174,11 +2561,11 @@ export const CompoundChild = {
         out.position[0] = mem.f32[(address + 0) >> 2]!;
         out.position[1] = mem.f32[(address + 4) >> 2]!;
         out.position[2] = mem.f32[(address + 8) >> 2]!;
-        out.quaternion[0] = mem.f32[(address + 12) >> 2]!;
-        out.quaternion[1] = mem.f32[(address + 16) >> 2]!;
-        out.quaternion[2] = mem.f32[(address + 20) >> 2]!;
-        out.quaternion[3] = mem.f32[(address + 24) >> 2]!;
-        out.shape = (mem.u32[(address + 28) >> 2]! || null) as Shape | null;
+        out.quaternion[0] = mem.f32[(address + 16) >> 2]!;
+        out.quaternion[1] = mem.f32[(address + 20) >> 2]!;
+        out.quaternion[2] = mem.f32[(address + 24) >> 2]!;
+        out.quaternion[3] = mem.f32[(address + 28) >> 2]!;
+        out.shape = (mem.u32[(address + 32) >> 2]! || null) as Shape | null;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -2187,169 +2574,177 @@ export const CompoundChild = {
         mem.f32[(address + 0) >> 2] = value.position[0];
         mem.f32[(address + 4) >> 2] = value.position[1];
         mem.f32[(address + 8) >> 2] = value.position[2];
-        mem.f32[(address + 12) >> 2] = value.quaternion[0];
-        mem.f32[(address + 16) >> 2] = value.quaternion[1];
-        mem.f32[(address + 20) >> 2] = value.quaternion[2];
-        mem.f32[(address + 24) >> 2] = value.quaternion[3];
-        mem.u32[(address + 28) >> 2] = value.shape ?? 0;
+        mem.f32[(address + 12) >> 2] = value.position[2];
+        mem.f32[(address + 16) >> 2] = value.quaternion[0];
+        mem.f32[(address + 20) >> 2] = value.quaternion[1];
+        mem.f32[(address + 24) >> 2] = value.quaternion[2];
+        mem.f32[(address + 28) >> 2] = value.quaternion[3];
+        mem.u32[(address + 32) >> 2] = value.shape ?? 0;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: CompoundChild): void {
         view.setFloat32(offset + 0, value.position[0], true);
         view.setFloat32(offset + 4, value.position[1], true);
         view.setFloat32(offset + 8, value.position[2], true);
-        view.setFloat32(offset + 12, value.quaternion[0], true);
-        view.setFloat32(offset + 16, value.quaternion[1], true);
-        view.setFloat32(offset + 20, value.quaternion[2], true);
-        view.setFloat32(offset + 24, value.quaternion[3], true);
-        view.setUint32(offset + 28, value.shape ?? 0, true);
+        view.setFloat32(offset + 12, value.position[2], true);
+        view.setFloat32(offset + 16, value.quaternion[0], true);
+        view.setFloat32(offset + 20, value.quaternion[1], true);
+        view.setFloat32(offset + 24, value.quaternion[2], true);
+        view.setFloat32(offset + 28, value.quaternion[3], true);
+        view.setUint32(offset + 32, value.shape ?? 0, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: CompoundChild, view: DataView, offset: number): CompoundChild {
         out.position[0] = view.getFloat32(offset + 0, true);
         out.position[1] = view.getFloat32(offset + 4, true);
         out.position[2] = view.getFloat32(offset + 8, true);
-        out.quaternion[0] = view.getFloat32(offset + 12, true);
-        out.quaternion[1] = view.getFloat32(offset + 16, true);
-        out.quaternion[2] = view.getFloat32(offset + 20, true);
-        out.quaternion[3] = view.getFloat32(offset + 24, true);
-        out.shape = (view.getUint32(offset + 28, true) || null) as Shape | null;
+        out.quaternion[0] = view.getFloat32(offset + 16, true);
+        out.quaternion[1] = view.getFloat32(offset + 20, true);
+        out.quaternion[2] = view.getFloat32(offset + 24, true);
+        out.quaternion[3] = view.getFloat32(offset + 28, true);
+        out.shape = (view.getUint32(offset + 32, true) || null) as Shape | null;
         return out;
     },
 };
 
-export type TransformedSettings = { shape: Shape | null; position: Vec3; quaternion: Quat };
+export type TransformedSettings = { shape: Shape | null; position: Vec3f; quaternion: Quatf };
 export const TransformedSettings = {
-    size: 32,
+    size: 48,
     create(): TransformedSettings {
-        return { shape: null, position: Vec3.create(), quaternion: Quat.create() };
+        return { shape: null, position: Vec3f.create(), quaternion: Quatf.create() };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: TransformedSettings, address: number): TransformedSettings {
         const mem = wasm.mem;
         out.shape = (mem.u32[(address + 0) >> 2]! || null) as Shape | null;
-        out.position[0] = mem.f32[(address + 4) >> 2]!;
-        out.position[1] = mem.f32[(address + 8) >> 2]!;
-        out.position[2] = mem.f32[(address + 12) >> 2]!;
-        out.quaternion[0] = mem.f32[(address + 16) >> 2]!;
-        out.quaternion[1] = mem.f32[(address + 20) >> 2]!;
-        out.quaternion[2] = mem.f32[(address + 24) >> 2]!;
-        out.quaternion[3] = mem.f32[(address + 28) >> 2]!;
+        out.position[0] = mem.f32[(address + 16) >> 2]!;
+        out.position[1] = mem.f32[(address + 20) >> 2]!;
+        out.position[2] = mem.f32[(address + 24) >> 2]!;
+        out.quaternion[0] = mem.f32[(address + 32) >> 2]!;
+        out.quaternion[1] = mem.f32[(address + 36) >> 2]!;
+        out.quaternion[2] = mem.f32[(address + 40) >> 2]!;
+        out.quaternion[3] = mem.f32[(address + 44) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
     write(address: number, value: TransformedSettings): void {
         const mem = wasm.mem;
         mem.u32[(address + 0) >> 2] = value.shape ?? 0;
-        mem.f32[(address + 4) >> 2] = value.position[0];
-        mem.f32[(address + 8) >> 2] = value.position[1];
-        mem.f32[(address + 12) >> 2] = value.position[2];
-        mem.f32[(address + 16) >> 2] = value.quaternion[0];
-        mem.f32[(address + 20) >> 2] = value.quaternion[1];
-        mem.f32[(address + 24) >> 2] = value.quaternion[2];
-        mem.f32[(address + 28) >> 2] = value.quaternion[3];
+        mem.f32[(address + 16) >> 2] = value.position[0];
+        mem.f32[(address + 20) >> 2] = value.position[1];
+        mem.f32[(address + 24) >> 2] = value.position[2];
+        mem.f32[(address + 28) >> 2] = value.position[2];
+        mem.f32[(address + 32) >> 2] = value.quaternion[0];
+        mem.f32[(address + 36) >> 2] = value.quaternion[1];
+        mem.f32[(address + 40) >> 2] = value.quaternion[2];
+        mem.f32[(address + 44) >> 2] = value.quaternion[3];
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: TransformedSettings): void {
         view.setUint32(offset + 0, value.shape ?? 0, true);
-        view.setFloat32(offset + 4, value.position[0], true);
-        view.setFloat32(offset + 8, value.position[1], true);
-        view.setFloat32(offset + 12, value.position[2], true);
-        view.setFloat32(offset + 16, value.quaternion[0], true);
-        view.setFloat32(offset + 20, value.quaternion[1], true);
-        view.setFloat32(offset + 24, value.quaternion[2], true);
-        view.setFloat32(offset + 28, value.quaternion[3], true);
+        view.setFloat32(offset + 16, value.position[0], true);
+        view.setFloat32(offset + 20, value.position[1], true);
+        view.setFloat32(offset + 24, value.position[2], true);
+        view.setFloat32(offset + 28, value.position[2], true);
+        view.setFloat32(offset + 32, value.quaternion[0], true);
+        view.setFloat32(offset + 36, value.quaternion[1], true);
+        view.setFloat32(offset + 40, value.quaternion[2], true);
+        view.setFloat32(offset + 44, value.quaternion[3], true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: TransformedSettings, view: DataView, offset: number): TransformedSettings {
         out.shape = (view.getUint32(offset + 0, true) || null) as Shape | null;
-        out.position[0] = view.getFloat32(offset + 4, true);
-        out.position[1] = view.getFloat32(offset + 8, true);
-        out.position[2] = view.getFloat32(offset + 12, true);
-        out.quaternion[0] = view.getFloat32(offset + 16, true);
-        out.quaternion[1] = view.getFloat32(offset + 20, true);
-        out.quaternion[2] = view.getFloat32(offset + 24, true);
-        out.quaternion[3] = view.getFloat32(offset + 28, true);
+        out.position[0] = view.getFloat32(offset + 16, true);
+        out.position[1] = view.getFloat32(offset + 20, true);
+        out.position[2] = view.getFloat32(offset + 24, true);
+        out.quaternion[0] = view.getFloat32(offset + 32, true);
+        out.quaternion[1] = view.getFloat32(offset + 36, true);
+        out.quaternion[2] = view.getFloat32(offset + 40, true);
+        out.quaternion[3] = view.getFloat32(offset + 44, true);
         return out;
     },
 };
 
-export type ScaledSettings = { shape: Shape | null; scale: Vec3 };
+export type ScaledSettings = { shape: Shape | null; scale: Vec3f };
 export const ScaledSettings = {
-    size: 16,
+    size: 32,
     create(): ScaledSettings {
-        return { shape: null, scale: Vec3.create() };
+        return { shape: null, scale: Vec3f.create() };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: ScaledSettings, address: number): ScaledSettings {
         const mem = wasm.mem;
         out.shape = (mem.u32[(address + 0) >> 2]! || null) as Shape | null;
-        out.scale[0] = mem.f32[(address + 4) >> 2]!;
-        out.scale[1] = mem.f32[(address + 8) >> 2]!;
-        out.scale[2] = mem.f32[(address + 12) >> 2]!;
+        out.scale[0] = mem.f32[(address + 16) >> 2]!;
+        out.scale[1] = mem.f32[(address + 20) >> 2]!;
+        out.scale[2] = mem.f32[(address + 24) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
     write(address: number, value: ScaledSettings): void {
         const mem = wasm.mem;
         mem.u32[(address + 0) >> 2] = value.shape ?? 0;
-        mem.f32[(address + 4) >> 2] = value.scale[0];
-        mem.f32[(address + 8) >> 2] = value.scale[1];
-        mem.f32[(address + 12) >> 2] = value.scale[2];
+        mem.f32[(address + 16) >> 2] = value.scale[0];
+        mem.f32[(address + 20) >> 2] = value.scale[1];
+        mem.f32[(address + 24) >> 2] = value.scale[2];
+        mem.f32[(address + 28) >> 2] = value.scale[2];
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: ScaledSettings): void {
         view.setUint32(offset + 0, value.shape ?? 0, true);
-        view.setFloat32(offset + 4, value.scale[0], true);
-        view.setFloat32(offset + 8, value.scale[1], true);
-        view.setFloat32(offset + 12, value.scale[2], true);
+        view.setFloat32(offset + 16, value.scale[0], true);
+        view.setFloat32(offset + 20, value.scale[1], true);
+        view.setFloat32(offset + 24, value.scale[2], true);
+        view.setFloat32(offset + 28, value.scale[2], true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: ScaledSettings, view: DataView, offset: number): ScaledSettings {
         out.shape = (view.getUint32(offset + 0, true) || null) as Shape | null;
-        out.scale[0] = view.getFloat32(offset + 4, true);
-        out.scale[1] = view.getFloat32(offset + 8, true);
-        out.scale[2] = view.getFloat32(offset + 12, true);
+        out.scale[0] = view.getFloat32(offset + 16, true);
+        out.scale[1] = view.getFloat32(offset + 20, true);
+        out.scale[2] = view.getFloat32(offset + 24, true);
         return out;
     },
 };
 
-export type OffsetCenterOfMassSettings = { shape: Shape | null; offset: Vec3 };
+export type OffsetCenterOfMassSettings = { shape: Shape | null; offset: Vec3f };
 export const OffsetCenterOfMassSettings = {
-    size: 16,
+    size: 32,
     create(): OffsetCenterOfMassSettings {
-        return { shape: null, offset: Vec3.create() };
+        return { shape: null, offset: Vec3f.create() };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: OffsetCenterOfMassSettings, address: number): OffsetCenterOfMassSettings {
         const mem = wasm.mem;
         out.shape = (mem.u32[(address + 0) >> 2]! || null) as Shape | null;
-        out.offset[0] = mem.f32[(address + 4) >> 2]!;
-        out.offset[1] = mem.f32[(address + 8) >> 2]!;
-        out.offset[2] = mem.f32[(address + 12) >> 2]!;
+        out.offset[0] = mem.f32[(address + 16) >> 2]!;
+        out.offset[1] = mem.f32[(address + 20) >> 2]!;
+        out.offset[2] = mem.f32[(address + 24) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
     write(address: number, value: OffsetCenterOfMassSettings): void {
         const mem = wasm.mem;
         mem.u32[(address + 0) >> 2] = value.shape ?? 0;
-        mem.f32[(address + 4) >> 2] = value.offset[0];
-        mem.f32[(address + 8) >> 2] = value.offset[1];
-        mem.f32[(address + 12) >> 2] = value.offset[2];
+        mem.f32[(address + 16) >> 2] = value.offset[0];
+        mem.f32[(address + 20) >> 2] = value.offset[1];
+        mem.f32[(address + 24) >> 2] = value.offset[2];
+        mem.f32[(address + 28) >> 2] = value.offset[2];
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: OffsetCenterOfMassSettings): void {
         view.setUint32(offset + 0, value.shape ?? 0, true);
-        view.setFloat32(offset + 4, value.offset[0], true);
-        view.setFloat32(offset + 8, value.offset[1], true);
-        view.setFloat32(offset + 12, value.offset[2], true);
+        view.setFloat32(offset + 16, value.offset[0], true);
+        view.setFloat32(offset + 20, value.offset[1], true);
+        view.setFloat32(offset + 24, value.offset[2], true);
+        view.setFloat32(offset + 28, value.offset[2], true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: OffsetCenterOfMassSettings, view: DataView, offset: number): OffsetCenterOfMassSettings {
         out.shape = (view.getUint32(offset + 0, true) || null) as Shape | null;
-        out.offset[0] = view.getFloat32(offset + 4, true);
-        out.offset[1] = view.getFloat32(offset + 8, true);
-        out.offset[2] = view.getFloat32(offset + 12, true);
+        out.offset[0] = view.getFloat32(offset + 16, true);
+        out.offset[1] = view.getFloat32(offset + 20, true);
+        out.offset[2] = view.getFloat32(offset + 24, true);
         return out;
     },
 };
@@ -2481,19 +2876,19 @@ export const MotorSettings = {
 };
 
 export type PointConstraintSettings = {
-    pointA: Vec3;
-    pointB: Vec3;
+    pointA: Vec3f;
+    pointB: Vec3f;
     space: number;
     constraintPriority: number;
     numVelocityStepsOverride: number;
     numPositionStepsOverride: number;
 };
 export const PointConstraintSettings = {
-    size: 40,
+    size: 48,
     create(): PointConstraintSettings {
         return {
-            pointA: Vec3.create(),
-            pointB: Vec3.create(),
+            pointA: Vec3f.create(),
+            pointB: Vec3f.create(),
             space: 0,
             constraintPriority: 0,
             numVelocityStepsOverride: 0,
@@ -2506,13 +2901,13 @@ export const PointConstraintSettings = {
         out.pointA[0] = mem.f32[(address + 0) >> 2]!;
         out.pointA[1] = mem.f32[(address + 4) >> 2]!;
         out.pointA[2] = mem.f32[(address + 8) >> 2]!;
-        out.pointB[0] = mem.f32[(address + 12) >> 2]!;
-        out.pointB[1] = mem.f32[(address + 16) >> 2]!;
-        out.pointB[2] = mem.f32[(address + 20) >> 2]!;
-        out.space = mem.u32[(address + 24) >> 2]!;
-        out.constraintPriority = mem.u32[(address + 28) >> 2]!;
-        out.numVelocityStepsOverride = mem.u32[(address + 32) >> 2]!;
-        out.numPositionStepsOverride = mem.u32[(address + 36) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 16) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 20) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 24) >> 2]!;
+        out.space = mem.u32[(address + 32) >> 2]!;
+        out.constraintPriority = mem.u32[(address + 36) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 40) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 44) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -2521,46 +2916,50 @@ export const PointConstraintSettings = {
         mem.f32[(address + 0) >> 2] = value.pointA[0];
         mem.f32[(address + 4) >> 2] = value.pointA[1];
         mem.f32[(address + 8) >> 2] = value.pointA[2];
-        mem.f32[(address + 12) >> 2] = value.pointB[0];
-        mem.f32[(address + 16) >> 2] = value.pointB[1];
-        mem.f32[(address + 20) >> 2] = value.pointB[2];
-        mem.u32[(address + 24) >> 2] = value.space;
-        mem.u32[(address + 28) >> 2] = value.constraintPriority;
-        mem.u32[(address + 32) >> 2] = value.numVelocityStepsOverride;
-        mem.u32[(address + 36) >> 2] = value.numPositionStepsOverride;
+        mem.f32[(address + 12) >> 2] = value.pointA[2];
+        mem.f32[(address + 16) >> 2] = value.pointB[0];
+        mem.f32[(address + 20) >> 2] = value.pointB[1];
+        mem.f32[(address + 24) >> 2] = value.pointB[2];
+        mem.f32[(address + 28) >> 2] = value.pointB[2];
+        mem.u32[(address + 32) >> 2] = value.space;
+        mem.u32[(address + 36) >> 2] = value.constraintPriority;
+        mem.u32[(address + 40) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 44) >> 2] = value.numPositionStepsOverride;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: PointConstraintSettings): void {
         view.setFloat32(offset + 0, value.pointA[0], true);
         view.setFloat32(offset + 4, value.pointA[1], true);
         view.setFloat32(offset + 8, value.pointA[2], true);
-        view.setFloat32(offset + 12, value.pointB[0], true);
-        view.setFloat32(offset + 16, value.pointB[1], true);
-        view.setFloat32(offset + 20, value.pointB[2], true);
-        view.setUint32(offset + 24, value.space, true);
-        view.setUint32(offset + 28, value.constraintPriority, true);
-        view.setUint32(offset + 32, value.numVelocityStepsOverride, true);
-        view.setUint32(offset + 36, value.numPositionStepsOverride, true);
+        view.setFloat32(offset + 12, value.pointA[2], true);
+        view.setFloat32(offset + 16, value.pointB[0], true);
+        view.setFloat32(offset + 20, value.pointB[1], true);
+        view.setFloat32(offset + 24, value.pointB[2], true);
+        view.setFloat32(offset + 28, value.pointB[2], true);
+        view.setUint32(offset + 32, value.space, true);
+        view.setUint32(offset + 36, value.constraintPriority, true);
+        view.setUint32(offset + 40, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 44, value.numPositionStepsOverride, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: PointConstraintSettings, view: DataView, offset: number): PointConstraintSettings {
         out.pointA[0] = view.getFloat32(offset + 0, true);
         out.pointA[1] = view.getFloat32(offset + 4, true);
         out.pointA[2] = view.getFloat32(offset + 8, true);
-        out.pointB[0] = view.getFloat32(offset + 12, true);
-        out.pointB[1] = view.getFloat32(offset + 16, true);
-        out.pointB[2] = view.getFloat32(offset + 20, true);
-        out.space = view.getUint32(offset + 24, true);
-        out.constraintPriority = view.getUint32(offset + 28, true);
-        out.numVelocityStepsOverride = view.getUint32(offset + 32, true);
-        out.numPositionStepsOverride = view.getUint32(offset + 36, true);
+        out.pointB[0] = view.getFloat32(offset + 16, true);
+        out.pointB[1] = view.getFloat32(offset + 20, true);
+        out.pointB[2] = view.getFloat32(offset + 24, true);
+        out.space = view.getUint32(offset + 32, true);
+        out.constraintPriority = view.getUint32(offset + 36, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 40, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 44, true);
         return out;
     },
 };
 
 export type DistanceConstraintSettings = {
-    pointA: Vec3;
-    pointB: Vec3;
+    pointA: Vec3f;
+    pointB: Vec3f;
     minDistance: number;
     maxDistance: number;
     springSettings: SpringSettings;
@@ -2570,11 +2969,11 @@ export type DistanceConstraintSettings = {
     numPositionStepsOverride: number;
 };
 export const DistanceConstraintSettings = {
-    size: 60,
+    size: 80,
     create(): DistanceConstraintSettings {
         return {
-            pointA: Vec3.create(),
-            pointB: Vec3.create(),
+            pointA: Vec3f.create(),
+            pointB: Vec3f.create(),
             minDistance: 0,
             maxDistance: 0,
             springSettings: SpringSettings.create(),
@@ -2590,18 +2989,18 @@ export const DistanceConstraintSettings = {
         out.pointA[0] = mem.f32[(address + 0) >> 2]!;
         out.pointA[1] = mem.f32[(address + 4) >> 2]!;
         out.pointA[2] = mem.f32[(address + 8) >> 2]!;
-        out.pointB[0] = mem.f32[(address + 12) >> 2]!;
-        out.pointB[1] = mem.f32[(address + 16) >> 2]!;
-        out.pointB[2] = mem.f32[(address + 20) >> 2]!;
-        out.minDistance = mem.f32[(address + 24) >> 2]!;
-        out.maxDistance = mem.f32[(address + 28) >> 2]!;
-        out.springSettings.mode = mem.u32[(address + 32) >> 2]!;
-        out.springSettings.frequencyOrStiffness = mem.f32[(address + 36) >> 2]!;
-        out.springSettings.damping = mem.f32[(address + 40) >> 2]!;
-        out.space = mem.u32[(address + 44) >> 2]!;
-        out.constraintPriority = mem.u32[(address + 48) >> 2]!;
-        out.numVelocityStepsOverride = mem.u32[(address + 52) >> 2]!;
-        out.numPositionStepsOverride = mem.u32[(address + 56) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 16) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 20) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 24) >> 2]!;
+        out.minDistance = mem.f32[(address + 32) >> 2]!;
+        out.maxDistance = mem.f32[(address + 36) >> 2]!;
+        out.springSettings.mode = mem.u32[(address + 40) >> 2]!;
+        out.springSettings.frequencyOrStiffness = mem.f32[(address + 44) >> 2]!;
+        out.springSettings.damping = mem.f32[(address + 48) >> 2]!;
+        out.space = mem.u32[(address + 52) >> 2]!;
+        out.constraintPriority = mem.u32[(address + 56) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 60) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 64) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -2610,65 +3009,69 @@ export const DistanceConstraintSettings = {
         mem.f32[(address + 0) >> 2] = value.pointA[0];
         mem.f32[(address + 4) >> 2] = value.pointA[1];
         mem.f32[(address + 8) >> 2] = value.pointA[2];
-        mem.f32[(address + 12) >> 2] = value.pointB[0];
-        mem.f32[(address + 16) >> 2] = value.pointB[1];
-        mem.f32[(address + 20) >> 2] = value.pointB[2];
-        mem.f32[(address + 24) >> 2] = value.minDistance;
-        mem.f32[(address + 28) >> 2] = value.maxDistance;
-        mem.u32[(address + 32) >> 2] = value.springSettings.mode;
-        mem.f32[(address + 36) >> 2] = value.springSettings.frequencyOrStiffness;
-        mem.f32[(address + 40) >> 2] = value.springSettings.damping;
-        mem.u32[(address + 44) >> 2] = value.space;
-        mem.u32[(address + 48) >> 2] = value.constraintPriority;
-        mem.u32[(address + 52) >> 2] = value.numVelocityStepsOverride;
-        mem.u32[(address + 56) >> 2] = value.numPositionStepsOverride;
+        mem.f32[(address + 12) >> 2] = value.pointA[2];
+        mem.f32[(address + 16) >> 2] = value.pointB[0];
+        mem.f32[(address + 20) >> 2] = value.pointB[1];
+        mem.f32[(address + 24) >> 2] = value.pointB[2];
+        mem.f32[(address + 28) >> 2] = value.pointB[2];
+        mem.f32[(address + 32) >> 2] = value.minDistance;
+        mem.f32[(address + 36) >> 2] = value.maxDistance;
+        mem.u32[(address + 40) >> 2] = value.springSettings.mode;
+        mem.f32[(address + 44) >> 2] = value.springSettings.frequencyOrStiffness;
+        mem.f32[(address + 48) >> 2] = value.springSettings.damping;
+        mem.u32[(address + 52) >> 2] = value.space;
+        mem.u32[(address + 56) >> 2] = value.constraintPriority;
+        mem.u32[(address + 60) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 64) >> 2] = value.numPositionStepsOverride;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: DistanceConstraintSettings): void {
         view.setFloat32(offset + 0, value.pointA[0], true);
         view.setFloat32(offset + 4, value.pointA[1], true);
         view.setFloat32(offset + 8, value.pointA[2], true);
-        view.setFloat32(offset + 12, value.pointB[0], true);
-        view.setFloat32(offset + 16, value.pointB[1], true);
-        view.setFloat32(offset + 20, value.pointB[2], true);
-        view.setFloat32(offset + 24, value.minDistance, true);
-        view.setFloat32(offset + 28, value.maxDistance, true);
-        view.setUint32(offset + 32, value.springSettings.mode, true);
-        view.setFloat32(offset + 36, value.springSettings.frequencyOrStiffness, true);
-        view.setFloat32(offset + 40, value.springSettings.damping, true);
-        view.setUint32(offset + 44, value.space, true);
-        view.setUint32(offset + 48, value.constraintPriority, true);
-        view.setUint32(offset + 52, value.numVelocityStepsOverride, true);
-        view.setUint32(offset + 56, value.numPositionStepsOverride, true);
+        view.setFloat32(offset + 12, value.pointA[2], true);
+        view.setFloat32(offset + 16, value.pointB[0], true);
+        view.setFloat32(offset + 20, value.pointB[1], true);
+        view.setFloat32(offset + 24, value.pointB[2], true);
+        view.setFloat32(offset + 28, value.pointB[2], true);
+        view.setFloat32(offset + 32, value.minDistance, true);
+        view.setFloat32(offset + 36, value.maxDistance, true);
+        view.setUint32(offset + 40, value.springSettings.mode, true);
+        view.setFloat32(offset + 44, value.springSettings.frequencyOrStiffness, true);
+        view.setFloat32(offset + 48, value.springSettings.damping, true);
+        view.setUint32(offset + 52, value.space, true);
+        view.setUint32(offset + 56, value.constraintPriority, true);
+        view.setUint32(offset + 60, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 64, value.numPositionStepsOverride, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: DistanceConstraintSettings, view: DataView, offset: number): DistanceConstraintSettings {
         out.pointA[0] = view.getFloat32(offset + 0, true);
         out.pointA[1] = view.getFloat32(offset + 4, true);
         out.pointA[2] = view.getFloat32(offset + 8, true);
-        out.pointB[0] = view.getFloat32(offset + 12, true);
-        out.pointB[1] = view.getFloat32(offset + 16, true);
-        out.pointB[2] = view.getFloat32(offset + 20, true);
-        out.minDistance = view.getFloat32(offset + 24, true);
-        out.maxDistance = view.getFloat32(offset + 28, true);
-        out.springSettings.mode = view.getUint32(offset + 32, true);
-        out.springSettings.frequencyOrStiffness = view.getFloat32(offset + 36, true);
-        out.springSettings.damping = view.getFloat32(offset + 40, true);
-        out.space = view.getUint32(offset + 44, true);
-        out.constraintPriority = view.getUint32(offset + 48, true);
-        out.numVelocityStepsOverride = view.getUint32(offset + 52, true);
-        out.numPositionStepsOverride = view.getUint32(offset + 56, true);
+        out.pointB[0] = view.getFloat32(offset + 16, true);
+        out.pointB[1] = view.getFloat32(offset + 20, true);
+        out.pointB[2] = view.getFloat32(offset + 24, true);
+        out.minDistance = view.getFloat32(offset + 32, true);
+        out.maxDistance = view.getFloat32(offset + 36, true);
+        out.springSettings.mode = view.getUint32(offset + 40, true);
+        out.springSettings.frequencyOrStiffness = view.getFloat32(offset + 44, true);
+        out.springSettings.damping = view.getFloat32(offset + 48, true);
+        out.space = view.getUint32(offset + 52, true);
+        out.constraintPriority = view.getUint32(offset + 56, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 60, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 64, true);
         return out;
     },
 };
 
 export type HingeConstraintSettings = {
-    pointA: Vec3;
-    pointB: Vec3;
-    hingeAxisA: Vec3;
-    hingeAxisB: Vec3;
-    normalAxisA: Vec3;
-    normalAxisB: Vec3;
+    pointA: Vec3f;
+    pointB: Vec3f;
+    hingeAxisA: Vec3f;
+    hingeAxisB: Vec3f;
+    normalAxisA: Vec3f;
+    normalAxisB: Vec3f;
     space: number;
     limitsMin: number;
     limitsMax: number;
@@ -2680,15 +3083,15 @@ export type HingeConstraintSettings = {
     numPositionStepsOverride: number;
 };
 export const HingeConstraintSettings = {
-    size: 140,
+    size: 176,
     create(): HingeConstraintSettings {
         return {
-            pointA: Vec3.create(),
-            pointB: Vec3.create(),
-            hingeAxisA: Vec3.create(),
-            hingeAxisB: Vec3.create(),
-            normalAxisA: Vec3.create(),
-            normalAxisB: Vec3.create(),
+            pointA: Vec3f.create(),
+            pointB: Vec3f.create(),
+            hingeAxisA: Vec3f.create(),
+            hingeAxisB: Vec3f.create(),
+            normalAxisA: Vec3f.create(),
+            normalAxisB: Vec3f.create(),
             space: 0,
             limitsMin: 0,
             limitsMax: 0,
@@ -2706,38 +3109,38 @@ export const HingeConstraintSettings = {
         out.pointA[0] = mem.f32[(address + 0) >> 2]!;
         out.pointA[1] = mem.f32[(address + 4) >> 2]!;
         out.pointA[2] = mem.f32[(address + 8) >> 2]!;
-        out.pointB[0] = mem.f32[(address + 12) >> 2]!;
-        out.pointB[1] = mem.f32[(address + 16) >> 2]!;
-        out.pointB[2] = mem.f32[(address + 20) >> 2]!;
-        out.hingeAxisA[0] = mem.f32[(address + 24) >> 2]!;
-        out.hingeAxisA[1] = mem.f32[(address + 28) >> 2]!;
-        out.hingeAxisA[2] = mem.f32[(address + 32) >> 2]!;
-        out.hingeAxisB[0] = mem.f32[(address + 36) >> 2]!;
-        out.hingeAxisB[1] = mem.f32[(address + 40) >> 2]!;
-        out.hingeAxisB[2] = mem.f32[(address + 44) >> 2]!;
-        out.normalAxisA[0] = mem.f32[(address + 48) >> 2]!;
-        out.normalAxisA[1] = mem.f32[(address + 52) >> 2]!;
-        out.normalAxisA[2] = mem.f32[(address + 56) >> 2]!;
-        out.normalAxisB[0] = mem.f32[(address + 60) >> 2]!;
-        out.normalAxisB[1] = mem.f32[(address + 64) >> 2]!;
-        out.normalAxisB[2] = mem.f32[(address + 68) >> 2]!;
-        out.space = mem.u32[(address + 72) >> 2]!;
-        out.limitsMin = mem.f32[(address + 76) >> 2]!;
-        out.limitsMax = mem.f32[(address + 80) >> 2]!;
-        out.limitsSpringSettings.mode = mem.u32[(address + 84) >> 2]!;
-        out.limitsSpringSettings.frequencyOrStiffness = mem.f32[(address + 88) >> 2]!;
-        out.limitsSpringSettings.damping = mem.f32[(address + 92) >> 2]!;
-        out.maxFrictionTorque = mem.f32[(address + 96) >> 2]!;
-        out.motorSettings.spring.mode = mem.u32[(address + 100) >> 2]!;
-        out.motorSettings.spring.frequencyOrStiffness = mem.f32[(address + 104) >> 2]!;
-        out.motorSettings.spring.damping = mem.f32[(address + 108) >> 2]!;
-        out.motorSettings.minForceLimit = mem.f32[(address + 112) >> 2]!;
-        out.motorSettings.maxForceLimit = mem.f32[(address + 116) >> 2]!;
-        out.motorSettings.minTorqueLimit = mem.f32[(address + 120) >> 2]!;
-        out.motorSettings.maxTorqueLimit = mem.f32[(address + 124) >> 2]!;
-        out.constraintPriority = mem.u32[(address + 128) >> 2]!;
-        out.numVelocityStepsOverride = mem.u32[(address + 132) >> 2]!;
-        out.numPositionStepsOverride = mem.u32[(address + 136) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 16) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 20) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 24) >> 2]!;
+        out.hingeAxisA[0] = mem.f32[(address + 32) >> 2]!;
+        out.hingeAxisA[1] = mem.f32[(address + 36) >> 2]!;
+        out.hingeAxisA[2] = mem.f32[(address + 40) >> 2]!;
+        out.hingeAxisB[0] = mem.f32[(address + 48) >> 2]!;
+        out.hingeAxisB[1] = mem.f32[(address + 52) >> 2]!;
+        out.hingeAxisB[2] = mem.f32[(address + 56) >> 2]!;
+        out.normalAxisA[0] = mem.f32[(address + 64) >> 2]!;
+        out.normalAxisA[1] = mem.f32[(address + 68) >> 2]!;
+        out.normalAxisA[2] = mem.f32[(address + 72) >> 2]!;
+        out.normalAxisB[0] = mem.f32[(address + 80) >> 2]!;
+        out.normalAxisB[1] = mem.f32[(address + 84) >> 2]!;
+        out.normalAxisB[2] = mem.f32[(address + 88) >> 2]!;
+        out.space = mem.u32[(address + 96) >> 2]!;
+        out.limitsMin = mem.f32[(address + 100) >> 2]!;
+        out.limitsMax = mem.f32[(address + 104) >> 2]!;
+        out.limitsSpringSettings.mode = mem.u32[(address + 108) >> 2]!;
+        out.limitsSpringSettings.frequencyOrStiffness = mem.f32[(address + 112) >> 2]!;
+        out.limitsSpringSettings.damping = mem.f32[(address + 116) >> 2]!;
+        out.maxFrictionTorque = mem.f32[(address + 120) >> 2]!;
+        out.motorSettings.spring.mode = mem.u32[(address + 124) >> 2]!;
+        out.motorSettings.spring.frequencyOrStiffness = mem.f32[(address + 128) >> 2]!;
+        out.motorSettings.spring.damping = mem.f32[(address + 132) >> 2]!;
+        out.motorSettings.minForceLimit = mem.f32[(address + 136) >> 2]!;
+        out.motorSettings.maxForceLimit = mem.f32[(address + 140) >> 2]!;
+        out.motorSettings.minTorqueLimit = mem.f32[(address + 144) >> 2]!;
+        out.motorSettings.maxTorqueLimit = mem.f32[(address + 148) >> 2]!;
+        out.constraintPriority = mem.u32[(address + 152) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 156) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 160) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -2746,125 +3149,137 @@ export const HingeConstraintSettings = {
         mem.f32[(address + 0) >> 2] = value.pointA[0];
         mem.f32[(address + 4) >> 2] = value.pointA[1];
         mem.f32[(address + 8) >> 2] = value.pointA[2];
-        mem.f32[(address + 12) >> 2] = value.pointB[0];
-        mem.f32[(address + 16) >> 2] = value.pointB[1];
-        mem.f32[(address + 20) >> 2] = value.pointB[2];
-        mem.f32[(address + 24) >> 2] = value.hingeAxisA[0];
-        mem.f32[(address + 28) >> 2] = value.hingeAxisA[1];
-        mem.f32[(address + 32) >> 2] = value.hingeAxisA[2];
-        mem.f32[(address + 36) >> 2] = value.hingeAxisB[0];
-        mem.f32[(address + 40) >> 2] = value.hingeAxisB[1];
-        mem.f32[(address + 44) >> 2] = value.hingeAxisB[2];
-        mem.f32[(address + 48) >> 2] = value.normalAxisA[0];
-        mem.f32[(address + 52) >> 2] = value.normalAxisA[1];
-        mem.f32[(address + 56) >> 2] = value.normalAxisA[2];
-        mem.f32[(address + 60) >> 2] = value.normalAxisB[0];
-        mem.f32[(address + 64) >> 2] = value.normalAxisB[1];
-        mem.f32[(address + 68) >> 2] = value.normalAxisB[2];
-        mem.u32[(address + 72) >> 2] = value.space;
-        mem.f32[(address + 76) >> 2] = value.limitsMin;
-        mem.f32[(address + 80) >> 2] = value.limitsMax;
-        mem.u32[(address + 84) >> 2] = value.limitsSpringSettings.mode;
-        mem.f32[(address + 88) >> 2] = value.limitsSpringSettings.frequencyOrStiffness;
-        mem.f32[(address + 92) >> 2] = value.limitsSpringSettings.damping;
-        mem.f32[(address + 96) >> 2] = value.maxFrictionTorque;
-        mem.u32[(address + 100) >> 2] = value.motorSettings.spring.mode;
-        mem.f32[(address + 104) >> 2] = value.motorSettings.spring.frequencyOrStiffness;
-        mem.f32[(address + 108) >> 2] = value.motorSettings.spring.damping;
-        mem.f32[(address + 112) >> 2] = value.motorSettings.minForceLimit;
-        mem.f32[(address + 116) >> 2] = value.motorSettings.maxForceLimit;
-        mem.f32[(address + 120) >> 2] = value.motorSettings.minTorqueLimit;
-        mem.f32[(address + 124) >> 2] = value.motorSettings.maxTorqueLimit;
-        mem.u32[(address + 128) >> 2] = value.constraintPriority;
-        mem.u32[(address + 132) >> 2] = value.numVelocityStepsOverride;
-        mem.u32[(address + 136) >> 2] = value.numPositionStepsOverride;
+        mem.f32[(address + 12) >> 2] = value.pointA[2];
+        mem.f32[(address + 16) >> 2] = value.pointB[0];
+        mem.f32[(address + 20) >> 2] = value.pointB[1];
+        mem.f32[(address + 24) >> 2] = value.pointB[2];
+        mem.f32[(address + 28) >> 2] = value.pointB[2];
+        mem.f32[(address + 32) >> 2] = value.hingeAxisA[0];
+        mem.f32[(address + 36) >> 2] = value.hingeAxisA[1];
+        mem.f32[(address + 40) >> 2] = value.hingeAxisA[2];
+        mem.f32[(address + 44) >> 2] = value.hingeAxisA[2];
+        mem.f32[(address + 48) >> 2] = value.hingeAxisB[0];
+        mem.f32[(address + 52) >> 2] = value.hingeAxisB[1];
+        mem.f32[(address + 56) >> 2] = value.hingeAxisB[2];
+        mem.f32[(address + 60) >> 2] = value.hingeAxisB[2];
+        mem.f32[(address + 64) >> 2] = value.normalAxisA[0];
+        mem.f32[(address + 68) >> 2] = value.normalAxisA[1];
+        mem.f32[(address + 72) >> 2] = value.normalAxisA[2];
+        mem.f32[(address + 76) >> 2] = value.normalAxisA[2];
+        mem.f32[(address + 80) >> 2] = value.normalAxisB[0];
+        mem.f32[(address + 84) >> 2] = value.normalAxisB[1];
+        mem.f32[(address + 88) >> 2] = value.normalAxisB[2];
+        mem.f32[(address + 92) >> 2] = value.normalAxisB[2];
+        mem.u32[(address + 96) >> 2] = value.space;
+        mem.f32[(address + 100) >> 2] = value.limitsMin;
+        mem.f32[(address + 104) >> 2] = value.limitsMax;
+        mem.u32[(address + 108) >> 2] = value.limitsSpringSettings.mode;
+        mem.f32[(address + 112) >> 2] = value.limitsSpringSettings.frequencyOrStiffness;
+        mem.f32[(address + 116) >> 2] = value.limitsSpringSettings.damping;
+        mem.f32[(address + 120) >> 2] = value.maxFrictionTorque;
+        mem.u32[(address + 124) >> 2] = value.motorSettings.spring.mode;
+        mem.f32[(address + 128) >> 2] = value.motorSettings.spring.frequencyOrStiffness;
+        mem.f32[(address + 132) >> 2] = value.motorSettings.spring.damping;
+        mem.f32[(address + 136) >> 2] = value.motorSettings.minForceLimit;
+        mem.f32[(address + 140) >> 2] = value.motorSettings.maxForceLimit;
+        mem.f32[(address + 144) >> 2] = value.motorSettings.minTorqueLimit;
+        mem.f32[(address + 148) >> 2] = value.motorSettings.maxTorqueLimit;
+        mem.u32[(address + 152) >> 2] = value.constraintPriority;
+        mem.u32[(address + 156) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 160) >> 2] = value.numPositionStepsOverride;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: HingeConstraintSettings): void {
         view.setFloat32(offset + 0, value.pointA[0], true);
         view.setFloat32(offset + 4, value.pointA[1], true);
         view.setFloat32(offset + 8, value.pointA[2], true);
-        view.setFloat32(offset + 12, value.pointB[0], true);
-        view.setFloat32(offset + 16, value.pointB[1], true);
-        view.setFloat32(offset + 20, value.pointB[2], true);
-        view.setFloat32(offset + 24, value.hingeAxisA[0], true);
-        view.setFloat32(offset + 28, value.hingeAxisA[1], true);
-        view.setFloat32(offset + 32, value.hingeAxisA[2], true);
-        view.setFloat32(offset + 36, value.hingeAxisB[0], true);
-        view.setFloat32(offset + 40, value.hingeAxisB[1], true);
-        view.setFloat32(offset + 44, value.hingeAxisB[2], true);
-        view.setFloat32(offset + 48, value.normalAxisA[0], true);
-        view.setFloat32(offset + 52, value.normalAxisA[1], true);
-        view.setFloat32(offset + 56, value.normalAxisA[2], true);
-        view.setFloat32(offset + 60, value.normalAxisB[0], true);
-        view.setFloat32(offset + 64, value.normalAxisB[1], true);
-        view.setFloat32(offset + 68, value.normalAxisB[2], true);
-        view.setUint32(offset + 72, value.space, true);
-        view.setFloat32(offset + 76, value.limitsMin, true);
-        view.setFloat32(offset + 80, value.limitsMax, true);
-        view.setUint32(offset + 84, value.limitsSpringSettings.mode, true);
-        view.setFloat32(offset + 88, value.limitsSpringSettings.frequencyOrStiffness, true);
-        view.setFloat32(offset + 92, value.limitsSpringSettings.damping, true);
-        view.setFloat32(offset + 96, value.maxFrictionTorque, true);
-        view.setUint32(offset + 100, value.motorSettings.spring.mode, true);
-        view.setFloat32(offset + 104, value.motorSettings.spring.frequencyOrStiffness, true);
-        view.setFloat32(offset + 108, value.motorSettings.spring.damping, true);
-        view.setFloat32(offset + 112, value.motorSettings.minForceLimit, true);
-        view.setFloat32(offset + 116, value.motorSettings.maxForceLimit, true);
-        view.setFloat32(offset + 120, value.motorSettings.minTorqueLimit, true);
-        view.setFloat32(offset + 124, value.motorSettings.maxTorqueLimit, true);
-        view.setUint32(offset + 128, value.constraintPriority, true);
-        view.setUint32(offset + 132, value.numVelocityStepsOverride, true);
-        view.setUint32(offset + 136, value.numPositionStepsOverride, true);
+        view.setFloat32(offset + 12, value.pointA[2], true);
+        view.setFloat32(offset + 16, value.pointB[0], true);
+        view.setFloat32(offset + 20, value.pointB[1], true);
+        view.setFloat32(offset + 24, value.pointB[2], true);
+        view.setFloat32(offset + 28, value.pointB[2], true);
+        view.setFloat32(offset + 32, value.hingeAxisA[0], true);
+        view.setFloat32(offset + 36, value.hingeAxisA[1], true);
+        view.setFloat32(offset + 40, value.hingeAxisA[2], true);
+        view.setFloat32(offset + 44, value.hingeAxisA[2], true);
+        view.setFloat32(offset + 48, value.hingeAxisB[0], true);
+        view.setFloat32(offset + 52, value.hingeAxisB[1], true);
+        view.setFloat32(offset + 56, value.hingeAxisB[2], true);
+        view.setFloat32(offset + 60, value.hingeAxisB[2], true);
+        view.setFloat32(offset + 64, value.normalAxisA[0], true);
+        view.setFloat32(offset + 68, value.normalAxisA[1], true);
+        view.setFloat32(offset + 72, value.normalAxisA[2], true);
+        view.setFloat32(offset + 76, value.normalAxisA[2], true);
+        view.setFloat32(offset + 80, value.normalAxisB[0], true);
+        view.setFloat32(offset + 84, value.normalAxisB[1], true);
+        view.setFloat32(offset + 88, value.normalAxisB[2], true);
+        view.setFloat32(offset + 92, value.normalAxisB[2], true);
+        view.setUint32(offset + 96, value.space, true);
+        view.setFloat32(offset + 100, value.limitsMin, true);
+        view.setFloat32(offset + 104, value.limitsMax, true);
+        view.setUint32(offset + 108, value.limitsSpringSettings.mode, true);
+        view.setFloat32(offset + 112, value.limitsSpringSettings.frequencyOrStiffness, true);
+        view.setFloat32(offset + 116, value.limitsSpringSettings.damping, true);
+        view.setFloat32(offset + 120, value.maxFrictionTorque, true);
+        view.setUint32(offset + 124, value.motorSettings.spring.mode, true);
+        view.setFloat32(offset + 128, value.motorSettings.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 132, value.motorSettings.spring.damping, true);
+        view.setFloat32(offset + 136, value.motorSettings.minForceLimit, true);
+        view.setFloat32(offset + 140, value.motorSettings.maxForceLimit, true);
+        view.setFloat32(offset + 144, value.motorSettings.minTorqueLimit, true);
+        view.setFloat32(offset + 148, value.motorSettings.maxTorqueLimit, true);
+        view.setUint32(offset + 152, value.constraintPriority, true);
+        view.setUint32(offset + 156, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 160, value.numPositionStepsOverride, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: HingeConstraintSettings, view: DataView, offset: number): HingeConstraintSettings {
         out.pointA[0] = view.getFloat32(offset + 0, true);
         out.pointA[1] = view.getFloat32(offset + 4, true);
         out.pointA[2] = view.getFloat32(offset + 8, true);
-        out.pointB[0] = view.getFloat32(offset + 12, true);
-        out.pointB[1] = view.getFloat32(offset + 16, true);
-        out.pointB[2] = view.getFloat32(offset + 20, true);
-        out.hingeAxisA[0] = view.getFloat32(offset + 24, true);
-        out.hingeAxisA[1] = view.getFloat32(offset + 28, true);
-        out.hingeAxisA[2] = view.getFloat32(offset + 32, true);
-        out.hingeAxisB[0] = view.getFloat32(offset + 36, true);
-        out.hingeAxisB[1] = view.getFloat32(offset + 40, true);
-        out.hingeAxisB[2] = view.getFloat32(offset + 44, true);
-        out.normalAxisA[0] = view.getFloat32(offset + 48, true);
-        out.normalAxisA[1] = view.getFloat32(offset + 52, true);
-        out.normalAxisA[2] = view.getFloat32(offset + 56, true);
-        out.normalAxisB[0] = view.getFloat32(offset + 60, true);
-        out.normalAxisB[1] = view.getFloat32(offset + 64, true);
-        out.normalAxisB[2] = view.getFloat32(offset + 68, true);
-        out.space = view.getUint32(offset + 72, true);
-        out.limitsMin = view.getFloat32(offset + 76, true);
-        out.limitsMax = view.getFloat32(offset + 80, true);
-        out.limitsSpringSettings.mode = view.getUint32(offset + 84, true);
-        out.limitsSpringSettings.frequencyOrStiffness = view.getFloat32(offset + 88, true);
-        out.limitsSpringSettings.damping = view.getFloat32(offset + 92, true);
-        out.maxFrictionTorque = view.getFloat32(offset + 96, true);
-        out.motorSettings.spring.mode = view.getUint32(offset + 100, true);
-        out.motorSettings.spring.frequencyOrStiffness = view.getFloat32(offset + 104, true);
-        out.motorSettings.spring.damping = view.getFloat32(offset + 108, true);
-        out.motorSettings.minForceLimit = view.getFloat32(offset + 112, true);
-        out.motorSettings.maxForceLimit = view.getFloat32(offset + 116, true);
-        out.motorSettings.minTorqueLimit = view.getFloat32(offset + 120, true);
-        out.motorSettings.maxTorqueLimit = view.getFloat32(offset + 124, true);
-        out.constraintPriority = view.getUint32(offset + 128, true);
-        out.numVelocityStepsOverride = view.getUint32(offset + 132, true);
-        out.numPositionStepsOverride = view.getUint32(offset + 136, true);
+        out.pointB[0] = view.getFloat32(offset + 16, true);
+        out.pointB[1] = view.getFloat32(offset + 20, true);
+        out.pointB[2] = view.getFloat32(offset + 24, true);
+        out.hingeAxisA[0] = view.getFloat32(offset + 32, true);
+        out.hingeAxisA[1] = view.getFloat32(offset + 36, true);
+        out.hingeAxisA[2] = view.getFloat32(offset + 40, true);
+        out.hingeAxisB[0] = view.getFloat32(offset + 48, true);
+        out.hingeAxisB[1] = view.getFloat32(offset + 52, true);
+        out.hingeAxisB[2] = view.getFloat32(offset + 56, true);
+        out.normalAxisA[0] = view.getFloat32(offset + 64, true);
+        out.normalAxisA[1] = view.getFloat32(offset + 68, true);
+        out.normalAxisA[2] = view.getFloat32(offset + 72, true);
+        out.normalAxisB[0] = view.getFloat32(offset + 80, true);
+        out.normalAxisB[1] = view.getFloat32(offset + 84, true);
+        out.normalAxisB[2] = view.getFloat32(offset + 88, true);
+        out.space = view.getUint32(offset + 96, true);
+        out.limitsMin = view.getFloat32(offset + 100, true);
+        out.limitsMax = view.getFloat32(offset + 104, true);
+        out.limitsSpringSettings.mode = view.getUint32(offset + 108, true);
+        out.limitsSpringSettings.frequencyOrStiffness = view.getFloat32(offset + 112, true);
+        out.limitsSpringSettings.damping = view.getFloat32(offset + 116, true);
+        out.maxFrictionTorque = view.getFloat32(offset + 120, true);
+        out.motorSettings.spring.mode = view.getUint32(offset + 124, true);
+        out.motorSettings.spring.frequencyOrStiffness = view.getFloat32(offset + 128, true);
+        out.motorSettings.spring.damping = view.getFloat32(offset + 132, true);
+        out.motorSettings.minForceLimit = view.getFloat32(offset + 136, true);
+        out.motorSettings.maxForceLimit = view.getFloat32(offset + 140, true);
+        out.motorSettings.minTorqueLimit = view.getFloat32(offset + 144, true);
+        out.motorSettings.maxTorqueLimit = view.getFloat32(offset + 148, true);
+        out.constraintPriority = view.getUint32(offset + 152, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 156, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 160, true);
         return out;
     },
 };
 
 export type SliderConstraintSettings = {
-    pointA: Vec3;
-    pointB: Vec3;
-    sliderAxisA: Vec3;
-    sliderAxisB: Vec3;
-    normalAxisA: Vec3;
-    normalAxisB: Vec3;
+    pointA: Vec3f;
+    pointB: Vec3f;
+    sliderAxisA: Vec3f;
+    sliderAxisB: Vec3f;
+    normalAxisA: Vec3f;
+    normalAxisB: Vec3f;
     space: number;
     autoDetectPoint: boolean;
     limitsMin: number;
@@ -2877,15 +3292,15 @@ export type SliderConstraintSettings = {
     numPositionStepsOverride: number;
 };
 export const SliderConstraintSettings = {
-    size: 144,
+    size: 176,
     create(): SliderConstraintSettings {
         return {
-            pointA: Vec3.create(),
-            pointB: Vec3.create(),
-            sliderAxisA: Vec3.create(),
-            sliderAxisB: Vec3.create(),
-            normalAxisA: Vec3.create(),
-            normalAxisB: Vec3.create(),
+            pointA: Vec3f.create(),
+            pointB: Vec3f.create(),
+            sliderAxisA: Vec3f.create(),
+            sliderAxisB: Vec3f.create(),
+            normalAxisA: Vec3f.create(),
+            normalAxisB: Vec3f.create(),
             space: 0,
             autoDetectPoint: false,
             limitsMin: 0,
@@ -2904,39 +3319,39 @@ export const SliderConstraintSettings = {
         out.pointA[0] = mem.f32[(address + 0) >> 2]!;
         out.pointA[1] = mem.f32[(address + 4) >> 2]!;
         out.pointA[2] = mem.f32[(address + 8) >> 2]!;
-        out.pointB[0] = mem.f32[(address + 12) >> 2]!;
-        out.pointB[1] = mem.f32[(address + 16) >> 2]!;
-        out.pointB[2] = mem.f32[(address + 20) >> 2]!;
-        out.sliderAxisA[0] = mem.f32[(address + 24) >> 2]!;
-        out.sliderAxisA[1] = mem.f32[(address + 28) >> 2]!;
-        out.sliderAxisA[2] = mem.f32[(address + 32) >> 2]!;
-        out.sliderAxisB[0] = mem.f32[(address + 36) >> 2]!;
-        out.sliderAxisB[1] = mem.f32[(address + 40) >> 2]!;
-        out.sliderAxisB[2] = mem.f32[(address + 44) >> 2]!;
-        out.normalAxisA[0] = mem.f32[(address + 48) >> 2]!;
-        out.normalAxisA[1] = mem.f32[(address + 52) >> 2]!;
-        out.normalAxisA[2] = mem.f32[(address + 56) >> 2]!;
-        out.normalAxisB[0] = mem.f32[(address + 60) >> 2]!;
-        out.normalAxisB[1] = mem.f32[(address + 64) >> 2]!;
-        out.normalAxisB[2] = mem.f32[(address + 68) >> 2]!;
-        out.space = mem.u32[(address + 72) >> 2]!;
-        out.autoDetectPoint = mem.u8[address + 76]! !== 0;
-        out.limitsMin = mem.f32[(address + 80) >> 2]!;
-        out.limitsMax = mem.f32[(address + 84) >> 2]!;
-        out.limitsSpringSettings.mode = mem.u32[(address + 88) >> 2]!;
-        out.limitsSpringSettings.frequencyOrStiffness = mem.f32[(address + 92) >> 2]!;
-        out.limitsSpringSettings.damping = mem.f32[(address + 96) >> 2]!;
-        out.maxFrictionForce = mem.f32[(address + 100) >> 2]!;
-        out.motorSettings.spring.mode = mem.u32[(address + 104) >> 2]!;
-        out.motorSettings.spring.frequencyOrStiffness = mem.f32[(address + 108) >> 2]!;
-        out.motorSettings.spring.damping = mem.f32[(address + 112) >> 2]!;
-        out.motorSettings.minForceLimit = mem.f32[(address + 116) >> 2]!;
-        out.motorSettings.maxForceLimit = mem.f32[(address + 120) >> 2]!;
-        out.motorSettings.minTorqueLimit = mem.f32[(address + 124) >> 2]!;
-        out.motorSettings.maxTorqueLimit = mem.f32[(address + 128) >> 2]!;
-        out.constraintPriority = mem.u32[(address + 132) >> 2]!;
-        out.numVelocityStepsOverride = mem.u32[(address + 136) >> 2]!;
-        out.numPositionStepsOverride = mem.u32[(address + 140) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 16) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 20) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 24) >> 2]!;
+        out.sliderAxisA[0] = mem.f32[(address + 32) >> 2]!;
+        out.sliderAxisA[1] = mem.f32[(address + 36) >> 2]!;
+        out.sliderAxisA[2] = mem.f32[(address + 40) >> 2]!;
+        out.sliderAxisB[0] = mem.f32[(address + 48) >> 2]!;
+        out.sliderAxisB[1] = mem.f32[(address + 52) >> 2]!;
+        out.sliderAxisB[2] = mem.f32[(address + 56) >> 2]!;
+        out.normalAxisA[0] = mem.f32[(address + 64) >> 2]!;
+        out.normalAxisA[1] = mem.f32[(address + 68) >> 2]!;
+        out.normalAxisA[2] = mem.f32[(address + 72) >> 2]!;
+        out.normalAxisB[0] = mem.f32[(address + 80) >> 2]!;
+        out.normalAxisB[1] = mem.f32[(address + 84) >> 2]!;
+        out.normalAxisB[2] = mem.f32[(address + 88) >> 2]!;
+        out.space = mem.u32[(address + 96) >> 2]!;
+        out.autoDetectPoint = mem.u8[address + 100]! !== 0;
+        out.limitsMin = mem.f32[(address + 104) >> 2]!;
+        out.limitsMax = mem.f32[(address + 108) >> 2]!;
+        out.limitsSpringSettings.mode = mem.u32[(address + 112) >> 2]!;
+        out.limitsSpringSettings.frequencyOrStiffness = mem.f32[(address + 116) >> 2]!;
+        out.limitsSpringSettings.damping = mem.f32[(address + 120) >> 2]!;
+        out.maxFrictionForce = mem.f32[(address + 124) >> 2]!;
+        out.motorSettings.spring.mode = mem.u32[(address + 128) >> 2]!;
+        out.motorSettings.spring.frequencyOrStiffness = mem.f32[(address + 132) >> 2]!;
+        out.motorSettings.spring.damping = mem.f32[(address + 136) >> 2]!;
+        out.motorSettings.minForceLimit = mem.f32[(address + 140) >> 2]!;
+        out.motorSettings.maxForceLimit = mem.f32[(address + 144) >> 2]!;
+        out.motorSettings.minTorqueLimit = mem.f32[(address + 148) >> 2]!;
+        out.motorSettings.maxTorqueLimit = mem.f32[(address + 152) >> 2]!;
+        out.constraintPriority = mem.u32[(address + 156) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 160) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 164) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -2945,128 +3360,140 @@ export const SliderConstraintSettings = {
         mem.f32[(address + 0) >> 2] = value.pointA[0];
         mem.f32[(address + 4) >> 2] = value.pointA[1];
         mem.f32[(address + 8) >> 2] = value.pointA[2];
-        mem.f32[(address + 12) >> 2] = value.pointB[0];
-        mem.f32[(address + 16) >> 2] = value.pointB[1];
-        mem.f32[(address + 20) >> 2] = value.pointB[2];
-        mem.f32[(address + 24) >> 2] = value.sliderAxisA[0];
-        mem.f32[(address + 28) >> 2] = value.sliderAxisA[1];
-        mem.f32[(address + 32) >> 2] = value.sliderAxisA[2];
-        mem.f32[(address + 36) >> 2] = value.sliderAxisB[0];
-        mem.f32[(address + 40) >> 2] = value.sliderAxisB[1];
-        mem.f32[(address + 44) >> 2] = value.sliderAxisB[2];
-        mem.f32[(address + 48) >> 2] = value.normalAxisA[0];
-        mem.f32[(address + 52) >> 2] = value.normalAxisA[1];
-        mem.f32[(address + 56) >> 2] = value.normalAxisA[2];
-        mem.f32[(address + 60) >> 2] = value.normalAxisB[0];
-        mem.f32[(address + 64) >> 2] = value.normalAxisB[1];
-        mem.f32[(address + 68) >> 2] = value.normalAxisB[2];
-        mem.u32[(address + 72) >> 2] = value.space;
-        mem.u8[address + 76] = value.autoDetectPoint ? 1 : 0;
-        mem.f32[(address + 80) >> 2] = value.limitsMin;
-        mem.f32[(address + 84) >> 2] = value.limitsMax;
-        mem.u32[(address + 88) >> 2] = value.limitsSpringSettings.mode;
-        mem.f32[(address + 92) >> 2] = value.limitsSpringSettings.frequencyOrStiffness;
-        mem.f32[(address + 96) >> 2] = value.limitsSpringSettings.damping;
-        mem.f32[(address + 100) >> 2] = value.maxFrictionForce;
-        mem.u32[(address + 104) >> 2] = value.motorSettings.spring.mode;
-        mem.f32[(address + 108) >> 2] = value.motorSettings.spring.frequencyOrStiffness;
-        mem.f32[(address + 112) >> 2] = value.motorSettings.spring.damping;
-        mem.f32[(address + 116) >> 2] = value.motorSettings.minForceLimit;
-        mem.f32[(address + 120) >> 2] = value.motorSettings.maxForceLimit;
-        mem.f32[(address + 124) >> 2] = value.motorSettings.minTorqueLimit;
-        mem.f32[(address + 128) >> 2] = value.motorSettings.maxTorqueLimit;
-        mem.u32[(address + 132) >> 2] = value.constraintPriority;
-        mem.u32[(address + 136) >> 2] = value.numVelocityStepsOverride;
-        mem.u32[(address + 140) >> 2] = value.numPositionStepsOverride;
+        mem.f32[(address + 12) >> 2] = value.pointA[2];
+        mem.f32[(address + 16) >> 2] = value.pointB[0];
+        mem.f32[(address + 20) >> 2] = value.pointB[1];
+        mem.f32[(address + 24) >> 2] = value.pointB[2];
+        mem.f32[(address + 28) >> 2] = value.pointB[2];
+        mem.f32[(address + 32) >> 2] = value.sliderAxisA[0];
+        mem.f32[(address + 36) >> 2] = value.sliderAxisA[1];
+        mem.f32[(address + 40) >> 2] = value.sliderAxisA[2];
+        mem.f32[(address + 44) >> 2] = value.sliderAxisA[2];
+        mem.f32[(address + 48) >> 2] = value.sliderAxisB[0];
+        mem.f32[(address + 52) >> 2] = value.sliderAxisB[1];
+        mem.f32[(address + 56) >> 2] = value.sliderAxisB[2];
+        mem.f32[(address + 60) >> 2] = value.sliderAxisB[2];
+        mem.f32[(address + 64) >> 2] = value.normalAxisA[0];
+        mem.f32[(address + 68) >> 2] = value.normalAxisA[1];
+        mem.f32[(address + 72) >> 2] = value.normalAxisA[2];
+        mem.f32[(address + 76) >> 2] = value.normalAxisA[2];
+        mem.f32[(address + 80) >> 2] = value.normalAxisB[0];
+        mem.f32[(address + 84) >> 2] = value.normalAxisB[1];
+        mem.f32[(address + 88) >> 2] = value.normalAxisB[2];
+        mem.f32[(address + 92) >> 2] = value.normalAxisB[2];
+        mem.u32[(address + 96) >> 2] = value.space;
+        mem.u8[address + 100] = value.autoDetectPoint ? 1 : 0;
+        mem.f32[(address + 104) >> 2] = value.limitsMin;
+        mem.f32[(address + 108) >> 2] = value.limitsMax;
+        mem.u32[(address + 112) >> 2] = value.limitsSpringSettings.mode;
+        mem.f32[(address + 116) >> 2] = value.limitsSpringSettings.frequencyOrStiffness;
+        mem.f32[(address + 120) >> 2] = value.limitsSpringSettings.damping;
+        mem.f32[(address + 124) >> 2] = value.maxFrictionForce;
+        mem.u32[(address + 128) >> 2] = value.motorSettings.spring.mode;
+        mem.f32[(address + 132) >> 2] = value.motorSettings.spring.frequencyOrStiffness;
+        mem.f32[(address + 136) >> 2] = value.motorSettings.spring.damping;
+        mem.f32[(address + 140) >> 2] = value.motorSettings.minForceLimit;
+        mem.f32[(address + 144) >> 2] = value.motorSettings.maxForceLimit;
+        mem.f32[(address + 148) >> 2] = value.motorSettings.minTorqueLimit;
+        mem.f32[(address + 152) >> 2] = value.motorSettings.maxTorqueLimit;
+        mem.u32[(address + 156) >> 2] = value.constraintPriority;
+        mem.u32[(address + 160) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 164) >> 2] = value.numPositionStepsOverride;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: SliderConstraintSettings): void {
         view.setFloat32(offset + 0, value.pointA[0], true);
         view.setFloat32(offset + 4, value.pointA[1], true);
         view.setFloat32(offset + 8, value.pointA[2], true);
-        view.setFloat32(offset + 12, value.pointB[0], true);
-        view.setFloat32(offset + 16, value.pointB[1], true);
-        view.setFloat32(offset + 20, value.pointB[2], true);
-        view.setFloat32(offset + 24, value.sliderAxisA[0], true);
-        view.setFloat32(offset + 28, value.sliderAxisA[1], true);
-        view.setFloat32(offset + 32, value.sliderAxisA[2], true);
-        view.setFloat32(offset + 36, value.sliderAxisB[0], true);
-        view.setFloat32(offset + 40, value.sliderAxisB[1], true);
-        view.setFloat32(offset + 44, value.sliderAxisB[2], true);
-        view.setFloat32(offset + 48, value.normalAxisA[0], true);
-        view.setFloat32(offset + 52, value.normalAxisA[1], true);
-        view.setFloat32(offset + 56, value.normalAxisA[2], true);
-        view.setFloat32(offset + 60, value.normalAxisB[0], true);
-        view.setFloat32(offset + 64, value.normalAxisB[1], true);
-        view.setFloat32(offset + 68, value.normalAxisB[2], true);
-        view.setUint32(offset + 72, value.space, true);
-        view.setUint8(offset + 76, value.autoDetectPoint ? 1 : 0);
-        view.setFloat32(offset + 80, value.limitsMin, true);
-        view.setFloat32(offset + 84, value.limitsMax, true);
-        view.setUint32(offset + 88, value.limitsSpringSettings.mode, true);
-        view.setFloat32(offset + 92, value.limitsSpringSettings.frequencyOrStiffness, true);
-        view.setFloat32(offset + 96, value.limitsSpringSettings.damping, true);
-        view.setFloat32(offset + 100, value.maxFrictionForce, true);
-        view.setUint32(offset + 104, value.motorSettings.spring.mode, true);
-        view.setFloat32(offset + 108, value.motorSettings.spring.frequencyOrStiffness, true);
-        view.setFloat32(offset + 112, value.motorSettings.spring.damping, true);
-        view.setFloat32(offset + 116, value.motorSettings.minForceLimit, true);
-        view.setFloat32(offset + 120, value.motorSettings.maxForceLimit, true);
-        view.setFloat32(offset + 124, value.motorSettings.minTorqueLimit, true);
-        view.setFloat32(offset + 128, value.motorSettings.maxTorqueLimit, true);
-        view.setUint32(offset + 132, value.constraintPriority, true);
-        view.setUint32(offset + 136, value.numVelocityStepsOverride, true);
-        view.setUint32(offset + 140, value.numPositionStepsOverride, true);
+        view.setFloat32(offset + 12, value.pointA[2], true);
+        view.setFloat32(offset + 16, value.pointB[0], true);
+        view.setFloat32(offset + 20, value.pointB[1], true);
+        view.setFloat32(offset + 24, value.pointB[2], true);
+        view.setFloat32(offset + 28, value.pointB[2], true);
+        view.setFloat32(offset + 32, value.sliderAxisA[0], true);
+        view.setFloat32(offset + 36, value.sliderAxisA[1], true);
+        view.setFloat32(offset + 40, value.sliderAxisA[2], true);
+        view.setFloat32(offset + 44, value.sliderAxisA[2], true);
+        view.setFloat32(offset + 48, value.sliderAxisB[0], true);
+        view.setFloat32(offset + 52, value.sliderAxisB[1], true);
+        view.setFloat32(offset + 56, value.sliderAxisB[2], true);
+        view.setFloat32(offset + 60, value.sliderAxisB[2], true);
+        view.setFloat32(offset + 64, value.normalAxisA[0], true);
+        view.setFloat32(offset + 68, value.normalAxisA[1], true);
+        view.setFloat32(offset + 72, value.normalAxisA[2], true);
+        view.setFloat32(offset + 76, value.normalAxisA[2], true);
+        view.setFloat32(offset + 80, value.normalAxisB[0], true);
+        view.setFloat32(offset + 84, value.normalAxisB[1], true);
+        view.setFloat32(offset + 88, value.normalAxisB[2], true);
+        view.setFloat32(offset + 92, value.normalAxisB[2], true);
+        view.setUint32(offset + 96, value.space, true);
+        view.setUint8(offset + 100, value.autoDetectPoint ? 1 : 0);
+        view.setFloat32(offset + 104, value.limitsMin, true);
+        view.setFloat32(offset + 108, value.limitsMax, true);
+        view.setUint32(offset + 112, value.limitsSpringSettings.mode, true);
+        view.setFloat32(offset + 116, value.limitsSpringSettings.frequencyOrStiffness, true);
+        view.setFloat32(offset + 120, value.limitsSpringSettings.damping, true);
+        view.setFloat32(offset + 124, value.maxFrictionForce, true);
+        view.setUint32(offset + 128, value.motorSettings.spring.mode, true);
+        view.setFloat32(offset + 132, value.motorSettings.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 136, value.motorSettings.spring.damping, true);
+        view.setFloat32(offset + 140, value.motorSettings.minForceLimit, true);
+        view.setFloat32(offset + 144, value.motorSettings.maxForceLimit, true);
+        view.setFloat32(offset + 148, value.motorSettings.minTorqueLimit, true);
+        view.setFloat32(offset + 152, value.motorSettings.maxTorqueLimit, true);
+        view.setUint32(offset + 156, value.constraintPriority, true);
+        view.setUint32(offset + 160, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 164, value.numPositionStepsOverride, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: SliderConstraintSettings, view: DataView, offset: number): SliderConstraintSettings {
         out.pointA[0] = view.getFloat32(offset + 0, true);
         out.pointA[1] = view.getFloat32(offset + 4, true);
         out.pointA[2] = view.getFloat32(offset + 8, true);
-        out.pointB[0] = view.getFloat32(offset + 12, true);
-        out.pointB[1] = view.getFloat32(offset + 16, true);
-        out.pointB[2] = view.getFloat32(offset + 20, true);
-        out.sliderAxisA[0] = view.getFloat32(offset + 24, true);
-        out.sliderAxisA[1] = view.getFloat32(offset + 28, true);
-        out.sliderAxisA[2] = view.getFloat32(offset + 32, true);
-        out.sliderAxisB[0] = view.getFloat32(offset + 36, true);
-        out.sliderAxisB[1] = view.getFloat32(offset + 40, true);
-        out.sliderAxisB[2] = view.getFloat32(offset + 44, true);
-        out.normalAxisA[0] = view.getFloat32(offset + 48, true);
-        out.normalAxisA[1] = view.getFloat32(offset + 52, true);
-        out.normalAxisA[2] = view.getFloat32(offset + 56, true);
-        out.normalAxisB[0] = view.getFloat32(offset + 60, true);
-        out.normalAxisB[1] = view.getFloat32(offset + 64, true);
-        out.normalAxisB[2] = view.getFloat32(offset + 68, true);
-        out.space = view.getUint32(offset + 72, true);
-        out.autoDetectPoint = view.getUint8(offset + 76) !== 0;
-        out.limitsMin = view.getFloat32(offset + 80, true);
-        out.limitsMax = view.getFloat32(offset + 84, true);
-        out.limitsSpringSettings.mode = view.getUint32(offset + 88, true);
-        out.limitsSpringSettings.frequencyOrStiffness = view.getFloat32(offset + 92, true);
-        out.limitsSpringSettings.damping = view.getFloat32(offset + 96, true);
-        out.maxFrictionForce = view.getFloat32(offset + 100, true);
-        out.motorSettings.spring.mode = view.getUint32(offset + 104, true);
-        out.motorSettings.spring.frequencyOrStiffness = view.getFloat32(offset + 108, true);
-        out.motorSettings.spring.damping = view.getFloat32(offset + 112, true);
-        out.motorSettings.minForceLimit = view.getFloat32(offset + 116, true);
-        out.motorSettings.maxForceLimit = view.getFloat32(offset + 120, true);
-        out.motorSettings.minTorqueLimit = view.getFloat32(offset + 124, true);
-        out.motorSettings.maxTorqueLimit = view.getFloat32(offset + 128, true);
-        out.constraintPriority = view.getUint32(offset + 132, true);
-        out.numVelocityStepsOverride = view.getUint32(offset + 136, true);
-        out.numPositionStepsOverride = view.getUint32(offset + 140, true);
+        out.pointB[0] = view.getFloat32(offset + 16, true);
+        out.pointB[1] = view.getFloat32(offset + 20, true);
+        out.pointB[2] = view.getFloat32(offset + 24, true);
+        out.sliderAxisA[0] = view.getFloat32(offset + 32, true);
+        out.sliderAxisA[1] = view.getFloat32(offset + 36, true);
+        out.sliderAxisA[2] = view.getFloat32(offset + 40, true);
+        out.sliderAxisB[0] = view.getFloat32(offset + 48, true);
+        out.sliderAxisB[1] = view.getFloat32(offset + 52, true);
+        out.sliderAxisB[2] = view.getFloat32(offset + 56, true);
+        out.normalAxisA[0] = view.getFloat32(offset + 64, true);
+        out.normalAxisA[1] = view.getFloat32(offset + 68, true);
+        out.normalAxisA[2] = view.getFloat32(offset + 72, true);
+        out.normalAxisB[0] = view.getFloat32(offset + 80, true);
+        out.normalAxisB[1] = view.getFloat32(offset + 84, true);
+        out.normalAxisB[2] = view.getFloat32(offset + 88, true);
+        out.space = view.getUint32(offset + 96, true);
+        out.autoDetectPoint = view.getUint8(offset + 100) !== 0;
+        out.limitsMin = view.getFloat32(offset + 104, true);
+        out.limitsMax = view.getFloat32(offset + 108, true);
+        out.limitsSpringSettings.mode = view.getUint32(offset + 112, true);
+        out.limitsSpringSettings.frequencyOrStiffness = view.getFloat32(offset + 116, true);
+        out.limitsSpringSettings.damping = view.getFloat32(offset + 120, true);
+        out.maxFrictionForce = view.getFloat32(offset + 124, true);
+        out.motorSettings.spring.mode = view.getUint32(offset + 128, true);
+        out.motorSettings.spring.frequencyOrStiffness = view.getFloat32(offset + 132, true);
+        out.motorSettings.spring.damping = view.getFloat32(offset + 136, true);
+        out.motorSettings.minForceLimit = view.getFloat32(offset + 140, true);
+        out.motorSettings.maxForceLimit = view.getFloat32(offset + 144, true);
+        out.motorSettings.minTorqueLimit = view.getFloat32(offset + 148, true);
+        out.motorSettings.maxTorqueLimit = view.getFloat32(offset + 152, true);
+        out.constraintPriority = view.getUint32(offset + 156, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 160, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 164, true);
         return out;
     },
 };
 
 export type FixedConstraintSettings = {
-    pointA: Vec3;
-    axisXA: Vec3;
-    axisYA: Vec3;
-    pointB: Vec3;
-    axisXB: Vec3;
-    axisYB: Vec3;
+    pointA: Vec3f;
+    axisXA: Vec3f;
+    axisYA: Vec3f;
+    pointB: Vec3f;
+    axisXB: Vec3f;
+    axisYB: Vec3f;
     space: number;
     autoDetectPoint: boolean;
     constraintPriority: number;
@@ -3074,15 +3501,15 @@ export type FixedConstraintSettings = {
     numPositionStepsOverride: number;
 };
 export const FixedConstraintSettings = {
-    size: 92,
+    size: 128,
     create(): FixedConstraintSettings {
         return {
-            pointA: Vec3.create(),
-            axisXA: Vec3.create(),
-            axisYA: Vec3.create(),
-            pointB: Vec3.create(),
-            axisXB: Vec3.create(),
-            axisYB: Vec3.create(),
+            pointA: Vec3f.create(),
+            axisXA: Vec3f.create(),
+            axisYA: Vec3f.create(),
+            pointB: Vec3f.create(),
+            axisXB: Vec3f.create(),
+            axisYB: Vec3f.create(),
             space: 0,
             autoDetectPoint: false,
             constraintPriority: 0,
@@ -3096,26 +3523,26 @@ export const FixedConstraintSettings = {
         out.pointA[0] = mem.f32[(address + 0) >> 2]!;
         out.pointA[1] = mem.f32[(address + 4) >> 2]!;
         out.pointA[2] = mem.f32[(address + 8) >> 2]!;
-        out.axisXA[0] = mem.f32[(address + 12) >> 2]!;
-        out.axisXA[1] = mem.f32[(address + 16) >> 2]!;
-        out.axisXA[2] = mem.f32[(address + 20) >> 2]!;
-        out.axisYA[0] = mem.f32[(address + 24) >> 2]!;
-        out.axisYA[1] = mem.f32[(address + 28) >> 2]!;
-        out.axisYA[2] = mem.f32[(address + 32) >> 2]!;
-        out.pointB[0] = mem.f32[(address + 36) >> 2]!;
-        out.pointB[1] = mem.f32[(address + 40) >> 2]!;
-        out.pointB[2] = mem.f32[(address + 44) >> 2]!;
-        out.axisXB[0] = mem.f32[(address + 48) >> 2]!;
-        out.axisXB[1] = mem.f32[(address + 52) >> 2]!;
-        out.axisXB[2] = mem.f32[(address + 56) >> 2]!;
-        out.axisYB[0] = mem.f32[(address + 60) >> 2]!;
-        out.axisYB[1] = mem.f32[(address + 64) >> 2]!;
-        out.axisYB[2] = mem.f32[(address + 68) >> 2]!;
-        out.space = mem.u32[(address + 72) >> 2]!;
-        out.autoDetectPoint = mem.u8[address + 76]! !== 0;
-        out.constraintPriority = mem.u32[(address + 80) >> 2]!;
-        out.numVelocityStepsOverride = mem.u32[(address + 84) >> 2]!;
-        out.numPositionStepsOverride = mem.u32[(address + 88) >> 2]!;
+        out.axisXA[0] = mem.f32[(address + 16) >> 2]!;
+        out.axisXA[1] = mem.f32[(address + 20) >> 2]!;
+        out.axisXA[2] = mem.f32[(address + 24) >> 2]!;
+        out.axisYA[0] = mem.f32[(address + 32) >> 2]!;
+        out.axisYA[1] = mem.f32[(address + 36) >> 2]!;
+        out.axisYA[2] = mem.f32[(address + 40) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 48) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 52) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 56) >> 2]!;
+        out.axisXB[0] = mem.f32[(address + 64) >> 2]!;
+        out.axisXB[1] = mem.f32[(address + 68) >> 2]!;
+        out.axisXB[2] = mem.f32[(address + 72) >> 2]!;
+        out.axisYB[0] = mem.f32[(address + 80) >> 2]!;
+        out.axisYB[1] = mem.f32[(address + 84) >> 2]!;
+        out.axisYB[2] = mem.f32[(address + 88) >> 2]!;
+        out.space = mem.u32[(address + 96) >> 2]!;
+        out.autoDetectPoint = mem.u8[address + 100]! !== 0;
+        out.constraintPriority = mem.u32[(address + 104) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 108) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 112) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -3124,87 +3551,99 @@ export const FixedConstraintSettings = {
         mem.f32[(address + 0) >> 2] = value.pointA[0];
         mem.f32[(address + 4) >> 2] = value.pointA[1];
         mem.f32[(address + 8) >> 2] = value.pointA[2];
-        mem.f32[(address + 12) >> 2] = value.axisXA[0];
-        mem.f32[(address + 16) >> 2] = value.axisXA[1];
-        mem.f32[(address + 20) >> 2] = value.axisXA[2];
-        mem.f32[(address + 24) >> 2] = value.axisYA[0];
-        mem.f32[(address + 28) >> 2] = value.axisYA[1];
-        mem.f32[(address + 32) >> 2] = value.axisYA[2];
-        mem.f32[(address + 36) >> 2] = value.pointB[0];
-        mem.f32[(address + 40) >> 2] = value.pointB[1];
-        mem.f32[(address + 44) >> 2] = value.pointB[2];
-        mem.f32[(address + 48) >> 2] = value.axisXB[0];
-        mem.f32[(address + 52) >> 2] = value.axisXB[1];
-        mem.f32[(address + 56) >> 2] = value.axisXB[2];
-        mem.f32[(address + 60) >> 2] = value.axisYB[0];
-        mem.f32[(address + 64) >> 2] = value.axisYB[1];
-        mem.f32[(address + 68) >> 2] = value.axisYB[2];
-        mem.u32[(address + 72) >> 2] = value.space;
-        mem.u8[address + 76] = value.autoDetectPoint ? 1 : 0;
-        mem.u32[(address + 80) >> 2] = value.constraintPriority;
-        mem.u32[(address + 84) >> 2] = value.numVelocityStepsOverride;
-        mem.u32[(address + 88) >> 2] = value.numPositionStepsOverride;
+        mem.f32[(address + 12) >> 2] = value.pointA[2];
+        mem.f32[(address + 16) >> 2] = value.axisXA[0];
+        mem.f32[(address + 20) >> 2] = value.axisXA[1];
+        mem.f32[(address + 24) >> 2] = value.axisXA[2];
+        mem.f32[(address + 28) >> 2] = value.axisXA[2];
+        mem.f32[(address + 32) >> 2] = value.axisYA[0];
+        mem.f32[(address + 36) >> 2] = value.axisYA[1];
+        mem.f32[(address + 40) >> 2] = value.axisYA[2];
+        mem.f32[(address + 44) >> 2] = value.axisYA[2];
+        mem.f32[(address + 48) >> 2] = value.pointB[0];
+        mem.f32[(address + 52) >> 2] = value.pointB[1];
+        mem.f32[(address + 56) >> 2] = value.pointB[2];
+        mem.f32[(address + 60) >> 2] = value.pointB[2];
+        mem.f32[(address + 64) >> 2] = value.axisXB[0];
+        mem.f32[(address + 68) >> 2] = value.axisXB[1];
+        mem.f32[(address + 72) >> 2] = value.axisXB[2];
+        mem.f32[(address + 76) >> 2] = value.axisXB[2];
+        mem.f32[(address + 80) >> 2] = value.axisYB[0];
+        mem.f32[(address + 84) >> 2] = value.axisYB[1];
+        mem.f32[(address + 88) >> 2] = value.axisYB[2];
+        mem.f32[(address + 92) >> 2] = value.axisYB[2];
+        mem.u32[(address + 96) >> 2] = value.space;
+        mem.u8[address + 100] = value.autoDetectPoint ? 1 : 0;
+        mem.u32[(address + 104) >> 2] = value.constraintPriority;
+        mem.u32[(address + 108) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 112) >> 2] = value.numPositionStepsOverride;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: FixedConstraintSettings): void {
         view.setFloat32(offset + 0, value.pointA[0], true);
         view.setFloat32(offset + 4, value.pointA[1], true);
         view.setFloat32(offset + 8, value.pointA[2], true);
-        view.setFloat32(offset + 12, value.axisXA[0], true);
-        view.setFloat32(offset + 16, value.axisXA[1], true);
-        view.setFloat32(offset + 20, value.axisXA[2], true);
-        view.setFloat32(offset + 24, value.axisYA[0], true);
-        view.setFloat32(offset + 28, value.axisYA[1], true);
-        view.setFloat32(offset + 32, value.axisYA[2], true);
-        view.setFloat32(offset + 36, value.pointB[0], true);
-        view.setFloat32(offset + 40, value.pointB[1], true);
-        view.setFloat32(offset + 44, value.pointB[2], true);
-        view.setFloat32(offset + 48, value.axisXB[0], true);
-        view.setFloat32(offset + 52, value.axisXB[1], true);
-        view.setFloat32(offset + 56, value.axisXB[2], true);
-        view.setFloat32(offset + 60, value.axisYB[0], true);
-        view.setFloat32(offset + 64, value.axisYB[1], true);
-        view.setFloat32(offset + 68, value.axisYB[2], true);
-        view.setUint32(offset + 72, value.space, true);
-        view.setUint8(offset + 76, value.autoDetectPoint ? 1 : 0);
-        view.setUint32(offset + 80, value.constraintPriority, true);
-        view.setUint32(offset + 84, value.numVelocityStepsOverride, true);
-        view.setUint32(offset + 88, value.numPositionStepsOverride, true);
+        view.setFloat32(offset + 12, value.pointA[2], true);
+        view.setFloat32(offset + 16, value.axisXA[0], true);
+        view.setFloat32(offset + 20, value.axisXA[1], true);
+        view.setFloat32(offset + 24, value.axisXA[2], true);
+        view.setFloat32(offset + 28, value.axisXA[2], true);
+        view.setFloat32(offset + 32, value.axisYA[0], true);
+        view.setFloat32(offset + 36, value.axisYA[1], true);
+        view.setFloat32(offset + 40, value.axisYA[2], true);
+        view.setFloat32(offset + 44, value.axisYA[2], true);
+        view.setFloat32(offset + 48, value.pointB[0], true);
+        view.setFloat32(offset + 52, value.pointB[1], true);
+        view.setFloat32(offset + 56, value.pointB[2], true);
+        view.setFloat32(offset + 60, value.pointB[2], true);
+        view.setFloat32(offset + 64, value.axisXB[0], true);
+        view.setFloat32(offset + 68, value.axisXB[1], true);
+        view.setFloat32(offset + 72, value.axisXB[2], true);
+        view.setFloat32(offset + 76, value.axisXB[2], true);
+        view.setFloat32(offset + 80, value.axisYB[0], true);
+        view.setFloat32(offset + 84, value.axisYB[1], true);
+        view.setFloat32(offset + 88, value.axisYB[2], true);
+        view.setFloat32(offset + 92, value.axisYB[2], true);
+        view.setUint32(offset + 96, value.space, true);
+        view.setUint8(offset + 100, value.autoDetectPoint ? 1 : 0);
+        view.setUint32(offset + 104, value.constraintPriority, true);
+        view.setUint32(offset + 108, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 112, value.numPositionStepsOverride, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: FixedConstraintSettings, view: DataView, offset: number): FixedConstraintSettings {
         out.pointA[0] = view.getFloat32(offset + 0, true);
         out.pointA[1] = view.getFloat32(offset + 4, true);
         out.pointA[2] = view.getFloat32(offset + 8, true);
-        out.axisXA[0] = view.getFloat32(offset + 12, true);
-        out.axisXA[1] = view.getFloat32(offset + 16, true);
-        out.axisXA[2] = view.getFloat32(offset + 20, true);
-        out.axisYA[0] = view.getFloat32(offset + 24, true);
-        out.axisYA[1] = view.getFloat32(offset + 28, true);
-        out.axisYA[2] = view.getFloat32(offset + 32, true);
-        out.pointB[0] = view.getFloat32(offset + 36, true);
-        out.pointB[1] = view.getFloat32(offset + 40, true);
-        out.pointB[2] = view.getFloat32(offset + 44, true);
-        out.axisXB[0] = view.getFloat32(offset + 48, true);
-        out.axisXB[1] = view.getFloat32(offset + 52, true);
-        out.axisXB[2] = view.getFloat32(offset + 56, true);
-        out.axisYB[0] = view.getFloat32(offset + 60, true);
-        out.axisYB[1] = view.getFloat32(offset + 64, true);
-        out.axisYB[2] = view.getFloat32(offset + 68, true);
-        out.space = view.getUint32(offset + 72, true);
-        out.autoDetectPoint = view.getUint8(offset + 76) !== 0;
-        out.constraintPriority = view.getUint32(offset + 80, true);
-        out.numVelocityStepsOverride = view.getUint32(offset + 84, true);
-        out.numPositionStepsOverride = view.getUint32(offset + 88, true);
+        out.axisXA[0] = view.getFloat32(offset + 16, true);
+        out.axisXA[1] = view.getFloat32(offset + 20, true);
+        out.axisXA[2] = view.getFloat32(offset + 24, true);
+        out.axisYA[0] = view.getFloat32(offset + 32, true);
+        out.axisYA[1] = view.getFloat32(offset + 36, true);
+        out.axisYA[2] = view.getFloat32(offset + 40, true);
+        out.pointB[0] = view.getFloat32(offset + 48, true);
+        out.pointB[1] = view.getFloat32(offset + 52, true);
+        out.pointB[2] = view.getFloat32(offset + 56, true);
+        out.axisXB[0] = view.getFloat32(offset + 64, true);
+        out.axisXB[1] = view.getFloat32(offset + 68, true);
+        out.axisXB[2] = view.getFloat32(offset + 72, true);
+        out.axisYB[0] = view.getFloat32(offset + 80, true);
+        out.axisYB[1] = view.getFloat32(offset + 84, true);
+        out.axisYB[2] = view.getFloat32(offset + 88, true);
+        out.space = view.getUint32(offset + 96, true);
+        out.autoDetectPoint = view.getUint8(offset + 100) !== 0;
+        out.constraintPriority = view.getUint32(offset + 104, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 108, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 112, true);
         return out;
     },
 };
 
 export type ConeConstraintSettings = {
-    pointA: Vec3;
-    twistAxisA: Vec3;
-    pointB: Vec3;
-    twistAxisB: Vec3;
+    pointA: Vec3f;
+    twistAxisA: Vec3f;
+    pointB: Vec3f;
+    twistAxisB: Vec3f;
     halfConeAngle: number;
     space: number;
     constraintPriority: number;
@@ -3212,13 +3651,13 @@ export type ConeConstraintSettings = {
     numPositionStepsOverride: number;
 };
 export const ConeConstraintSettings = {
-    size: 68,
+    size: 96,
     create(): ConeConstraintSettings {
         return {
-            pointA: Vec3.create(),
-            twistAxisA: Vec3.create(),
-            pointB: Vec3.create(),
-            twistAxisB: Vec3.create(),
+            pointA: Vec3f.create(),
+            twistAxisA: Vec3f.create(),
+            pointB: Vec3f.create(),
+            twistAxisB: Vec3f.create(),
             halfConeAngle: 0,
             space: 0,
             constraintPriority: 0,
@@ -3232,20 +3671,20 @@ export const ConeConstraintSettings = {
         out.pointA[0] = mem.f32[(address + 0) >> 2]!;
         out.pointA[1] = mem.f32[(address + 4) >> 2]!;
         out.pointA[2] = mem.f32[(address + 8) >> 2]!;
-        out.twistAxisA[0] = mem.f32[(address + 12) >> 2]!;
-        out.twistAxisA[1] = mem.f32[(address + 16) >> 2]!;
-        out.twistAxisA[2] = mem.f32[(address + 20) >> 2]!;
-        out.pointB[0] = mem.f32[(address + 24) >> 2]!;
-        out.pointB[1] = mem.f32[(address + 28) >> 2]!;
-        out.pointB[2] = mem.f32[(address + 32) >> 2]!;
-        out.twistAxisB[0] = mem.f32[(address + 36) >> 2]!;
-        out.twistAxisB[1] = mem.f32[(address + 40) >> 2]!;
-        out.twistAxisB[2] = mem.f32[(address + 44) >> 2]!;
-        out.halfConeAngle = mem.f32[(address + 48) >> 2]!;
-        out.space = mem.u32[(address + 52) >> 2]!;
-        out.constraintPriority = mem.u32[(address + 56) >> 2]!;
-        out.numVelocityStepsOverride = mem.u32[(address + 60) >> 2]!;
-        out.numPositionStepsOverride = mem.u32[(address + 64) >> 2]!;
+        out.twistAxisA[0] = mem.f32[(address + 16) >> 2]!;
+        out.twistAxisA[1] = mem.f32[(address + 20) >> 2]!;
+        out.twistAxisA[2] = mem.f32[(address + 24) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 32) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 36) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 40) >> 2]!;
+        out.twistAxisB[0] = mem.f32[(address + 48) >> 2]!;
+        out.twistAxisB[1] = mem.f32[(address + 52) >> 2]!;
+        out.twistAxisB[2] = mem.f32[(address + 56) >> 2]!;
+        out.halfConeAngle = mem.f32[(address + 64) >> 2]!;
+        out.space = mem.u32[(address + 68) >> 2]!;
+        out.constraintPriority = mem.u32[(address + 72) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 76) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 80) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -3254,71 +3693,79 @@ export const ConeConstraintSettings = {
         mem.f32[(address + 0) >> 2] = value.pointA[0];
         mem.f32[(address + 4) >> 2] = value.pointA[1];
         mem.f32[(address + 8) >> 2] = value.pointA[2];
-        mem.f32[(address + 12) >> 2] = value.twistAxisA[0];
-        mem.f32[(address + 16) >> 2] = value.twistAxisA[1];
-        mem.f32[(address + 20) >> 2] = value.twistAxisA[2];
-        mem.f32[(address + 24) >> 2] = value.pointB[0];
-        mem.f32[(address + 28) >> 2] = value.pointB[1];
-        mem.f32[(address + 32) >> 2] = value.pointB[2];
-        mem.f32[(address + 36) >> 2] = value.twistAxisB[0];
-        mem.f32[(address + 40) >> 2] = value.twistAxisB[1];
-        mem.f32[(address + 44) >> 2] = value.twistAxisB[2];
-        mem.f32[(address + 48) >> 2] = value.halfConeAngle;
-        mem.u32[(address + 52) >> 2] = value.space;
-        mem.u32[(address + 56) >> 2] = value.constraintPriority;
-        mem.u32[(address + 60) >> 2] = value.numVelocityStepsOverride;
-        mem.u32[(address + 64) >> 2] = value.numPositionStepsOverride;
+        mem.f32[(address + 12) >> 2] = value.pointA[2];
+        mem.f32[(address + 16) >> 2] = value.twistAxisA[0];
+        mem.f32[(address + 20) >> 2] = value.twistAxisA[1];
+        mem.f32[(address + 24) >> 2] = value.twistAxisA[2];
+        mem.f32[(address + 28) >> 2] = value.twistAxisA[2];
+        mem.f32[(address + 32) >> 2] = value.pointB[0];
+        mem.f32[(address + 36) >> 2] = value.pointB[1];
+        mem.f32[(address + 40) >> 2] = value.pointB[2];
+        mem.f32[(address + 44) >> 2] = value.pointB[2];
+        mem.f32[(address + 48) >> 2] = value.twistAxisB[0];
+        mem.f32[(address + 52) >> 2] = value.twistAxisB[1];
+        mem.f32[(address + 56) >> 2] = value.twistAxisB[2];
+        mem.f32[(address + 60) >> 2] = value.twistAxisB[2];
+        mem.f32[(address + 64) >> 2] = value.halfConeAngle;
+        mem.u32[(address + 68) >> 2] = value.space;
+        mem.u32[(address + 72) >> 2] = value.constraintPriority;
+        mem.u32[(address + 76) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 80) >> 2] = value.numPositionStepsOverride;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: ConeConstraintSettings): void {
         view.setFloat32(offset + 0, value.pointA[0], true);
         view.setFloat32(offset + 4, value.pointA[1], true);
         view.setFloat32(offset + 8, value.pointA[2], true);
-        view.setFloat32(offset + 12, value.twistAxisA[0], true);
-        view.setFloat32(offset + 16, value.twistAxisA[1], true);
-        view.setFloat32(offset + 20, value.twistAxisA[2], true);
-        view.setFloat32(offset + 24, value.pointB[0], true);
-        view.setFloat32(offset + 28, value.pointB[1], true);
-        view.setFloat32(offset + 32, value.pointB[2], true);
-        view.setFloat32(offset + 36, value.twistAxisB[0], true);
-        view.setFloat32(offset + 40, value.twistAxisB[1], true);
-        view.setFloat32(offset + 44, value.twistAxisB[2], true);
-        view.setFloat32(offset + 48, value.halfConeAngle, true);
-        view.setUint32(offset + 52, value.space, true);
-        view.setUint32(offset + 56, value.constraintPriority, true);
-        view.setUint32(offset + 60, value.numVelocityStepsOverride, true);
-        view.setUint32(offset + 64, value.numPositionStepsOverride, true);
+        view.setFloat32(offset + 12, value.pointA[2], true);
+        view.setFloat32(offset + 16, value.twistAxisA[0], true);
+        view.setFloat32(offset + 20, value.twistAxisA[1], true);
+        view.setFloat32(offset + 24, value.twistAxisA[2], true);
+        view.setFloat32(offset + 28, value.twistAxisA[2], true);
+        view.setFloat32(offset + 32, value.pointB[0], true);
+        view.setFloat32(offset + 36, value.pointB[1], true);
+        view.setFloat32(offset + 40, value.pointB[2], true);
+        view.setFloat32(offset + 44, value.pointB[2], true);
+        view.setFloat32(offset + 48, value.twistAxisB[0], true);
+        view.setFloat32(offset + 52, value.twistAxisB[1], true);
+        view.setFloat32(offset + 56, value.twistAxisB[2], true);
+        view.setFloat32(offset + 60, value.twistAxisB[2], true);
+        view.setFloat32(offset + 64, value.halfConeAngle, true);
+        view.setUint32(offset + 68, value.space, true);
+        view.setUint32(offset + 72, value.constraintPriority, true);
+        view.setUint32(offset + 76, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 80, value.numPositionStepsOverride, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: ConeConstraintSettings, view: DataView, offset: number): ConeConstraintSettings {
         out.pointA[0] = view.getFloat32(offset + 0, true);
         out.pointA[1] = view.getFloat32(offset + 4, true);
         out.pointA[2] = view.getFloat32(offset + 8, true);
-        out.twistAxisA[0] = view.getFloat32(offset + 12, true);
-        out.twistAxisA[1] = view.getFloat32(offset + 16, true);
-        out.twistAxisA[2] = view.getFloat32(offset + 20, true);
-        out.pointB[0] = view.getFloat32(offset + 24, true);
-        out.pointB[1] = view.getFloat32(offset + 28, true);
-        out.pointB[2] = view.getFloat32(offset + 32, true);
-        out.twistAxisB[0] = view.getFloat32(offset + 36, true);
-        out.twistAxisB[1] = view.getFloat32(offset + 40, true);
-        out.twistAxisB[2] = view.getFloat32(offset + 44, true);
-        out.halfConeAngle = view.getFloat32(offset + 48, true);
-        out.space = view.getUint32(offset + 52, true);
-        out.constraintPriority = view.getUint32(offset + 56, true);
-        out.numVelocityStepsOverride = view.getUint32(offset + 60, true);
-        out.numPositionStepsOverride = view.getUint32(offset + 64, true);
+        out.twistAxisA[0] = view.getFloat32(offset + 16, true);
+        out.twistAxisA[1] = view.getFloat32(offset + 20, true);
+        out.twistAxisA[2] = view.getFloat32(offset + 24, true);
+        out.pointB[0] = view.getFloat32(offset + 32, true);
+        out.pointB[1] = view.getFloat32(offset + 36, true);
+        out.pointB[2] = view.getFloat32(offset + 40, true);
+        out.twistAxisB[0] = view.getFloat32(offset + 48, true);
+        out.twistAxisB[1] = view.getFloat32(offset + 52, true);
+        out.twistAxisB[2] = view.getFloat32(offset + 56, true);
+        out.halfConeAngle = view.getFloat32(offset + 64, true);
+        out.space = view.getUint32(offset + 68, true);
+        out.constraintPriority = view.getUint32(offset + 72, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 76, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 80, true);
         return out;
     },
 };
 
 export type SwingTwistConstraintSettings = {
-    pointA: Vec3;
-    pointB: Vec3;
-    twistAxisA: Vec3;
-    planeAxisA: Vec3;
-    twistAxisB: Vec3;
-    planeAxisB: Vec3;
+    pointA: Vec3f;
+    pointB: Vec3f;
+    twistAxisA: Vec3f;
+    planeAxisA: Vec3f;
+    twistAxisB: Vec3f;
+    planeAxisB: Vec3f;
     space: number;
     swingType: number;
     normalHalfConeAngle: number;
@@ -3333,15 +3780,15 @@ export type SwingTwistConstraintSettings = {
     numPositionStepsOverride: number;
 };
 export const SwingTwistConstraintSettings = {
-    size: 168,
+    size: 192,
     create(): SwingTwistConstraintSettings {
         return {
-            pointA: Vec3.create(),
-            pointB: Vec3.create(),
-            twistAxisA: Vec3.create(),
-            planeAxisA: Vec3.create(),
-            twistAxisB: Vec3.create(),
-            planeAxisB: Vec3.create(),
+            pointA: Vec3f.create(),
+            pointB: Vec3f.create(),
+            twistAxisA: Vec3f.create(),
+            planeAxisA: Vec3f.create(),
+            twistAxisB: Vec3f.create(),
+            planeAxisB: Vec3f.create(),
             space: 0,
             swingType: 0,
             normalHalfConeAngle: 0,
@@ -3362,45 +3809,45 @@ export const SwingTwistConstraintSettings = {
         out.pointA[0] = mem.f32[(address + 0) >> 2]!;
         out.pointA[1] = mem.f32[(address + 4) >> 2]!;
         out.pointA[2] = mem.f32[(address + 8) >> 2]!;
-        out.pointB[0] = mem.f32[(address + 12) >> 2]!;
-        out.pointB[1] = mem.f32[(address + 16) >> 2]!;
-        out.pointB[2] = mem.f32[(address + 20) >> 2]!;
-        out.twistAxisA[0] = mem.f32[(address + 24) >> 2]!;
-        out.twistAxisA[1] = mem.f32[(address + 28) >> 2]!;
-        out.twistAxisA[2] = mem.f32[(address + 32) >> 2]!;
-        out.planeAxisA[0] = mem.f32[(address + 36) >> 2]!;
-        out.planeAxisA[1] = mem.f32[(address + 40) >> 2]!;
-        out.planeAxisA[2] = mem.f32[(address + 44) >> 2]!;
-        out.twistAxisB[0] = mem.f32[(address + 48) >> 2]!;
-        out.twistAxisB[1] = mem.f32[(address + 52) >> 2]!;
-        out.twistAxisB[2] = mem.f32[(address + 56) >> 2]!;
-        out.planeAxisB[0] = mem.f32[(address + 60) >> 2]!;
-        out.planeAxisB[1] = mem.f32[(address + 64) >> 2]!;
-        out.planeAxisB[2] = mem.f32[(address + 68) >> 2]!;
-        out.space = mem.u32[(address + 72) >> 2]!;
-        out.swingType = mem.u32[(address + 76) >> 2]!;
-        out.normalHalfConeAngle = mem.f32[(address + 80) >> 2]!;
-        out.planeHalfConeAngle = mem.f32[(address + 84) >> 2]!;
-        out.twistMinAngle = mem.f32[(address + 88) >> 2]!;
-        out.twistMaxAngle = mem.f32[(address + 92) >> 2]!;
-        out.maxFrictionTorque = mem.f32[(address + 96) >> 2]!;
-        out.swingMotorSettings.spring.mode = mem.u32[(address + 100) >> 2]!;
-        out.swingMotorSettings.spring.frequencyOrStiffness = mem.f32[(address + 104) >> 2]!;
-        out.swingMotorSettings.spring.damping = mem.f32[(address + 108) >> 2]!;
-        out.swingMotorSettings.minForceLimit = mem.f32[(address + 112) >> 2]!;
-        out.swingMotorSettings.maxForceLimit = mem.f32[(address + 116) >> 2]!;
-        out.swingMotorSettings.minTorqueLimit = mem.f32[(address + 120) >> 2]!;
-        out.swingMotorSettings.maxTorqueLimit = mem.f32[(address + 124) >> 2]!;
-        out.twistMotorSettings.spring.mode = mem.u32[(address + 128) >> 2]!;
-        out.twistMotorSettings.spring.frequencyOrStiffness = mem.f32[(address + 132) >> 2]!;
-        out.twistMotorSettings.spring.damping = mem.f32[(address + 136) >> 2]!;
-        out.twistMotorSettings.minForceLimit = mem.f32[(address + 140) >> 2]!;
-        out.twistMotorSettings.maxForceLimit = mem.f32[(address + 144) >> 2]!;
-        out.twistMotorSettings.minTorqueLimit = mem.f32[(address + 148) >> 2]!;
-        out.twistMotorSettings.maxTorqueLimit = mem.f32[(address + 152) >> 2]!;
-        out.constraintPriority = mem.u32[(address + 156) >> 2]!;
-        out.numVelocityStepsOverride = mem.u32[(address + 160) >> 2]!;
-        out.numPositionStepsOverride = mem.u32[(address + 164) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 16) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 20) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 24) >> 2]!;
+        out.twistAxisA[0] = mem.f32[(address + 32) >> 2]!;
+        out.twistAxisA[1] = mem.f32[(address + 36) >> 2]!;
+        out.twistAxisA[2] = mem.f32[(address + 40) >> 2]!;
+        out.planeAxisA[0] = mem.f32[(address + 48) >> 2]!;
+        out.planeAxisA[1] = mem.f32[(address + 52) >> 2]!;
+        out.planeAxisA[2] = mem.f32[(address + 56) >> 2]!;
+        out.twistAxisB[0] = mem.f32[(address + 64) >> 2]!;
+        out.twistAxisB[1] = mem.f32[(address + 68) >> 2]!;
+        out.twistAxisB[2] = mem.f32[(address + 72) >> 2]!;
+        out.planeAxisB[0] = mem.f32[(address + 80) >> 2]!;
+        out.planeAxisB[1] = mem.f32[(address + 84) >> 2]!;
+        out.planeAxisB[2] = mem.f32[(address + 88) >> 2]!;
+        out.space = mem.u32[(address + 96) >> 2]!;
+        out.swingType = mem.u32[(address + 100) >> 2]!;
+        out.normalHalfConeAngle = mem.f32[(address + 104) >> 2]!;
+        out.planeHalfConeAngle = mem.f32[(address + 108) >> 2]!;
+        out.twistMinAngle = mem.f32[(address + 112) >> 2]!;
+        out.twistMaxAngle = mem.f32[(address + 116) >> 2]!;
+        out.maxFrictionTorque = mem.f32[(address + 120) >> 2]!;
+        out.swingMotorSettings.spring.mode = mem.u32[(address + 124) >> 2]!;
+        out.swingMotorSettings.spring.frequencyOrStiffness = mem.f32[(address + 128) >> 2]!;
+        out.swingMotorSettings.spring.damping = mem.f32[(address + 132) >> 2]!;
+        out.swingMotorSettings.minForceLimit = mem.f32[(address + 136) >> 2]!;
+        out.swingMotorSettings.maxForceLimit = mem.f32[(address + 140) >> 2]!;
+        out.swingMotorSettings.minTorqueLimit = mem.f32[(address + 144) >> 2]!;
+        out.swingMotorSettings.maxTorqueLimit = mem.f32[(address + 148) >> 2]!;
+        out.twistMotorSettings.spring.mode = mem.u32[(address + 152) >> 2]!;
+        out.twistMotorSettings.spring.frequencyOrStiffness = mem.f32[(address + 156) >> 2]!;
+        out.twistMotorSettings.spring.damping = mem.f32[(address + 160) >> 2]!;
+        out.twistMotorSettings.minForceLimit = mem.f32[(address + 164) >> 2]!;
+        out.twistMotorSettings.maxForceLimit = mem.f32[(address + 168) >> 2]!;
+        out.twistMotorSettings.minTorqueLimit = mem.f32[(address + 172) >> 2]!;
+        out.twistMotorSettings.maxTorqueLimit = mem.f32[(address + 176) >> 2]!;
+        out.constraintPriority = mem.u32[(address + 180) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 184) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 188) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -3409,146 +3856,158 @@ export const SwingTwistConstraintSettings = {
         mem.f32[(address + 0) >> 2] = value.pointA[0];
         mem.f32[(address + 4) >> 2] = value.pointA[1];
         mem.f32[(address + 8) >> 2] = value.pointA[2];
-        mem.f32[(address + 12) >> 2] = value.pointB[0];
-        mem.f32[(address + 16) >> 2] = value.pointB[1];
-        mem.f32[(address + 20) >> 2] = value.pointB[2];
-        mem.f32[(address + 24) >> 2] = value.twistAxisA[0];
-        mem.f32[(address + 28) >> 2] = value.twistAxisA[1];
-        mem.f32[(address + 32) >> 2] = value.twistAxisA[2];
-        mem.f32[(address + 36) >> 2] = value.planeAxisA[0];
-        mem.f32[(address + 40) >> 2] = value.planeAxisA[1];
-        mem.f32[(address + 44) >> 2] = value.planeAxisA[2];
-        mem.f32[(address + 48) >> 2] = value.twistAxisB[0];
-        mem.f32[(address + 52) >> 2] = value.twistAxisB[1];
-        mem.f32[(address + 56) >> 2] = value.twistAxisB[2];
-        mem.f32[(address + 60) >> 2] = value.planeAxisB[0];
-        mem.f32[(address + 64) >> 2] = value.planeAxisB[1];
-        mem.f32[(address + 68) >> 2] = value.planeAxisB[2];
-        mem.u32[(address + 72) >> 2] = value.space;
-        mem.u32[(address + 76) >> 2] = value.swingType;
-        mem.f32[(address + 80) >> 2] = value.normalHalfConeAngle;
-        mem.f32[(address + 84) >> 2] = value.planeHalfConeAngle;
-        mem.f32[(address + 88) >> 2] = value.twistMinAngle;
-        mem.f32[(address + 92) >> 2] = value.twistMaxAngle;
-        mem.f32[(address + 96) >> 2] = value.maxFrictionTorque;
-        mem.u32[(address + 100) >> 2] = value.swingMotorSettings.spring.mode;
-        mem.f32[(address + 104) >> 2] = value.swingMotorSettings.spring.frequencyOrStiffness;
-        mem.f32[(address + 108) >> 2] = value.swingMotorSettings.spring.damping;
-        mem.f32[(address + 112) >> 2] = value.swingMotorSettings.minForceLimit;
-        mem.f32[(address + 116) >> 2] = value.swingMotorSettings.maxForceLimit;
-        mem.f32[(address + 120) >> 2] = value.swingMotorSettings.minTorqueLimit;
-        mem.f32[(address + 124) >> 2] = value.swingMotorSettings.maxTorqueLimit;
-        mem.u32[(address + 128) >> 2] = value.twistMotorSettings.spring.mode;
-        mem.f32[(address + 132) >> 2] = value.twistMotorSettings.spring.frequencyOrStiffness;
-        mem.f32[(address + 136) >> 2] = value.twistMotorSettings.spring.damping;
-        mem.f32[(address + 140) >> 2] = value.twistMotorSettings.minForceLimit;
-        mem.f32[(address + 144) >> 2] = value.twistMotorSettings.maxForceLimit;
-        mem.f32[(address + 148) >> 2] = value.twistMotorSettings.minTorqueLimit;
-        mem.f32[(address + 152) >> 2] = value.twistMotorSettings.maxTorqueLimit;
-        mem.u32[(address + 156) >> 2] = value.constraintPriority;
-        mem.u32[(address + 160) >> 2] = value.numVelocityStepsOverride;
-        mem.u32[(address + 164) >> 2] = value.numPositionStepsOverride;
+        mem.f32[(address + 12) >> 2] = value.pointA[2];
+        mem.f32[(address + 16) >> 2] = value.pointB[0];
+        mem.f32[(address + 20) >> 2] = value.pointB[1];
+        mem.f32[(address + 24) >> 2] = value.pointB[2];
+        mem.f32[(address + 28) >> 2] = value.pointB[2];
+        mem.f32[(address + 32) >> 2] = value.twistAxisA[0];
+        mem.f32[(address + 36) >> 2] = value.twistAxisA[1];
+        mem.f32[(address + 40) >> 2] = value.twistAxisA[2];
+        mem.f32[(address + 44) >> 2] = value.twistAxisA[2];
+        mem.f32[(address + 48) >> 2] = value.planeAxisA[0];
+        mem.f32[(address + 52) >> 2] = value.planeAxisA[1];
+        mem.f32[(address + 56) >> 2] = value.planeAxisA[2];
+        mem.f32[(address + 60) >> 2] = value.planeAxisA[2];
+        mem.f32[(address + 64) >> 2] = value.twistAxisB[0];
+        mem.f32[(address + 68) >> 2] = value.twistAxisB[1];
+        mem.f32[(address + 72) >> 2] = value.twistAxisB[2];
+        mem.f32[(address + 76) >> 2] = value.twistAxisB[2];
+        mem.f32[(address + 80) >> 2] = value.planeAxisB[0];
+        mem.f32[(address + 84) >> 2] = value.planeAxisB[1];
+        mem.f32[(address + 88) >> 2] = value.planeAxisB[2];
+        mem.f32[(address + 92) >> 2] = value.planeAxisB[2];
+        mem.u32[(address + 96) >> 2] = value.space;
+        mem.u32[(address + 100) >> 2] = value.swingType;
+        mem.f32[(address + 104) >> 2] = value.normalHalfConeAngle;
+        mem.f32[(address + 108) >> 2] = value.planeHalfConeAngle;
+        mem.f32[(address + 112) >> 2] = value.twistMinAngle;
+        mem.f32[(address + 116) >> 2] = value.twistMaxAngle;
+        mem.f32[(address + 120) >> 2] = value.maxFrictionTorque;
+        mem.u32[(address + 124) >> 2] = value.swingMotorSettings.spring.mode;
+        mem.f32[(address + 128) >> 2] = value.swingMotorSettings.spring.frequencyOrStiffness;
+        mem.f32[(address + 132) >> 2] = value.swingMotorSettings.spring.damping;
+        mem.f32[(address + 136) >> 2] = value.swingMotorSettings.minForceLimit;
+        mem.f32[(address + 140) >> 2] = value.swingMotorSettings.maxForceLimit;
+        mem.f32[(address + 144) >> 2] = value.swingMotorSettings.minTorqueLimit;
+        mem.f32[(address + 148) >> 2] = value.swingMotorSettings.maxTorqueLimit;
+        mem.u32[(address + 152) >> 2] = value.twistMotorSettings.spring.mode;
+        mem.f32[(address + 156) >> 2] = value.twistMotorSettings.spring.frequencyOrStiffness;
+        mem.f32[(address + 160) >> 2] = value.twistMotorSettings.spring.damping;
+        mem.f32[(address + 164) >> 2] = value.twistMotorSettings.minForceLimit;
+        mem.f32[(address + 168) >> 2] = value.twistMotorSettings.maxForceLimit;
+        mem.f32[(address + 172) >> 2] = value.twistMotorSettings.minTorqueLimit;
+        mem.f32[(address + 176) >> 2] = value.twistMotorSettings.maxTorqueLimit;
+        mem.u32[(address + 180) >> 2] = value.constraintPriority;
+        mem.u32[(address + 184) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 188) >> 2] = value.numPositionStepsOverride;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: SwingTwistConstraintSettings): void {
         view.setFloat32(offset + 0, value.pointA[0], true);
         view.setFloat32(offset + 4, value.pointA[1], true);
         view.setFloat32(offset + 8, value.pointA[2], true);
-        view.setFloat32(offset + 12, value.pointB[0], true);
-        view.setFloat32(offset + 16, value.pointB[1], true);
-        view.setFloat32(offset + 20, value.pointB[2], true);
-        view.setFloat32(offset + 24, value.twistAxisA[0], true);
-        view.setFloat32(offset + 28, value.twistAxisA[1], true);
-        view.setFloat32(offset + 32, value.twistAxisA[2], true);
-        view.setFloat32(offset + 36, value.planeAxisA[0], true);
-        view.setFloat32(offset + 40, value.planeAxisA[1], true);
-        view.setFloat32(offset + 44, value.planeAxisA[2], true);
-        view.setFloat32(offset + 48, value.twistAxisB[0], true);
-        view.setFloat32(offset + 52, value.twistAxisB[1], true);
-        view.setFloat32(offset + 56, value.twistAxisB[2], true);
-        view.setFloat32(offset + 60, value.planeAxisB[0], true);
-        view.setFloat32(offset + 64, value.planeAxisB[1], true);
-        view.setFloat32(offset + 68, value.planeAxisB[2], true);
-        view.setUint32(offset + 72, value.space, true);
-        view.setUint32(offset + 76, value.swingType, true);
-        view.setFloat32(offset + 80, value.normalHalfConeAngle, true);
-        view.setFloat32(offset + 84, value.planeHalfConeAngle, true);
-        view.setFloat32(offset + 88, value.twistMinAngle, true);
-        view.setFloat32(offset + 92, value.twistMaxAngle, true);
-        view.setFloat32(offset + 96, value.maxFrictionTorque, true);
-        view.setUint32(offset + 100, value.swingMotorSettings.spring.mode, true);
-        view.setFloat32(offset + 104, value.swingMotorSettings.spring.frequencyOrStiffness, true);
-        view.setFloat32(offset + 108, value.swingMotorSettings.spring.damping, true);
-        view.setFloat32(offset + 112, value.swingMotorSettings.minForceLimit, true);
-        view.setFloat32(offset + 116, value.swingMotorSettings.maxForceLimit, true);
-        view.setFloat32(offset + 120, value.swingMotorSettings.minTorqueLimit, true);
-        view.setFloat32(offset + 124, value.swingMotorSettings.maxTorqueLimit, true);
-        view.setUint32(offset + 128, value.twistMotorSettings.spring.mode, true);
-        view.setFloat32(offset + 132, value.twistMotorSettings.spring.frequencyOrStiffness, true);
-        view.setFloat32(offset + 136, value.twistMotorSettings.spring.damping, true);
-        view.setFloat32(offset + 140, value.twistMotorSettings.minForceLimit, true);
-        view.setFloat32(offset + 144, value.twistMotorSettings.maxForceLimit, true);
-        view.setFloat32(offset + 148, value.twistMotorSettings.minTorqueLimit, true);
-        view.setFloat32(offset + 152, value.twistMotorSettings.maxTorqueLimit, true);
-        view.setUint32(offset + 156, value.constraintPriority, true);
-        view.setUint32(offset + 160, value.numVelocityStepsOverride, true);
-        view.setUint32(offset + 164, value.numPositionStepsOverride, true);
+        view.setFloat32(offset + 12, value.pointA[2], true);
+        view.setFloat32(offset + 16, value.pointB[0], true);
+        view.setFloat32(offset + 20, value.pointB[1], true);
+        view.setFloat32(offset + 24, value.pointB[2], true);
+        view.setFloat32(offset + 28, value.pointB[2], true);
+        view.setFloat32(offset + 32, value.twistAxisA[0], true);
+        view.setFloat32(offset + 36, value.twistAxisA[1], true);
+        view.setFloat32(offset + 40, value.twistAxisA[2], true);
+        view.setFloat32(offset + 44, value.twistAxisA[2], true);
+        view.setFloat32(offset + 48, value.planeAxisA[0], true);
+        view.setFloat32(offset + 52, value.planeAxisA[1], true);
+        view.setFloat32(offset + 56, value.planeAxisA[2], true);
+        view.setFloat32(offset + 60, value.planeAxisA[2], true);
+        view.setFloat32(offset + 64, value.twistAxisB[0], true);
+        view.setFloat32(offset + 68, value.twistAxisB[1], true);
+        view.setFloat32(offset + 72, value.twistAxisB[2], true);
+        view.setFloat32(offset + 76, value.twistAxisB[2], true);
+        view.setFloat32(offset + 80, value.planeAxisB[0], true);
+        view.setFloat32(offset + 84, value.planeAxisB[1], true);
+        view.setFloat32(offset + 88, value.planeAxisB[2], true);
+        view.setFloat32(offset + 92, value.planeAxisB[2], true);
+        view.setUint32(offset + 96, value.space, true);
+        view.setUint32(offset + 100, value.swingType, true);
+        view.setFloat32(offset + 104, value.normalHalfConeAngle, true);
+        view.setFloat32(offset + 108, value.planeHalfConeAngle, true);
+        view.setFloat32(offset + 112, value.twistMinAngle, true);
+        view.setFloat32(offset + 116, value.twistMaxAngle, true);
+        view.setFloat32(offset + 120, value.maxFrictionTorque, true);
+        view.setUint32(offset + 124, value.swingMotorSettings.spring.mode, true);
+        view.setFloat32(offset + 128, value.swingMotorSettings.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 132, value.swingMotorSettings.spring.damping, true);
+        view.setFloat32(offset + 136, value.swingMotorSettings.minForceLimit, true);
+        view.setFloat32(offset + 140, value.swingMotorSettings.maxForceLimit, true);
+        view.setFloat32(offset + 144, value.swingMotorSettings.minTorqueLimit, true);
+        view.setFloat32(offset + 148, value.swingMotorSettings.maxTorqueLimit, true);
+        view.setUint32(offset + 152, value.twistMotorSettings.spring.mode, true);
+        view.setFloat32(offset + 156, value.twistMotorSettings.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 160, value.twistMotorSettings.spring.damping, true);
+        view.setFloat32(offset + 164, value.twistMotorSettings.minForceLimit, true);
+        view.setFloat32(offset + 168, value.twistMotorSettings.maxForceLimit, true);
+        view.setFloat32(offset + 172, value.twistMotorSettings.minTorqueLimit, true);
+        view.setFloat32(offset + 176, value.twistMotorSettings.maxTorqueLimit, true);
+        view.setUint32(offset + 180, value.constraintPriority, true);
+        view.setUint32(offset + 184, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 188, value.numPositionStepsOverride, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: SwingTwistConstraintSettings, view: DataView, offset: number): SwingTwistConstraintSettings {
         out.pointA[0] = view.getFloat32(offset + 0, true);
         out.pointA[1] = view.getFloat32(offset + 4, true);
         out.pointA[2] = view.getFloat32(offset + 8, true);
-        out.pointB[0] = view.getFloat32(offset + 12, true);
-        out.pointB[1] = view.getFloat32(offset + 16, true);
-        out.pointB[2] = view.getFloat32(offset + 20, true);
-        out.twistAxisA[0] = view.getFloat32(offset + 24, true);
-        out.twistAxisA[1] = view.getFloat32(offset + 28, true);
-        out.twistAxisA[2] = view.getFloat32(offset + 32, true);
-        out.planeAxisA[0] = view.getFloat32(offset + 36, true);
-        out.planeAxisA[1] = view.getFloat32(offset + 40, true);
-        out.planeAxisA[2] = view.getFloat32(offset + 44, true);
-        out.twistAxisB[0] = view.getFloat32(offset + 48, true);
-        out.twistAxisB[1] = view.getFloat32(offset + 52, true);
-        out.twistAxisB[2] = view.getFloat32(offset + 56, true);
-        out.planeAxisB[0] = view.getFloat32(offset + 60, true);
-        out.planeAxisB[1] = view.getFloat32(offset + 64, true);
-        out.planeAxisB[2] = view.getFloat32(offset + 68, true);
-        out.space = view.getUint32(offset + 72, true);
-        out.swingType = view.getUint32(offset + 76, true);
-        out.normalHalfConeAngle = view.getFloat32(offset + 80, true);
-        out.planeHalfConeAngle = view.getFloat32(offset + 84, true);
-        out.twistMinAngle = view.getFloat32(offset + 88, true);
-        out.twistMaxAngle = view.getFloat32(offset + 92, true);
-        out.maxFrictionTorque = view.getFloat32(offset + 96, true);
-        out.swingMotorSettings.spring.mode = view.getUint32(offset + 100, true);
-        out.swingMotorSettings.spring.frequencyOrStiffness = view.getFloat32(offset + 104, true);
-        out.swingMotorSettings.spring.damping = view.getFloat32(offset + 108, true);
-        out.swingMotorSettings.minForceLimit = view.getFloat32(offset + 112, true);
-        out.swingMotorSettings.maxForceLimit = view.getFloat32(offset + 116, true);
-        out.swingMotorSettings.minTorqueLimit = view.getFloat32(offset + 120, true);
-        out.swingMotorSettings.maxTorqueLimit = view.getFloat32(offset + 124, true);
-        out.twistMotorSettings.spring.mode = view.getUint32(offset + 128, true);
-        out.twistMotorSettings.spring.frequencyOrStiffness = view.getFloat32(offset + 132, true);
-        out.twistMotorSettings.spring.damping = view.getFloat32(offset + 136, true);
-        out.twistMotorSettings.minForceLimit = view.getFloat32(offset + 140, true);
-        out.twistMotorSettings.maxForceLimit = view.getFloat32(offset + 144, true);
-        out.twistMotorSettings.minTorqueLimit = view.getFloat32(offset + 148, true);
-        out.twistMotorSettings.maxTorqueLimit = view.getFloat32(offset + 152, true);
-        out.constraintPriority = view.getUint32(offset + 156, true);
-        out.numVelocityStepsOverride = view.getUint32(offset + 160, true);
-        out.numPositionStepsOverride = view.getUint32(offset + 164, true);
+        out.pointB[0] = view.getFloat32(offset + 16, true);
+        out.pointB[1] = view.getFloat32(offset + 20, true);
+        out.pointB[2] = view.getFloat32(offset + 24, true);
+        out.twistAxisA[0] = view.getFloat32(offset + 32, true);
+        out.twistAxisA[1] = view.getFloat32(offset + 36, true);
+        out.twistAxisA[2] = view.getFloat32(offset + 40, true);
+        out.planeAxisA[0] = view.getFloat32(offset + 48, true);
+        out.planeAxisA[1] = view.getFloat32(offset + 52, true);
+        out.planeAxisA[2] = view.getFloat32(offset + 56, true);
+        out.twistAxisB[0] = view.getFloat32(offset + 64, true);
+        out.twistAxisB[1] = view.getFloat32(offset + 68, true);
+        out.twistAxisB[2] = view.getFloat32(offset + 72, true);
+        out.planeAxisB[0] = view.getFloat32(offset + 80, true);
+        out.planeAxisB[1] = view.getFloat32(offset + 84, true);
+        out.planeAxisB[2] = view.getFloat32(offset + 88, true);
+        out.space = view.getUint32(offset + 96, true);
+        out.swingType = view.getUint32(offset + 100, true);
+        out.normalHalfConeAngle = view.getFloat32(offset + 104, true);
+        out.planeHalfConeAngle = view.getFloat32(offset + 108, true);
+        out.twistMinAngle = view.getFloat32(offset + 112, true);
+        out.twistMaxAngle = view.getFloat32(offset + 116, true);
+        out.maxFrictionTorque = view.getFloat32(offset + 120, true);
+        out.swingMotorSettings.spring.mode = view.getUint32(offset + 124, true);
+        out.swingMotorSettings.spring.frequencyOrStiffness = view.getFloat32(offset + 128, true);
+        out.swingMotorSettings.spring.damping = view.getFloat32(offset + 132, true);
+        out.swingMotorSettings.minForceLimit = view.getFloat32(offset + 136, true);
+        out.swingMotorSettings.maxForceLimit = view.getFloat32(offset + 140, true);
+        out.swingMotorSettings.minTorqueLimit = view.getFloat32(offset + 144, true);
+        out.swingMotorSettings.maxTorqueLimit = view.getFloat32(offset + 148, true);
+        out.twistMotorSettings.spring.mode = view.getUint32(offset + 152, true);
+        out.twistMotorSettings.spring.frequencyOrStiffness = view.getFloat32(offset + 156, true);
+        out.twistMotorSettings.spring.damping = view.getFloat32(offset + 160, true);
+        out.twistMotorSettings.minForceLimit = view.getFloat32(offset + 164, true);
+        out.twistMotorSettings.maxForceLimit = view.getFloat32(offset + 168, true);
+        out.twistMotorSettings.minTorqueLimit = view.getFloat32(offset + 172, true);
+        out.twistMotorSettings.maxTorqueLimit = view.getFloat32(offset + 176, true);
+        out.constraintPriority = view.getUint32(offset + 180, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 184, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 188, true);
         return out;
     },
 };
 
 export type SixDOFConstraintSettings = {
-    pointA: Vec3;
-    pointB: Vec3;
-    axisXA: Vec3;
-    axisYA: Vec3;
-    axisXB: Vec3;
-    axisYB: Vec3;
+    pointA: Vec3f;
+    pointB: Vec3f;
+    axisXA: Vec3f;
+    axisYA: Vec3f;
+    axisXB: Vec3f;
+    axisYB: Vec3f;
     space: number;
     swingType: number;
     limitMin: number[];
@@ -3561,15 +4020,15 @@ export type SixDOFConstraintSettings = {
     numPositionStepsOverride: number;
 };
 export const SixDOFConstraintSettings = {
-    size: 368,
+    size: 400,
     create(): SixDOFConstraintSettings {
         return {
-            pointA: Vec3.create(),
-            pointB: Vec3.create(),
-            axisXA: Vec3.create(),
-            axisYA: Vec3.create(),
-            axisXB: Vec3.create(),
-            axisYB: Vec3.create(),
+            pointA: Vec3f.create(),
+            pointB: Vec3f.create(),
+            axisXA: Vec3f.create(),
+            axisYA: Vec3f.create(),
+            axisXB: Vec3f.create(),
+            axisYB: Vec3f.create(),
             space: 0,
             swingType: 0,
             limitMin: [0, 0, 0, 0, 0, 0],
@@ -3588,95 +4047,95 @@ export const SixDOFConstraintSettings = {
         out.pointA[0] = mem.f32[(address + 0) >> 2]!;
         out.pointA[1] = mem.f32[(address + 4) >> 2]!;
         out.pointA[2] = mem.f32[(address + 8) >> 2]!;
-        out.pointB[0] = mem.f32[(address + 12) >> 2]!;
-        out.pointB[1] = mem.f32[(address + 16) >> 2]!;
-        out.pointB[2] = mem.f32[(address + 20) >> 2]!;
-        out.axisXA[0] = mem.f32[(address + 24) >> 2]!;
-        out.axisXA[1] = mem.f32[(address + 28) >> 2]!;
-        out.axisXA[2] = mem.f32[(address + 32) >> 2]!;
-        out.axisYA[0] = mem.f32[(address + 36) >> 2]!;
-        out.axisYA[1] = mem.f32[(address + 40) >> 2]!;
-        out.axisYA[2] = mem.f32[(address + 44) >> 2]!;
-        out.axisXB[0] = mem.f32[(address + 48) >> 2]!;
-        out.axisXB[1] = mem.f32[(address + 52) >> 2]!;
-        out.axisXB[2] = mem.f32[(address + 56) >> 2]!;
-        out.axisYB[0] = mem.f32[(address + 60) >> 2]!;
-        out.axisYB[1] = mem.f32[(address + 64) >> 2]!;
-        out.axisYB[2] = mem.f32[(address + 68) >> 2]!;
-        out.space = mem.u32[(address + 72) >> 2]!;
-        out.swingType = mem.u32[(address + 76) >> 2]!;
-        out.limitMin[0]! = mem.f32[(address + 80) >> 2]!;
-        out.limitMin[1]! = mem.f32[(address + 84) >> 2]!;
-        out.limitMin[2]! = mem.f32[(address + 88) >> 2]!;
-        out.limitMin[3]! = mem.f32[(address + 92) >> 2]!;
-        out.limitMin[4]! = mem.f32[(address + 96) >> 2]!;
-        out.limitMin[5]! = mem.f32[(address + 100) >> 2]!;
-        out.limitMax[0]! = mem.f32[(address + 104) >> 2]!;
-        out.limitMax[1]! = mem.f32[(address + 108) >> 2]!;
-        out.limitMax[2]! = mem.f32[(address + 112) >> 2]!;
-        out.limitMax[3]! = mem.f32[(address + 116) >> 2]!;
-        out.limitMax[4]! = mem.f32[(address + 120) >> 2]!;
-        out.limitMax[5]! = mem.f32[(address + 124) >> 2]!;
-        out.maxFriction[0]! = mem.f32[(address + 128) >> 2]!;
-        out.maxFriction[1]! = mem.f32[(address + 132) >> 2]!;
-        out.maxFriction[2]! = mem.f32[(address + 136) >> 2]!;
-        out.maxFriction[3]! = mem.f32[(address + 140) >> 2]!;
-        out.maxFriction[4]! = mem.f32[(address + 144) >> 2]!;
-        out.maxFriction[5]! = mem.f32[(address + 148) >> 2]!;
-        out.limitsSpringSettings[0]!.mode = mem.u32[(address + 152) >> 2]!;
-        out.limitsSpringSettings[0]!.frequencyOrStiffness = mem.f32[(address + 156) >> 2]!;
-        out.limitsSpringSettings[0]!.damping = mem.f32[(address + 160) >> 2]!;
-        out.limitsSpringSettings[1]!.mode = mem.u32[(address + 164) >> 2]!;
-        out.limitsSpringSettings[1]!.frequencyOrStiffness = mem.f32[(address + 168) >> 2]!;
-        out.limitsSpringSettings[1]!.damping = mem.f32[(address + 172) >> 2]!;
-        out.limitsSpringSettings[2]!.mode = mem.u32[(address + 176) >> 2]!;
-        out.limitsSpringSettings[2]!.frequencyOrStiffness = mem.f32[(address + 180) >> 2]!;
-        out.limitsSpringSettings[2]!.damping = mem.f32[(address + 184) >> 2]!;
-        out.motorSettings[0]!.spring.mode = mem.u32[(address + 188) >> 2]!;
-        out.motorSettings[0]!.spring.frequencyOrStiffness = mem.f32[(address + 192) >> 2]!;
-        out.motorSettings[0]!.spring.damping = mem.f32[(address + 196) >> 2]!;
-        out.motorSettings[0]!.minForceLimit = mem.f32[(address + 200) >> 2]!;
-        out.motorSettings[0]!.maxForceLimit = mem.f32[(address + 204) >> 2]!;
-        out.motorSettings[0]!.minTorqueLimit = mem.f32[(address + 208) >> 2]!;
-        out.motorSettings[0]!.maxTorqueLimit = mem.f32[(address + 212) >> 2]!;
-        out.motorSettings[1]!.spring.mode = mem.u32[(address + 216) >> 2]!;
-        out.motorSettings[1]!.spring.frequencyOrStiffness = mem.f32[(address + 220) >> 2]!;
-        out.motorSettings[1]!.spring.damping = mem.f32[(address + 224) >> 2]!;
-        out.motorSettings[1]!.minForceLimit = mem.f32[(address + 228) >> 2]!;
-        out.motorSettings[1]!.maxForceLimit = mem.f32[(address + 232) >> 2]!;
-        out.motorSettings[1]!.minTorqueLimit = mem.f32[(address + 236) >> 2]!;
-        out.motorSettings[1]!.maxTorqueLimit = mem.f32[(address + 240) >> 2]!;
-        out.motorSettings[2]!.spring.mode = mem.u32[(address + 244) >> 2]!;
-        out.motorSettings[2]!.spring.frequencyOrStiffness = mem.f32[(address + 248) >> 2]!;
-        out.motorSettings[2]!.spring.damping = mem.f32[(address + 252) >> 2]!;
-        out.motorSettings[2]!.minForceLimit = mem.f32[(address + 256) >> 2]!;
-        out.motorSettings[2]!.maxForceLimit = mem.f32[(address + 260) >> 2]!;
-        out.motorSettings[2]!.minTorqueLimit = mem.f32[(address + 264) >> 2]!;
-        out.motorSettings[2]!.maxTorqueLimit = mem.f32[(address + 268) >> 2]!;
-        out.motorSettings[3]!.spring.mode = mem.u32[(address + 272) >> 2]!;
-        out.motorSettings[3]!.spring.frequencyOrStiffness = mem.f32[(address + 276) >> 2]!;
-        out.motorSettings[3]!.spring.damping = mem.f32[(address + 280) >> 2]!;
-        out.motorSettings[3]!.minForceLimit = mem.f32[(address + 284) >> 2]!;
-        out.motorSettings[3]!.maxForceLimit = mem.f32[(address + 288) >> 2]!;
-        out.motorSettings[3]!.minTorqueLimit = mem.f32[(address + 292) >> 2]!;
-        out.motorSettings[3]!.maxTorqueLimit = mem.f32[(address + 296) >> 2]!;
-        out.motorSettings[4]!.spring.mode = mem.u32[(address + 300) >> 2]!;
-        out.motorSettings[4]!.spring.frequencyOrStiffness = mem.f32[(address + 304) >> 2]!;
-        out.motorSettings[4]!.spring.damping = mem.f32[(address + 308) >> 2]!;
-        out.motorSettings[4]!.minForceLimit = mem.f32[(address + 312) >> 2]!;
-        out.motorSettings[4]!.maxForceLimit = mem.f32[(address + 316) >> 2]!;
-        out.motorSettings[4]!.minTorqueLimit = mem.f32[(address + 320) >> 2]!;
-        out.motorSettings[4]!.maxTorqueLimit = mem.f32[(address + 324) >> 2]!;
-        out.motorSettings[5]!.spring.mode = mem.u32[(address + 328) >> 2]!;
-        out.motorSettings[5]!.spring.frequencyOrStiffness = mem.f32[(address + 332) >> 2]!;
-        out.motorSettings[5]!.spring.damping = mem.f32[(address + 336) >> 2]!;
-        out.motorSettings[5]!.minForceLimit = mem.f32[(address + 340) >> 2]!;
-        out.motorSettings[5]!.maxForceLimit = mem.f32[(address + 344) >> 2]!;
-        out.motorSettings[5]!.minTorqueLimit = mem.f32[(address + 348) >> 2]!;
-        out.motorSettings[5]!.maxTorqueLimit = mem.f32[(address + 352) >> 2]!;
-        out.constraintPriority = mem.u32[(address + 356) >> 2]!;
-        out.numVelocityStepsOverride = mem.u32[(address + 360) >> 2]!;
-        out.numPositionStepsOverride = mem.u32[(address + 364) >> 2]!;
+        out.pointB[0] = mem.f32[(address + 16) >> 2]!;
+        out.pointB[1] = mem.f32[(address + 20) >> 2]!;
+        out.pointB[2] = mem.f32[(address + 24) >> 2]!;
+        out.axisXA[0] = mem.f32[(address + 32) >> 2]!;
+        out.axisXA[1] = mem.f32[(address + 36) >> 2]!;
+        out.axisXA[2] = mem.f32[(address + 40) >> 2]!;
+        out.axisYA[0] = mem.f32[(address + 48) >> 2]!;
+        out.axisYA[1] = mem.f32[(address + 52) >> 2]!;
+        out.axisYA[2] = mem.f32[(address + 56) >> 2]!;
+        out.axisXB[0] = mem.f32[(address + 64) >> 2]!;
+        out.axisXB[1] = mem.f32[(address + 68) >> 2]!;
+        out.axisXB[2] = mem.f32[(address + 72) >> 2]!;
+        out.axisYB[0] = mem.f32[(address + 80) >> 2]!;
+        out.axisYB[1] = mem.f32[(address + 84) >> 2]!;
+        out.axisYB[2] = mem.f32[(address + 88) >> 2]!;
+        out.space = mem.u32[(address + 96) >> 2]!;
+        out.swingType = mem.u32[(address + 100) >> 2]!;
+        out.limitMin[0]! = mem.f32[(address + 104) >> 2]!;
+        out.limitMin[1]! = mem.f32[(address + 108) >> 2]!;
+        out.limitMin[2]! = mem.f32[(address + 112) >> 2]!;
+        out.limitMin[3]! = mem.f32[(address + 116) >> 2]!;
+        out.limitMin[4]! = mem.f32[(address + 120) >> 2]!;
+        out.limitMin[5]! = mem.f32[(address + 124) >> 2]!;
+        out.limitMax[0]! = mem.f32[(address + 128) >> 2]!;
+        out.limitMax[1]! = mem.f32[(address + 132) >> 2]!;
+        out.limitMax[2]! = mem.f32[(address + 136) >> 2]!;
+        out.limitMax[3]! = mem.f32[(address + 140) >> 2]!;
+        out.limitMax[4]! = mem.f32[(address + 144) >> 2]!;
+        out.limitMax[5]! = mem.f32[(address + 148) >> 2]!;
+        out.maxFriction[0]! = mem.f32[(address + 152) >> 2]!;
+        out.maxFriction[1]! = mem.f32[(address + 156) >> 2]!;
+        out.maxFriction[2]! = mem.f32[(address + 160) >> 2]!;
+        out.maxFriction[3]! = mem.f32[(address + 164) >> 2]!;
+        out.maxFriction[4]! = mem.f32[(address + 168) >> 2]!;
+        out.maxFriction[5]! = mem.f32[(address + 172) >> 2]!;
+        out.limitsSpringSettings[0]!.mode = mem.u32[(address + 176) >> 2]!;
+        out.limitsSpringSettings[0]!.frequencyOrStiffness = mem.f32[(address + 180) >> 2]!;
+        out.limitsSpringSettings[0]!.damping = mem.f32[(address + 184) >> 2]!;
+        out.limitsSpringSettings[1]!.mode = mem.u32[(address + 188) >> 2]!;
+        out.limitsSpringSettings[1]!.frequencyOrStiffness = mem.f32[(address + 192) >> 2]!;
+        out.limitsSpringSettings[1]!.damping = mem.f32[(address + 196) >> 2]!;
+        out.limitsSpringSettings[2]!.mode = mem.u32[(address + 200) >> 2]!;
+        out.limitsSpringSettings[2]!.frequencyOrStiffness = mem.f32[(address + 204) >> 2]!;
+        out.limitsSpringSettings[2]!.damping = mem.f32[(address + 208) >> 2]!;
+        out.motorSettings[0]!.spring.mode = mem.u32[(address + 212) >> 2]!;
+        out.motorSettings[0]!.spring.frequencyOrStiffness = mem.f32[(address + 216) >> 2]!;
+        out.motorSettings[0]!.spring.damping = mem.f32[(address + 220) >> 2]!;
+        out.motorSettings[0]!.minForceLimit = mem.f32[(address + 224) >> 2]!;
+        out.motorSettings[0]!.maxForceLimit = mem.f32[(address + 228) >> 2]!;
+        out.motorSettings[0]!.minTorqueLimit = mem.f32[(address + 232) >> 2]!;
+        out.motorSettings[0]!.maxTorqueLimit = mem.f32[(address + 236) >> 2]!;
+        out.motorSettings[1]!.spring.mode = mem.u32[(address + 240) >> 2]!;
+        out.motorSettings[1]!.spring.frequencyOrStiffness = mem.f32[(address + 244) >> 2]!;
+        out.motorSettings[1]!.spring.damping = mem.f32[(address + 248) >> 2]!;
+        out.motorSettings[1]!.minForceLimit = mem.f32[(address + 252) >> 2]!;
+        out.motorSettings[1]!.maxForceLimit = mem.f32[(address + 256) >> 2]!;
+        out.motorSettings[1]!.minTorqueLimit = mem.f32[(address + 260) >> 2]!;
+        out.motorSettings[1]!.maxTorqueLimit = mem.f32[(address + 264) >> 2]!;
+        out.motorSettings[2]!.spring.mode = mem.u32[(address + 268) >> 2]!;
+        out.motorSettings[2]!.spring.frequencyOrStiffness = mem.f32[(address + 272) >> 2]!;
+        out.motorSettings[2]!.spring.damping = mem.f32[(address + 276) >> 2]!;
+        out.motorSettings[2]!.minForceLimit = mem.f32[(address + 280) >> 2]!;
+        out.motorSettings[2]!.maxForceLimit = mem.f32[(address + 284) >> 2]!;
+        out.motorSettings[2]!.minTorqueLimit = mem.f32[(address + 288) >> 2]!;
+        out.motorSettings[2]!.maxTorqueLimit = mem.f32[(address + 292) >> 2]!;
+        out.motorSettings[3]!.spring.mode = mem.u32[(address + 296) >> 2]!;
+        out.motorSettings[3]!.spring.frequencyOrStiffness = mem.f32[(address + 300) >> 2]!;
+        out.motorSettings[3]!.spring.damping = mem.f32[(address + 304) >> 2]!;
+        out.motorSettings[3]!.minForceLimit = mem.f32[(address + 308) >> 2]!;
+        out.motorSettings[3]!.maxForceLimit = mem.f32[(address + 312) >> 2]!;
+        out.motorSettings[3]!.minTorqueLimit = mem.f32[(address + 316) >> 2]!;
+        out.motorSettings[3]!.maxTorqueLimit = mem.f32[(address + 320) >> 2]!;
+        out.motorSettings[4]!.spring.mode = mem.u32[(address + 324) >> 2]!;
+        out.motorSettings[4]!.spring.frequencyOrStiffness = mem.f32[(address + 328) >> 2]!;
+        out.motorSettings[4]!.spring.damping = mem.f32[(address + 332) >> 2]!;
+        out.motorSettings[4]!.minForceLimit = mem.f32[(address + 336) >> 2]!;
+        out.motorSettings[4]!.maxForceLimit = mem.f32[(address + 340) >> 2]!;
+        out.motorSettings[4]!.minTorqueLimit = mem.f32[(address + 344) >> 2]!;
+        out.motorSettings[4]!.maxTorqueLimit = mem.f32[(address + 348) >> 2]!;
+        out.motorSettings[5]!.spring.mode = mem.u32[(address + 352) >> 2]!;
+        out.motorSettings[5]!.spring.frequencyOrStiffness = mem.f32[(address + 356) >> 2]!;
+        out.motorSettings[5]!.spring.damping = mem.f32[(address + 360) >> 2]!;
+        out.motorSettings[5]!.minForceLimit = mem.f32[(address + 364) >> 2]!;
+        out.motorSettings[5]!.maxForceLimit = mem.f32[(address + 368) >> 2]!;
+        out.motorSettings[5]!.minTorqueLimit = mem.f32[(address + 372) >> 2]!;
+        out.motorSettings[5]!.maxTorqueLimit = mem.f32[(address + 376) >> 2]!;
+        out.constraintPriority = mem.u32[(address + 380) >> 2]!;
+        out.numVelocityStepsOverride = mem.u32[(address + 384) >> 2]!;
+        out.numPositionStepsOverride = mem.u32[(address + 388) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -3685,285 +4144,297 @@ export const SixDOFConstraintSettings = {
         mem.f32[(address + 0) >> 2] = value.pointA[0];
         mem.f32[(address + 4) >> 2] = value.pointA[1];
         mem.f32[(address + 8) >> 2] = value.pointA[2];
-        mem.f32[(address + 12) >> 2] = value.pointB[0];
-        mem.f32[(address + 16) >> 2] = value.pointB[1];
-        mem.f32[(address + 20) >> 2] = value.pointB[2];
-        mem.f32[(address + 24) >> 2] = value.axisXA[0];
-        mem.f32[(address + 28) >> 2] = value.axisXA[1];
-        mem.f32[(address + 32) >> 2] = value.axisXA[2];
-        mem.f32[(address + 36) >> 2] = value.axisYA[0];
-        mem.f32[(address + 40) >> 2] = value.axisYA[1];
-        mem.f32[(address + 44) >> 2] = value.axisYA[2];
-        mem.f32[(address + 48) >> 2] = value.axisXB[0];
-        mem.f32[(address + 52) >> 2] = value.axisXB[1];
-        mem.f32[(address + 56) >> 2] = value.axisXB[2];
-        mem.f32[(address + 60) >> 2] = value.axisYB[0];
-        mem.f32[(address + 64) >> 2] = value.axisYB[1];
-        mem.f32[(address + 68) >> 2] = value.axisYB[2];
-        mem.u32[(address + 72) >> 2] = value.space;
-        mem.u32[(address + 76) >> 2] = value.swingType;
-        mem.f32[(address + 80) >> 2] = value.limitMin[0]!;
-        mem.f32[(address + 84) >> 2] = value.limitMin[1]!;
-        mem.f32[(address + 88) >> 2] = value.limitMin[2]!;
-        mem.f32[(address + 92) >> 2] = value.limitMin[3]!;
-        mem.f32[(address + 96) >> 2] = value.limitMin[4]!;
-        mem.f32[(address + 100) >> 2] = value.limitMin[5]!;
-        mem.f32[(address + 104) >> 2] = value.limitMax[0]!;
-        mem.f32[(address + 108) >> 2] = value.limitMax[1]!;
-        mem.f32[(address + 112) >> 2] = value.limitMax[2]!;
-        mem.f32[(address + 116) >> 2] = value.limitMax[3]!;
-        mem.f32[(address + 120) >> 2] = value.limitMax[4]!;
-        mem.f32[(address + 124) >> 2] = value.limitMax[5]!;
-        mem.f32[(address + 128) >> 2] = value.maxFriction[0]!;
-        mem.f32[(address + 132) >> 2] = value.maxFriction[1]!;
-        mem.f32[(address + 136) >> 2] = value.maxFriction[2]!;
-        mem.f32[(address + 140) >> 2] = value.maxFriction[3]!;
-        mem.f32[(address + 144) >> 2] = value.maxFriction[4]!;
-        mem.f32[(address + 148) >> 2] = value.maxFriction[5]!;
-        mem.u32[(address + 152) >> 2] = value.limitsSpringSettings[0]!.mode;
-        mem.f32[(address + 156) >> 2] = value.limitsSpringSettings[0]!.frequencyOrStiffness;
-        mem.f32[(address + 160) >> 2] = value.limitsSpringSettings[0]!.damping;
-        mem.u32[(address + 164) >> 2] = value.limitsSpringSettings[1]!.mode;
-        mem.f32[(address + 168) >> 2] = value.limitsSpringSettings[1]!.frequencyOrStiffness;
-        mem.f32[(address + 172) >> 2] = value.limitsSpringSettings[1]!.damping;
-        mem.u32[(address + 176) >> 2] = value.limitsSpringSettings[2]!.mode;
-        mem.f32[(address + 180) >> 2] = value.limitsSpringSettings[2]!.frequencyOrStiffness;
-        mem.f32[(address + 184) >> 2] = value.limitsSpringSettings[2]!.damping;
-        mem.u32[(address + 188) >> 2] = value.motorSettings[0]!.spring.mode;
-        mem.f32[(address + 192) >> 2] = value.motorSettings[0]!.spring.frequencyOrStiffness;
-        mem.f32[(address + 196) >> 2] = value.motorSettings[0]!.spring.damping;
-        mem.f32[(address + 200) >> 2] = value.motorSettings[0]!.minForceLimit;
-        mem.f32[(address + 204) >> 2] = value.motorSettings[0]!.maxForceLimit;
-        mem.f32[(address + 208) >> 2] = value.motorSettings[0]!.minTorqueLimit;
-        mem.f32[(address + 212) >> 2] = value.motorSettings[0]!.maxTorqueLimit;
-        mem.u32[(address + 216) >> 2] = value.motorSettings[1]!.spring.mode;
-        mem.f32[(address + 220) >> 2] = value.motorSettings[1]!.spring.frequencyOrStiffness;
-        mem.f32[(address + 224) >> 2] = value.motorSettings[1]!.spring.damping;
-        mem.f32[(address + 228) >> 2] = value.motorSettings[1]!.minForceLimit;
-        mem.f32[(address + 232) >> 2] = value.motorSettings[1]!.maxForceLimit;
-        mem.f32[(address + 236) >> 2] = value.motorSettings[1]!.minTorqueLimit;
-        mem.f32[(address + 240) >> 2] = value.motorSettings[1]!.maxTorqueLimit;
-        mem.u32[(address + 244) >> 2] = value.motorSettings[2]!.spring.mode;
-        mem.f32[(address + 248) >> 2] = value.motorSettings[2]!.spring.frequencyOrStiffness;
-        mem.f32[(address + 252) >> 2] = value.motorSettings[2]!.spring.damping;
-        mem.f32[(address + 256) >> 2] = value.motorSettings[2]!.minForceLimit;
-        mem.f32[(address + 260) >> 2] = value.motorSettings[2]!.maxForceLimit;
-        mem.f32[(address + 264) >> 2] = value.motorSettings[2]!.minTorqueLimit;
-        mem.f32[(address + 268) >> 2] = value.motorSettings[2]!.maxTorqueLimit;
-        mem.u32[(address + 272) >> 2] = value.motorSettings[3]!.spring.mode;
-        mem.f32[(address + 276) >> 2] = value.motorSettings[3]!.spring.frequencyOrStiffness;
-        mem.f32[(address + 280) >> 2] = value.motorSettings[3]!.spring.damping;
-        mem.f32[(address + 284) >> 2] = value.motorSettings[3]!.minForceLimit;
-        mem.f32[(address + 288) >> 2] = value.motorSettings[3]!.maxForceLimit;
-        mem.f32[(address + 292) >> 2] = value.motorSettings[3]!.minTorqueLimit;
-        mem.f32[(address + 296) >> 2] = value.motorSettings[3]!.maxTorqueLimit;
-        mem.u32[(address + 300) >> 2] = value.motorSettings[4]!.spring.mode;
-        mem.f32[(address + 304) >> 2] = value.motorSettings[4]!.spring.frequencyOrStiffness;
-        mem.f32[(address + 308) >> 2] = value.motorSettings[4]!.spring.damping;
-        mem.f32[(address + 312) >> 2] = value.motorSettings[4]!.minForceLimit;
-        mem.f32[(address + 316) >> 2] = value.motorSettings[4]!.maxForceLimit;
-        mem.f32[(address + 320) >> 2] = value.motorSettings[4]!.minTorqueLimit;
-        mem.f32[(address + 324) >> 2] = value.motorSettings[4]!.maxTorqueLimit;
-        mem.u32[(address + 328) >> 2] = value.motorSettings[5]!.spring.mode;
-        mem.f32[(address + 332) >> 2] = value.motorSettings[5]!.spring.frequencyOrStiffness;
-        mem.f32[(address + 336) >> 2] = value.motorSettings[5]!.spring.damping;
-        mem.f32[(address + 340) >> 2] = value.motorSettings[5]!.minForceLimit;
-        mem.f32[(address + 344) >> 2] = value.motorSettings[5]!.maxForceLimit;
-        mem.f32[(address + 348) >> 2] = value.motorSettings[5]!.minTorqueLimit;
-        mem.f32[(address + 352) >> 2] = value.motorSettings[5]!.maxTorqueLimit;
-        mem.u32[(address + 356) >> 2] = value.constraintPriority;
-        mem.u32[(address + 360) >> 2] = value.numVelocityStepsOverride;
-        mem.u32[(address + 364) >> 2] = value.numPositionStepsOverride;
+        mem.f32[(address + 12) >> 2] = value.pointA[2];
+        mem.f32[(address + 16) >> 2] = value.pointB[0];
+        mem.f32[(address + 20) >> 2] = value.pointB[1];
+        mem.f32[(address + 24) >> 2] = value.pointB[2];
+        mem.f32[(address + 28) >> 2] = value.pointB[2];
+        mem.f32[(address + 32) >> 2] = value.axisXA[0];
+        mem.f32[(address + 36) >> 2] = value.axisXA[1];
+        mem.f32[(address + 40) >> 2] = value.axisXA[2];
+        mem.f32[(address + 44) >> 2] = value.axisXA[2];
+        mem.f32[(address + 48) >> 2] = value.axisYA[0];
+        mem.f32[(address + 52) >> 2] = value.axisYA[1];
+        mem.f32[(address + 56) >> 2] = value.axisYA[2];
+        mem.f32[(address + 60) >> 2] = value.axisYA[2];
+        mem.f32[(address + 64) >> 2] = value.axisXB[0];
+        mem.f32[(address + 68) >> 2] = value.axisXB[1];
+        mem.f32[(address + 72) >> 2] = value.axisXB[2];
+        mem.f32[(address + 76) >> 2] = value.axisXB[2];
+        mem.f32[(address + 80) >> 2] = value.axisYB[0];
+        mem.f32[(address + 84) >> 2] = value.axisYB[1];
+        mem.f32[(address + 88) >> 2] = value.axisYB[2];
+        mem.f32[(address + 92) >> 2] = value.axisYB[2];
+        mem.u32[(address + 96) >> 2] = value.space;
+        mem.u32[(address + 100) >> 2] = value.swingType;
+        mem.f32[(address + 104) >> 2] = value.limitMin[0]!;
+        mem.f32[(address + 108) >> 2] = value.limitMin[1]!;
+        mem.f32[(address + 112) >> 2] = value.limitMin[2]!;
+        mem.f32[(address + 116) >> 2] = value.limitMin[3]!;
+        mem.f32[(address + 120) >> 2] = value.limitMin[4]!;
+        mem.f32[(address + 124) >> 2] = value.limitMin[5]!;
+        mem.f32[(address + 128) >> 2] = value.limitMax[0]!;
+        mem.f32[(address + 132) >> 2] = value.limitMax[1]!;
+        mem.f32[(address + 136) >> 2] = value.limitMax[2]!;
+        mem.f32[(address + 140) >> 2] = value.limitMax[3]!;
+        mem.f32[(address + 144) >> 2] = value.limitMax[4]!;
+        mem.f32[(address + 148) >> 2] = value.limitMax[5]!;
+        mem.f32[(address + 152) >> 2] = value.maxFriction[0]!;
+        mem.f32[(address + 156) >> 2] = value.maxFriction[1]!;
+        mem.f32[(address + 160) >> 2] = value.maxFriction[2]!;
+        mem.f32[(address + 164) >> 2] = value.maxFriction[3]!;
+        mem.f32[(address + 168) >> 2] = value.maxFriction[4]!;
+        mem.f32[(address + 172) >> 2] = value.maxFriction[5]!;
+        mem.u32[(address + 176) >> 2] = value.limitsSpringSettings[0]!.mode;
+        mem.f32[(address + 180) >> 2] = value.limitsSpringSettings[0]!.frequencyOrStiffness;
+        mem.f32[(address + 184) >> 2] = value.limitsSpringSettings[0]!.damping;
+        mem.u32[(address + 188) >> 2] = value.limitsSpringSettings[1]!.mode;
+        mem.f32[(address + 192) >> 2] = value.limitsSpringSettings[1]!.frequencyOrStiffness;
+        mem.f32[(address + 196) >> 2] = value.limitsSpringSettings[1]!.damping;
+        mem.u32[(address + 200) >> 2] = value.limitsSpringSettings[2]!.mode;
+        mem.f32[(address + 204) >> 2] = value.limitsSpringSettings[2]!.frequencyOrStiffness;
+        mem.f32[(address + 208) >> 2] = value.limitsSpringSettings[2]!.damping;
+        mem.u32[(address + 212) >> 2] = value.motorSettings[0]!.spring.mode;
+        mem.f32[(address + 216) >> 2] = value.motorSettings[0]!.spring.frequencyOrStiffness;
+        mem.f32[(address + 220) >> 2] = value.motorSettings[0]!.spring.damping;
+        mem.f32[(address + 224) >> 2] = value.motorSettings[0]!.minForceLimit;
+        mem.f32[(address + 228) >> 2] = value.motorSettings[0]!.maxForceLimit;
+        mem.f32[(address + 232) >> 2] = value.motorSettings[0]!.minTorqueLimit;
+        mem.f32[(address + 236) >> 2] = value.motorSettings[0]!.maxTorqueLimit;
+        mem.u32[(address + 240) >> 2] = value.motorSettings[1]!.spring.mode;
+        mem.f32[(address + 244) >> 2] = value.motorSettings[1]!.spring.frequencyOrStiffness;
+        mem.f32[(address + 248) >> 2] = value.motorSettings[1]!.spring.damping;
+        mem.f32[(address + 252) >> 2] = value.motorSettings[1]!.minForceLimit;
+        mem.f32[(address + 256) >> 2] = value.motorSettings[1]!.maxForceLimit;
+        mem.f32[(address + 260) >> 2] = value.motorSettings[1]!.minTorqueLimit;
+        mem.f32[(address + 264) >> 2] = value.motorSettings[1]!.maxTorqueLimit;
+        mem.u32[(address + 268) >> 2] = value.motorSettings[2]!.spring.mode;
+        mem.f32[(address + 272) >> 2] = value.motorSettings[2]!.spring.frequencyOrStiffness;
+        mem.f32[(address + 276) >> 2] = value.motorSettings[2]!.spring.damping;
+        mem.f32[(address + 280) >> 2] = value.motorSettings[2]!.minForceLimit;
+        mem.f32[(address + 284) >> 2] = value.motorSettings[2]!.maxForceLimit;
+        mem.f32[(address + 288) >> 2] = value.motorSettings[2]!.minTorqueLimit;
+        mem.f32[(address + 292) >> 2] = value.motorSettings[2]!.maxTorqueLimit;
+        mem.u32[(address + 296) >> 2] = value.motorSettings[3]!.spring.mode;
+        mem.f32[(address + 300) >> 2] = value.motorSettings[3]!.spring.frequencyOrStiffness;
+        mem.f32[(address + 304) >> 2] = value.motorSettings[3]!.spring.damping;
+        mem.f32[(address + 308) >> 2] = value.motorSettings[3]!.minForceLimit;
+        mem.f32[(address + 312) >> 2] = value.motorSettings[3]!.maxForceLimit;
+        mem.f32[(address + 316) >> 2] = value.motorSettings[3]!.minTorqueLimit;
+        mem.f32[(address + 320) >> 2] = value.motorSettings[3]!.maxTorqueLimit;
+        mem.u32[(address + 324) >> 2] = value.motorSettings[4]!.spring.mode;
+        mem.f32[(address + 328) >> 2] = value.motorSettings[4]!.spring.frequencyOrStiffness;
+        mem.f32[(address + 332) >> 2] = value.motorSettings[4]!.spring.damping;
+        mem.f32[(address + 336) >> 2] = value.motorSettings[4]!.minForceLimit;
+        mem.f32[(address + 340) >> 2] = value.motorSettings[4]!.maxForceLimit;
+        mem.f32[(address + 344) >> 2] = value.motorSettings[4]!.minTorqueLimit;
+        mem.f32[(address + 348) >> 2] = value.motorSettings[4]!.maxTorqueLimit;
+        mem.u32[(address + 352) >> 2] = value.motorSettings[5]!.spring.mode;
+        mem.f32[(address + 356) >> 2] = value.motorSettings[5]!.spring.frequencyOrStiffness;
+        mem.f32[(address + 360) >> 2] = value.motorSettings[5]!.spring.damping;
+        mem.f32[(address + 364) >> 2] = value.motorSettings[5]!.minForceLimit;
+        mem.f32[(address + 368) >> 2] = value.motorSettings[5]!.maxForceLimit;
+        mem.f32[(address + 372) >> 2] = value.motorSettings[5]!.minTorqueLimit;
+        mem.f32[(address + 376) >> 2] = value.motorSettings[5]!.maxTorqueLimit;
+        mem.u32[(address + 380) >> 2] = value.constraintPriority;
+        mem.u32[(address + 384) >> 2] = value.numVelocityStepsOverride;
+        mem.u32[(address + 388) >> 2] = value.numPositionStepsOverride;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: SixDOFConstraintSettings): void {
         view.setFloat32(offset + 0, value.pointA[0], true);
         view.setFloat32(offset + 4, value.pointA[1], true);
         view.setFloat32(offset + 8, value.pointA[2], true);
-        view.setFloat32(offset + 12, value.pointB[0], true);
-        view.setFloat32(offset + 16, value.pointB[1], true);
-        view.setFloat32(offset + 20, value.pointB[2], true);
-        view.setFloat32(offset + 24, value.axisXA[0], true);
-        view.setFloat32(offset + 28, value.axisXA[1], true);
-        view.setFloat32(offset + 32, value.axisXA[2], true);
-        view.setFloat32(offset + 36, value.axisYA[0], true);
-        view.setFloat32(offset + 40, value.axisYA[1], true);
-        view.setFloat32(offset + 44, value.axisYA[2], true);
-        view.setFloat32(offset + 48, value.axisXB[0], true);
-        view.setFloat32(offset + 52, value.axisXB[1], true);
-        view.setFloat32(offset + 56, value.axisXB[2], true);
-        view.setFloat32(offset + 60, value.axisYB[0], true);
-        view.setFloat32(offset + 64, value.axisYB[1], true);
-        view.setFloat32(offset + 68, value.axisYB[2], true);
-        view.setUint32(offset + 72, value.space, true);
-        view.setUint32(offset + 76, value.swingType, true);
-        view.setFloat32(offset + 80, value.limitMin[0]!, true);
-        view.setFloat32(offset + 84, value.limitMin[1]!, true);
-        view.setFloat32(offset + 88, value.limitMin[2]!, true);
-        view.setFloat32(offset + 92, value.limitMin[3]!, true);
-        view.setFloat32(offset + 96, value.limitMin[4]!, true);
-        view.setFloat32(offset + 100, value.limitMin[5]!, true);
-        view.setFloat32(offset + 104, value.limitMax[0]!, true);
-        view.setFloat32(offset + 108, value.limitMax[1]!, true);
-        view.setFloat32(offset + 112, value.limitMax[2]!, true);
-        view.setFloat32(offset + 116, value.limitMax[3]!, true);
-        view.setFloat32(offset + 120, value.limitMax[4]!, true);
-        view.setFloat32(offset + 124, value.limitMax[5]!, true);
-        view.setFloat32(offset + 128, value.maxFriction[0]!, true);
-        view.setFloat32(offset + 132, value.maxFriction[1]!, true);
-        view.setFloat32(offset + 136, value.maxFriction[2]!, true);
-        view.setFloat32(offset + 140, value.maxFriction[3]!, true);
-        view.setFloat32(offset + 144, value.maxFriction[4]!, true);
-        view.setFloat32(offset + 148, value.maxFriction[5]!, true);
-        view.setUint32(offset + 152, value.limitsSpringSettings[0]!.mode, true);
-        view.setFloat32(offset + 156, value.limitsSpringSettings[0]!.frequencyOrStiffness, true);
-        view.setFloat32(offset + 160, value.limitsSpringSettings[0]!.damping, true);
-        view.setUint32(offset + 164, value.limitsSpringSettings[1]!.mode, true);
-        view.setFloat32(offset + 168, value.limitsSpringSettings[1]!.frequencyOrStiffness, true);
-        view.setFloat32(offset + 172, value.limitsSpringSettings[1]!.damping, true);
-        view.setUint32(offset + 176, value.limitsSpringSettings[2]!.mode, true);
-        view.setFloat32(offset + 180, value.limitsSpringSettings[2]!.frequencyOrStiffness, true);
-        view.setFloat32(offset + 184, value.limitsSpringSettings[2]!.damping, true);
-        view.setUint32(offset + 188, value.motorSettings[0]!.spring.mode, true);
-        view.setFloat32(offset + 192, value.motorSettings[0]!.spring.frequencyOrStiffness, true);
-        view.setFloat32(offset + 196, value.motorSettings[0]!.spring.damping, true);
-        view.setFloat32(offset + 200, value.motorSettings[0]!.minForceLimit, true);
-        view.setFloat32(offset + 204, value.motorSettings[0]!.maxForceLimit, true);
-        view.setFloat32(offset + 208, value.motorSettings[0]!.minTorqueLimit, true);
-        view.setFloat32(offset + 212, value.motorSettings[0]!.maxTorqueLimit, true);
-        view.setUint32(offset + 216, value.motorSettings[1]!.spring.mode, true);
-        view.setFloat32(offset + 220, value.motorSettings[1]!.spring.frequencyOrStiffness, true);
-        view.setFloat32(offset + 224, value.motorSettings[1]!.spring.damping, true);
-        view.setFloat32(offset + 228, value.motorSettings[1]!.minForceLimit, true);
-        view.setFloat32(offset + 232, value.motorSettings[1]!.maxForceLimit, true);
-        view.setFloat32(offset + 236, value.motorSettings[1]!.minTorqueLimit, true);
-        view.setFloat32(offset + 240, value.motorSettings[1]!.maxTorqueLimit, true);
-        view.setUint32(offset + 244, value.motorSettings[2]!.spring.mode, true);
-        view.setFloat32(offset + 248, value.motorSettings[2]!.spring.frequencyOrStiffness, true);
-        view.setFloat32(offset + 252, value.motorSettings[2]!.spring.damping, true);
-        view.setFloat32(offset + 256, value.motorSettings[2]!.minForceLimit, true);
-        view.setFloat32(offset + 260, value.motorSettings[2]!.maxForceLimit, true);
-        view.setFloat32(offset + 264, value.motorSettings[2]!.minTorqueLimit, true);
-        view.setFloat32(offset + 268, value.motorSettings[2]!.maxTorqueLimit, true);
-        view.setUint32(offset + 272, value.motorSettings[3]!.spring.mode, true);
-        view.setFloat32(offset + 276, value.motorSettings[3]!.spring.frequencyOrStiffness, true);
-        view.setFloat32(offset + 280, value.motorSettings[3]!.spring.damping, true);
-        view.setFloat32(offset + 284, value.motorSettings[3]!.minForceLimit, true);
-        view.setFloat32(offset + 288, value.motorSettings[3]!.maxForceLimit, true);
-        view.setFloat32(offset + 292, value.motorSettings[3]!.minTorqueLimit, true);
-        view.setFloat32(offset + 296, value.motorSettings[3]!.maxTorqueLimit, true);
-        view.setUint32(offset + 300, value.motorSettings[4]!.spring.mode, true);
-        view.setFloat32(offset + 304, value.motorSettings[4]!.spring.frequencyOrStiffness, true);
-        view.setFloat32(offset + 308, value.motorSettings[4]!.spring.damping, true);
-        view.setFloat32(offset + 312, value.motorSettings[4]!.minForceLimit, true);
-        view.setFloat32(offset + 316, value.motorSettings[4]!.maxForceLimit, true);
-        view.setFloat32(offset + 320, value.motorSettings[4]!.minTorqueLimit, true);
-        view.setFloat32(offset + 324, value.motorSettings[4]!.maxTorqueLimit, true);
-        view.setUint32(offset + 328, value.motorSettings[5]!.spring.mode, true);
-        view.setFloat32(offset + 332, value.motorSettings[5]!.spring.frequencyOrStiffness, true);
-        view.setFloat32(offset + 336, value.motorSettings[5]!.spring.damping, true);
-        view.setFloat32(offset + 340, value.motorSettings[5]!.minForceLimit, true);
-        view.setFloat32(offset + 344, value.motorSettings[5]!.maxForceLimit, true);
-        view.setFloat32(offset + 348, value.motorSettings[5]!.minTorqueLimit, true);
-        view.setFloat32(offset + 352, value.motorSettings[5]!.maxTorqueLimit, true);
-        view.setUint32(offset + 356, value.constraintPriority, true);
-        view.setUint32(offset + 360, value.numVelocityStepsOverride, true);
-        view.setUint32(offset + 364, value.numPositionStepsOverride, true);
+        view.setFloat32(offset + 12, value.pointA[2], true);
+        view.setFloat32(offset + 16, value.pointB[0], true);
+        view.setFloat32(offset + 20, value.pointB[1], true);
+        view.setFloat32(offset + 24, value.pointB[2], true);
+        view.setFloat32(offset + 28, value.pointB[2], true);
+        view.setFloat32(offset + 32, value.axisXA[0], true);
+        view.setFloat32(offset + 36, value.axisXA[1], true);
+        view.setFloat32(offset + 40, value.axisXA[2], true);
+        view.setFloat32(offset + 44, value.axisXA[2], true);
+        view.setFloat32(offset + 48, value.axisYA[0], true);
+        view.setFloat32(offset + 52, value.axisYA[1], true);
+        view.setFloat32(offset + 56, value.axisYA[2], true);
+        view.setFloat32(offset + 60, value.axisYA[2], true);
+        view.setFloat32(offset + 64, value.axisXB[0], true);
+        view.setFloat32(offset + 68, value.axisXB[1], true);
+        view.setFloat32(offset + 72, value.axisXB[2], true);
+        view.setFloat32(offset + 76, value.axisXB[2], true);
+        view.setFloat32(offset + 80, value.axisYB[0], true);
+        view.setFloat32(offset + 84, value.axisYB[1], true);
+        view.setFloat32(offset + 88, value.axisYB[2], true);
+        view.setFloat32(offset + 92, value.axisYB[2], true);
+        view.setUint32(offset + 96, value.space, true);
+        view.setUint32(offset + 100, value.swingType, true);
+        view.setFloat32(offset + 104, value.limitMin[0]!, true);
+        view.setFloat32(offset + 108, value.limitMin[1]!, true);
+        view.setFloat32(offset + 112, value.limitMin[2]!, true);
+        view.setFloat32(offset + 116, value.limitMin[3]!, true);
+        view.setFloat32(offset + 120, value.limitMin[4]!, true);
+        view.setFloat32(offset + 124, value.limitMin[5]!, true);
+        view.setFloat32(offset + 128, value.limitMax[0]!, true);
+        view.setFloat32(offset + 132, value.limitMax[1]!, true);
+        view.setFloat32(offset + 136, value.limitMax[2]!, true);
+        view.setFloat32(offset + 140, value.limitMax[3]!, true);
+        view.setFloat32(offset + 144, value.limitMax[4]!, true);
+        view.setFloat32(offset + 148, value.limitMax[5]!, true);
+        view.setFloat32(offset + 152, value.maxFriction[0]!, true);
+        view.setFloat32(offset + 156, value.maxFriction[1]!, true);
+        view.setFloat32(offset + 160, value.maxFriction[2]!, true);
+        view.setFloat32(offset + 164, value.maxFriction[3]!, true);
+        view.setFloat32(offset + 168, value.maxFriction[4]!, true);
+        view.setFloat32(offset + 172, value.maxFriction[5]!, true);
+        view.setUint32(offset + 176, value.limitsSpringSettings[0]!.mode, true);
+        view.setFloat32(offset + 180, value.limitsSpringSettings[0]!.frequencyOrStiffness, true);
+        view.setFloat32(offset + 184, value.limitsSpringSettings[0]!.damping, true);
+        view.setUint32(offset + 188, value.limitsSpringSettings[1]!.mode, true);
+        view.setFloat32(offset + 192, value.limitsSpringSettings[1]!.frequencyOrStiffness, true);
+        view.setFloat32(offset + 196, value.limitsSpringSettings[1]!.damping, true);
+        view.setUint32(offset + 200, value.limitsSpringSettings[2]!.mode, true);
+        view.setFloat32(offset + 204, value.limitsSpringSettings[2]!.frequencyOrStiffness, true);
+        view.setFloat32(offset + 208, value.limitsSpringSettings[2]!.damping, true);
+        view.setUint32(offset + 212, value.motorSettings[0]!.spring.mode, true);
+        view.setFloat32(offset + 216, value.motorSettings[0]!.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 220, value.motorSettings[0]!.spring.damping, true);
+        view.setFloat32(offset + 224, value.motorSettings[0]!.minForceLimit, true);
+        view.setFloat32(offset + 228, value.motorSettings[0]!.maxForceLimit, true);
+        view.setFloat32(offset + 232, value.motorSettings[0]!.minTorqueLimit, true);
+        view.setFloat32(offset + 236, value.motorSettings[0]!.maxTorqueLimit, true);
+        view.setUint32(offset + 240, value.motorSettings[1]!.spring.mode, true);
+        view.setFloat32(offset + 244, value.motorSettings[1]!.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 248, value.motorSettings[1]!.spring.damping, true);
+        view.setFloat32(offset + 252, value.motorSettings[1]!.minForceLimit, true);
+        view.setFloat32(offset + 256, value.motorSettings[1]!.maxForceLimit, true);
+        view.setFloat32(offset + 260, value.motorSettings[1]!.minTorqueLimit, true);
+        view.setFloat32(offset + 264, value.motorSettings[1]!.maxTorqueLimit, true);
+        view.setUint32(offset + 268, value.motorSettings[2]!.spring.mode, true);
+        view.setFloat32(offset + 272, value.motorSettings[2]!.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 276, value.motorSettings[2]!.spring.damping, true);
+        view.setFloat32(offset + 280, value.motorSettings[2]!.minForceLimit, true);
+        view.setFloat32(offset + 284, value.motorSettings[2]!.maxForceLimit, true);
+        view.setFloat32(offset + 288, value.motorSettings[2]!.minTorqueLimit, true);
+        view.setFloat32(offset + 292, value.motorSettings[2]!.maxTorqueLimit, true);
+        view.setUint32(offset + 296, value.motorSettings[3]!.spring.mode, true);
+        view.setFloat32(offset + 300, value.motorSettings[3]!.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 304, value.motorSettings[3]!.spring.damping, true);
+        view.setFloat32(offset + 308, value.motorSettings[3]!.minForceLimit, true);
+        view.setFloat32(offset + 312, value.motorSettings[3]!.maxForceLimit, true);
+        view.setFloat32(offset + 316, value.motorSettings[3]!.minTorqueLimit, true);
+        view.setFloat32(offset + 320, value.motorSettings[3]!.maxTorqueLimit, true);
+        view.setUint32(offset + 324, value.motorSettings[4]!.spring.mode, true);
+        view.setFloat32(offset + 328, value.motorSettings[4]!.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 332, value.motorSettings[4]!.spring.damping, true);
+        view.setFloat32(offset + 336, value.motorSettings[4]!.minForceLimit, true);
+        view.setFloat32(offset + 340, value.motorSettings[4]!.maxForceLimit, true);
+        view.setFloat32(offset + 344, value.motorSettings[4]!.minTorqueLimit, true);
+        view.setFloat32(offset + 348, value.motorSettings[4]!.maxTorqueLimit, true);
+        view.setUint32(offset + 352, value.motorSettings[5]!.spring.mode, true);
+        view.setFloat32(offset + 356, value.motorSettings[5]!.spring.frequencyOrStiffness, true);
+        view.setFloat32(offset + 360, value.motorSettings[5]!.spring.damping, true);
+        view.setFloat32(offset + 364, value.motorSettings[5]!.minForceLimit, true);
+        view.setFloat32(offset + 368, value.motorSettings[5]!.maxForceLimit, true);
+        view.setFloat32(offset + 372, value.motorSettings[5]!.minTorqueLimit, true);
+        view.setFloat32(offset + 376, value.motorSettings[5]!.maxTorqueLimit, true);
+        view.setUint32(offset + 380, value.constraintPriority, true);
+        view.setUint32(offset + 384, value.numVelocityStepsOverride, true);
+        view.setUint32(offset + 388, value.numPositionStepsOverride, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: SixDOFConstraintSettings, view: DataView, offset: number): SixDOFConstraintSettings {
         out.pointA[0] = view.getFloat32(offset + 0, true);
         out.pointA[1] = view.getFloat32(offset + 4, true);
         out.pointA[2] = view.getFloat32(offset + 8, true);
-        out.pointB[0] = view.getFloat32(offset + 12, true);
-        out.pointB[1] = view.getFloat32(offset + 16, true);
-        out.pointB[2] = view.getFloat32(offset + 20, true);
-        out.axisXA[0] = view.getFloat32(offset + 24, true);
-        out.axisXA[1] = view.getFloat32(offset + 28, true);
-        out.axisXA[2] = view.getFloat32(offset + 32, true);
-        out.axisYA[0] = view.getFloat32(offset + 36, true);
-        out.axisYA[1] = view.getFloat32(offset + 40, true);
-        out.axisYA[2] = view.getFloat32(offset + 44, true);
-        out.axisXB[0] = view.getFloat32(offset + 48, true);
-        out.axisXB[1] = view.getFloat32(offset + 52, true);
-        out.axisXB[2] = view.getFloat32(offset + 56, true);
-        out.axisYB[0] = view.getFloat32(offset + 60, true);
-        out.axisYB[1] = view.getFloat32(offset + 64, true);
-        out.axisYB[2] = view.getFloat32(offset + 68, true);
-        out.space = view.getUint32(offset + 72, true);
-        out.swingType = view.getUint32(offset + 76, true);
-        out.limitMin[0]! = view.getFloat32(offset + 80, true);
-        out.limitMin[1]! = view.getFloat32(offset + 84, true);
-        out.limitMin[2]! = view.getFloat32(offset + 88, true);
-        out.limitMin[3]! = view.getFloat32(offset + 92, true);
-        out.limitMin[4]! = view.getFloat32(offset + 96, true);
-        out.limitMin[5]! = view.getFloat32(offset + 100, true);
-        out.limitMax[0]! = view.getFloat32(offset + 104, true);
-        out.limitMax[1]! = view.getFloat32(offset + 108, true);
-        out.limitMax[2]! = view.getFloat32(offset + 112, true);
-        out.limitMax[3]! = view.getFloat32(offset + 116, true);
-        out.limitMax[4]! = view.getFloat32(offset + 120, true);
-        out.limitMax[5]! = view.getFloat32(offset + 124, true);
-        out.maxFriction[0]! = view.getFloat32(offset + 128, true);
-        out.maxFriction[1]! = view.getFloat32(offset + 132, true);
-        out.maxFriction[2]! = view.getFloat32(offset + 136, true);
-        out.maxFriction[3]! = view.getFloat32(offset + 140, true);
-        out.maxFriction[4]! = view.getFloat32(offset + 144, true);
-        out.maxFriction[5]! = view.getFloat32(offset + 148, true);
-        out.limitsSpringSettings[0]!.mode = view.getUint32(offset + 152, true);
-        out.limitsSpringSettings[0]!.frequencyOrStiffness = view.getFloat32(offset + 156, true);
-        out.limitsSpringSettings[0]!.damping = view.getFloat32(offset + 160, true);
-        out.limitsSpringSettings[1]!.mode = view.getUint32(offset + 164, true);
-        out.limitsSpringSettings[1]!.frequencyOrStiffness = view.getFloat32(offset + 168, true);
-        out.limitsSpringSettings[1]!.damping = view.getFloat32(offset + 172, true);
-        out.limitsSpringSettings[2]!.mode = view.getUint32(offset + 176, true);
-        out.limitsSpringSettings[2]!.frequencyOrStiffness = view.getFloat32(offset + 180, true);
-        out.limitsSpringSettings[2]!.damping = view.getFloat32(offset + 184, true);
-        out.motorSettings[0]!.spring.mode = view.getUint32(offset + 188, true);
-        out.motorSettings[0]!.spring.frequencyOrStiffness = view.getFloat32(offset + 192, true);
-        out.motorSettings[0]!.spring.damping = view.getFloat32(offset + 196, true);
-        out.motorSettings[0]!.minForceLimit = view.getFloat32(offset + 200, true);
-        out.motorSettings[0]!.maxForceLimit = view.getFloat32(offset + 204, true);
-        out.motorSettings[0]!.minTorqueLimit = view.getFloat32(offset + 208, true);
-        out.motorSettings[0]!.maxTorqueLimit = view.getFloat32(offset + 212, true);
-        out.motorSettings[1]!.spring.mode = view.getUint32(offset + 216, true);
-        out.motorSettings[1]!.spring.frequencyOrStiffness = view.getFloat32(offset + 220, true);
-        out.motorSettings[1]!.spring.damping = view.getFloat32(offset + 224, true);
-        out.motorSettings[1]!.minForceLimit = view.getFloat32(offset + 228, true);
-        out.motorSettings[1]!.maxForceLimit = view.getFloat32(offset + 232, true);
-        out.motorSettings[1]!.minTorqueLimit = view.getFloat32(offset + 236, true);
-        out.motorSettings[1]!.maxTorqueLimit = view.getFloat32(offset + 240, true);
-        out.motorSettings[2]!.spring.mode = view.getUint32(offset + 244, true);
-        out.motorSettings[2]!.spring.frequencyOrStiffness = view.getFloat32(offset + 248, true);
-        out.motorSettings[2]!.spring.damping = view.getFloat32(offset + 252, true);
-        out.motorSettings[2]!.minForceLimit = view.getFloat32(offset + 256, true);
-        out.motorSettings[2]!.maxForceLimit = view.getFloat32(offset + 260, true);
-        out.motorSettings[2]!.minTorqueLimit = view.getFloat32(offset + 264, true);
-        out.motorSettings[2]!.maxTorqueLimit = view.getFloat32(offset + 268, true);
-        out.motorSettings[3]!.spring.mode = view.getUint32(offset + 272, true);
-        out.motorSettings[3]!.spring.frequencyOrStiffness = view.getFloat32(offset + 276, true);
-        out.motorSettings[3]!.spring.damping = view.getFloat32(offset + 280, true);
-        out.motorSettings[3]!.minForceLimit = view.getFloat32(offset + 284, true);
-        out.motorSettings[3]!.maxForceLimit = view.getFloat32(offset + 288, true);
-        out.motorSettings[3]!.minTorqueLimit = view.getFloat32(offset + 292, true);
-        out.motorSettings[3]!.maxTorqueLimit = view.getFloat32(offset + 296, true);
-        out.motorSettings[4]!.spring.mode = view.getUint32(offset + 300, true);
-        out.motorSettings[4]!.spring.frequencyOrStiffness = view.getFloat32(offset + 304, true);
-        out.motorSettings[4]!.spring.damping = view.getFloat32(offset + 308, true);
-        out.motorSettings[4]!.minForceLimit = view.getFloat32(offset + 312, true);
-        out.motorSettings[4]!.maxForceLimit = view.getFloat32(offset + 316, true);
-        out.motorSettings[4]!.minTorqueLimit = view.getFloat32(offset + 320, true);
-        out.motorSettings[4]!.maxTorqueLimit = view.getFloat32(offset + 324, true);
-        out.motorSettings[5]!.spring.mode = view.getUint32(offset + 328, true);
-        out.motorSettings[5]!.spring.frequencyOrStiffness = view.getFloat32(offset + 332, true);
-        out.motorSettings[5]!.spring.damping = view.getFloat32(offset + 336, true);
-        out.motorSettings[5]!.minForceLimit = view.getFloat32(offset + 340, true);
-        out.motorSettings[5]!.maxForceLimit = view.getFloat32(offset + 344, true);
-        out.motorSettings[5]!.minTorqueLimit = view.getFloat32(offset + 348, true);
-        out.motorSettings[5]!.maxTorqueLimit = view.getFloat32(offset + 352, true);
-        out.constraintPriority = view.getUint32(offset + 356, true);
-        out.numVelocityStepsOverride = view.getUint32(offset + 360, true);
-        out.numPositionStepsOverride = view.getUint32(offset + 364, true);
+        out.pointB[0] = view.getFloat32(offset + 16, true);
+        out.pointB[1] = view.getFloat32(offset + 20, true);
+        out.pointB[2] = view.getFloat32(offset + 24, true);
+        out.axisXA[0] = view.getFloat32(offset + 32, true);
+        out.axisXA[1] = view.getFloat32(offset + 36, true);
+        out.axisXA[2] = view.getFloat32(offset + 40, true);
+        out.axisYA[0] = view.getFloat32(offset + 48, true);
+        out.axisYA[1] = view.getFloat32(offset + 52, true);
+        out.axisYA[2] = view.getFloat32(offset + 56, true);
+        out.axisXB[0] = view.getFloat32(offset + 64, true);
+        out.axisXB[1] = view.getFloat32(offset + 68, true);
+        out.axisXB[2] = view.getFloat32(offset + 72, true);
+        out.axisYB[0] = view.getFloat32(offset + 80, true);
+        out.axisYB[1] = view.getFloat32(offset + 84, true);
+        out.axisYB[2] = view.getFloat32(offset + 88, true);
+        out.space = view.getUint32(offset + 96, true);
+        out.swingType = view.getUint32(offset + 100, true);
+        out.limitMin[0]! = view.getFloat32(offset + 104, true);
+        out.limitMin[1]! = view.getFloat32(offset + 108, true);
+        out.limitMin[2]! = view.getFloat32(offset + 112, true);
+        out.limitMin[3]! = view.getFloat32(offset + 116, true);
+        out.limitMin[4]! = view.getFloat32(offset + 120, true);
+        out.limitMin[5]! = view.getFloat32(offset + 124, true);
+        out.limitMax[0]! = view.getFloat32(offset + 128, true);
+        out.limitMax[1]! = view.getFloat32(offset + 132, true);
+        out.limitMax[2]! = view.getFloat32(offset + 136, true);
+        out.limitMax[3]! = view.getFloat32(offset + 140, true);
+        out.limitMax[4]! = view.getFloat32(offset + 144, true);
+        out.limitMax[5]! = view.getFloat32(offset + 148, true);
+        out.maxFriction[0]! = view.getFloat32(offset + 152, true);
+        out.maxFriction[1]! = view.getFloat32(offset + 156, true);
+        out.maxFriction[2]! = view.getFloat32(offset + 160, true);
+        out.maxFriction[3]! = view.getFloat32(offset + 164, true);
+        out.maxFriction[4]! = view.getFloat32(offset + 168, true);
+        out.maxFriction[5]! = view.getFloat32(offset + 172, true);
+        out.limitsSpringSettings[0]!.mode = view.getUint32(offset + 176, true);
+        out.limitsSpringSettings[0]!.frequencyOrStiffness = view.getFloat32(offset + 180, true);
+        out.limitsSpringSettings[0]!.damping = view.getFloat32(offset + 184, true);
+        out.limitsSpringSettings[1]!.mode = view.getUint32(offset + 188, true);
+        out.limitsSpringSettings[1]!.frequencyOrStiffness = view.getFloat32(offset + 192, true);
+        out.limitsSpringSettings[1]!.damping = view.getFloat32(offset + 196, true);
+        out.limitsSpringSettings[2]!.mode = view.getUint32(offset + 200, true);
+        out.limitsSpringSettings[2]!.frequencyOrStiffness = view.getFloat32(offset + 204, true);
+        out.limitsSpringSettings[2]!.damping = view.getFloat32(offset + 208, true);
+        out.motorSettings[0]!.spring.mode = view.getUint32(offset + 212, true);
+        out.motorSettings[0]!.spring.frequencyOrStiffness = view.getFloat32(offset + 216, true);
+        out.motorSettings[0]!.spring.damping = view.getFloat32(offset + 220, true);
+        out.motorSettings[0]!.minForceLimit = view.getFloat32(offset + 224, true);
+        out.motorSettings[0]!.maxForceLimit = view.getFloat32(offset + 228, true);
+        out.motorSettings[0]!.minTorqueLimit = view.getFloat32(offset + 232, true);
+        out.motorSettings[0]!.maxTorqueLimit = view.getFloat32(offset + 236, true);
+        out.motorSettings[1]!.spring.mode = view.getUint32(offset + 240, true);
+        out.motorSettings[1]!.spring.frequencyOrStiffness = view.getFloat32(offset + 244, true);
+        out.motorSettings[1]!.spring.damping = view.getFloat32(offset + 248, true);
+        out.motorSettings[1]!.minForceLimit = view.getFloat32(offset + 252, true);
+        out.motorSettings[1]!.maxForceLimit = view.getFloat32(offset + 256, true);
+        out.motorSettings[1]!.minTorqueLimit = view.getFloat32(offset + 260, true);
+        out.motorSettings[1]!.maxTorqueLimit = view.getFloat32(offset + 264, true);
+        out.motorSettings[2]!.spring.mode = view.getUint32(offset + 268, true);
+        out.motorSettings[2]!.spring.frequencyOrStiffness = view.getFloat32(offset + 272, true);
+        out.motorSettings[2]!.spring.damping = view.getFloat32(offset + 276, true);
+        out.motorSettings[2]!.minForceLimit = view.getFloat32(offset + 280, true);
+        out.motorSettings[2]!.maxForceLimit = view.getFloat32(offset + 284, true);
+        out.motorSettings[2]!.minTorqueLimit = view.getFloat32(offset + 288, true);
+        out.motorSettings[2]!.maxTorqueLimit = view.getFloat32(offset + 292, true);
+        out.motorSettings[3]!.spring.mode = view.getUint32(offset + 296, true);
+        out.motorSettings[3]!.spring.frequencyOrStiffness = view.getFloat32(offset + 300, true);
+        out.motorSettings[3]!.spring.damping = view.getFloat32(offset + 304, true);
+        out.motorSettings[3]!.minForceLimit = view.getFloat32(offset + 308, true);
+        out.motorSettings[3]!.maxForceLimit = view.getFloat32(offset + 312, true);
+        out.motorSettings[3]!.minTorqueLimit = view.getFloat32(offset + 316, true);
+        out.motorSettings[3]!.maxTorqueLimit = view.getFloat32(offset + 320, true);
+        out.motorSettings[4]!.spring.mode = view.getUint32(offset + 324, true);
+        out.motorSettings[4]!.spring.frequencyOrStiffness = view.getFloat32(offset + 328, true);
+        out.motorSettings[4]!.spring.damping = view.getFloat32(offset + 332, true);
+        out.motorSettings[4]!.minForceLimit = view.getFloat32(offset + 336, true);
+        out.motorSettings[4]!.maxForceLimit = view.getFloat32(offset + 340, true);
+        out.motorSettings[4]!.minTorqueLimit = view.getFloat32(offset + 344, true);
+        out.motorSettings[4]!.maxTorqueLimit = view.getFloat32(offset + 348, true);
+        out.motorSettings[5]!.spring.mode = view.getUint32(offset + 352, true);
+        out.motorSettings[5]!.spring.frequencyOrStiffness = view.getFloat32(offset + 356, true);
+        out.motorSettings[5]!.spring.damping = view.getFloat32(offset + 360, true);
+        out.motorSettings[5]!.minForceLimit = view.getFloat32(offset + 364, true);
+        out.motorSettings[5]!.maxForceLimit = view.getFloat32(offset + 368, true);
+        out.motorSettings[5]!.minTorqueLimit = view.getFloat32(offset + 372, true);
+        out.motorSettings[5]!.maxTorqueLimit = view.getFloat32(offset + 376, true);
+        out.constraintPriority = view.getUint32(offset + 380, true);
+        out.numVelocityStepsOverride = view.getUint32(offset + 384, true);
+        out.numPositionStepsOverride = view.getUint32(offset + 388, true);
         return out;
     },
 };
@@ -4487,19 +4958,19 @@ export type KCCBodyPolicy = {
     canPushCharacter: boolean;
     canReceiveImpulses: boolean;
     slideOnWalkable: boolean;
-    surfaceLinearVelocity: Vec3;
-    surfaceAngularVelocity: Vec3;
+    surfaceLinearVelocity: Vec3f;
+    surfaceAngularVelocity: Vec3f;
 };
 export const KCCBodyPolicy = {
-    size: 28,
+    size: 48,
     create(): KCCBodyPolicy {
         return {
             ignore: false,
             canPushCharacter: false,
             canReceiveImpulses: false,
             slideOnWalkable: false,
-            surfaceLinearVelocity: Vec3.create(),
-            surfaceAngularVelocity: Vec3.create(),
+            surfaceLinearVelocity: Vec3f.create(),
+            surfaceAngularVelocity: Vec3f.create(),
         };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
@@ -4509,12 +4980,12 @@ export const KCCBodyPolicy = {
         out.canPushCharacter = mem.u8[address + 1]! !== 0;
         out.canReceiveImpulses = mem.u8[address + 2]! !== 0;
         out.slideOnWalkable = mem.u8[address + 3]! !== 0;
-        out.surfaceLinearVelocity[0] = mem.f32[(address + 4) >> 2]!;
-        out.surfaceLinearVelocity[1] = mem.f32[(address + 8) >> 2]!;
-        out.surfaceLinearVelocity[2] = mem.f32[(address + 12) >> 2]!;
-        out.surfaceAngularVelocity[0] = mem.f32[(address + 16) >> 2]!;
-        out.surfaceAngularVelocity[1] = mem.f32[(address + 20) >> 2]!;
-        out.surfaceAngularVelocity[2] = mem.f32[(address + 24) >> 2]!;
+        out.surfaceLinearVelocity[0] = mem.f32[(address + 16) >> 2]!;
+        out.surfaceLinearVelocity[1] = mem.f32[(address + 20) >> 2]!;
+        out.surfaceLinearVelocity[2] = mem.f32[(address + 24) >> 2]!;
+        out.surfaceAngularVelocity[0] = mem.f32[(address + 32) >> 2]!;
+        out.surfaceAngularVelocity[1] = mem.f32[(address + 36) >> 2]!;
+        out.surfaceAngularVelocity[2] = mem.f32[(address + 40) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -4524,12 +4995,14 @@ export const KCCBodyPolicy = {
         mem.u8[address + 1] = value.canPushCharacter ? 1 : 0;
         mem.u8[address + 2] = value.canReceiveImpulses ? 1 : 0;
         mem.u8[address + 3] = value.slideOnWalkable ? 1 : 0;
-        mem.f32[(address + 4) >> 2] = value.surfaceLinearVelocity[0];
-        mem.f32[(address + 8) >> 2] = value.surfaceLinearVelocity[1];
-        mem.f32[(address + 12) >> 2] = value.surfaceLinearVelocity[2];
-        mem.f32[(address + 16) >> 2] = value.surfaceAngularVelocity[0];
-        mem.f32[(address + 20) >> 2] = value.surfaceAngularVelocity[1];
-        mem.f32[(address + 24) >> 2] = value.surfaceAngularVelocity[2];
+        mem.f32[(address + 16) >> 2] = value.surfaceLinearVelocity[0];
+        mem.f32[(address + 20) >> 2] = value.surfaceLinearVelocity[1];
+        mem.f32[(address + 24) >> 2] = value.surfaceLinearVelocity[2];
+        mem.f32[(address + 28) >> 2] = value.surfaceLinearVelocity[2];
+        mem.f32[(address + 32) >> 2] = value.surfaceAngularVelocity[0];
+        mem.f32[(address + 36) >> 2] = value.surfaceAngularVelocity[1];
+        mem.f32[(address + 40) >> 2] = value.surfaceAngularVelocity[2];
+        mem.f32[(address + 44) >> 2] = value.surfaceAngularVelocity[2];
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: KCCBodyPolicy): void {
@@ -4537,12 +5010,14 @@ export const KCCBodyPolicy = {
         view.setUint8(offset + 1, value.canPushCharacter ? 1 : 0);
         view.setUint8(offset + 2, value.canReceiveImpulses ? 1 : 0);
         view.setUint8(offset + 3, value.slideOnWalkable ? 1 : 0);
-        view.setFloat32(offset + 4, value.surfaceLinearVelocity[0], true);
-        view.setFloat32(offset + 8, value.surfaceLinearVelocity[1], true);
-        view.setFloat32(offset + 12, value.surfaceLinearVelocity[2], true);
-        view.setFloat32(offset + 16, value.surfaceAngularVelocity[0], true);
-        view.setFloat32(offset + 20, value.surfaceAngularVelocity[1], true);
-        view.setFloat32(offset + 24, value.surfaceAngularVelocity[2], true);
+        view.setFloat32(offset + 16, value.surfaceLinearVelocity[0], true);
+        view.setFloat32(offset + 20, value.surfaceLinearVelocity[1], true);
+        view.setFloat32(offset + 24, value.surfaceLinearVelocity[2], true);
+        view.setFloat32(offset + 28, value.surfaceLinearVelocity[2], true);
+        view.setFloat32(offset + 32, value.surfaceAngularVelocity[0], true);
+        view.setFloat32(offset + 36, value.surfaceAngularVelocity[1], true);
+        view.setFloat32(offset + 40, value.surfaceAngularVelocity[2], true);
+        view.setFloat32(offset + 44, value.surfaceAngularVelocity[2], true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: KCCBodyPolicy, view: DataView, offset: number): KCCBodyPolicy {
@@ -4550,12 +5025,12 @@ export const KCCBodyPolicy = {
         out.canPushCharacter = view.getUint8(offset + 1) !== 0;
         out.canReceiveImpulses = view.getUint8(offset + 2) !== 0;
         out.slideOnWalkable = view.getUint8(offset + 3) !== 0;
-        out.surfaceLinearVelocity[0] = view.getFloat32(offset + 4, true);
-        out.surfaceLinearVelocity[1] = view.getFloat32(offset + 8, true);
-        out.surfaceLinearVelocity[2] = view.getFloat32(offset + 12, true);
-        out.surfaceAngularVelocity[0] = view.getFloat32(offset + 16, true);
-        out.surfaceAngularVelocity[1] = view.getFloat32(offset + 20, true);
-        out.surfaceAngularVelocity[2] = view.getFloat32(offset + 24, true);
+        out.surfaceLinearVelocity[0] = view.getFloat32(offset + 16, true);
+        out.surfaceLinearVelocity[1] = view.getFloat32(offset + 20, true);
+        out.surfaceLinearVelocity[2] = view.getFloat32(offset + 24, true);
+        out.surfaceAngularVelocity[0] = view.getFloat32(offset + 32, true);
+        out.surfaceAngularVelocity[1] = view.getFloat32(offset + 36, true);
+        out.surfaceAngularVelocity[2] = view.getFloat32(offset + 40, true);
         return out;
     },
 };
@@ -4580,14 +5055,13 @@ export type KCCSettings = {
     enhancedInternalEdgeRemoval: boolean;
     hasSupportingVolumePlane: boolean;
     supportingVolumePlane: Plane3;
-    userDataLow: number;
-    userDataHigh: number;
+    userData: number;
     observesContacts: boolean;
     innerRigidBodyShape: Shape | null;
     innerRigidBodyObjectLayer: number;
 };
 export const KCCSettings = {
-    size: 120,
+    size: 128,
     create(): KCCSettings {
         return {
             shape: null,
@@ -4609,8 +5083,7 @@ export const KCCSettings = {
             enhancedInternalEdgeRemoval: false,
             hasSupportingVolumePlane: false,
             supportingVolumePlane: Plane3.create(),
-            userDataLow: 0,
-            userDataHigh: 0,
+            userData: 0,
             observesContacts: false,
             innerRigidBodyShape: null,
             innerRigidBodyObjectLayer: 0,
@@ -4645,11 +5118,10 @@ export const KCCSettings = {
         out.supportingVolumePlane.normal[1] = mem.f32[(address + 88) >> 2]!;
         out.supportingVolumePlane.normal[2] = mem.f32[(address + 92) >> 2]!;
         out.supportingVolumePlane.constant = mem.f32[(address + 96) >> 2]!;
-        out.userDataLow = mem.u32[(address + 100) >> 2]!;
-        out.userDataHigh = mem.u32[(address + 104) >> 2]!;
-        out.observesContacts = mem.u8[address + 108]! !== 0;
-        out.innerRigidBodyShape = (mem.u32[(address + 112) >> 2]! || null) as Shape | null;
-        out.innerRigidBodyObjectLayer = mem.u32[(address + 116) >> 2]!;
+        out.userData = mem.u32[(address + 104) >> 2]! + mem.u32[(address + 104 + 4) >> 2]! * 0x100000000;
+        out.observesContacts = mem.u8[address + 112]! !== 0;
+        out.innerRigidBodyShape = (mem.u32[(address + 116) >> 2]! || null) as Shape | null;
+        out.innerRigidBodyObjectLayer = mem.u32[(address + 120) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -4681,11 +5153,11 @@ export const KCCSettings = {
         mem.f32[(address + 88) >> 2] = value.supportingVolumePlane.normal[1];
         mem.f32[(address + 92) >> 2] = value.supportingVolumePlane.normal[2];
         mem.f32[(address + 96) >> 2] = value.supportingVolumePlane.constant;
-        mem.u32[(address + 100) >> 2] = value.userDataLow;
-        mem.u32[(address + 104) >> 2] = value.userDataHigh;
-        mem.u8[address + 108] = value.observesContacts ? 1 : 0;
-        mem.u32[(address + 112) >> 2] = value.innerRigidBodyShape ?? 0;
-        mem.u32[(address + 116) >> 2] = value.innerRigidBodyObjectLayer;
+        mem.u32[(address + 104) >> 2] = value.userData >>> 0;
+        mem.u32[(address + 104 + 4) >> 2] = Math.floor(value.userData / 0x100000000);
+        mem.u8[address + 112] = value.observesContacts ? 1 : 0;
+        mem.u32[(address + 116) >> 2] = value.innerRigidBodyShape ?? 0;
+        mem.u32[(address + 120) >> 2] = value.innerRigidBodyObjectLayer;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: KCCSettings): void {
@@ -4715,11 +5187,11 @@ export const KCCSettings = {
         view.setFloat32(offset + 88, value.supportingVolumePlane.normal[1], true);
         view.setFloat32(offset + 92, value.supportingVolumePlane.normal[2], true);
         view.setFloat32(offset + 96, value.supportingVolumePlane.constant, true);
-        view.setUint32(offset + 100, value.userDataLow, true);
-        view.setUint32(offset + 104, value.userDataHigh, true);
-        view.setUint8(offset + 108, value.observesContacts ? 1 : 0);
-        view.setUint32(offset + 112, value.innerRigidBodyShape ?? 0, true);
-        view.setUint32(offset + 116, value.innerRigidBodyObjectLayer, true);
+        view.setUint32(offset + 104, value.userData >>> 0, true);
+        view.setUint32(offset + 108, Math.floor(value.userData / 0x100000000), true);
+        view.setUint8(offset + 112, value.observesContacts ? 1 : 0);
+        view.setUint32(offset + 116, value.innerRigidBodyShape ?? 0, true);
+        view.setUint32(offset + 120, value.innerRigidBodyObjectLayer, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: KCCSettings, view: DataView, offset: number): KCCSettings {
@@ -4749,33 +5221,32 @@ export const KCCSettings = {
         out.supportingVolumePlane.normal[1] = view.getFloat32(offset + 88, true);
         out.supportingVolumePlane.normal[2] = view.getFloat32(offset + 92, true);
         out.supportingVolumePlane.constant = view.getFloat32(offset + 96, true);
-        out.userDataLow = view.getUint32(offset + 100, true);
-        out.userDataHigh = view.getUint32(offset + 104, true);
-        out.observesContacts = view.getUint8(offset + 108) !== 0;
-        out.innerRigidBodyShape = (view.getUint32(offset + 112, true) || null) as Shape | null;
-        out.innerRigidBodyObjectLayer = view.getUint32(offset + 116, true);
+        out.userData = view.getUint32(offset + 104, true) + view.getUint32(offset + 108, true) * 0x100000000;
+        out.observesContacts = view.getUint8(offset + 112) !== 0;
+        out.innerRigidBodyShape = (view.getUint32(offset + 116, true) || null) as Shape | null;
+        out.innerRigidBodyObjectLayer = view.getUint32(offset + 120, true);
         return out;
     },
 };
 
 export type KCCUpdateSettings = {
-    stickToFloorStepDown: Vec3;
-    walkStairsStepUp: Vec3;
+    stickToFloorStepDown: Vec3f;
+    walkStairsStepUp: Vec3f;
     walkStairsMinStepForward: number;
     walkStairsStepForwardTest: number;
     walkStairsCosAngleForwardContact: number;
-    walkStairsStepDownExtra: Vec3;
+    walkStairsStepDownExtra: Vec3f;
 };
 export const KCCUpdateSettings = {
-    size: 48,
+    size: 64,
     create(): KCCUpdateSettings {
         return {
-            stickToFloorStepDown: Vec3.create(),
-            walkStairsStepUp: Vec3.create(),
+            stickToFloorStepDown: Vec3f.create(),
+            walkStairsStepUp: Vec3f.create(),
             walkStairsMinStepForward: 0,
             walkStairsStepForwardTest: 0,
             walkStairsCosAngleForwardContact: 0,
-            walkStairsStepDownExtra: Vec3.create(),
+            walkStairsStepDownExtra: Vec3f.create(),
         };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
@@ -4784,15 +5255,15 @@ export const KCCUpdateSettings = {
         out.stickToFloorStepDown[0] = mem.f32[(address + 0) >> 2]!;
         out.stickToFloorStepDown[1] = mem.f32[(address + 4) >> 2]!;
         out.stickToFloorStepDown[2] = mem.f32[(address + 8) >> 2]!;
-        out.walkStairsStepUp[0] = mem.f32[(address + 12) >> 2]!;
-        out.walkStairsStepUp[1] = mem.f32[(address + 16) >> 2]!;
-        out.walkStairsStepUp[2] = mem.f32[(address + 20) >> 2]!;
-        out.walkStairsMinStepForward = mem.f32[(address + 24) >> 2]!;
-        out.walkStairsStepForwardTest = mem.f32[(address + 28) >> 2]!;
-        out.walkStairsCosAngleForwardContact = mem.f32[(address + 32) >> 2]!;
-        out.walkStairsStepDownExtra[0] = mem.f32[(address + 36) >> 2]!;
-        out.walkStairsStepDownExtra[1] = mem.f32[(address + 40) >> 2]!;
-        out.walkStairsStepDownExtra[2] = mem.f32[(address + 44) >> 2]!;
+        out.walkStairsStepUp[0] = mem.f32[(address + 16) >> 2]!;
+        out.walkStairsStepUp[1] = mem.f32[(address + 20) >> 2]!;
+        out.walkStairsStepUp[2] = mem.f32[(address + 24) >> 2]!;
+        out.walkStairsMinStepForward = mem.f32[(address + 32) >> 2]!;
+        out.walkStairsStepForwardTest = mem.f32[(address + 36) >> 2]!;
+        out.walkStairsCosAngleForwardContact = mem.f32[(address + 40) >> 2]!;
+        out.walkStairsStepDownExtra[0] = mem.f32[(address + 48) >> 2]!;
+        out.walkStairsStepDownExtra[1] = mem.f32[(address + 52) >> 2]!;
+        out.walkStairsStepDownExtra[2] = mem.f32[(address + 56) >> 2]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -4801,45 +5272,51 @@ export const KCCUpdateSettings = {
         mem.f32[(address + 0) >> 2] = value.stickToFloorStepDown[0];
         mem.f32[(address + 4) >> 2] = value.stickToFloorStepDown[1];
         mem.f32[(address + 8) >> 2] = value.stickToFloorStepDown[2];
-        mem.f32[(address + 12) >> 2] = value.walkStairsStepUp[0];
-        mem.f32[(address + 16) >> 2] = value.walkStairsStepUp[1];
-        mem.f32[(address + 20) >> 2] = value.walkStairsStepUp[2];
-        mem.f32[(address + 24) >> 2] = value.walkStairsMinStepForward;
-        mem.f32[(address + 28) >> 2] = value.walkStairsStepForwardTest;
-        mem.f32[(address + 32) >> 2] = value.walkStairsCosAngleForwardContact;
-        mem.f32[(address + 36) >> 2] = value.walkStairsStepDownExtra[0];
-        mem.f32[(address + 40) >> 2] = value.walkStairsStepDownExtra[1];
-        mem.f32[(address + 44) >> 2] = value.walkStairsStepDownExtra[2];
+        mem.f32[(address + 12) >> 2] = value.stickToFloorStepDown[2];
+        mem.f32[(address + 16) >> 2] = value.walkStairsStepUp[0];
+        mem.f32[(address + 20) >> 2] = value.walkStairsStepUp[1];
+        mem.f32[(address + 24) >> 2] = value.walkStairsStepUp[2];
+        mem.f32[(address + 28) >> 2] = value.walkStairsStepUp[2];
+        mem.f32[(address + 32) >> 2] = value.walkStairsMinStepForward;
+        mem.f32[(address + 36) >> 2] = value.walkStairsStepForwardTest;
+        mem.f32[(address + 40) >> 2] = value.walkStairsCosAngleForwardContact;
+        mem.f32[(address + 48) >> 2] = value.walkStairsStepDownExtra[0];
+        mem.f32[(address + 52) >> 2] = value.walkStairsStepDownExtra[1];
+        mem.f32[(address + 56) >> 2] = value.walkStairsStepDownExtra[2];
+        mem.f32[(address + 60) >> 2] = value.walkStairsStepDownExtra[2];
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: KCCUpdateSettings): void {
         view.setFloat32(offset + 0, value.stickToFloorStepDown[0], true);
         view.setFloat32(offset + 4, value.stickToFloorStepDown[1], true);
         view.setFloat32(offset + 8, value.stickToFloorStepDown[2], true);
-        view.setFloat32(offset + 12, value.walkStairsStepUp[0], true);
-        view.setFloat32(offset + 16, value.walkStairsStepUp[1], true);
-        view.setFloat32(offset + 20, value.walkStairsStepUp[2], true);
-        view.setFloat32(offset + 24, value.walkStairsMinStepForward, true);
-        view.setFloat32(offset + 28, value.walkStairsStepForwardTest, true);
-        view.setFloat32(offset + 32, value.walkStairsCosAngleForwardContact, true);
-        view.setFloat32(offset + 36, value.walkStairsStepDownExtra[0], true);
-        view.setFloat32(offset + 40, value.walkStairsStepDownExtra[1], true);
-        view.setFloat32(offset + 44, value.walkStairsStepDownExtra[2], true);
+        view.setFloat32(offset + 12, value.stickToFloorStepDown[2], true);
+        view.setFloat32(offset + 16, value.walkStairsStepUp[0], true);
+        view.setFloat32(offset + 20, value.walkStairsStepUp[1], true);
+        view.setFloat32(offset + 24, value.walkStairsStepUp[2], true);
+        view.setFloat32(offset + 28, value.walkStairsStepUp[2], true);
+        view.setFloat32(offset + 32, value.walkStairsMinStepForward, true);
+        view.setFloat32(offset + 36, value.walkStairsStepForwardTest, true);
+        view.setFloat32(offset + 40, value.walkStairsCosAngleForwardContact, true);
+        view.setFloat32(offset + 48, value.walkStairsStepDownExtra[0], true);
+        view.setFloat32(offset + 52, value.walkStairsStepDownExtra[1], true);
+        view.setFloat32(offset + 56, value.walkStairsStepDownExtra[2], true);
+        view.setFloat32(offset + 60, value.walkStairsStepDownExtra[2], true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: KCCUpdateSettings, view: DataView, offset: number): KCCUpdateSettings {
         out.stickToFloorStepDown[0] = view.getFloat32(offset + 0, true);
         out.stickToFloorStepDown[1] = view.getFloat32(offset + 4, true);
         out.stickToFloorStepDown[2] = view.getFloat32(offset + 8, true);
-        out.walkStairsStepUp[0] = view.getFloat32(offset + 12, true);
-        out.walkStairsStepUp[1] = view.getFloat32(offset + 16, true);
-        out.walkStairsStepUp[2] = view.getFloat32(offset + 20, true);
-        out.walkStairsMinStepForward = view.getFloat32(offset + 24, true);
-        out.walkStairsStepForwardTest = view.getFloat32(offset + 28, true);
-        out.walkStairsCosAngleForwardContact = view.getFloat32(offset + 32, true);
-        out.walkStairsStepDownExtra[0] = view.getFloat32(offset + 36, true);
-        out.walkStairsStepDownExtra[1] = view.getFloat32(offset + 40, true);
-        out.walkStairsStepDownExtra[2] = view.getFloat32(offset + 44, true);
+        out.walkStairsStepUp[0] = view.getFloat32(offset + 16, true);
+        out.walkStairsStepUp[1] = view.getFloat32(offset + 20, true);
+        out.walkStairsStepUp[2] = view.getFloat32(offset + 24, true);
+        out.walkStairsMinStepForward = view.getFloat32(offset + 32, true);
+        out.walkStairsStepForwardTest = view.getFloat32(offset + 36, true);
+        out.walkStairsCosAngleForwardContact = view.getFloat32(offset + 40, true);
+        out.walkStairsStepDownExtra[0] = view.getFloat32(offset + 48, true);
+        out.walkStairsStepDownExtra[1] = view.getFloat32(offset + 52, true);
+        out.walkStairsStepDownExtra[2] = view.getFloat32(offset + 56, true);
         return out;
     },
 };
@@ -5453,67 +5930,69 @@ export const DebugBodiesOptions = {
 
 export type DebugBodyOptions = {
     hasColor: boolean;
-    color: Vec3;
+    color: Vec3f;
     colorMode: number;
     showLinearVelocity: boolean;
     showAngularVelocity: boolean;
 };
 export const DebugBodyOptions = {
-    size: 24,
+    size: 48,
     create(): DebugBodyOptions {
-        return { hasColor: false, color: Vec3.create(), colorMode: 0, showLinearVelocity: false, showAngularVelocity: false };
+        return { hasColor: false, color: Vec3f.create(), colorMode: 0, showLinearVelocity: false, showAngularVelocity: false };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: DebugBodyOptions, address: number): DebugBodyOptions {
         const mem = wasm.mem;
         out.hasColor = mem.u8[address + 0]! !== 0;
-        out.color[0] = mem.f32[(address + 4) >> 2]!;
-        out.color[1] = mem.f32[(address + 8) >> 2]!;
-        out.color[2] = mem.f32[(address + 12) >> 2]!;
-        out.colorMode = mem.u32[(address + 16) >> 2]!;
-        out.showLinearVelocity = mem.u8[address + 20]! !== 0;
-        out.showAngularVelocity = mem.u8[address + 21]! !== 0;
+        out.color[0] = mem.f32[(address + 16) >> 2]!;
+        out.color[1] = mem.f32[(address + 20) >> 2]!;
+        out.color[2] = mem.f32[(address + 24) >> 2]!;
+        out.colorMode = mem.u32[(address + 32) >> 2]!;
+        out.showLinearVelocity = mem.u8[address + 36]! !== 0;
+        out.showAngularVelocity = mem.u8[address + 37]! !== 0;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
     write(address: number, value: DebugBodyOptions): void {
         const mem = wasm.mem;
         mem.u8[address + 0] = value.hasColor ? 1 : 0;
-        mem.f32[(address + 4) >> 2] = value.color[0];
-        mem.f32[(address + 8) >> 2] = value.color[1];
-        mem.f32[(address + 12) >> 2] = value.color[2];
-        mem.u32[(address + 16) >> 2] = value.colorMode;
-        mem.u8[address + 20] = value.showLinearVelocity ? 1 : 0;
-        mem.u8[address + 21] = value.showAngularVelocity ? 1 : 0;
+        mem.f32[(address + 16) >> 2] = value.color[0];
+        mem.f32[(address + 20) >> 2] = value.color[1];
+        mem.f32[(address + 24) >> 2] = value.color[2];
+        mem.f32[(address + 28) >> 2] = value.color[2];
+        mem.u32[(address + 32) >> 2] = value.colorMode;
+        mem.u8[address + 36] = value.showLinearVelocity ? 1 : 0;
+        mem.u8[address + 37] = value.showAngularVelocity ? 1 : 0;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: DebugBodyOptions): void {
         view.setUint8(offset + 0, value.hasColor ? 1 : 0);
-        view.setFloat32(offset + 4, value.color[0], true);
-        view.setFloat32(offset + 8, value.color[1], true);
-        view.setFloat32(offset + 12, value.color[2], true);
-        view.setUint32(offset + 16, value.colorMode, true);
-        view.setUint8(offset + 20, value.showLinearVelocity ? 1 : 0);
-        view.setUint8(offset + 21, value.showAngularVelocity ? 1 : 0);
+        view.setFloat32(offset + 16, value.color[0], true);
+        view.setFloat32(offset + 20, value.color[1], true);
+        view.setFloat32(offset + 24, value.color[2], true);
+        view.setFloat32(offset + 28, value.color[2], true);
+        view.setUint32(offset + 32, value.colorMode, true);
+        view.setUint8(offset + 36, value.showLinearVelocity ? 1 : 0);
+        view.setUint8(offset + 37, value.showAngularVelocity ? 1 : 0);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: DebugBodyOptions, view: DataView, offset: number): DebugBodyOptions {
         out.hasColor = view.getUint8(offset + 0) !== 0;
-        out.color[0] = view.getFloat32(offset + 4, true);
-        out.color[1] = view.getFloat32(offset + 8, true);
-        out.color[2] = view.getFloat32(offset + 12, true);
-        out.colorMode = view.getUint32(offset + 16, true);
-        out.showLinearVelocity = view.getUint8(offset + 20) !== 0;
-        out.showAngularVelocity = view.getUint8(offset + 21) !== 0;
+        out.color[0] = view.getFloat32(offset + 16, true);
+        out.color[1] = view.getFloat32(offset + 20, true);
+        out.color[2] = view.getFloat32(offset + 24, true);
+        out.colorMode = view.getUint32(offset + 32, true);
+        out.showLinearVelocity = view.getUint8(offset + 36) !== 0;
+        out.showAngularVelocity = view.getUint8(offset + 37) !== 0;
         return out;
     },
 };
 
-export type DebugShapeOptions = { color: Vec3 };
+export type DebugShapeOptions = { color: Vec3f };
 export const DebugShapeOptions = {
-    size: 12,
+    size: 16,
     create(): DebugShapeOptions {
-        return { color: Vec3.create() };
+        return { color: Vec3f.create() };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: DebugShapeOptions, address: number): DebugShapeOptions {
@@ -5529,12 +6008,14 @@ export const DebugShapeOptions = {
         mem.f32[(address + 0) >> 2] = value.color[0];
         mem.f32[(address + 4) >> 2] = value.color[1];
         mem.f32[(address + 8) >> 2] = value.color[2];
+        mem.f32[(address + 12) >> 2] = value.color[2];
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: DebugShapeOptions): void {
         view.setFloat32(offset + 0, value.color[0], true);
         view.setFloat32(offset + 4, value.color[1], true);
         view.setFloat32(offset + 8, value.color[2], true);
+        view.setFloat32(offset + 12, value.color[2], true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: DebugShapeOptions, view: DataView, offset: number): DebugShapeOptions {
@@ -5581,13 +6062,11 @@ export type ContactPair = {
     handle: number;
     bodyA: number;
     subShapeA: number;
-    userDataALow: number;
-    userDataAHigh: number;
+    userDataA: number;
     sensorA: boolean;
     bodyB: number;
     subShapeB: number;
-    userDataBLow: number;
-    userDataBHigh: number;
+    userDataB: number;
     sensorB: boolean;
     point: Vec3;
     normal: Vec3;
@@ -5596,19 +6075,17 @@ export type ContactPair = {
     added: boolean;
 };
 export const ContactPair = {
-    size: 88,
+    size: 96,
     create(): ContactPair {
         return {
             handle: 0,
             bodyA: 0,
             subShapeA: 0,
-            userDataALow: 0,
-            userDataAHigh: 0,
+            userDataA: 0,
             sensorA: false,
             bodyB: 0,
             subShapeB: 0,
-            userDataBLow: 0,
-            userDataBHigh: 0,
+            userDataB: 0,
             sensorB: false,
             point: Vec3.create(),
             normal: Vec3.create(),
@@ -5623,25 +6100,23 @@ export const ContactPair = {
         out.handle = mem.u32[(address + 0) >> 2]!;
         out.bodyA = mem.u32[(address + 4) >> 2]!;
         out.subShapeA = mem.u32[(address + 8) >> 2]!;
-        out.userDataALow = mem.u32[(address + 12) >> 2]!;
-        out.userDataAHigh = mem.u32[(address + 16) >> 2]!;
-        out.sensorA = mem.u8[address + 20]! !== 0;
-        out.bodyB = mem.u32[(address + 24) >> 2]!;
-        out.subShapeB = mem.u32[(address + 28) >> 2]!;
-        out.userDataBLow = mem.u32[(address + 32) >> 2]!;
-        out.userDataBHigh = mem.u32[(address + 36) >> 2]!;
-        out.sensorB = mem.u8[address + 40]! !== 0;
-        out.point[0] = mem.f32[(address + 44) >> 2]!;
-        out.point[1] = mem.f32[(address + 48) >> 2]!;
-        out.point[2] = mem.f32[(address + 52) >> 2]!;
-        out.normal[0] = mem.f32[(address + 56) >> 2]!;
-        out.normal[1] = mem.f32[(address + 60) >> 2]!;
-        out.normal[2] = mem.f32[(address + 64) >> 2]!;
-        out.penetrationDepth = mem.f32[(address + 68) >> 2]!;
-        out.relativeVelocity[0] = mem.f32[(address + 72) >> 2]!;
-        out.relativeVelocity[1] = mem.f32[(address + 76) >> 2]!;
-        out.relativeVelocity[2] = mem.f32[(address + 80) >> 2]!;
-        out.added = mem.u8[address + 84]! !== 0;
+        out.userDataA = mem.u32[(address + 16) >> 2]! + mem.u32[(address + 16 + 4) >> 2]! * 0x100000000;
+        out.sensorA = mem.u8[address + 24]! !== 0;
+        out.bodyB = mem.u32[(address + 28) >> 2]!;
+        out.subShapeB = mem.u32[(address + 32) >> 2]!;
+        out.userDataB = mem.u32[(address + 40) >> 2]! + mem.u32[(address + 40 + 4) >> 2]! * 0x100000000;
+        out.sensorB = mem.u8[address + 48]! !== 0;
+        out.point[0] = mem.f32[(address + 52) >> 2]!;
+        out.point[1] = mem.f32[(address + 56) >> 2]!;
+        out.point[2] = mem.f32[(address + 60) >> 2]!;
+        out.normal[0] = mem.f32[(address + 64) >> 2]!;
+        out.normal[1] = mem.f32[(address + 68) >> 2]!;
+        out.normal[2] = mem.f32[(address + 72) >> 2]!;
+        out.penetrationDepth = mem.f32[(address + 76) >> 2]!;
+        out.relativeVelocity[0] = mem.f32[(address + 80) >> 2]!;
+        out.relativeVelocity[1] = mem.f32[(address + 84) >> 2]!;
+        out.relativeVelocity[2] = mem.f32[(address + 88) >> 2]!;
+        out.added = mem.u8[address + 92]! !== 0;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
@@ -5650,75 +6125,73 @@ export const ContactPair = {
         mem.u32[(address + 0) >> 2] = value.handle;
         mem.u32[(address + 4) >> 2] = value.bodyA;
         mem.u32[(address + 8) >> 2] = value.subShapeA;
-        mem.u32[(address + 12) >> 2] = value.userDataALow;
-        mem.u32[(address + 16) >> 2] = value.userDataAHigh;
-        mem.u8[address + 20] = value.sensorA ? 1 : 0;
-        mem.u32[(address + 24) >> 2] = value.bodyB;
-        mem.u32[(address + 28) >> 2] = value.subShapeB;
-        mem.u32[(address + 32) >> 2] = value.userDataBLow;
-        mem.u32[(address + 36) >> 2] = value.userDataBHigh;
-        mem.u8[address + 40] = value.sensorB ? 1 : 0;
-        mem.f32[(address + 44) >> 2] = value.point[0];
-        mem.f32[(address + 48) >> 2] = value.point[1];
-        mem.f32[(address + 52) >> 2] = value.point[2];
-        mem.f32[(address + 56) >> 2] = value.normal[0];
-        mem.f32[(address + 60) >> 2] = value.normal[1];
-        mem.f32[(address + 64) >> 2] = value.normal[2];
-        mem.f32[(address + 68) >> 2] = value.penetrationDepth;
-        mem.f32[(address + 72) >> 2] = value.relativeVelocity[0];
-        mem.f32[(address + 76) >> 2] = value.relativeVelocity[1];
-        mem.f32[(address + 80) >> 2] = value.relativeVelocity[2];
-        mem.u8[address + 84] = value.added ? 1 : 0;
+        mem.u32[(address + 16) >> 2] = value.userDataA >>> 0;
+        mem.u32[(address + 16 + 4) >> 2] = Math.floor(value.userDataA / 0x100000000);
+        mem.u8[address + 24] = value.sensorA ? 1 : 0;
+        mem.u32[(address + 28) >> 2] = value.bodyB;
+        mem.u32[(address + 32) >> 2] = value.subShapeB;
+        mem.u32[(address + 40) >> 2] = value.userDataB >>> 0;
+        mem.u32[(address + 40 + 4) >> 2] = Math.floor(value.userDataB / 0x100000000);
+        mem.u8[address + 48] = value.sensorB ? 1 : 0;
+        mem.f32[(address + 52) >> 2] = value.point[0];
+        mem.f32[(address + 56) >> 2] = value.point[1];
+        mem.f32[(address + 60) >> 2] = value.point[2];
+        mem.f32[(address + 64) >> 2] = value.normal[0];
+        mem.f32[(address + 68) >> 2] = value.normal[1];
+        mem.f32[(address + 72) >> 2] = value.normal[2];
+        mem.f32[(address + 76) >> 2] = value.penetrationDepth;
+        mem.f32[(address + 80) >> 2] = value.relativeVelocity[0];
+        mem.f32[(address + 84) >> 2] = value.relativeVelocity[1];
+        mem.f32[(address + 88) >> 2] = value.relativeVelocity[2];
+        mem.u8[address + 92] = value.added ? 1 : 0;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: ContactPair): void {
         view.setUint32(offset + 0, value.handle, true);
         view.setUint32(offset + 4, value.bodyA, true);
         view.setUint32(offset + 8, value.subShapeA, true);
-        view.setUint32(offset + 12, value.userDataALow, true);
-        view.setUint32(offset + 16, value.userDataAHigh, true);
-        view.setUint8(offset + 20, value.sensorA ? 1 : 0);
-        view.setUint32(offset + 24, value.bodyB, true);
-        view.setUint32(offset + 28, value.subShapeB, true);
-        view.setUint32(offset + 32, value.userDataBLow, true);
-        view.setUint32(offset + 36, value.userDataBHigh, true);
-        view.setUint8(offset + 40, value.sensorB ? 1 : 0);
-        view.setFloat32(offset + 44, value.point[0], true);
-        view.setFloat32(offset + 48, value.point[1], true);
-        view.setFloat32(offset + 52, value.point[2], true);
-        view.setFloat32(offset + 56, value.normal[0], true);
-        view.setFloat32(offset + 60, value.normal[1], true);
-        view.setFloat32(offset + 64, value.normal[2], true);
-        view.setFloat32(offset + 68, value.penetrationDepth, true);
-        view.setFloat32(offset + 72, value.relativeVelocity[0], true);
-        view.setFloat32(offset + 76, value.relativeVelocity[1], true);
-        view.setFloat32(offset + 80, value.relativeVelocity[2], true);
-        view.setUint8(offset + 84, value.added ? 1 : 0);
+        view.setUint32(offset + 16, value.userDataA >>> 0, true);
+        view.setUint32(offset + 20, Math.floor(value.userDataA / 0x100000000), true);
+        view.setUint8(offset + 24, value.sensorA ? 1 : 0);
+        view.setUint32(offset + 28, value.bodyB, true);
+        view.setUint32(offset + 32, value.subShapeB, true);
+        view.setUint32(offset + 40, value.userDataB >>> 0, true);
+        view.setUint32(offset + 44, Math.floor(value.userDataB / 0x100000000), true);
+        view.setUint8(offset + 48, value.sensorB ? 1 : 0);
+        view.setFloat32(offset + 52, value.point[0], true);
+        view.setFloat32(offset + 56, value.point[1], true);
+        view.setFloat32(offset + 60, value.point[2], true);
+        view.setFloat32(offset + 64, value.normal[0], true);
+        view.setFloat32(offset + 68, value.normal[1], true);
+        view.setFloat32(offset + 72, value.normal[2], true);
+        view.setFloat32(offset + 76, value.penetrationDepth, true);
+        view.setFloat32(offset + 80, value.relativeVelocity[0], true);
+        view.setFloat32(offset + 84, value.relativeVelocity[1], true);
+        view.setFloat32(offset + 88, value.relativeVelocity[2], true);
+        view.setUint8(offset + 92, value.added ? 1 : 0);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: ContactPair, view: DataView, offset: number): ContactPair {
         out.handle = view.getUint32(offset + 0, true);
         out.bodyA = view.getUint32(offset + 4, true);
         out.subShapeA = view.getUint32(offset + 8, true);
-        out.userDataALow = view.getUint32(offset + 12, true);
-        out.userDataAHigh = view.getUint32(offset + 16, true);
-        out.sensorA = view.getUint8(offset + 20) !== 0;
-        out.bodyB = view.getUint32(offset + 24, true);
-        out.subShapeB = view.getUint32(offset + 28, true);
-        out.userDataBLow = view.getUint32(offset + 32, true);
-        out.userDataBHigh = view.getUint32(offset + 36, true);
-        out.sensorB = view.getUint8(offset + 40) !== 0;
-        out.point[0] = view.getFloat32(offset + 44, true);
-        out.point[1] = view.getFloat32(offset + 48, true);
-        out.point[2] = view.getFloat32(offset + 52, true);
-        out.normal[0] = view.getFloat32(offset + 56, true);
-        out.normal[1] = view.getFloat32(offset + 60, true);
-        out.normal[2] = view.getFloat32(offset + 64, true);
-        out.penetrationDepth = view.getFloat32(offset + 68, true);
-        out.relativeVelocity[0] = view.getFloat32(offset + 72, true);
-        out.relativeVelocity[1] = view.getFloat32(offset + 76, true);
-        out.relativeVelocity[2] = view.getFloat32(offset + 80, true);
-        out.added = view.getUint8(offset + 84) !== 0;
+        out.userDataA = view.getUint32(offset + 16, true) + view.getUint32(offset + 20, true) * 0x100000000;
+        out.sensorA = view.getUint8(offset + 24) !== 0;
+        out.bodyB = view.getUint32(offset + 28, true);
+        out.subShapeB = view.getUint32(offset + 32, true);
+        out.userDataB = view.getUint32(offset + 40, true) + view.getUint32(offset + 44, true) * 0x100000000;
+        out.sensorB = view.getUint8(offset + 48) !== 0;
+        out.point[0] = view.getFloat32(offset + 52, true);
+        out.point[1] = view.getFloat32(offset + 56, true);
+        out.point[2] = view.getFloat32(offset + 60, true);
+        out.normal[0] = view.getFloat32(offset + 64, true);
+        out.normal[1] = view.getFloat32(offset + 68, true);
+        out.normal[2] = view.getFloat32(offset + 72, true);
+        out.penetrationDepth = view.getFloat32(offset + 76, true);
+        out.relativeVelocity[0] = view.getFloat32(offset + 80, true);
+        out.relativeVelocity[1] = view.getFloat32(offset + 84, true);
+        out.relativeVelocity[2] = view.getFloat32(offset + 88, true);
+        out.added = view.getUint8(offset + 92) !== 0;
         return out;
     },
 };
@@ -5726,7 +6199,7 @@ export const ContactPair = {
 export type WorldSettings = Handle<'WorldSettings'>;
 /** WorldSettings's fields as a plain object, for WorldSettings.writeTo / readFrom over another realm's buffer. */
 export type WorldSettingsValue = {
-    gravity: Vec3;
+    gravity: Vec3f;
     gravityEnabled: boolean;
     contacts: ContactsSettings;
     narrowphase: NarrowphaseSettings;
@@ -5735,21 +6208,21 @@ export type WorldSettingsValue = {
     ccd: CcdSettings;
 };
 export const WorldSettings = {
-    size: 176,
-    align: 4,
+    size: 192,
+    align: 16,
     /** byte offset of each field, for hot paths that read the views directly. */
     offset: {
-        gravity: 56,
-        gravityEnabled: 68,
-        contacts: 72,
-        narrowphase: 76,
-        solver: 120,
-        sleeping: 152,
-        ccd: 164,
+        gravity: 64,
+        gravityEnabled: 80,
+        contacts: 84,
+        narrowphase: 88,
+        solver: 132,
+        sleeping: 164,
+        ccd: 176,
     },
     createValue(): WorldSettingsValue {
         return {
-            gravity: Vec3.create(),
+            gravity: Vec3f.create(),
             gravityEnabled: false,
             contacts: ContactsSettings.create(),
             narrowphase: NarrowphaseSettings.create(),
@@ -5760,125 +6233,126 @@ export const WorldSettings = {
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: WorldSettingsValue): void {
-        view.setFloat32(offset + 56, value.gravity[0], true);
-        view.setFloat32(offset + 60, value.gravity[1], true);
-        view.setFloat32(offset + 64, value.gravity[2], true);
-        view.setUint8(offset + 68, value.gravityEnabled ? 1 : 0);
-        view.setFloat32(offset + 72, value.contacts.contactPointPreserveLambdaMaxDistSq, true);
-        view.setFloat32(offset + 76, value.narrowphase.collisionTolerance, true);
-        view.setFloat32(offset + 80, value.narrowphase.penetrationTolerance, true);
-        view.setUint8(offset + 84, value.narrowphase.returnDeepestPoint ? 1 : 0);
-        view.setUint8(offset + 85, value.narrowphase.collideOnlyWithActiveEdges ? 1 : 0);
-        view.setFloat32(offset + 88, value.narrowphase.speculativeContactDistance, true);
-        view.setFloat32(offset + 92, value.narrowphase.manifoldTolerance, true);
-        view.setUint8(offset + 96, value.narrowphase.collideWithBackfaces ? 1 : 0);
-        view.setUint8(offset + 97, value.narrowphase.useManifoldReduction ? 1 : 0);
-        view.setFloat32(offset + 100, value.narrowphase.normalCosMaxDeltaRotation, true);
-        view.setUint8(offset + 104, value.narrowphase.useBodyPairContactCache ? 1 : 0);
-        view.setFloat32(offset + 108, value.narrowphase.bodyPairCacheMaxDeltaPositionSq, true);
-        view.setFloat32(offset + 112, value.narrowphase.bodyPairCacheCosMaxDeltaRotationDiv2, true);
-        view.setFloat32(offset + 116, value.narrowphase.internalEdgeRemovalVertexToleranceSq, true);
-        view.setFloat32(offset + 120, value.solver.minVelocityForRestitution, true);
-        view.setUint32(offset + 124, value.solver.velocityIterations, true);
-        view.setUint32(offset + 128, value.solver.positionIterations, true);
-        view.setUint8(offset + 132, value.solver.warmStarting ? 1 : 0);
-        view.setFloat32(offset + 136, value.solver.penetrationSlop, true);
-        view.setFloat32(offset + 140, value.solver.baumgarteFactor, true);
-        view.setFloat32(offset + 144, value.solver.warmStartImpulseRatio, true);
-        view.setFloat32(offset + 148, value.solver.maxPenetrationDistance, true);
-        view.setUint8(offset + 152, value.sleeping.allowSleeping ? 1 : 0);
-        view.setFloat32(offset + 156, value.sleeping.timeBeforeSleep, true);
-        view.setFloat32(offset + 160, value.sleeping.pointVelocitySleepThreshold, true);
-        view.setFloat32(offset + 164, value.ccd.linearCastThreshold, true);
-        view.setFloat32(offset + 168, value.ccd.linearCastMaxPenetration, true);
-        view.setFloat32(offset + 172, value.ccd.minVelocityForRestitution, true);
+        view.setFloat32(offset + 64, value.gravity[0], true);
+        view.setFloat32(offset + 68, value.gravity[1], true);
+        view.setFloat32(offset + 72, value.gravity[2], true);
+        view.setFloat32(offset + 76, value.gravity[2], true);
+        view.setUint8(offset + 80, value.gravityEnabled ? 1 : 0);
+        view.setFloat32(offset + 84, value.contacts.contactPointPreserveLambdaMaxDistSq, true);
+        view.setFloat32(offset + 88, value.narrowphase.collisionTolerance, true);
+        view.setFloat32(offset + 92, value.narrowphase.penetrationTolerance, true);
+        view.setUint8(offset + 96, value.narrowphase.returnDeepestPoint ? 1 : 0);
+        view.setUint8(offset + 97, value.narrowphase.collideOnlyWithActiveEdges ? 1 : 0);
+        view.setFloat32(offset + 100, value.narrowphase.speculativeContactDistance, true);
+        view.setFloat32(offset + 104, value.narrowphase.manifoldTolerance, true);
+        view.setUint8(offset + 108, value.narrowphase.collideWithBackfaces ? 1 : 0);
+        view.setUint8(offset + 109, value.narrowphase.useManifoldReduction ? 1 : 0);
+        view.setFloat32(offset + 112, value.narrowphase.normalCosMaxDeltaRotation, true);
+        view.setUint8(offset + 116, value.narrowphase.useBodyPairContactCache ? 1 : 0);
+        view.setFloat32(offset + 120, value.narrowphase.bodyPairCacheMaxDeltaPositionSq, true);
+        view.setFloat32(offset + 124, value.narrowphase.bodyPairCacheCosMaxDeltaRotationDiv2, true);
+        view.setFloat32(offset + 128, value.narrowphase.internalEdgeRemovalVertexToleranceSq, true);
+        view.setFloat32(offset + 132, value.solver.minVelocityForRestitution, true);
+        view.setUint32(offset + 136, value.solver.velocityIterations, true);
+        view.setUint32(offset + 140, value.solver.positionIterations, true);
+        view.setUint8(offset + 144, value.solver.warmStarting ? 1 : 0);
+        view.setFloat32(offset + 148, value.solver.penetrationSlop, true);
+        view.setFloat32(offset + 152, value.solver.baumgarteFactor, true);
+        view.setFloat32(offset + 156, value.solver.warmStartImpulseRatio, true);
+        view.setFloat32(offset + 160, value.solver.maxPenetrationDistance, true);
+        view.setUint8(offset + 164, value.sleeping.allowSleeping ? 1 : 0);
+        view.setFloat32(offset + 168, value.sleeping.timeBeforeSleep, true);
+        view.setFloat32(offset + 172, value.sleeping.pointVelocitySleepThreshold, true);
+        view.setFloat32(offset + 176, value.ccd.linearCastThreshold, true);
+        view.setFloat32(offset + 180, value.ccd.linearCastMaxPenetration, true);
+        view.setFloat32(offset + 184, value.ccd.minVelocityForRestitution, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: WorldSettingsValue, view: DataView, offset: number): WorldSettingsValue {
-        out.gravity[0] = view.getFloat32(offset + 56, true);
-        out.gravity[1] = view.getFloat32(offset + 60, true);
-        out.gravity[2] = view.getFloat32(offset + 64, true);
-        out.gravityEnabled = view.getUint8(offset + 68) !== 0;
-        out.contacts.contactPointPreserveLambdaMaxDistSq = view.getFloat32(offset + 72, true);
-        out.narrowphase.collisionTolerance = view.getFloat32(offset + 76, true);
-        out.narrowphase.penetrationTolerance = view.getFloat32(offset + 80, true);
-        out.narrowphase.returnDeepestPoint = view.getUint8(offset + 84) !== 0;
-        out.narrowphase.collideOnlyWithActiveEdges = view.getUint8(offset + 85) !== 0;
-        out.narrowphase.speculativeContactDistance = view.getFloat32(offset + 88, true);
-        out.narrowphase.manifoldTolerance = view.getFloat32(offset + 92, true);
-        out.narrowphase.collideWithBackfaces = view.getUint8(offset + 96) !== 0;
-        out.narrowphase.useManifoldReduction = view.getUint8(offset + 97) !== 0;
-        out.narrowphase.normalCosMaxDeltaRotation = view.getFloat32(offset + 100, true);
-        out.narrowphase.useBodyPairContactCache = view.getUint8(offset + 104) !== 0;
-        out.narrowphase.bodyPairCacheMaxDeltaPositionSq = view.getFloat32(offset + 108, true);
-        out.narrowphase.bodyPairCacheCosMaxDeltaRotationDiv2 = view.getFloat32(offset + 112, true);
-        out.narrowphase.internalEdgeRemovalVertexToleranceSq = view.getFloat32(offset + 116, true);
-        out.solver.minVelocityForRestitution = view.getFloat32(offset + 120, true);
-        out.solver.velocityIterations = view.getUint32(offset + 124, true);
-        out.solver.positionIterations = view.getUint32(offset + 128, true);
-        out.solver.warmStarting = view.getUint8(offset + 132) !== 0;
-        out.solver.penetrationSlop = view.getFloat32(offset + 136, true);
-        out.solver.baumgarteFactor = view.getFloat32(offset + 140, true);
-        out.solver.warmStartImpulseRatio = view.getFloat32(offset + 144, true);
-        out.solver.maxPenetrationDistance = view.getFloat32(offset + 148, true);
-        out.sleeping.allowSleeping = view.getUint8(offset + 152) !== 0;
-        out.sleeping.timeBeforeSleep = view.getFloat32(offset + 156, true);
-        out.sleeping.pointVelocitySleepThreshold = view.getFloat32(offset + 160, true);
-        out.ccd.linearCastThreshold = view.getFloat32(offset + 164, true);
-        out.ccd.linearCastMaxPenetration = view.getFloat32(offset + 168, true);
-        out.ccd.minVelocityForRestitution = view.getFloat32(offset + 172, true);
+        out.gravity[0] = view.getFloat32(offset + 64, true);
+        out.gravity[1] = view.getFloat32(offset + 68, true);
+        out.gravity[2] = view.getFloat32(offset + 72, true);
+        out.gravityEnabled = view.getUint8(offset + 80) !== 0;
+        out.contacts.contactPointPreserveLambdaMaxDistSq = view.getFloat32(offset + 84, true);
+        out.narrowphase.collisionTolerance = view.getFloat32(offset + 88, true);
+        out.narrowphase.penetrationTolerance = view.getFloat32(offset + 92, true);
+        out.narrowphase.returnDeepestPoint = view.getUint8(offset + 96) !== 0;
+        out.narrowphase.collideOnlyWithActiveEdges = view.getUint8(offset + 97) !== 0;
+        out.narrowphase.speculativeContactDistance = view.getFloat32(offset + 100, true);
+        out.narrowphase.manifoldTolerance = view.getFloat32(offset + 104, true);
+        out.narrowphase.collideWithBackfaces = view.getUint8(offset + 108) !== 0;
+        out.narrowphase.useManifoldReduction = view.getUint8(offset + 109) !== 0;
+        out.narrowphase.normalCosMaxDeltaRotation = view.getFloat32(offset + 112, true);
+        out.narrowphase.useBodyPairContactCache = view.getUint8(offset + 116) !== 0;
+        out.narrowphase.bodyPairCacheMaxDeltaPositionSq = view.getFloat32(offset + 120, true);
+        out.narrowphase.bodyPairCacheCosMaxDeltaRotationDiv2 = view.getFloat32(offset + 124, true);
+        out.narrowphase.internalEdgeRemovalVertexToleranceSq = view.getFloat32(offset + 128, true);
+        out.solver.minVelocityForRestitution = view.getFloat32(offset + 132, true);
+        out.solver.velocityIterations = view.getUint32(offset + 136, true);
+        out.solver.positionIterations = view.getUint32(offset + 140, true);
+        out.solver.warmStarting = view.getUint8(offset + 144) !== 0;
+        out.solver.penetrationSlop = view.getFloat32(offset + 148, true);
+        out.solver.baumgarteFactor = view.getFloat32(offset + 152, true);
+        out.solver.warmStartImpulseRatio = view.getFloat32(offset + 156, true);
+        out.solver.maxPenetrationDistance = view.getFloat32(offset + 160, true);
+        out.sleeping.allowSleeping = view.getUint8(offset + 164) !== 0;
+        out.sleeping.timeBeforeSleep = view.getFloat32(offset + 168, true);
+        out.sleeping.pointVelocitySleepThreshold = view.getFloat32(offset + 172, true);
+        out.ccd.linearCastThreshold = view.getFloat32(offset + 176, true);
+        out.ccd.linearCastMaxPenetration = view.getFloat32(offset + 180, true);
+        out.ccd.minVelocityForRestitution = view.getFloat32(offset + 184, true);
         return out;
     },
 
-    readGravity(out: Vec3, worldSettings: WorldSettings): Vec3 {
-        return Vec3.read(out, worldSettings + 56);
+    readGravity(out: Vec3f, worldSettings: WorldSettings): Vec3f {
+        return Vec3f.read(out, worldSettings + 64);
     },
-    writeGravity(worldSettings: WorldSettings, value: Vec3): void {
-        Vec3.write(worldSettings + 56, value);
+    writeGravity(worldSettings: WorldSettings, value: Vec3f): void {
+        Vec3f.write(worldSettings + 64, value);
     },
 
     gravityEnabled(worldSettings: WorldSettings): boolean {
         const mem = wasm.mem;
-        return mem.u8[worldSettings + 68]! !== 0;
+        return mem.u8[worldSettings + 80]! !== 0;
     },
     setGravityEnabled(worldSettings: WorldSettings, value: boolean): void {
         const mem = wasm.mem;
-        mem.u8[worldSettings + 68] = value ? 1 : 0;
+        mem.u8[worldSettings + 80] = value ? 1 : 0;
     },
 
     readContacts(out: ContactsSettings, worldSettings: WorldSettings): ContactsSettings {
-        return ContactsSettings.read(out, worldSettings + 72);
+        return ContactsSettings.read(out, worldSettings + 84);
     },
     writeContacts(worldSettings: WorldSettings, value: ContactsSettings): void {
-        ContactsSettings.write(worldSettings + 72, value);
+        ContactsSettings.write(worldSettings + 84, value);
     },
 
     readNarrowphase(out: NarrowphaseSettings, worldSettings: WorldSettings): NarrowphaseSettings {
-        return NarrowphaseSettings.read(out, worldSettings + 76);
+        return NarrowphaseSettings.read(out, worldSettings + 88);
     },
     writeNarrowphase(worldSettings: WorldSettings, value: NarrowphaseSettings): void {
-        NarrowphaseSettings.write(worldSettings + 76, value);
+        NarrowphaseSettings.write(worldSettings + 88, value);
     },
 
     readSolver(out: SolverSettings, worldSettings: WorldSettings): SolverSettings {
-        return SolverSettings.read(out, worldSettings + 120);
+        return SolverSettings.read(out, worldSettings + 132);
     },
     writeSolver(worldSettings: WorldSettings, value: SolverSettings): void {
-        SolverSettings.write(worldSettings + 120, value);
+        SolverSettings.write(worldSettings + 132, value);
     },
 
     readSleeping(out: SleepingSettings, worldSettings: WorldSettings): SleepingSettings {
-        return SleepingSettings.read(out, worldSettings + 152);
+        return SleepingSettings.read(out, worldSettings + 164);
     },
     writeSleeping(worldSettings: WorldSettings, value: SleepingSettings): void {
-        SleepingSettings.write(worldSettings + 152, value);
+        SleepingSettings.write(worldSettings + 164, value);
     },
 
     readCcd(out: CcdSettings, worldSettings: WorldSettings): CcdSettings {
-        return CcdSettings.read(out, worldSettings + 164);
+        return CcdSettings.read(out, worldSettings + 176);
     },
     writeCcd(worldSettings: WorldSettings, value: CcdSettings): void {
-        CcdSettings.write(worldSettings + 164, value);
+        CcdSettings.write(worldSettings + 176, value);
     },
 
     create(): WorldSettings {
@@ -5910,7 +6384,32 @@ export const WorldSettings = {
 };
 
 export type World = Handle<'World'>;
+/** World's fields as a plain object, for World.writeTo / readFrom over another realm's buffer. */
+export type WorldValue = { events: WorldEventsValue };
 export const World = {
+    size: 1136,
+    align: 16,
+    /** byte offset of each field, for hot paths that read the views directly. */
+    offset: {
+        events: 1068,
+    },
+    createValue(): WorldValue {
+        return { events: WorldEvents.createValue() };
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: WorldValue): void {
+        view.setUint32(offset + 1116, value.events.woken, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: WorldValue, view: DataView, offset: number): WorldValue {
+        out.events.woken = view.getUint32(offset + 1116, true);
+        return out;
+    },
+
+    events(world: World): WorldEvents {
+        return (world + 1068) as WorldEvents;
+    },
+
     create(settings: WorldSettings): World {
         const r = wasm.exports.tumble_world_create(settings);
         wasm.grew();
@@ -5950,11 +6449,6 @@ export const World = {
     stepEnd(world: World): void {
         wasm.exports.tumble_world_step_end(world);
         wasm.grew();
-    },
-
-    woken(world: World): number {
-        const r = wasm.exports.tumble_world_woken(world);
-        return r >>> 0;
     },
 
     setMaterials(world: World, frictionRestitution: Pointer<'f32'>, count: number): void {
@@ -6019,251 +6513,352 @@ export const Shape = {
     },
 };
 
-export type Filter = Handle<'Filter'>;
-export const Filter = {
-    create(world: World): Filter {
-        const r = wasm.exports.tumble_filter_create(world);
-        wasm.grew();
-        if (r === 0) wasm.check();
-        return r as Filter;
+export type WorldEvents = Handle<'WorldEvents'>;
+/** WorldEvents's fields as a plain object, for WorldEvents.writeTo / readFrom over another realm's buffer. */
+export type WorldEventsValue = { woken: number };
+export const WorldEvents = {
+    size: 52,
+    align: 4,
+    /** byte offset of each field, for hot paths that read the views directly. */
+    offset: {
+        pairs: 0,
+        contactsAdded: 12,
+        contactsPersisted: 24,
+        contactsRemoved: 36,
+        woken: 48,
+    },
+    createValue(): WorldEventsValue {
+        return { woken: 0 };
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: WorldEventsValue): void {
+        view.setUint32(offset + 48, value.woken, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: WorldEventsValue, view: DataView, offset: number): WorldEventsValue {
+        out.woken = view.getUint32(offset + 48, true);
+        return out;
     },
 
-    destroy(filter: Filter): void {
-        wasm.exports.tumble_filter_destroy(filter);
+    pairsLength(worldEvents: WorldEvents): number {
+        const mem = wasm.mem;
+        return mem.u32[(worldEvents + 4) >> 2]!;
+    },
+    /** the address of the element at index, to read or write its fields in place. */
+    pairsAddress(worldEvents: WorldEvents, index: number): number {
+        const mem = wasm.mem;
+        return mem.u32[(worldEvents + 0) >> 2]! + index * 40;
+    },
+    readPairs(out: PairEvent, worldEvents: WorldEvents, index: number): PairEvent {
+        const mem = wasm.mem;
+        return PairEvent.read(out, mem.u32[(worldEvents + 0) >> 2]! + index * 40);
     },
 
-    enableAllLayers(filter: Filter, world: World): void {
-        wasm.exports.tumble_filter_enable_all_layers(filter, world);
+    contactsAddedLength(worldEvents: WorldEvents): number {
+        const mem = wasm.mem;
+        return mem.u32[(worldEvents + 16) >> 2]!;
+    },
+    /** the address of the element at index, to read or write its fields in place. */
+    contactsAddedAddress(worldEvents: WorldEvents, index: number): number {
+        const mem = wasm.mem;
+        return mem.u32[(worldEvents + 12) >> 2]! + index * 304;
+    },
+    readContactsAdded(out: ContactEvent, worldEvents: WorldEvents, index: number): ContactEvent {
+        const mem = wasm.mem;
+        return ContactEvent.read(out, mem.u32[(worldEvents + 12) >> 2]! + index * 304);
     },
 
-    disableAllLayers(filter: Filter, world: World): void {
-        wasm.exports.tumble_filter_disable_all_layers(filter, world);
+    contactsPersistedLength(worldEvents: WorldEvents): number {
+        const mem = wasm.mem;
+        return mem.u32[(worldEvents + 28) >> 2]!;
+    },
+    /** the address of the element at index, to read or write its fields in place. */
+    contactsPersistedAddress(worldEvents: WorldEvents, index: number): number {
+        const mem = wasm.mem;
+        return mem.u32[(worldEvents + 24) >> 2]! + index * 304;
+    },
+    readContactsPersisted(out: ContactEvent, worldEvents: WorldEvents, index: number): ContactEvent {
+        const mem = wasm.mem;
+        return ContactEvent.read(out, mem.u32[(worldEvents + 24) >> 2]! + index * 304);
     },
 
-    enableObjectLayer(filter: Filter, world: World, objectLayer: number): boolean {
-        const r = wasm.exports.tumble_filter_enable_object_layer(filter, world, objectLayer);
-        return r !== 0;
+    contactsRemovedLength(worldEvents: WorldEvents): number {
+        const mem = wasm.mem;
+        return mem.u32[(worldEvents + 40) >> 2]!;
+    },
+    /** the address of the element at index, to read or write its fields in place. */
+    contactsRemovedAddress(worldEvents: WorldEvents, index: number): number {
+        const mem = wasm.mem;
+        return mem.u32[(worldEvents + 36) >> 2]! + index * 16;
+    },
+    readContactsRemoved(out: ContactRemovedEvent, worldEvents: WorldEvents, index: number): ContactRemovedEvent {
+        const mem = wasm.mem;
+        return ContactRemovedEvent.read(out, mem.u32[(worldEvents + 36) >> 2]! + index * 16);
     },
 
-    disableObjectLayer(filter: Filter, world: World, objectLayer: number): boolean {
-        const r = wasm.exports.tumble_filter_disable_object_layer(filter, world, objectLayer);
-        return r !== 0;
-    },
-
-    enableBroadphaseLayer(filter: Filter, world: World, broadphaseLayer: number): boolean {
-        const r = wasm.exports.tumble_filter_enable_broadphase_layer(filter, world, broadphaseLayer);
-        return r !== 0;
-    },
-
-    disableBroadphaseLayer(filter: Filter, world: World, broadphaseLayer: number): boolean {
-        const r = wasm.exports.tumble_filter_disable_broadphase_layer(filter, world, broadphaseLayer);
-        return r !== 0;
-    },
-
-    isObjectLayerEnabled(filter: Filter, objectLayer: number): boolean {
-        const r = wasm.exports.tumble_filter_is_object_layer_enabled(filter, objectLayer);
-        return r !== 0;
-    },
-
-    isBroadphaseLayerEnabled(filter: Filter, broadphaseLayer: number): boolean {
-        const r = wasm.exports.tumble_filter_is_broadphase_layer_enabled(filter, broadphaseLayer);
-        return r !== 0;
-    },
-
-    setFromBody(filter: Filter, world: World, body: number): boolean {
-        const r = wasm.exports.tumble_filter_set_from_body(filter, world, body);
-        return r !== 0;
-    },
-
-    getCollisionGroups(filter: Filter): number {
-        const r = wasm.exports.tumble_filter_get_collision_groups(filter);
-        return r >>> 0;
-    },
-
-    getCollisionMask(filter: Filter): number {
-        const r = wasm.exports.tumble_filter_get_collision_mask(filter);
-        return r >>> 0;
-    },
-
-    copy(out: Filter, source: Filter): void {
-        wasm.exports.tumble_filter_copy(out, source);
-        wasm.grew();
-    },
-};
-
-export type Policy = Handle<'Policy'>;
-export const Policy = {
-};
-
-export type KCC = Handle<'KCC'>;
-export const KCC = {
-};
-
-export type DebugDraw = Handle<'DebugDraw'>;
-export const DebugDraw = {
-};
-
-export function init(heapBegin: number): boolean {
-    const r = wasm.exports.tumble_wasm_init(heapBegin);
-    wasm.grew();
-    return r !== 0;
-}
-
-export function abiVersion(): number {
-    const r = wasm.exports.tumble_wasm_abi_version();
-    return r >>> 0;
-}
-
-export function schemaHash(): number {
-    const r = wasm.exports.tumble_wasm_schema_hash();
-    return r >>> 0;
-}
-
-export function simdCheck(): number {
-    const r = wasm.exports.tumble_wasm_simd_check();
-    return r;
-}
-
-export function error(): number {
-    const r = wasm.exports.tumble_wasm_error();
-    return r >>> 0;
-}
-
-export function errorClear(): void {
-    wasm.exports.tumble_wasm_error_clear();
-}
-
-export function allocBytes(bytes: number): number {
-    const r = wasm.exports.tumble_wasm_alloc_bytes(bytes);
-    wasm.grew();
-    return r;
-}
-
-export function freeBytes(block: number, bytes: number): void {
-    wasm.exports.tumble_wasm_free_bytes(block, bytes);
-}
-
-export function allocatedBytes(): number {
-    const r = wasm.exports.tumble_wasm_allocated_bytes();
-    return r >>> 0;
-}
-
-export const Events = {
-    pairs(world: World): number {
-        const r = wasm.exports.tumble_events_pairs(world);
-        return r >>> 0;
-    },
-
-    readPair(out: PairEvent, world: World, index: number): boolean {
-        const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_events_read_pair(scratch + 0, world, index);
-        PairEvent.read(out, scratch + 0);
-        return r !== 0;
-    },
-
-    contactsAdded(world: World): number {
-        const r = wasm.exports.tumble_events_contacts_added(world);
-        return r >>> 0;
-    },
-
-    readContactAdded(out: ContactEvent, world: World, index: number): boolean {
-        const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_events_read_contact_added(scratch + 0, world, index);
-        ContactEvent.read(out, scratch + 0);
-        return r !== 0;
-    },
-
-    contactsPersisted(world: World): number {
-        const r = wasm.exports.tumble_events_contacts_persisted(world);
-        return r >>> 0;
-    },
-
-    readContactPersisted(out: ContactEvent, world: World, index: number): boolean {
-        const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_events_read_contact_persisted(scratch + 0, world, index);
-        ContactEvent.read(out, scratch + 0);
-        return r !== 0;
-    },
-
-    contactsRemoved(world: World): number {
-        const r = wasm.exports.tumble_events_contacts_removed(world);
-        return r >>> 0;
-    },
-
-    readContactRemoved(out: ContactRemovedEvent, world: World, index: number): boolean {
-        const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_events_read_contact_removed(scratch + 0, world, index);
-        ContactRemovedEvent.read(out, scratch + 0);
-        return r !== 0;
-    },
-
-    rejectPair(world: World, index: number): boolean {
-        const r = wasm.exports.tumble_events_reject_pair(world, index);
-        return r !== 0;
-    },
-
-    rejectContactAdded(world: World, index: number): boolean {
-        const r = wasm.exports.tumble_events_reject_contact_added(world, index);
-        return r !== 0;
-    },
-
-    rejectContactPersisted(world: World, index: number): boolean {
-        const r = wasm.exports.tumble_events_reject_contact_persisted(world, index);
-        return r !== 0;
-    },
-
-    changeContactAdded(world: World, index: number, settings: ContactSettings): boolean {
-        const scratch = wasm.scratch;
-        ContactSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_events_change_contact_added(world, index, scratch + 0);
-        return r !== 0;
-    },
-
-    changeContactPersisted(world: World, index: number, settings: ContactSettings): boolean {
-        const scratch = wasm.scratch;
-        ContactSettings.write(scratch + 0, settings);
-        const r = wasm.exports.tumble_events_change_contact_persisted(world, index, scratch + 0);
-        return r !== 0;
+    /** the bodies the last narrowphase woke, whose pairs are not found yet. */
+    woken(worldEvents: WorldEvents): number {
+        const mem = wasm.mem;
+        return mem.u32[(worldEvents + 48) >> 2]!;
     },
 };
 
-export const Activation = {
-    events(world: World): number {
-        const r = wasm.exports.tumble_activation_events(world);
-        return r >>> 0;
+export type MotionProperties = Handle<'MotionProperties'>;
+/** MotionProperties's fields as a plain object, for MotionProperties.writeTo / readFrom over another realm's buffer. */
+export type MotionPropertiesValue = { linearVelocity: Vec3f; angularVelocity: Vec3f; invMass: number };
+export const MotionProperties = {
+    size: 272,
+    align: 16,
+    /** byte offset of each field, for hot paths that read the views directly. */
+    offset: {
+        linearVelocity: 0,
+        angularVelocity: 16,
+        invMass: 88,
+    },
+    createValue(): MotionPropertiesValue {
+        return { linearVelocity: Vec3f.create(), angularVelocity: Vec3f.create(), invMass: 0 };
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: MotionPropertiesValue): void {
+        view.setFloat32(offset + 0, value.linearVelocity[0], true);
+        view.setFloat32(offset + 4, value.linearVelocity[1], true);
+        view.setFloat32(offset + 8, value.linearVelocity[2], true);
+        view.setFloat32(offset + 12, value.linearVelocity[2], true);
+        view.setFloat32(offset + 16, value.angularVelocity[0], true);
+        view.setFloat32(offset + 20, value.angularVelocity[1], true);
+        view.setFloat32(offset + 24, value.angularVelocity[2], true);
+        view.setFloat32(offset + 28, value.angularVelocity[2], true);
+        view.setFloat32(offset + 88, value.invMass, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: MotionPropertiesValue, view: DataView, offset: number): MotionPropertiesValue {
+        out.linearVelocity[0] = view.getFloat32(offset + 0, true);
+        out.linearVelocity[1] = view.getFloat32(offset + 4, true);
+        out.linearVelocity[2] = view.getFloat32(offset + 8, true);
+        out.angularVelocity[0] = view.getFloat32(offset + 16, true);
+        out.angularVelocity[1] = view.getFloat32(offset + 20, true);
+        out.angularVelocity[2] = view.getFloat32(offset + 24, true);
+        out.invMass = view.getFloat32(offset + 88, true);
+        return out;
     },
 
-    readEvent(out: ActivationEvent, world: World, index: number): boolean {
-        const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_activation_read_event(scratch + 0, world, index);
-        ActivationEvent.read(out, scratch + 0);
-        return r !== 0;
+    readLinearVelocity(out: Vec3f, motionProperties: MotionProperties): Vec3f {
+        return Vec3f.read(out, motionProperties + 0);
     },
 
-    clear(world: World): void {
-        wasm.exports.tumble_activation_clear(world);
+    readAngularVelocity(out: Vec3f, motionProperties: MotionProperties): Vec3f {
+        return Vec3f.read(out, motionProperties + 16);
+    },
+
+    invMass(motionProperties: MotionProperties): number {
+        const mem = wasm.mem;
+        return mem.f32[(motionProperties + 88) >> 2]!;
     },
 };
 
-export const ActiveBodies = {
-    count(world: World): number {
-        const r = wasm.exports.tumble_active_bodies_count(world);
-        return r >>> 0;
-    },
-
-    read(world: World): number {
-        const r = wasm.exports.tumble_active_bodies_read(world);
-        wasm.grew();
-        return r >>> 0;
-    },
-
-    rows(world: World): Pointer<'u32'> {
-        const r = wasm.exports.tumble_active_bodies_rows(world);
-        return r as Pointer<'u32'>;
-    },
+export type RigidBody = Handle<'RigidBody'>;
+/** RigidBody's fields as a plain object, for RigidBody.writeTo / readFrom over another realm's buffer. */
+export type RigidBodyValue = {
+    position: Vec3f;
+    quaternion: Quatf;
+    centerOfMassPosition: Vec3f;
+    userData: number;
+    shape: Shape | null;
+    motionType: number;
+    motionProperties: MotionPropertiesValue;
+    friction: number;
+    restitution: number;
+    aabb: AABox;
+    objectLayer: number;
+    activeIndex: number;
 };
-
 export const RigidBody = {
+    size: 592,
+    align: 16,
+    /** byte offset of each field, for hot paths that read the views directly. */
+    offset: {
+        position: 32,
+        quaternion: 48,
+        centerOfMassPosition: 64,
+        userData: 16,
+        shape: 24,
+        motionType: 96,
+        motionProperties: 208,
+        friction: 480,
+        restitution: 484,
+        aabb: 512,
+        objectLayer: 544,
+        activeIndex: 568,
+    },
+    createValue(): RigidBodyValue {
+        return {
+            position: Vec3f.create(),
+            quaternion: Quatf.create(),
+            centerOfMassPosition: Vec3f.create(),
+            userData: 0,
+            shape: null,
+            motionType: 0,
+            motionProperties: MotionProperties.createValue(),
+            friction: 0,
+            restitution: 0,
+            aabb: AABox.create(),
+            objectLayer: 0,
+            activeIndex: 0,
+        };
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: RigidBodyValue): void {
+        view.setFloat32(offset + 32, value.position[0], true);
+        view.setFloat32(offset + 36, value.position[1], true);
+        view.setFloat32(offset + 40, value.position[2], true);
+        view.setFloat32(offset + 44, value.position[2], true);
+        view.setFloat32(offset + 48, value.quaternion[0], true);
+        view.setFloat32(offset + 52, value.quaternion[1], true);
+        view.setFloat32(offset + 56, value.quaternion[2], true);
+        view.setFloat32(offset + 60, value.quaternion[3], true);
+        view.setFloat32(offset + 64, value.centerOfMassPosition[0], true);
+        view.setFloat32(offset + 68, value.centerOfMassPosition[1], true);
+        view.setFloat32(offset + 72, value.centerOfMassPosition[2], true);
+        view.setFloat32(offset + 76, value.centerOfMassPosition[2], true);
+        view.setUint32(offset + 16, value.userData >>> 0, true);
+        view.setUint32(offset + 20, Math.floor(value.userData / 0x100000000), true);
+        view.setUint32(offset + 24, value.shape ?? 0, true);
+        view.setUint32(offset + 96, value.motionType, true);
+        view.setFloat32(offset + 208, value.motionProperties.linearVelocity[0], true);
+        view.setFloat32(offset + 212, value.motionProperties.linearVelocity[1], true);
+        view.setFloat32(offset + 216, value.motionProperties.linearVelocity[2], true);
+        view.setFloat32(offset + 220, value.motionProperties.linearVelocity[2], true);
+        view.setFloat32(offset + 224, value.motionProperties.angularVelocity[0], true);
+        view.setFloat32(offset + 228, value.motionProperties.angularVelocity[1], true);
+        view.setFloat32(offset + 232, value.motionProperties.angularVelocity[2], true);
+        view.setFloat32(offset + 236, value.motionProperties.angularVelocity[2], true);
+        view.setFloat32(offset + 296, value.motionProperties.invMass, true);
+        view.setFloat32(offset + 480, value.friction, true);
+        view.setFloat32(offset + 484, value.restitution, true);
+        view.setFloat32(offset + 512, value.aabb.min[0], true);
+        view.setFloat32(offset + 516, value.aabb.min[1], true);
+        view.setFloat32(offset + 520, value.aabb.min[2], true);
+        view.setFloat32(offset + 524, value.aabb.min[2], true);
+        view.setFloat32(offset + 528, value.aabb.max[0], true);
+        view.setFloat32(offset + 532, value.aabb.max[1], true);
+        view.setFloat32(offset + 536, value.aabb.max[2], true);
+        view.setFloat32(offset + 540, value.aabb.max[2], true);
+        view.setUint32(offset + 544, value.objectLayer, true);
+        view.setUint32(offset + 568, value.activeIndex, true);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: RigidBodyValue, view: DataView, offset: number): RigidBodyValue {
+        out.position[0] = view.getFloat32(offset + 32, true);
+        out.position[1] = view.getFloat32(offset + 36, true);
+        out.position[2] = view.getFloat32(offset + 40, true);
+        out.quaternion[0] = view.getFloat32(offset + 48, true);
+        out.quaternion[1] = view.getFloat32(offset + 52, true);
+        out.quaternion[2] = view.getFloat32(offset + 56, true);
+        out.quaternion[3] = view.getFloat32(offset + 60, true);
+        out.centerOfMassPosition[0] = view.getFloat32(offset + 64, true);
+        out.centerOfMassPosition[1] = view.getFloat32(offset + 68, true);
+        out.centerOfMassPosition[2] = view.getFloat32(offset + 72, true);
+        out.userData = view.getUint32(offset + 16, true) + view.getUint32(offset + 20, true) * 0x100000000;
+        out.shape = (view.getUint32(offset + 24, true) || null) as Shape | null;
+        out.motionType = view.getUint32(offset + 96, true);
+        out.motionProperties.linearVelocity[0] = view.getFloat32(offset + 208, true);
+        out.motionProperties.linearVelocity[1] = view.getFloat32(offset + 212, true);
+        out.motionProperties.linearVelocity[2] = view.getFloat32(offset + 216, true);
+        out.motionProperties.angularVelocity[0] = view.getFloat32(offset + 224, true);
+        out.motionProperties.angularVelocity[1] = view.getFloat32(offset + 228, true);
+        out.motionProperties.angularVelocity[2] = view.getFloat32(offset + 232, true);
+        out.motionProperties.invMass = view.getFloat32(offset + 296, true);
+        out.friction = view.getFloat32(offset + 480, true);
+        out.restitution = view.getFloat32(offset + 484, true);
+        out.aabb.min[0] = view.getFloat32(offset + 512, true);
+        out.aabb.min[1] = view.getFloat32(offset + 516, true);
+        out.aabb.min[2] = view.getFloat32(offset + 520, true);
+        out.aabb.max[0] = view.getFloat32(offset + 528, true);
+        out.aabb.max[1] = view.getFloat32(offset + 532, true);
+        out.aabb.max[2] = view.getFloat32(offset + 536, true);
+        out.objectLayer = view.getUint32(offset + 544, true);
+        out.activeIndex = view.getUint32(offset + 568, true);
+        return out;
+    },
+
+    /** the RigidBody the id names, or null for an id naming none. */
+    get(world: World, id: number): RigidBody | null {
+        const mem = wasm.mem;
+        const index = id & 0x7fffff;
+        if (index >= mem.u32[(world + 300) >> 2]!) return null;
+        const rigidBody = mem.u32[(mem.u32[(world + 296) >> 2]! >> 2) + index]!;
+        return mem.u32[rigidBody >> 2] === id ? (rigidBody as RigidBody) : null;
+    },
+
+    readPosition(out: Vec3f, rigidBody: RigidBody): Vec3f {
+        return Vec3f.read(out, rigidBody + 32);
+    },
+
+    readQuaternion(out: Quatf, rigidBody: RigidBody): Quatf {
+        return Quatf.read(out, rigidBody + 48);
+    },
+
+    readCenterOfMassPosition(out: Vec3f, rigidBody: RigidBody): Vec3f {
+        return Vec3f.read(out, rigidBody + 64);
+    },
+
+    userData(rigidBody: RigidBody): number {
+        const mem = wasm.mem;
+        return mem.u32[(rigidBody + 16) >> 2]! + mem.u32[(rigidBody + 16 + 4) >> 2]! * 0x100000000;
+    },
+    setUserData(rigidBody: RigidBody, value: number): void {
+        const mem = wasm.mem;
+        mem.u32[(rigidBody + 16) >> 2] = value >>> 0;
+        mem.u32[(rigidBody + 16 + 4) >> 2] = Math.floor(value / 0x100000000);
+    },
+
+    shape(rigidBody: RigidBody): Shape | null {
+        const mem = wasm.mem;
+        const a = mem.u32[(rigidBody + 24) >> 2]!;
+        return a === 0 ? null : (a as Shape);
+    },
+
+    motionType(rigidBody: RigidBody): number {
+        const mem = wasm.mem;
+        return mem.u32[(rigidBody + 96) >> 2]!;
+    },
+
+    motionProperties(rigidBody: RigidBody): MotionProperties {
+        return (rigidBody + 208) as MotionProperties;
+    },
+
+    friction(rigidBody: RigidBody): number {
+        const mem = wasm.mem;
+        return mem.f32[(rigidBody + 480) >> 2]!;
+    },
+    setFriction(rigidBody: RigidBody, value: number): void {
+        const mem = wasm.mem;
+        mem.f32[(rigidBody + 480) >> 2] = value;
+    },
+
+    restitution(rigidBody: RigidBody): number {
+        const mem = wasm.mem;
+        return mem.f32[(rigidBody + 484) >> 2]!;
+    },
+    setRestitution(rigidBody: RigidBody, value: number): void {
+        const mem = wasm.mem;
+        mem.f32[(rigidBody + 484) >> 2] = value;
+    },
+
+    readAabb(out: AABox, rigidBody: RigidBody): AABox {
+        return AABox.read(out, rigidBody + 512);
+    },
+
+    objectLayer(rigidBody: RigidBody): number {
+        const mem = wasm.mem;
+        return mem.u32[(rigidBody + 544) >> 2]!;
+    },
+
+    activeIndex(rigidBody: RigidBody): number {
+        const mem = wasm.mem;
+        return mem.u32[(rigidBody + 568) >> 2]!;
+    },
+
     defaultSettings(out: BodySettings): BodySettings {
         const scratch = wasm.scratch;
         wasm.exports.tumble_rigid_body_default_settings(scratch + 0);
@@ -6284,107 +6879,18 @@ export const RigidBody = {
         return r !== 0;
     },
 
-    exists(world: World, body: number): boolean {
-        const r = wasm.exports.tumble_rigid_body_exists(world, body);
-        return r !== 0;
-    },
-
-    getPosition(out: Vec3, world: World, body: number): boolean {
-        const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_rigid_body_get_position(scratch + 0, world, body);
-        Vec3.read(out, scratch + 0);
-        return r !== 0;
-    },
-
-    getQuaternion(out: Quat, world: World, body: number): boolean {
-        const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_rigid_body_get_quaternion(scratch + 0, world, body);
-        Quat.read(out, scratch + 0);
-        return r !== 0;
-    },
-
-    getTransform(outPosition: Vec3, outQuaternion: Quat, world: World, body: number): boolean {
-        const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_rigid_body_get_transform(scratch + 0, scratch + 16, world, body);
-        Vec3.read(outPosition, scratch + 0);
-        Quat.read(outQuaternion, scratch + 16);
-        return r !== 0;
-    },
-
-    getCenterOfMassPosition(out: Vec3, world: World, body: number): boolean {
-        const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_rigid_body_get_center_of_mass_position(scratch + 0, world, body);
-        Vec3.read(out, scratch + 0);
-        return r !== 0;
-    },
-
-    getLinearVelocity(out: Vec3, world: World, body: number): boolean {
-        const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_rigid_body_get_linear_velocity(scratch + 0, world, body);
-        Vec3.read(out, scratch + 0);
-        return r !== 0;
-    },
-
-    getAngularVelocity(out: Vec3, world: World, body: number): boolean {
-        const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_rigid_body_get_angular_velocity(scratch + 0, world, body);
-        Vec3.read(out, scratch + 0);
-        return r !== 0;
-    },
-
     getVelocityAtPoint(out: Vec3, world: World, body: number, point: Vec3): boolean {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 16, point);
         const r = wasm.exports.tumble_rigid_body_get_velocity_at_point(scratch + 0, world, body, scratch + 16);
+        if (r === 0) return false;
         Vec3.read(out, scratch + 0);
-        return r !== 0;
-    },
-
-    getAabb(out: Box3, world: World, body: number): boolean {
-        const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_rigid_body_get_aabb(scratch + 0, world, body);
-        Box3.read(out, scratch + 0);
-        return r !== 0;
-    },
-
-    getMass(world: World, body: number): number {
-        const r = wasm.exports.tumble_rigid_body_get_mass(world, body);
-        return r;
-    },
-
-    getMotionType(world: World, body: number): number {
-        const r = wasm.exports.tumble_rigid_body_get_motion_type(world, body);
-        return r >>> 0;
-    },
-
-    getObjectLayer(world: World, body: number): number {
-        const r = wasm.exports.tumble_rigid_body_get_object_layer(world, body);
-        return r >>> 0;
-    },
-
-    getUserDataLow(world: World, body: number): number {
-        const r = wasm.exports.tumble_rigid_body_get_user_data_low(world, body);
-        return r >>> 0;
-    },
-
-    getUserDataHigh(world: World, body: number): number {
-        const r = wasm.exports.tumble_rigid_body_get_user_data_high(world, body);
-        return r >>> 0;
-    },
-
-    getShape(world: World, body: number): Shape | null {
-        const r = wasm.exports.tumble_rigid_body_get_shape(world, body);
-        return r === 0 ? null : (r as Shape);
+        return true;
     },
 
     getMaterial(world: World, body: number, subShapeId: number): number {
         const r = wasm.exports.tumble_rigid_body_get_material(world, body, subShapeId);
         return r;
-    },
-
-    isSleeping(world: World, body: number): boolean {
-        const r = wasm.exports.tumble_rigid_body_is_sleeping(world, body);
-        return r !== 0;
     },
 
     setPosition(world: World, body: number, position: Vec3, wake: boolean): boolean {
@@ -6531,20 +7037,171 @@ export const RigidBody = {
         wasm.grew();
         return r !== 0;
     },
+};
 
-    setUserData(world: World, body: number, low: number, high: number): boolean {
-        const r = wasm.exports.tumble_rigid_body_set_user_data(world, body, low, high);
+export type Filter = Handle<'Filter'>;
+export const Filter = {
+    create(world: World): Filter {
+        const r = wasm.exports.tumble_filter_create(world);
+        wasm.grew();
+        if (r === 0) wasm.check();
+        return r as Filter;
+    },
+
+    destroy(filter: Filter): void {
+        wasm.exports.tumble_filter_destroy(filter);
+    },
+
+    enableAllLayers(filter: Filter, world: World): void {
+        wasm.exports.tumble_filter_enable_all_layers(filter, world);
+    },
+
+    disableAllLayers(filter: Filter, world: World): void {
+        wasm.exports.tumble_filter_disable_all_layers(filter, world);
+    },
+
+    enableObjectLayer(filter: Filter, world: World, objectLayer: number): boolean {
+        const r = wasm.exports.tumble_filter_enable_object_layer(filter, world, objectLayer);
         return r !== 0;
     },
 
-    setFriction(world: World, body: number, friction: number): boolean {
-        const r = wasm.exports.tumble_rigid_body_set_friction(world, body, friction);
+    disableObjectLayer(filter: Filter, world: World, objectLayer: number): boolean {
+        const r = wasm.exports.tumble_filter_disable_object_layer(filter, world, objectLayer);
         return r !== 0;
     },
 
-    setRestitution(world: World, body: number, restitution: number): boolean {
-        const r = wasm.exports.tumble_rigid_body_set_restitution(world, body, restitution);
+    enableBroadphaseLayer(filter: Filter, world: World, broadphaseLayer: number): boolean {
+        const r = wasm.exports.tumble_filter_enable_broadphase_layer(filter, world, broadphaseLayer);
         return r !== 0;
+    },
+
+    disableBroadphaseLayer(filter: Filter, world: World, broadphaseLayer: number): boolean {
+        const r = wasm.exports.tumble_filter_disable_broadphase_layer(filter, world, broadphaseLayer);
+        return r !== 0;
+    },
+
+    isObjectLayerEnabled(filter: Filter, objectLayer: number): boolean {
+        const r = wasm.exports.tumble_filter_is_object_layer_enabled(filter, objectLayer);
+        return r !== 0;
+    },
+
+    isBroadphaseLayerEnabled(filter: Filter, broadphaseLayer: number): boolean {
+        const r = wasm.exports.tumble_filter_is_broadphase_layer_enabled(filter, broadphaseLayer);
+        return r !== 0;
+    },
+
+    setFromBody(filter: Filter, world: World, body: number): boolean {
+        const r = wasm.exports.tumble_filter_set_from_body(filter, world, body);
+        return r !== 0;
+    },
+
+    getCollisionGroups(filter: Filter): number {
+        const r = wasm.exports.tumble_filter_get_collision_groups(filter);
+        return r >>> 0;
+    },
+
+    getCollisionMask(filter: Filter): number {
+        const r = wasm.exports.tumble_filter_get_collision_mask(filter);
+        return r >>> 0;
+    },
+
+    copy(out: Filter, source: Filter): void {
+        wasm.exports.tumble_filter_copy(out, source);
+        wasm.grew();
+    },
+};
+
+export type Policy = Handle<'Policy'>;
+export const Policy = {
+};
+
+export type KCC = Handle<'KCC'>;
+export const KCC = {
+};
+
+export type DebugDraw = Handle<'DebugDraw'>;
+export const DebugDraw = {
+};
+
+export function init(heapBegin: number): boolean {
+    const r = wasm.exports.tumble_wasm_init(heapBegin);
+    wasm.grew();
+    return r !== 0;
+}
+
+export function abiVersion(): number {
+    const r = wasm.exports.tumble_wasm_abi_version();
+    return r >>> 0;
+}
+
+export function schemaHash(): number {
+    const r = wasm.exports.tumble_wasm_schema_hash();
+    return r >>> 0;
+}
+
+export function simdCheck(): number {
+    const r = wasm.exports.tumble_wasm_simd_check();
+    return r;
+}
+
+export function error(): number {
+    const r = wasm.exports.tumble_wasm_error();
+    return r >>> 0;
+}
+
+export function errorClear(): void {
+    wasm.exports.tumble_wasm_error_clear();
+}
+
+export function allocBytes(bytes: number): number {
+    const r = wasm.exports.tumble_wasm_alloc_bytes(bytes);
+    wasm.grew();
+    return r;
+}
+
+export function freeBytes(block: number, bytes: number): void {
+    wasm.exports.tumble_wasm_free_bytes(block, bytes);
+}
+
+export function allocatedBytes(): number {
+    const r = wasm.exports.tumble_wasm_allocated_bytes();
+    return r >>> 0;
+}
+
+export const Activation = {
+    events(world: World): number {
+        const r = wasm.exports.tumble_activation_events(world);
+        return r >>> 0;
+    },
+
+    readEvent(out: ActivationEvent, world: World, index: number): boolean {
+        const scratch = wasm.scratch;
+        const r = wasm.exports.tumble_activation_read_event(scratch + 0, world, index);
+        if (r === 0) return false;
+        ActivationEvent.read(out, scratch + 0);
+        return true;
+    },
+
+    clear(world: World): void {
+        wasm.exports.tumble_activation_clear(world);
+    },
+};
+
+export const ActiveBodies = {
+    count(world: World): number {
+        const r = wasm.exports.tumble_active_bodies_count(world);
+        return r >>> 0;
+    },
+
+    read(world: World): number {
+        const r = wasm.exports.tumble_active_bodies_read(world);
+        wasm.grew();
+        return r >>> 0;
+    },
+
+    rows(world: World): Pointer<'u32'> {
+        const r = wasm.exports.tumble_active_bodies_rows(world);
+        return r as Pointer<'u32'>;
     },
 };
 
@@ -6679,13 +7336,13 @@ export const ConvexHull = {
         return out;
     },
 
-    create(out: ConvexHullCreate, settings: ConvexHullSettings): boolean {
+    create(out: ConvexHullCreate, settings: ConvexHullSettings): ConvexHullCreate {
         const scratch = wasm.scratch;
         ConvexHullSettings.write(scratch + 16, settings);
-        const r = wasm.exports.tumble_convex_hull_create(scratch + 0, scratch + 16);
+        wasm.exports.tumble_convex_hull_create(scratch + 0, scratch + 16);
         wasm.grew();
         ConvexHullCreate.read(out, scratch + 0);
-        return r !== 0;
+        return out;
     },
 };
 
@@ -6835,8 +7492,9 @@ export const PointConstraint = {
     getTotalLambda(out: Vec3, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_point_constraint_get_total_lambda(scratch + 0, world, constraint);
+        if (r === 0) return false;
         Vec3.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 };
 
@@ -6917,8 +7575,9 @@ export const HingeConstraint = {
     getMotorSettings(out: MotorSettings, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_hinge_constraint_get_motor_settings(scratch + 0, world, constraint);
+        if (r === 0) return false;
         MotorSettings.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 
     setMotorState(world: World, constraint: number, state: number): boolean {
@@ -6985,8 +7644,9 @@ export const SliderConstraint = {
     getMotorSettings(out: MotorSettings, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_slider_constraint_get_motor_settings(scratch + 0, world, constraint);
+        if (r === 0) return false;
         MotorSettings.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 
     setMotorState(world: World, constraint: number, state: number): boolean {
@@ -7017,8 +7677,9 @@ export const SliderConstraint = {
     getTotalLambdaPosition(out: Vec2, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_slider_constraint_get_total_lambda_position(scratch + 0, world, constraint);
+        if (r === 0) return false;
         Vec2.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 
     getTotalLambdaPositionLimits(world: World, constraint: number): number {
@@ -7029,8 +7690,9 @@ export const SliderConstraint = {
     getTotalLambdaRotation(out: Vec3, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_slider_constraint_get_total_lambda_rotation(scratch + 0, world, constraint);
+        if (r === 0) return false;
         Vec3.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 
     getTotalLambdaMotor(world: World, constraint: number): number {
@@ -7058,15 +7720,17 @@ export const FixedConstraint = {
     getTotalLambdaPosition(out: Vec3, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_fixed_constraint_get_total_lambda_position(scratch + 0, world, constraint);
+        if (r === 0) return false;
         Vec3.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 
     getTotalLambdaRotation(out: Vec3, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_fixed_constraint_get_total_lambda_rotation(scratch + 0, world, constraint);
+        if (r === 0) return false;
         Vec3.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 };
 
@@ -7104,8 +7768,9 @@ export const ConeConstraint = {
     getTotalLambdaPosition(out: Vec3, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_cone_constraint_get_total_lambda_position(scratch + 0, world, constraint);
+        if (r === 0) return false;
         Vec3.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 
     getTotalLambdaRotation(world: World, constraint: number): number {
@@ -7172,15 +7837,17 @@ export const SwingTwistConstraint = {
     getSwingMotorSettings(out: MotorSettings, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_swing_twist_constraint_get_swing_motor_settings(scratch + 0, world, constraint);
+        if (r === 0) return false;
         MotorSettings.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 
     getTwistMotorSettings(out: MotorSettings, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_swing_twist_constraint_get_twist_motor_settings(scratch + 0, world, constraint);
+        if (r === 0) return false;
         MotorSettings.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 
     setSwingMotorState(world: World, constraint: number, state: number): boolean {
@@ -7217,15 +7884,17 @@ export const SwingTwistConstraint = {
     getRotationInConstraintSpace(out: Quat, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_swing_twist_constraint_get_rotation_in_constraint_space(scratch + 0, world, constraint);
+        if (r === 0) return false;
         Quat.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 
     getTotalLambdaPosition(out: Vec3, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_swing_twist_constraint_get_total_lambda_position(scratch + 0, world, constraint);
+        if (r === 0) return false;
         Vec3.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 
     getTotalLambdaTwist(world: World, constraint: number): number {
@@ -7246,8 +7915,9 @@ export const SwingTwistConstraint = {
     getTotalLambdaMotor(out: Vec3, world: World, constraint: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_swing_twist_constraint_get_total_lambda_motor(scratch + 0, world, constraint);
+        if (r === 0) return false;
         Vec3.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 };
 
@@ -7300,8 +7970,9 @@ export const SixDofConstraint = {
     getMotorSettings(out: MotorSettings, world: World, constraint: number, axis: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_six_dof_constraint_get_motor_settings(scratch + 0, world, constraint, axis);
+        if (r === 0) return false;
         MotorSettings.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 
     setMotorState(world: World, constraint: number, axis: number, state: number): boolean {
@@ -7398,11 +8069,9 @@ export const Query = {
         return r >>> 0;
     },
 
-    readCastRayHit(out: CastRayHit, index: number): boolean {
-        const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_query_read_cast_ray_hit(scratch + 0, index);
-        CastRayHit.read(out, scratch + 0);
-        return r !== 0;
+    castRayHits(): Pointer<'u32'> {
+        const r = wasm.exports.tumble_query_cast_ray_hits();
+        return r as Pointer<'u32'>;
     },
 
     defaultCastShapeSettings(out: CastShapeSettings): CastShapeSettings {
@@ -7453,8 +8122,9 @@ export const Query = {
     readCastShapeHit(out: CastShapeHit, index: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_query_read_cast_shape_hit(scratch + 0, index);
+        if (r === 0) return false;
         CastShapeHit.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 
     defaultCollideShapeSettings(out: CollideShapeSettings): CollideShapeSettings {
@@ -7504,8 +8174,9 @@ export const Query = {
     readCollideShapeHit(out: CollideShapeHit, index: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_query_read_collide_shape_hit(scratch + 0, index);
+        if (r === 0) return false;
         CollideShapeHit.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 
     defaultCollidePointSettings(out: CollidePointSettings): CollidePointSettings {
@@ -7540,11 +8211,9 @@ export const Query = {
         return r >>> 0;
     },
 
-    readCollidePointHit(out: CollidePointHit, index: number): boolean {
-        const scratch = wasm.scratch;
-        const r = wasm.exports.tumble_query_read_collide_point_hit(scratch + 0, index);
-        CollidePointHit.read(out, scratch + 0);
-        return r !== 0;
+    collidePointHits(): Pointer<'u32'> {
+        const r = wasm.exports.tumble_query_collide_point_hits();
+        return r as Pointer<'u32'>;
     },
 };
 
@@ -7673,8 +8342,9 @@ export const Kcc = {
     readContactEvent(out: KCCContactEvent, character: KCC, index: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_kcc_read_contact_event(scratch + 0, character, index);
+        if (r === 0) return false;
         KCCContactEvent.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 
     setPosition(world: World, character: KCC, position: Vec3): void {
@@ -7937,8 +8607,9 @@ export const Kcc = {
             policy,
         );
         wasm.grew();
+        if (r === 0) return false;
         KCCContact.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 
     updateGround(world: World, character: KCC, deltaTime: number, skipContactVelocityCheck: boolean, policy: Policy): void {
@@ -8113,8 +8784,9 @@ export const ContactPairs = {
     readActive(out: ContactPair, world: World, index: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_contact_pairs_read_active(scratch + 0, world, index);
+        if (r === 0) return false;
         ContactPair.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 
     removedCount(world: World): number {
@@ -8125,8 +8797,9 @@ export const ContactPairs = {
     readRemoved(out: ContactPair, world: World, index: number): boolean {
         const scratch = wasm.scratch;
         const r = wasm.exports.tumble_contact_pairs_read_removed(scratch + 0, world, index);
+        if (r === 0) return false;
         ContactPair.read(out, scratch + 0);
-        return r !== 0;
+        return true;
     },
 };
 
@@ -8156,23 +8829,9 @@ export type WasmExports = {
     tumble_world_narrowphase(world: number): void;
     tumble_world_solve(world: number): void;
     tumble_world_step_end(world: number): void;
-    tumble_world_woken(world: number): number;
     tumble_world_set_materials(world: number, frictionRestitution: number, count: number): void;
     tumble_world_get_gravity(out: number, world: number): void;
     tumble_world_set_gravity(world: number, gravity: number): void;
-    tumble_events_pairs(world: number): number;
-    tumble_events_read_pair(out: number, world: number, index: number): number;
-    tumble_events_contacts_added(world: number): number;
-    tumble_events_read_contact_added(out: number, world: number, index: number): number;
-    tumble_events_contacts_persisted(world: number): number;
-    tumble_events_read_contact_persisted(out: number, world: number, index: number): number;
-    tumble_events_contacts_removed(world: number): number;
-    tumble_events_read_contact_removed(out: number, world: number, index: number): number;
-    tumble_events_reject_pair(world: number, index: number): number;
-    tumble_events_reject_contact_added(world: number, index: number): number;
-    tumble_events_reject_contact_persisted(world: number, index: number): number;
-    tumble_events_change_contact_added(world: number, index: number, settings: number): number;
-    tumble_events_change_contact_persisted(world: number, index: number, settings: number): number;
     tumble_activation_events(world: number): number;
     tumble_activation_read_event(out: number, world: number, index: number): number;
     tumble_activation_clear(world: number): void;
@@ -8182,23 +8841,8 @@ export type WasmExports = {
     tumble_rigid_body_default_settings(out: number): void;
     tumble_rigid_body_create(world: number, settings: number): number;
     tumble_rigid_body_remove(world: number, body: number): number;
-    tumble_rigid_body_exists(world: number, body: number): number;
-    tumble_rigid_body_get_position(out: number, world: number, body: number): number;
-    tumble_rigid_body_get_quaternion(out: number, world: number, body: number): number;
-    tumble_rigid_body_get_transform(outPosition: number, outQuaternion: number, world: number, body: number): number;
-    tumble_rigid_body_get_center_of_mass_position(out: number, world: number, body: number): number;
-    tumble_rigid_body_get_linear_velocity(out: number, world: number, body: number): number;
-    tumble_rigid_body_get_angular_velocity(out: number, world: number, body: number): number;
     tumble_rigid_body_get_velocity_at_point(out: number, world: number, body: number, point: number): number;
-    tumble_rigid_body_get_aabb(out: number, world: number, body: number): number;
-    tumble_rigid_body_get_mass(world: number, body: number): number;
-    tumble_rigid_body_get_motion_type(world: number, body: number): number;
-    tumble_rigid_body_get_object_layer(world: number, body: number): number;
-    tumble_rigid_body_get_user_data_low(world: number, body: number): number;
-    tumble_rigid_body_get_user_data_high(world: number, body: number): number;
-    tumble_rigid_body_get_shape(world: number, body: number): number;
     tumble_rigid_body_get_material(world: number, body: number, subShapeId: number): number;
-    tumble_rigid_body_is_sleeping(world: number, body: number): number;
     tumble_rigid_body_set_position(world: number, body: number, position: number, wake: number): number;
     tumble_rigid_body_set_quaternion(world: number, body: number, quaternion: number, wake: number): number;
     tumble_rigid_body_set_transform(world: number, body: number, position: number, quaternion: number, wake: number): number;
@@ -8224,9 +8868,6 @@ export type WasmExports = {
     ): number;
     tumble_rigid_body_sleep(world: number, body: number): number;
     tumble_rigid_body_wake(world: number, body: number): number;
-    tumble_rigid_body_set_user_data(world: number, body: number, low: number, high: number): number;
-    tumble_rigid_body_set_friction(world: number, body: number, friction: number): number;
-    tumble_rigid_body_set_restitution(world: number, body: number, restitution: number): number;
     tumble_shape_get_type(shape: number): number;
     tumble_shape_get_local_bounds(out: number, shape: number): void;
     tumble_shape_get_center_of_mass(out: number, shape: number): void;
@@ -8250,7 +8891,7 @@ export type WasmExports = {
     tumble_plane_create(settings: number): number;
     tumble_empty_create(): number;
     tumble_convex_hull_default_settings(out: number): void;
-    tumble_convex_hull_create(out: number, settings: number): number;
+    tumble_convex_hull_create(out: number, settings: number): void;
     tumble_triangle_mesh_default_settings(out: number): void;
     tumble_triangle_mesh_create(settings: number): number;
     tumble_compound_create(children: number, count: number): number;
@@ -8389,7 +9030,7 @@ export type WasmExports = {
         collisionGroups: number,
         collisionMask: number,
     ): number;
-    tumble_query_read_cast_ray_hit(out: number, index: number): number;
+    tumble_query_cast_ray_hits(): number;
     tumble_query_default_cast_shape_settings(out: number): void;
     tumble_query_cast_shape(
         world: number,
@@ -8432,7 +9073,7 @@ export type WasmExports = {
         collisionGroups: number,
         collisionMask: number,
     ): number;
-    tumble_query_read_collide_point_hit(out: number, index: number): number;
+    tumble_query_collide_point_hits(): number;
     tumble_kcc_policy_default_body_policy(out: number): void;
     tumble_kcc_policy_create(): number;
     tumble_kcc_policy_destroy(policy: number): void;

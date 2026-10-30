@@ -159,9 +159,9 @@ void test_swing_twist_constraint_part_cone_velocity_limit(TestCtx &ctx) {
     // identity, so the constraint rotation is b's rotation
     RigidBody a = make_body(MotionType::STATIC, 1.0f, {0.0f, 0.0f, 0.0f});
     RigidBody b = make_body(MotionType::DYNAMIC, 1.0f, {1.0f, 1.0f, 1.0f});
-    b.quaternion = stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.6f);
+    b.quaternion = axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.6f);
     SwingTwistConstraintPart part = make_cone(0.4f);
-    swing_twist_constraint_part::calculate_constraint_properties(part, a, b, quatf::load(b.quaternion), quatf::identity());
+    swing_twist_constraint_part::calculate_constraint_properties(part, a, b, b.quaternion, quatf::identity());
 
     // one limit part, about the axis from the clamped swing to the actual one (+z), and no twist
     CHECK(ctx, angle_constraint_part::is_active(part.swing_limit_y_constraint_part));
@@ -170,9 +170,9 @@ void test_swing_twist_constraint_part_cone_velocity_limit(TestCtx &ctx) {
     CHECK(ctx, vec3f::distance(part.world_space_swing_limit_y_rotation_axis, vec3f::make(0.0f, 0.0f, 1.0f)) < 1e-6f);
 
     // spinning further out of the cone: that spin is removed, the rest kept
-    b.motion_properties.angular_velocity = {0.3f, -0.2f, 1.0f};
+    b.motion_properties.angular_velocity = vec3f::make(0.3f, -0.2f, 1.0f);
     CHECK(ctx, swing_twist_constraint_part::solve_velocity_constraint(part, a, b));
-    CHECK(ctx, vec3f::distance(vec3f::load(b.motion_properties.angular_velocity), vec3f::make(0.3f, -0.2f, 0.0f)) < 1e-6f);
+    CHECK(ctx, vec3f::distance(b.motion_properties.angular_velocity, vec3f::make(0.3f, -0.2f, 0.0f)) < 1e-6f);
     CHECK_NEAR(ctx, swing_twist_constraint_part::get_total_swing_y_lambda(part), -1.0f, 1e-6f);
     CHECK(ctx, swing_twist_constraint_part::get_total_swing_z_lambda(part) == 0.0f &&
                    swing_twist_constraint_part::get_total_twist_lambda(part) == 0.0f);
@@ -180,18 +180,18 @@ void test_swing_twist_constraint_part_cone_velocity_limit(TestCtx &ctx) {
     // spinning back into the cone, a fresh step (no accumulated impulse to give back): the limit only pushes, so
     // nothing is applied
     part = make_cone(0.4f);
-    swing_twist_constraint_part::calculate_constraint_properties(part, a, b, quatf::load(b.quaternion), quatf::identity());
-    b.motion_properties.angular_velocity = {0.3f, -0.2f, -1.0f};
+    swing_twist_constraint_part::calculate_constraint_properties(part, a, b, b.quaternion, quatf::identity());
+    b.motion_properties.angular_velocity = vec3f::make(0.3f, -0.2f, -1.0f);
     CHECK(ctx, !swing_twist_constraint_part::solve_velocity_constraint(part, a, b));
-    CHECK(ctx, vec3f::exact_equals(vec3f::load(b.motion_properties.angular_velocity), vec3f::make(0.3f, -0.2f, -1.0f)));
+    CHECK(ctx, vec3f::exact_equals(b.motion_properties.angular_velocity, vec3f::make(0.3f, -0.2f, -1.0f)));
 
     // within the cone the limit is inactive and any spin is untouched
-    b.quaternion = stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.2f);
-    swing_twist_constraint_part::calculate_constraint_properties(part, a, b, quatf::load(b.quaternion), quatf::identity());
+    b.quaternion = axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.2f);
+    swing_twist_constraint_part::calculate_constraint_properties(part, a, b, b.quaternion, quatf::identity());
     CHECK(ctx, !swing_twist_constraint_part::is_active(part));
-    b.motion_properties.angular_velocity = {0.0f, 0.0f, 1.0f};
+    b.motion_properties.angular_velocity = vec3f::make(0.0f, 0.0f, 1.0f);
     CHECK(ctx, !swing_twist_constraint_part::solve_velocity_constraint(part, a, b));
-    CHECK(ctx, vec3f::exact_equals(vec3f::load(b.motion_properties.angular_velocity), vec3f::make(0.0f, 0.0f, 1.0f)));
+    CHECK(ctx, vec3f::exact_equals(b.motion_properties.angular_velocity, vec3f::make(0.0f, 0.0f, 1.0f)));
 }
 
 void test_swing_twist_constraint_part_locked_twist_velocity(TestCtx &ctx) {
@@ -202,40 +202,40 @@ void test_swing_twist_constraint_part_locked_twist_velocity(TestCtx &ctx) {
     swing_twist_constraint_part::set_limits(part, 0.0f, 0.0f, -PI, PI, -PI, PI);
 
     for (int sign = -1; sign <= 1; sign += 2) {
-        swing_twist_constraint_part::calculate_constraint_properties(part, a, b, quatf::load(b.quaternion), quatf::identity());
+        swing_twist_constraint_part::calculate_constraint_properties(part, a, b, b.quaternion, quatf::identity());
         CHECK(ctx, angle_constraint_part::is_active(part.twist_limit_constraint_part));
         CHECK(ctx, vec3f::distance(part.world_space_twist_limit_rotation_axis, vec3f::make(1.0f, 0.0f, 0.0f)) < 1e-6f);
-        b.motion_properties.angular_velocity = {(float)sign, 0.5f, 0.0f};
+        b.motion_properties.angular_velocity = vec3f::make((float)sign, 0.5f, 0.0f);
         CHECK(ctx, swing_twist_constraint_part::solve_velocity_constraint(part, a, b));
-        CHECK(ctx, vec3f::distance(vec3f::load(b.motion_properties.angular_velocity), vec3f::make(0.0f, 0.5f, 0.0f)) < 1e-6f);
+        CHECK(ctx, vec3f::distance(b.motion_properties.angular_velocity, vec3f::make(0.0f, 0.5f, 0.0f)) < 1e-6f);
     }
 
     // warm start carries the scaled impulse
     part.twist_limit_constraint_part.total_lambda = 1.0f;
-    b.motion_properties.angular_velocity = {0.0f, 0.0f, 0.0f};
+    b.motion_properties.angular_velocity = vec3f::zero();
     swing_twist_constraint_part::warm_start(part, a, b, 0.5f);
     CHECK(ctx, part.twist_limit_constraint_part.total_lambda == 0.5f);
-    CHECK(ctx, vec3f::distance(vec3f::load(b.motion_properties.angular_velocity), vec3f::make(0.5f, 0.0f, 0.0f)) < 1e-6f);
+    CHECK(ctx, vec3f::distance(b.motion_properties.angular_velocity, vec3f::make(0.5f, 0.0f, 0.0f)) < 1e-6f);
 }
 
 void test_swing_twist_constraint_part_position_returns_to_cone(TestCtx &ctx) {
     // b past the 0.4 cone at 0.6 about z: one baumgarte 1 step brings it back to the edge (static a takes nothing)
     RigidBody a = make_body(MotionType::STATIC, 1.0f, {0.0f, 0.0f, 0.0f});
     RigidBody b = make_body(MotionType::DYNAMIC, 1.0f, {1.0f, 2.0f, 3.0f});
-    b.quaternion = stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.6f);
+    b.quaternion = axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.6f);
     SwingTwistConstraintPart part = make_cone(0.4f);
-    CHECK(ctx, swing_twist_constraint_part::solve_position_constraint(part, a, b, quatf::load(b.quaternion), quatf::identity(), quatf::identity(), 1.0f));
+    CHECK(ctx, swing_twist_constraint_part::solve_position_constraint(part, a, b, b.quaternion, quatf::identity(), quatf::identity(), 1.0f));
     // the error is linearised (2 sin(0.1) for a 0.2 overshoot), so the step lands within a few 1e-4 of the edge
-    CHECK_NEAR(ctx, 2.0f * scalar::atan2(b.quaternion.z, b.quaternion.w), 0.4f, 1e-3f);
-    CHECK_NEAR(ctx, b.quaternion.x, 0.0f, 1e-6f);
-    CHECK_NEAR(ctx, b.quaternion.y, 0.0f, 1e-6f);
-    CHECK(ctx, same_bits(quatf::load(a.quaternion), quatf::identity()));
+    CHECK_NEAR(ctx, 2.0f * scalar::atan2(quatf::z(b.quaternion), quatf::w(b.quaternion)), 0.4f, 1e-3f);
+    CHECK_NEAR(ctx, quatf::x(b.quaternion), 0.0f, 1e-6f);
+    CHECK_NEAR(ctx, quatf::y(b.quaternion), 0.0f, 1e-6f);
+    CHECK(ctx, same_bits(a.quaternion, quatf::identity()));
 
     // within the cone nothing is corrected
-    b.quaternion = stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.3f);
-    const Quatf inside = quatf::load(b.quaternion);
+    b.quaternion = axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.3f);
+    const Quatf inside = b.quaternion;
     CHECK(ctx, !swing_twist_constraint_part::solve_position_constraint(part, a, b, inside, quatf::identity(), quatf::identity(), 1.0f));
-    CHECK(ctx, same_bits(quatf::load(b.quaternion), inside));
+    CHECK(ctx, same_bits(b.quaternion, inside));
 }
 
 void test_swing_twist_constraint_part_tiny_overshoot_activates_limit(TestCtx &ctx) {
@@ -246,8 +246,8 @@ void test_swing_twist_constraint_part_tiny_overshoot_activates_limit(TestCtx &ct
     SwingTwistConstraintPart part = swing_twist_constraint_part::create();
     part.swing_type = SwingType::PYRAMID;
     swing_twist_constraint_part::set_limits(part, -0.5f, 0.5f, -0.5f, 0.5f, -0.5f, 0.5f);
-    b.quaternion = stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.5f + 4e-7f);
-    swing_twist_constraint_part::calculate_constraint_properties(part, a, b, quatf::load(b.quaternion), quatf::identity());
+    b.quaternion = axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.5f + 4e-7f);
+    swing_twist_constraint_part::calculate_constraint_properties(part, a, b, b.quaternion, quatf::identity());
     CHECK(ctx, angle_constraint_part::is_active(part.swing_limit_y_constraint_part));
     CHECK(ctx, !angle_constraint_part::is_active(part.swing_limit_z_constraint_part));
     // both x axes lie in the xz plane, so desired x current is exactly along +y

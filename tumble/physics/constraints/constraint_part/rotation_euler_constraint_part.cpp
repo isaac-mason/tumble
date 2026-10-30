@@ -33,10 +33,10 @@ void calculate_constraint_properties(RotationEulerConstraintPart &part, RigidBod
                                      uint32_t step_stamp) {
     // world space inverse inertia of both bodies
     part.inv_i1 = body_a.motion_type == MotionType::DYNAMIC
-                      ? motion_properties::get_world_inverse_inertia(body_a.motion_properties, quatf::load(body_a.quaternion), step_stamp)
+                      ? motion_properties::get_world_inverse_inertia(body_a.motion_properties, body_a.quaternion, step_stamp)
                       : mat4f::zero();
     part.inv_i2 = body_b.motion_type == MotionType::DYNAMIC
-                      ? motion_properties::get_world_inverse_inertia(body_b.motion_properties, quatf::load(body_b.quaternion), step_stamp)
+                      ? motion_properties::get_world_inverse_inertia(body_b.motion_properties, body_b.quaternion, step_stamp)
                       : mat4f::zero();
 
     // K = I1^-1 + I2^-1 (3x3 only); singular when both bodies are static/kinematic
@@ -88,8 +88,8 @@ void warm_start(RotationEulerConstraintPart &part, RigidBody &body_a, RigidBody 
 
 bool solve_velocity_constraint(RotationEulerConstraintPart &part, RigidBody &body_a, RigidBody &body_b) {
     // J v = w1 - w2; static bodies contribute zero
-    const Vec3f w1 = body_a.motion_type != MotionType::STATIC ? vec3f::load(body_a.motion_properties.angular_velocity) : vec3f::zero();
-    const Vec3f w2 = body_b.motion_type != MotionType::STATIC ? vec3f::load(body_b.motion_properties.angular_velocity) : vec3f::zero();
+    const Vec3f w1 = body_a.motion_type != MotionType::STATIC ? body_a.motion_properties.angular_velocity : vec3f::zero();
+    const Vec3f w2 = body_b.motion_type != MotionType::STATIC ? body_b.motion_properties.angular_velocity : vec3f::zero();
 
     // lambda = K * (J v); the negation is the subtraction from body a
     const Vec3f lambda = mat4f::multiply3x3_vec(part.effective_mass, vec3f::subtract(w1, w2));
@@ -102,8 +102,8 @@ bool solve_velocity_constraint(RotationEulerConstraintPart &part, RigidBody &bod
 bool solve_position_constraint(RotationEulerConstraintPart &part, RigidBody &body_a, RigidBody &body_b,
                                Quatf inv_initial_orientation, float baumgarte) {
     // the rotation should be q2 = q1 * r0, but with drift q2 = diff * q1 * r0 => diff = q2 * r0^-1 * q1^-1
-    Quatf diff = quatf::multiply(quatf::multiply(quatf::load(body_b.quaternion), inv_initial_orientation),
-                                 quatf::conjugate(quatf::load(body_a.quaternion)));
+    Quatf diff = quatf::multiply(quatf::multiply(body_b.quaternion, inv_initial_orientation),
+                                 quatf::conjugate(body_a.quaternion));
 
     // positive w for consistent angle extraction
     if (quatf::w(diff) < 0.0f) diff = quatf::scale(diff, -1.0f);

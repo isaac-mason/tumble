@@ -39,10 +39,10 @@ void calculate_constraint_properties(HingeRotationConstraintPart &part, RigidBod
     part.c2 = vec3f::cross(a2, part.b2);
 
     part.inv_i1 = body_a.motion_type == MotionType::DYNAMIC
-                      ? motion_properties::get_world_inverse_inertia(body_a.motion_properties, quatf::load(body_a.quaternion), step_stamp)
+                      ? motion_properties::get_world_inverse_inertia(body_a.motion_properties, body_a.quaternion, step_stamp)
                       : mat4f::zero();
     part.inv_i2 = body_b.motion_type == MotionType::DYNAMIC
-                      ? motion_properties::get_world_inverse_inertia(body_b.motion_properties, quatf::load(body_b.quaternion), step_stamp)
+                      ? motion_properties::get_world_inverse_inertia(body_b.motion_properties, body_b.quaternion, step_stamp)
                       : mat4f::zero();
 
     // cross products for the jacobian
@@ -116,12 +116,12 @@ bool solve_velocity_constraint(HingeRotationConstraintPart &part, RigidBody &bod
     float jv1 = 0.0f;
 
     if (body_a.motion_type != MotionType::STATIC) {
-        const Vec3f w1 = vec3f::load(body_a.motion_properties.angular_velocity);
+        const Vec3f w1 = body_a.motion_properties.angular_velocity;
         jv0 += vec3f::dot(part.b2_x_a1, w1);
         jv1 += vec3f::dot(part.c2_x_a1, w1);
     }
     if (body_b.motion_type != MotionType::STATIC) {
-        const Vec3f w2 = vec3f::load(body_b.motion_properties.angular_velocity);
+        const Vec3f w2 = body_b.motion_properties.angular_velocity;
         jv0 -= vec3f::dot(part.b2_x_a1, w2);
         jv1 -= vec3f::dot(part.c2_x_a1, w2);
     }

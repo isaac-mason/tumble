@@ -22,7 +22,7 @@ typedef AngularFrictionConstraintPart AngularPart;
 static Mat4f inverse_inertia_of(const RigidBody &body, float scale) {
     if (body.motion_type != MotionType::DYNAMIC) return mat4f::zero();
     const Mat4f inverse_inertia =
-        motion_properties::get_inverse_inertia_for_rotation(body.motion_properties, mat4f::from_quat(quatf::load(body.quaternion)));
+        motion_properties::get_inverse_inertia_for_rotation(body.motion_properties, mat4f::from_quat(body.quaternion));
     return mat4f::multiply_scalar(inverse_inertia, scale);
 }
 
@@ -38,15 +38,15 @@ void estimate_collision_response(CollisionEstimationResult &result, const RigidB
 
     // the bodies' velocities, zero for a static body
     if (body_1.motion_type != MotionType::STATIC) {
-        result.linear_velocity_1 = vec3f::load(body_1.motion_properties.linear_velocity);
-        result.angular_velocity_1 = vec3f::load(body_1.motion_properties.angular_velocity);
+        result.linear_velocity_1 = body_1.motion_properties.linear_velocity;
+        result.angular_velocity_1 = body_1.motion_properties.angular_velocity;
     } else {
         result.linear_velocity_1 = vec3f::zero();
         result.angular_velocity_1 = vec3f::zero();
     }
     if (body_2.motion_type != MotionType::STATIC) {
-        result.linear_velocity_2 = vec3f::load(body_2.motion_properties.linear_velocity);
-        result.angular_velocity_2 = vec3f::load(body_2.motion_properties.angular_velocity);
+        result.linear_velocity_2 = body_2.motion_properties.linear_velocity;
+        result.angular_velocity_2 = body_2.motion_properties.angular_velocity;
     } else {
         result.linear_velocity_2 = vec3f::zero();
         result.angular_velocity_2 = vec3f::zero();
@@ -68,8 +68,8 @@ void estimate_collision_response(CollisionEstimationResult &result, const RigidB
     const Mat4f inv_i2 = inverse_inertia_of(body_2, settings.inv_inertia_scale_2);
 
     // the centres of mass relative to the base offset
-    const Vec3f com_1 = vec3f::subtract(vec3f::load(body_1.center_of_mass_position), manifold.base_offset);
-    const Vec3f com_2 = vec3f::subtract(vec3f::load(body_2.center_of_mass_position), manifold.base_offset);
+    const Vec3f com_1 = vec3f::subtract(body_1.center_of_mass_position, manifold.base_offset);
+    const Vec3f com_2 = vec3f::subtract(body_2.center_of_mass_position, manifold.base_offset);
 
     // the non-penetration parts, and each body's friction point as the sum of its own contact points
     ContactPart contact_constraints[manifold::MAX_CLIPPING_CONTACT_POINTS];
@@ -120,16 +120,15 @@ void estimate_collision_response(CollisionEstimationResult &result, const RigidB
     if (settings.combined_friction > 0.0f) {
         const Vec3f r1 = vec3f::subtract(friction_point_1, com_1);
         const Vec3f r2 = vec3f::subtract(friction_point_2, com_2);
-        const Vec3f relative_angular_surface_velocity = vec3f::load(settings.relative_angular_surface_velocity);
-        const Vec3f surface_velocity = vec3f::add(vec3f::load(settings.relative_linear_surface_velocity),
-                                                  vec3f::cross(relative_angular_surface_velocity, friction_point_1));
+        const Vec3f surface_velocity = vec3f::add(settings.relative_linear_surface_velocity,
+                                                  vec3f::cross(settings.relative_angular_surface_velocity, friction_point_1));
         contact_constraint_part::calculate_constraint_properties<MotionType::DYNAMIC, MotionType::DYNAMIC>(friction_1, inv_m1, inv_i1, r1, inv_m2, inv_i2, r2,
                                                                                                tangent_1, vec3f::dot(tangent_1, surface_velocity));
         contact_constraint_part::calculate_constraint_properties<MotionType::DYNAMIC, MotionType::DYNAMIC>(friction_2, inv_m1, inv_i1, r1, inv_m2, inv_i2, r2,
                                                                                                tangent_2, vec3f::dot(tangent_2, surface_velocity));
         if (num_points > 1) {
             angular_friction_constraint_part::calculate_constraint_properties<MotionType::DYNAMIC, MotionType::DYNAMIC>(
-                angular_friction, inv_i1, inv_i2, normal, vec3f::dot(relative_angular_surface_velocity, normal));
+                angular_friction, inv_i1, inv_i2, normal, vec3f::dot(settings.relative_angular_surface_velocity, normal));
         }
     }
 

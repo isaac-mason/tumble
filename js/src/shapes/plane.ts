@@ -17,9 +17,11 @@ const planeDefaults = defaultsOf(Low.Plane.defaultSettings, Low.PlaneSettings.cr
 
 export function create(settings: PlaneShapeSettings = {}): Shape {
     const defaults = planeDefaults();
+    const normal = settings.normal ?? defaults.plane;
     Low.errorClear();
     return Low.Plane.create({
-        plane: { normal: settings.normal ?? defaults.plane.normal, constant: settings.constant ?? defaults.plane.constant },
+        // the normal in x, y and z, the constant in w
+        plane: [normal[0], normal[1], normal[2], settings.constant ?? defaults.plane[3]],
         halfExtent: settings.halfExtent ?? defaults.halfExtent,
         materialId: settings.materialId ?? defaults.materialId,
     });

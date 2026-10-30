@@ -81,9 +81,7 @@ static void query_box(bool *hits, const BvhNode *nodes, const TriangleMeshShape:
             const uint32_t start = mesh_bvh::node_tri_start(nodes, node);
             const uint32_t count = mesh_bvh::node_tri_count(nodes, node);
             for (uint32_t t = start; t < start + count; t++) {
-                Box3f aabb;
-                triangle_mesh_data::calculate_triangle_aabb(aabb, data, t);
-                if (aabox::intersects(aabox::load(aabb), aabox::load(box))) hits[data.triangles[t].material_id] = true;
+                if (aabox::intersects(triangle_mesh_data::calculate_triangle_aabb(data, t), aabox::load(box))) hits[data.triangles[t].material_id] = true;
             }
         } else {
             stack[size++] = bvh::node_right(nodes, node);
@@ -138,9 +136,7 @@ static void check_tree(TestCtx &ctx, const collections::Array<BvhNode> &tree, co
             if (strict_leaves) leaves_ok = leaves_ok && count <= max_leaf_tris;
             for (uint32_t t = start; t < start + count && t < data.triangle_count; t++) {
                 covered[t]++;
-                Box3f aabb;
-                triangle_mesh_data::calculate_triangle_aabb(aabb, data, t);
-                bounds_ok = bounds_ok && aabox::contains(aabox::load(bounds), aabox::load(aabb));
+                bounds_ok = bounds_ok && aabox::contains(aabox::load(bounds), triangle_mesh_data::calculate_triangle_aabb(data, t));
             }
         } else {
             const int32_t left = bvh::node_left(node);
@@ -462,9 +458,7 @@ void test_triangle_mesh_bvh_exact_bounds(TestCtx &ctx) {
                     const uint32_t count = mesh_bvh::node_tri_count(nodes, node);
                     covered += count;
                     for (uint32_t t = start; t < start + count; t++) {
-                        Box3f aabb;
-                        triangle_mesh_data::calculate_triangle_aabb(aabb, *data, t);
-                        leaves_contain = leaves_contain && aabox::contains(aabox::load(bounds), aabox::load(aabb));
+                        leaves_contain = leaves_contain && aabox::contains(aabox::load(bounds), triangle_mesh_data::calculate_triangle_aabb(*data, t));
                     }
                 } else {
                     const int32_t left = bvh::node_left(node);

@@ -20,9 +20,8 @@ void test_bvh_node_accessors(TestCtx &ctx) {
     CHECK(ctx, bvh::node_right(nodes, 0) == 2);
     CHECK(ctx, bvh::node_split_axis(nodes, 0) == 0);
 
-    Box3f bounds;
-    bvh::node_get_bounds(bounds, nodes, 2);
-    CHECK(ctx, bounds.min.x == 2 && bounds.min.y == 0 && bounds.max.x == 3 && bounds.max.z == 1);
+    const AABox bounds = bvh::node_get_bounds(nodes, 2);
+    CHECK(ctx, vec3f::x(bounds.min) == 2 && vec3f::y(bounds.min) == 0 && vec3f::x(bounds.max) == 3 && vec3f::z(bounds.max) == 1);
 
     const Vec3f center = bvh::node_get_center(nodes, 0);
     CHECK(ctx, vec3f::x(center) == 1.5f && vec3f::y(center) == 0.5f && vec3f::z(center) == 0.5f);

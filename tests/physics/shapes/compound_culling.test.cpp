@@ -12,12 +12,11 @@
 
 
 static const SubShapeIdBuilder NO_SUB_SHAPE = {sub_shape::EMPTY_SUB_SHAPE_ID, 0};
-static const Float4 IDENTITY = {0, 0, 0, 1};
 
 /** `count` copies of `child` 10 apart along x: only the one at the origin is near a query at the origin */
 static Shape *row(Shape *child, uint32_t count) {
     CompoundShapeSettings::Child children[8];
-    for (uint32_t i = 0; i < count; i++) children[i] = {{(float)i * 10.0f, 0, 0}, IDENTITY, child};
+    for (uint32_t i = 0; i < count; i++) children[i] = {vec3f::make((float)i * 10.0f, 0, 0), quatf::identity(), child};
     return compound::create({.children = children, .num_children = count});
 }
 
@@ -25,7 +24,7 @@ static Shape *row(Shape *child, uint32_t count) {
 static void count_ray_hit(CastRayCollector &c, const CastRayHit &) { (*static_cast<uint32_t *>(c.context))++; }
 static void count_ray_miss(CastRayCollector &c) { (*static_cast<uint32_t *>(c.context))++; }
 
-static uint32_t ray_visits(const Shape *shape, const Transformf &transform, const Float3 &origin) {
+static uint32_t ray_visits(const Shape *shape, const Transform &transform, const Float3 &origin) {
     uint32_t visits = 0;
     CastRayCollector collector = cast_ray::create_collector(CollectorKind::CUSTOM);
     collector.custom_add_hit = count_ray_hit;
@@ -38,8 +37,8 @@ static uint32_t ray_visits(const Shape *shape, const Transformf &transform, cons
 // the sphere-vs-sphere row swapped for a count, so a compound of spheres counts the children its walk hands on
 static uint32_t sphere_collides = 0;
 static void count_sphere_collide(CollideShapeCollector &, const CollideShapeSettings &, const Shape *,
-                                 const SubShapeIdBuilder &, const Transformf &, const Shape *, const SubShapeIdBuilder &,
-                                 const Transformf &) {
+                                 const SubShapeIdBuilder &, const Transform &, const Shape *, const SubShapeIdBuilder &,
+                                 const Transform &) {
     sphere_collides++;
 }
 
@@ -55,14 +54,14 @@ static uint32_t collide_visits(const Shape *ball, const Shape *shape) {
 
 void test_compound_culling_ray(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> cube = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.0f});
+    Ref<Shape> cube = box::create({.half_extents = vec3f::splat(0.5f), .convex_radius = 0.0f});
     Ref<Shape> many = row(cube, 8);
 
     // straight down onto the child at the origin: only it is visited
     CHECK(ctx, ray_visits(many, pose({0, 0, 0}), {0, 10, 0}) == 1);
 
     // posed: a quarter turn about y takes local +x to world -z, scaled by 2 the child at local x = 30 sits 60 along -z
-    Float4 turn = stored_axis_angle(vec3f::make(0, 1, 0), 1.5707963f);
+    const Quatf turn = axis_angle(vec3f::axis_y(), 1.5707963f);
     CHECK(ctx, ray_visits(many, pose({5, 0, 5}, turn, {2, 2, 2}), {5, 10, 5 - 60}) == 1);
 
     many = nullptr;
@@ -88,7 +87,7 @@ void test_compound_culling_cast(TestCtx &ctx) {
     CastShapeCollector collector = cast_shape::create_collector(CollectorKind::ALL);
 
     // posed and scaled: the swept ball still finds the far child, and only it
-    Float4 turn = stored_axis_angle(vec3f::make(0, 1, 0), 1.5707963f);
+    const Quatf turn = axis_angle(vec3f::axis_y(), 1.5707963f);
     shapes::cast_fn(ball->type, many->type)(collector, cast_shape::default_settings(), ball, NO_SUB_SHAPE, pose({5, 5, 5 - 60}), vec3f::make(0, -10, 0),
                                             many, NO_SUB_SHAPE, pose({5, 0, 5}, turn, {2, 2, 2}));
     CHECK(ctx, collector.hits.length == 1);

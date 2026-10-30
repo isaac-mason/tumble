@@ -44,12 +44,12 @@ struct ContactEvent {
     int32_t material_id_a;
     int32_t material_id_b;
     /** unit, world space, from a to b */
-    Float3 normal;
+    Vec3f normal;
     float penetration;
     uint32_t num_points;
     /** world space */
-    Float3 points_a[manifold::MAX_CONTACT_POINTS];
-    Float3 points_b[manifold::MAX_CONTACT_POINTS];
+    Vec3f points_a[manifold::MAX_CONTACT_POINTS];
+    Vec3f points_b[manifold::MAX_CONTACT_POINTS];
     /**
      * what the constraint was built from: the combined material, no scales, no surface velocity. change it before the solve
      * through events::change_contact

@@ -40,13 +40,13 @@ static void init(App &app) {
     state.steps = 0;
     state.reset_countdown = 0;
     app.world = app::create_world(state.layers, {0.0f, 0.0f, 0.0f});
-    Shape *cube = app::keep(app, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}));
+    Shape *cube = app::keep(app, box::create({.half_extents = vec3f::splat(0.5f)}));
     for (int i = 0; i < BOX_COUNT; i++) {
         RigidBodySettings settings;
         settings.shape = cube;
         settings.object_layer = state.layers.moving;
         settings.motion_type = MotionType::DYNAMIC;
-        settings.position = {x_of(i), START_HEIGHT, 0.0f};
+        settings.position = vec3f::make(x_of(i), START_HEIGHT, 0.0f);
         settings.restitution = 0.0f;
         settings.friction = 1.0f;
         settings.linear_damping = damping_of(i);
@@ -68,7 +68,7 @@ static void step(App &app, float) {
     bool all_stopped = true;
     for (int i = 0; i < BOX_COUNT; i++) {
         const RigidBody *box = state.boxes[i];
-        all_stopped = all_stopped && (scalar::abs(box->motion_properties.linear_velocity.z) < 0.01f || box->position.z > 15.0f);
+        all_stopped = all_stopped && (scalar::abs(vec3f::z(box->motion_properties.linear_velocity)) < 0.01f || vec3f::z(box->position) > 15.0f);
     }
     if (all_stopped && state.steps > 60) state.reset_countdown = RESET_DELAY_STEPS;
 }

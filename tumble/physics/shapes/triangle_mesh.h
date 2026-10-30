@@ -83,34 +83,34 @@ void get_supporting_face(SupportingFaceResult &io, Vec3f direction, const Shape 
 int32_t get_material(const Shape *shape, SubShapeId sub_shape_id);
 
 void cast_ray_vs_triangle_mesh(CastRayCollector &collector, const CastRaySettings &settings, const Rayf &ray,
-                               const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform);
+                               const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform);
 
 /** inside when a ray from the point up through the mesh crosses an odd number of triangles */
 void collide_point_vs_triangle_mesh(CollidePointCollector &collector, const CollidePointSettings &settings,
                                     Vec3f point, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                                    const Transformf &transform_b);
+                                    const Transform &transform_b);
 
 /** sweeps convex a against the mesh's triangles, front to back along the bvh */
 void cast_convex_vs_triangle_mesh(CastShapeCollector &collector, const CastShapeSettings &settings,
-                                  const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
+                                  const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                                   Vec3f displacement_a, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                                  const Transformf &transform_b);
+                                  const Transform &transform_b);
 
 /** convex a against every triangle the bvh puts near it, gjk then epa, in a's local space */
 void collide_convex_vs_triangle_mesh(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                                     const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                                     const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                                     const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                                     const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 
 /** sphere a against the triangles by the closest point on each, no gjk */
 void collide_sphere_vs_triangle_mesh(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                                     const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                                     const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                                     const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                                     const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 
 /** sweeps sphere a against the triangles by direct tests: the start overlap, the face, then the edges and vertices */
 void cast_sphere_vs_triangle_mesh(CastShapeCollector &collector, const CastShapeSettings &settings,
-                                  const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
+                                  const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                                   Vec3f displacement_a, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                                  const Transformf &transform_b);
+                                  const Transform &transform_b);
 
 ShapeDef def();
 

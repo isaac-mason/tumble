@@ -9,8 +9,8 @@ static const Float3 GRAVITY = {0.0f, -9.81f, 0.0f};
 
 /** the angle between the two twist axes in world space */
 static float swing_angle(const ConeConstraint &constraint, const RigidBody *a, const RigidBody *b) {
-    const Vec3f twist1 = vec3f::transform_quat(constraint.local_space_twist_axis1, quatf::load(a->quaternion));
-    const Vec3f twist2 = vec3f::transform_quat(constraint.local_space_twist_axis2, quatf::load(b->quaternion));
+    const Vec3f twist1 = vec3f::transform_quat(constraint.local_space_twist_axis1, a->quaternion);
+    const Vec3f twist2 = vec3f::transform_quat(constraint.local_space_twist_axis2, b->quaternion);
     return scalar::acos(scalar::max(-1.0f, scalar::min(1.0f, vec3f::dot(twist1, twist2))));
 }
 
@@ -22,10 +22,10 @@ void test_cone_constraint_create(TestCtx &ctx) {
 
     // world space: twist axes normalized and taken to body space
     const ConstraintId id = cone_constraint::create(*scene.world, a, b,
-                                                                   {.point_a = {1.0f, 0.0f, 0.0f},
-                                                                    .twist_axis_a = {3.0f, 0.0f, 0.0f},
-                                                                    .point_b = {1.0f, 0.0f, 0.0f},
-                                                                    .twist_axis_b = {0.0f, 0.0f, 2.0f},
+                                                                   {.point_a = vec3f::make(1.0f, 0.0f, 0.0f),
+                                                                    .twist_axis_a = vec3f::make(3.0f, 0.0f, 0.0f),
+                                                                    .point_b = vec3f::make(1.0f, 0.0f, 0.0f),
+                                                                    .twist_axis_b = vec3f::make(0.0f, 0.0f, 2.0f),
                                                                     .half_cone_angle = scalar::PI / 3.0f});
     const ConeConstraint *constraint = cone_constraint::get(*scene.world, id);
     CHECK(ctx, constraint != nullptr && constraint_id::type(id) == ConstraintType::CONE);
@@ -40,7 +40,7 @@ void test_cone_constraint_create(TestCtx &ctx) {
 
     // local space: the fallback axis is taken to world space by body a's rotation
     const ConstraintId local_id = cone_constraint::create(
-        *scene.world, a, b, {.twist_axis_a = {0.0f, 0.0f, 1.0f}, .space = ConstraintSpace::LOCAL});
+        *scene.world, a, b, {.twist_axis_a = vec3f::axis_z(), .space = ConstraintSpace::LOCAL});
     const ConeConstraint *local = cone_constraint::get(*scene.world, local_id);
     CHECK(ctx, vec3f::exact_equals(local->local_space_twist_axis1, vec3f::make(0.0f, 0.0f, 1.0f)));
     // the perpendicular of +z is (0, 1, 0) in body a, which a's quarter turn takes to world -x
@@ -73,16 +73,16 @@ void test_cone_constraint_rotation_axis_from_a_tiny_cross(TestCtx &ctx) {
     RigidBody *b = add_body(scene, MotionType::DYNAMIC, {1.0f, 0.0f, 0.0f});
     ConeConstraint *constraint = cone_constraint::get(
         *scene.world, cone_constraint::create(*scene.world, a, b,
-                                                   {.point_a = {0.5f, 0.0f, 0.0f},
-                                                    .twist_axis_a = {1.0f, 0.0f, 0.0f},
-                                                    .point_b = {0.5f, 0.0f, 0.0f},
-                                                    .twist_axis_b = {1.0f, 0.0f, 0.0f},
+                                                   {.point_a = vec3f::make(0.5f, 0.0f, 0.0f),
+                                                    .twist_axis_a = vec3f::axis_x(),
+                                                    .point_b = vec3f::make(0.5f, 0.0f, 0.0f),
+                                                    .twist_axis_b = vec3f::axis_x(),
                                                     .half_cone_angle = scalar::PI / 2.0f}));
     // the fallback starts as the perpendicular of +x, which is -z
     CHECK(ctx, vec3f::exact_equals(constraint->world_space_rotation_axis, vec3f::make(0.0f, 0.0f, -1.0f)));
 
     // b swung almost half a turn about y: its twist axis is (-1, 0, 5e-7), and twist2 x twist1 is +y of length 5e-7
-    b->quaternion = {0.0f, 1.0f, 0.0f, -2.5e-7f};
+    b->quaternion = quatf::make(0.0f, 1.0f, 0.0f, -2.5e-7f);
     cone_constraint::setup_velocity(*constraint, scene.world->bodies, 1.0f / 60.0f);
     CHECK(ctx, constraint->cos_theta < constraint->cos_half_cone_angle);
     CHECK(ctx, vec3f::distance(constraint->world_space_rotation_axis, vec3f::make(0.0f, 1.0f, 0.0f)) < 1e-6f);
@@ -97,10 +97,10 @@ void test_cone_constraint_clamps_swing(TestCtx &ctx) {
     const float half_cone = scalar::PI / 6.0f;
     const ConstraintId id = cone_constraint::create(
         *scene.world, base, ball,
-        {.twist_axis_a = {1.0f, 0.0f, 0.0f}, .twist_axis_b = {1.0f, 0.0f, 0.0f}, .half_cone_angle = half_cone});
+        {.twist_axis_a = vec3f::axis_x(), .twist_axis_b = vec3f::axis_x(), .half_cone_angle = half_cone});
     scene.ids.push(id);
     const ConeConstraint *constraint = cone_constraint::get(*scene.world, id);
-    ball->motion_properties.angular_velocity = {0.0f, 0.0f, 3.0f};
+    ball->motion_properties.angular_velocity = vec3f::make(0.0f, 0.0f, 3.0f);
 
     float widest = 0.0f;
     const float dt = 1.0f / 60.0f;
@@ -112,7 +112,7 @@ void test_cone_constraint_clamps_swing(TestCtx &ctx) {
     // step's turn since the limit engages once crossed
     CHECK(ctx, widest < half_cone + 3.0f * dt);
     CHECK_NEAR(ctx, swing_angle(*constraint, base, ball), half_cone, 2e-2f);
-    CHECK(ctx, scalar::abs(ball->motion_properties.angular_velocity.z) < 1e-2f);
+    CHECK(ctx, scalar::abs(vec3f::z(ball->motion_properties.angular_velocity)) < 1e-2f);
     // the limit pushes back only: lambda one-signed
     CHECK(ctx, cone_constraint::get_total_lambda_rotation(*constraint) >= 0.0f);
     release_constraint_scene(scene);
@@ -126,10 +126,10 @@ void test_cone_constraint_leaves_twist_free(TestCtx &ctx) {
     const ConstraintId id = cone_constraint::create(*scene.world, base, ball,
                                                                    {.half_cone_angle = 0.1f});
     scene.ids.push(id);
-    ball->motion_properties.angular_velocity = {5.0f, 0.0f, 0.0f};
+    ball->motion_properties.angular_velocity = vec3f::make(5.0f, 0.0f, 0.0f);
     for (int i = 0; i < 60; i++) step_constraint_scene(scene, 1.0f / 60.0f, vec3f::zero());
     const ConeConstraint *constraint = cone_constraint::get(*scene.world, id);
-    CHECK_NEAR(ctx, ball->motion_properties.angular_velocity.x, 5.0f, 1e-4f);
+    CHECK_NEAR(ctx, vec3f::x(ball->motion_properties.angular_velocity), 5.0f, 1e-4f);
     CHECK(ctx, swing_angle(*constraint, base, ball) < 1e-3f);
     CHECK(ctx, !angle_constraint_part::is_active(constraint->angle_constraint_part));
     release_constraint_scene(scene);
@@ -141,14 +141,14 @@ void test_cone_constraint_pendulum(TestCtx &ctx) {
     RigidBody *pivot = add_body(scene, MotionType::STATIC, {0.0f, 10.0f, 0.0f});
     RigidBody *ball = add_body(scene, MotionType::DYNAMIC, {0.0f, 9.0f, 0.0f});
     const float half_cone = 20.0f * scalar::DEGREES_TO_RADIANS;
-    const Float3 down = {0.0f, -1.0f, 0.0f};
-    const Float3 pivot_point = {0.0f, 10.0f, 0.0f};
+    const Vec3f down = vec3f::make(0.0f, -1.0f, 0.0f);
+    const Vec3f pivot_point = vec3f::make(0.0f, 10.0f, 0.0f);
     const ConstraintId id = cone_constraint::create(
         *scene.world, pivot, ball,
         {.point_a = pivot_point, .twist_axis_a = down, .point_b = pivot_point, .twist_axis_b = down, .half_cone_angle = half_cone});
     scene.ids.push(id);
     const ConeConstraint *constraint = cone_constraint::get(*scene.world, id);
-    ball->motion_properties.linear_velocity = {5.0f, 0.0f, 2.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(5.0f, 0.0f, 2.0f);
 
     const float dt = 1.0f / 60.0f;
     float widest = 0.0f;
@@ -156,17 +156,17 @@ void test_cone_constraint_pendulum(TestCtx &ctx) {
     for (int i = 0; i < 180; i++) {
         step_constraint_scene(scene, dt, vec3f::load(GRAVITY));
         widest = scalar::max(widest, swing_angle(*constraint, pivot, ball));
-        worst_anchor = scalar::max(worst_anchor, vec3f::distance(world_point(ball, constraint->local_space_position2), vec3f::load(pivot_point)));
+        worst_anchor = scalar::max(worst_anchor, vec3f::distance(world_point(ball, constraint->local_space_position2), pivot_point));
     }
     // it reaches the edge, overshooting by at most one step's swing (about 5.4 rad/s at the bottom)
     CHECK(ctx, widest > half_cone - 2e-2f);
     CHECK(ctx, widest < half_cone + 5.4f * dt);
     // the impacts on the cone's edge open the joint a little; the position iterations close it again
     CHECK(ctx, worst_anchor < 5e-2f);
-    CHECK(ctx, vec3f::distance(world_point(ball, constraint->local_space_position2), vec3f::load(pivot_point)) < 1e-2f);
+    CHECK(ctx, vec3f::distance(world_point(ball, constraint->local_space_position2), pivot_point) < 1e-2f);
     CHECK(ctx, swing_angle(*constraint, pivot, ball) < half_cone + 2e-2f);
     // the ball hangs on its rod: one meter from the pivot
-    CHECK_NEAR(ctx, vec3f::distance(vec3f::load(ball->center_of_mass_position), vec3f::load(pivot_point)), 1.0f, 1e-2f);
+    CHECK_NEAR(ctx, vec3f::distance(ball->center_of_mass_position, pivot_point), 1.0f, 1e-2f);
     CHECK(ctx, vec3f::exact_equals(cone_constraint::get_total_lambda_position(*constraint), constraint->point_constraint_part.total_lambda));
     release_constraint_scene(scene);
 }

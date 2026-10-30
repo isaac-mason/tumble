@@ -11,16 +11,12 @@
 
 
 static void calculate(RotationEulerConstraintPart &part, RigidBody &a, RigidBody &b) {
-    Float4x4 rotation_a, rotation_b;
-    mat4f::store(rotation_a, mat4f::from_quat(quatf::load(a.quaternion)));
-    mat4f::store(rotation_b, mat4f::from_quat(quatf::load(b.quaternion)));
     rotation_euler_constraint_part::calculate_constraint_properties(part, a, b, motion_properties::STEP_STAMP_NONE);
 }
 
 /** the angle of q2 * r0^-1 * q1^-1, the drift from the initial relative rotation */
 static float drift(const RigidBody &a, const RigidBody &b, Quatf inv_initial_orientation) {
-    const Quatf diff =
-        quatf::multiply(quatf::multiply(quatf::load(b.quaternion), inv_initial_orientation), quatf::conjugate(quatf::load(a.quaternion)));
+    const Quatf diff = quatf::multiply(quatf::multiply(b.quaternion, inv_initial_orientation), quatf::conjugate(a.quaternion));
     const float x = quatf::x(diff), y = quatf::y(diff), z = quatf::z(diff);
     const float sin_half = scalar::sqrt(x * x + y * y + z * z);
     return 2.0f * scalar::atan2(sin_half, scalar::abs(quatf::w(diff)));
@@ -67,8 +63,8 @@ void test_rotation_euler_constraint_part_effective_mass(TestCtx &ctx) {
     // K = I1^-1 + I2^-1 and the effective mass is its inverse, with turned bodies and unequal inertias
     RigidBody a = make_body(MotionType::DYNAMIC, 1.0f, {1.0f, 2.0f, 3.0f});
     RigidBody b = make_body(MotionType::DYNAMIC, 1.0f, {0.5f, 4.0f, 1.0f});
-    a.quaternion = stored_axis_angle(vec3f::make(1.0f, 2.0f, 3.0f), 0.7f);
-    b.quaternion = stored_axis_angle(vec3f::make(0.0f, 1.0f, -1.0f), -1.1f);
+    a.quaternion = axis_angle(vec3f::make(1.0f, 2.0f, 3.0f), 0.7f);
+    b.quaternion = axis_angle(vec3f::make(0.0f, 1.0f, -1.0f), -1.1f);
     RotationEulerConstraintPart part = rotation_euler_constraint_part::create();
     calculate(part, a, b);
     CHECK(ctx, rotation_euler_constraint_part::is_active(part));
@@ -87,62 +83,62 @@ void test_rotation_euler_constraint_part_effective_mass(TestCtx &ctx) {
     // nothing dynamic: every column of the sum is zero, so each is made identity, as jolt's, and the part stays active,
     // but every impulse goes through a zero inverse inertia, so neither body turns
     a.motion_type = MotionType::KINEMATIC;
-    a.motion_properties.angular_velocity = {0.0f, 1.0f, 0.0f};
+    a.motion_properties.angular_velocity = vec3f::make(0.0f, 1.0f, 0.0f);
     calculate(part, a, b);
     CHECK(ctx, rotation_euler_constraint_part::is_active(part));
     rotation_euler_constraint_part::solve_velocity_constraint(part, a, b);
-    CHECK(ctx, a.motion_properties.angular_velocity.x == 0.0f && a.motion_properties.angular_velocity.y == 1.0f &&
-                   a.motion_properties.angular_velocity.z == 0.0f);
+    CHECK(ctx, near3(a.motion_properties.angular_velocity, 0.0f, 1.0f, 0.0f, 0.0f));
 }
 
 void test_rotation_euler_constraint_part_velocity_locks_rotation(TestCtx &ctx) {
     // one solve makes the angular velocities equal and keeps the total angular momentum
     RigidBody a = make_body(MotionType::DYNAMIC, 1.0f, {1.0f, 2.0f, 3.0f});
     RigidBody b = make_body(MotionType::DYNAMIC, 1.0f, {0.5f, 4.0f, 1.0f});
-    a.motion_properties.angular_velocity = {1.0f, -2.0f, 0.5f};
-    b.motion_properties.angular_velocity = {-0.5f, 0.25f, 3.0f};
+    a.motion_properties.angular_velocity = vec3f::make(1.0f, -2.0f, 0.5f);
+    b.motion_properties.angular_velocity = vec3f::make(-0.5f, 0.25f, 3.0f);
     // identity rotations: L = I w with I = diag(1 / inv)
-    const Float3 momentum = {1.0f / 1.0f + -0.5f / 0.5f, -2.0f / 2.0f + 0.25f / 4.0f, 0.5f / 3.0f + 3.0f / 1.0f};
+    const Vec3f momentum = vec3f::make(1.0f / 1.0f + -0.5f / 0.5f, -2.0f / 2.0f + 0.25f / 4.0f, 0.5f / 3.0f + 3.0f / 1.0f);
 
     RotationEulerConstraintPart part = rotation_euler_constraint_part::create();
     calculate(part, a, b);
     CHECK(ctx, rotation_euler_constraint_part::solve_velocity_constraint(part, a, b));
 
-    const Float3 &wa = a.motion_properties.angular_velocity;
-    const Float3 &wb = b.motion_properties.angular_velocity;
-    CHECK(ctx, vec3f::distance(vec3f::load(wa), vec3f::load(wb)) < 1e-5f);
-    const Float3 after = {wa.x / 1.0f + wb.x / 0.5f, wa.y / 2.0f + wb.y / 4.0f, wa.z / 3.0f + wb.z / 1.0f};
-    CHECK(ctx, vec3f::distance(vec3f::load(after), vec3f::load(momentum)) < 1e-5f);
+    const Vec3f wa = a.motion_properties.angular_velocity;
+    const Vec3f wb = b.motion_properties.angular_velocity;
+    CHECK(ctx, vec3f::distance(wa, wb) < 1e-5f);
+    const Vec3f after = vec3f::make(vec3f::x(wa) / 1.0f + vec3f::x(wb) / 0.5f, vec3f::y(wa) / 2.0f + vec3f::y(wb) / 4.0f,
+                                    vec3f::z(wa) / 3.0f + vec3f::z(wb) / 1.0f);
+    CHECK(ctx, vec3f::distance(after, momentum) < 1e-5f);
 
     // warm starting the stored impulse on the original velocities lands on the same result
     RigidBody a2 = make_body(MotionType::DYNAMIC, 1.0f, {1.0f, 2.0f, 3.0f});
     RigidBody b2 = make_body(MotionType::DYNAMIC, 1.0f, {0.5f, 4.0f, 1.0f});
-    a2.motion_properties.angular_velocity = {1.0f, -2.0f, 0.5f};
-    b2.motion_properties.angular_velocity = {-0.5f, 0.25f, 3.0f};
+    a2.motion_properties.angular_velocity = vec3f::make(1.0f, -2.0f, 0.5f);
+    b2.motion_properties.angular_velocity = vec3f::make(-0.5f, 0.25f, 3.0f);
     rotation_euler_constraint_part::warm_start(part, a2, b2, 1.0f);
-    CHECK(ctx, vec3f::distance(vec3f::load(a2.motion_properties.angular_velocity), vec3f::load(wa)) < 1e-5f);
-    CHECK(ctx, vec3f::distance(vec3f::load(b2.motion_properties.angular_velocity), vec3f::load(wb)) < 1e-5f);
+    CHECK(ctx, vec3f::distance(a2.motion_properties.angular_velocity, wa) < 1e-5f);
+    CHECK(ctx, vec3f::distance(b2.motion_properties.angular_velocity, wb) < 1e-5f);
 
     // against a kinematic body the dynamic one takes on its spin
     RigidBody kinematic = make_body(MotionType::KINEMATIC, 1.0f, {0.0f, 0.0f, 0.0f});
-    kinematic.motion_properties.angular_velocity = {0.0f, 1.0f, 0.0f};
+    kinematic.motion_properties.angular_velocity = vec3f::make(0.0f, 1.0f, 0.0f);
     RigidBody dynamic = make_body(MotionType::DYNAMIC, 1.0f, {1.0f, 2.0f, 3.0f});
     calculate(part, kinematic, dynamic);
     rotation_euler_constraint_part::solve_velocity_constraint(part, kinematic, dynamic);
-    CHECK(ctx, vec3f::distance(vec3f::load(dynamic.motion_properties.angular_velocity), vec3f::make(0.0f, 1.0f, 0.0f)) < 1e-6f);
-    CHECK(ctx, vec3f::distance(vec3f::load(kinematic.motion_properties.angular_velocity), vec3f::make(0.0f, 1.0f, 0.0f)) == 0.0f);
+    CHECK(ctx, vec3f::distance(dynamic.motion_properties.angular_velocity, vec3f::make(0.0f, 1.0f, 0.0f)) < 1e-6f);
+    CHECK(ctx, vec3f::distance(kinematic.motion_properties.angular_velocity, vec3f::make(0.0f, 1.0f, 0.0f)) == 0.0f);
 }
 
 void test_rotation_euler_constraint_part_position_removes_drift(TestCtx &ctx) {
     // the bodies started at a known relative rotation, then b drifted 0.2 rad off it; position steps remove the drift
     RigidBody a = make_body(MotionType::DYNAMIC, 1.0f, {1.0f, 2.0f, 3.0f});
     RigidBody b = make_body(MotionType::DYNAMIC, 1.0f, {0.5f, 4.0f, 1.0f});
-    a.quaternion = stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.5f);
-    b.quaternion = stored_axis_angle(vec3f::make(1.0f, 0.0f, 0.0f), 0.8f);
-    const Quatf inv_initial = rotation_euler_constraint_part::get_inv_initial_orientation(quatf::load(a.quaternion), quatf::load(b.quaternion));
+    a.quaternion = axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.5f);
+    b.quaternion = axis_angle(vec3f::make(1.0f, 0.0f, 0.0f), 0.8f);
+    const Quatf inv_initial = rotation_euler_constraint_part::get_inv_initial_orientation(a.quaternion, b.quaternion);
     CHECK(ctx, drift(a, b, inv_initial) < 1e-5f);
 
-    quatf::store(b.quaternion, quatf::multiply(axis_angle(vec3f::make(1.0f, -1.0f, 2.0f), 0.2f), quatf::load(b.quaternion)));
+    b.quaternion = quatf::multiply(axis_angle(vec3f::make(1.0f, -1.0f, 2.0f), 0.2f), b.quaternion);
     CHECK_NEAR(ctx, drift(a, b, inv_initial), 0.2f, 1e-5f);
 
     RotationEulerConstraintPart part = rotation_euler_constraint_part::create();
@@ -157,6 +153,6 @@ void test_rotation_euler_constraint_part_position_removes_drift(TestCtx &ctx) {
 
     // no drift: nothing applied
     calculate(part, a, b);
-    const Quatf at_rest = rotation_euler_constraint_part::get_inv_initial_orientation(quatf::load(a.quaternion), quatf::load(b.quaternion));
+    const Quatf at_rest = rotation_euler_constraint_part::get_inv_initial_orientation(a.quaternion, b.quaternion);
     CHECK(ctx, !rotation_euler_constraint_part::solve_position_constraint(part, a, b, at_rest, 1.0f));
 }

@@ -77,10 +77,13 @@ The rest of this guide leaves out the includes, `using namespace tumble;` and th
   in `tumble/physics/body/rigid_body.h`.
 - Enums are scoped, such as `MotionType::DYNAMIC` and `ShapeType::BOX`.
 - A function that changes a world takes the world first: `rigid_body::set_position(world, body, ...)`.
-- Settings structs hold storage types: `Float3`, `Float4` and plain floats. They work with designated initializers,
-  which C++20 requires in declaration order.
-- Functions take register types such as `Vec3f` and `Quatf`. Make them with functions like `vec3f::make` and
-  `quatf::set_axis_angle`, or load them from storage with `vec3f::load`.
+- Vectors, rotations and matrices are SIMD register types: `Vec3f`, `Quatf`, `Mat4f`, `AABox`, `Plane` and
+  `Transform`. Functions take them, and bodies, shapes and settings hold them, as in Jolt.
+- Make them with functions like `vec3f::make`, `vec3f::splat` and `quatf::set_axis_angle`. Read a component with
+  `vec3f::x` and the like.
+- Settings structs work with designated initializers, which C++20 requires in declaration order.
+- Packed storage types such as `Float3`, `Float4` and `Box3f` are for arrays and buffers. Convert with `vec3f::load`
+  and `vec3f::store`.
 - Units are metres, kilograms, seconds and radians.
 - Values free their memory when they go out of scope. This covers settings, filters, collectors and debug draws.
 - `world::create` makes a world and `world::destroy` frees it, with its bodies and constraints.

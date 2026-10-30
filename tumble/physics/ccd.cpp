@@ -35,7 +35,7 @@ void clear(CCD &ccd, Bodies &bodies) {
 
 AABox compute_swept_aabb(const RigidBody &body, Vec3f displacement) {
     // the body's aabb, and the same translated by the displacement
-    const AABox aabb = aabox::load(body.aabb);
+    const AABox aabb = body.aabb;
     return aabox::union_(aabb, {vec3f::add(aabb.min, displacement), vec3f::add(aabb.max, displacement)});
 }
 

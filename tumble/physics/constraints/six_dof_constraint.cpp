@@ -228,26 +228,26 @@ ConstraintId create(World &world, RigidBody *body_a, RigidBody *body_b,
     constraint.swing_twist_constraint_part.swing_type = settings.swing_type;
 
     // constraint to body rotations from the normalized axes
-    const Vec3f axis_x1 = vec3f::normalize(vec3f::load(settings.axis_x_a));
-    const Vec3f axis_y1 = vec3f::normalize(vec3f::load(settings.axis_y_a));
-    const Vec3f axis_x2 = vec3f::normalize(vec3f::load(settings.axis_x_b));
-    const Vec3f axis_y2 = vec3f::normalize(vec3f::load(settings.axis_y_b));
+    const Vec3f axis_x1 = vec3f::normalize(settings.axis_x_a);
+    const Vec3f axis_y1 = vec3f::normalize(settings.axis_y_a);
+    const Vec3f axis_x2 = vec3f::normalize(settings.axis_x_b);
+    const Vec3f axis_y2 = vec3f::normalize(settings.axis_y_b);
     constraint.constraint_to_body1 = constraint_to_body(axis_x1, axis_y1);
     constraint.constraint_to_body2 = constraint_to_body(axis_x2, axis_y2);
 
     if (settings.space == ConstraintSpace::WORLD) {
-        const Quatf inv_quat_a = quatf::conjugate(quatf::load(body_a->quaternion));
-        const Quatf inv_quat_b = quatf::conjugate(quatf::load(body_b->quaternion));
+        const Quatf inv_quat_a = quatf::conjugate(body_a->quaternion);
+        const Quatf inv_quat_b = quatf::conjugate(body_b->quaternion);
 
-        constraint.local_space_position1 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point_a), vec3f::load(body_a->center_of_mass_position)), inv_quat_a);
+        constraint.local_space_position1 = vec3f::transform_quat(vec3f::subtract(settings.point_a, body_a->center_of_mass_position), inv_quat_a);
 
-        constraint.local_space_position2 = vec3f::transform_quat(vec3f::subtract(vec3f::load(settings.point_b), vec3f::load(body_b->center_of_mass_position)), inv_quat_b);
+        constraint.local_space_position2 = vec3f::transform_quat(vec3f::subtract(settings.point_b, body_b->center_of_mass_position), inv_quat_b);
 
         constraint.constraint_to_body1 = quatf::multiply(inv_quat_a, constraint.constraint_to_body1);
         constraint.constraint_to_body2 = quatf::multiply(inv_quat_b, constraint.constraint_to_body2);
     } else {
-        constraint.local_space_position1 = vec3f::load(settings.point_a);
-        constraint.local_space_position2 = vec3f::load(settings.point_b);
+        constraint.local_space_position1 = settings.point_a;
+        constraint.local_space_position2 = settings.point_b;
     }
 
     for (uint32_t i = 0; i < SixDOFConstraint::Axis::NUM; i++) {
@@ -284,7 +284,7 @@ SixDOFConstraint *get(World &world, ConstraintId id) {
 static void get_inverse_mass_and_inertia(float &out_inv_mass, Mat4f &out_inv_inertia, RigidBody &body, uint32_t step_stamp) {
     if (body.motion_type == MotionType::DYNAMIC) {
         out_inv_mass = body.motion_properties.inv_mass;
-        out_inv_inertia = motion_properties::get_world_inverse_inertia(body.motion_properties, quatf::load(body.quaternion), step_stamp);
+        out_inv_inertia = motion_properties::get_world_inverse_inertia(body.motion_properties, body.quaternion, step_stamp);
     } else {
         out_inv_mass = 0.0f;
         out_inv_inertia = mat4f::zero();
@@ -294,10 +294,10 @@ static void get_inverse_mass_and_inertia(float &out_inv_mass, Mat4f &out_inv_ine
 /** r1 + u = p2 - x1, r2 = p2 - x2 and u = p2 - p1, from the bodies' current transforms */
 static void get_position_constraint_properties(Vec3f &out_r1_plus_u, Vec3f &out_r2, Vec3f &out_u, const SixDOFConstraint &constraint,
                                                const RigidBody &body_a, const RigidBody &body_b) {
-    const Vec3f center_of_mass_a = vec3f::load(body_a.center_of_mass_position);
-    const Vec3f center_of_mass_b = vec3f::load(body_b.center_of_mass_position);
-    const Vec3f p1 = vec3f::add(vec3f::transform_quat(constraint.local_space_position1, quatf::load(body_a.quaternion)), center_of_mass_a);
-    const Vec3f p2 = vec3f::add(vec3f::transform_quat(constraint.local_space_position2, quatf::load(body_b.quaternion)), center_of_mass_b);
+    const Vec3f center_of_mass_a = body_a.center_of_mass_position;
+    const Vec3f center_of_mass_b = body_b.center_of_mass_position;
+    const Vec3f p1 = vec3f::add(vec3f::transform_quat(constraint.local_space_position1, body_a.quaternion), center_of_mass_a);
+    const Vec3f p2 = vec3f::add(vec3f::transform_quat(constraint.local_space_position2, body_b.quaternion), center_of_mass_b);
 
     out_r1_plus_u = vec3f::subtract(p2, center_of_mass_a);
     out_r2 = vec3f::subtract(p2, center_of_mass_b);
@@ -309,11 +309,11 @@ void setup_velocity(SixDOFConstraint &constraint, Bodies &bodies, float delta_ti
     RigidBody &body_a = *bodies.pool[constraint.base.body_index_a];
     RigidBody &body_b = *bodies.pool[constraint.base.body_index_b];
 
-    const Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
+    const Mat4f rotation_a = mat4f::from_quat(body_a.quaternion);
+    const Mat4f rotation_b = mat4f::from_quat(body_b.quaternion);
 
     // rotates from body 1's constraint space to world space
-    const Quatf constraint_body1_to_world = quatf::multiply(quatf::load(body_a.quaternion), constraint.constraint_to_body1);
+    const Quatf constraint_body1_to_world = quatf::multiply(body_a.quaternion, constraint.constraint_to_body1);
 
     // world space axes of constraint space
     const Mat4f translation_axes = mat4f::from_quat(constraint_body1_to_world);
@@ -412,7 +412,7 @@ void setup_velocity(SixDOFConstraint &constraint, Bodies &bodies, float delta_ti
     }
 
     // rotation constraints
-    const Quatf constraint_body2_to_world = quatf::multiply(quatf::load(body_b.quaternion), constraint.constraint_to_body2);
+    const Quatf constraint_body2_to_world = quatf::multiply(body_b.quaternion, constraint.constraint_to_body2);
     const Quatf q = quatf::multiply(quatf::conjugate(constraint_body1_to_world), constraint_body2_to_world);
 
     if (is_rotation_fully_constrained(constraint)) {
@@ -688,8 +688,8 @@ bool solve_position(SixDOFConstraint &constraint, Bodies &bodies, float delta_ti
                                                                             inv_initial_orientation, baumgarte) ||
                   impulse;
     } else if (is_rotation_constrained(constraint)) {
-        const Quatf constraint_body1_to_world = quatf::multiply(quatf::load(body_a.quaternion), constraint.constraint_to_body1);
-        const Quatf constraint_body2_to_world = quatf::multiply(quatf::load(body_b.quaternion), constraint.constraint_to_body2);
+        const Quatf constraint_body1_to_world = quatf::multiply(body_a.quaternion, constraint.constraint_to_body1);
+        const Quatf constraint_body2_to_world = quatf::multiply(body_b.quaternion, constraint.constraint_to_body2);
         const Quatf q = quatf::multiply(quatf::conjugate(constraint_body1_to_world), constraint_body2_to_world);
 
         impulse = swing_twist_constraint_part::solve_position_constraint(constraint.swing_twist_constraint_part, body_a, body_b, q,
@@ -699,8 +699,8 @@ bool solve_position(SixDOFConstraint &constraint, Bodies &bodies, float delta_ti
     }
 
     // the translation solve takes the rotations as the rotation solve left them
-    const Mat4f rotation_a = mat4f::from_quat(quatf::load(body_a.quaternion));
-    const Mat4f rotation_b = mat4f::from_quat(quatf::load(body_b.quaternion));
+    const Mat4f rotation_a = mat4f::from_quat(body_a.quaternion);
+    const Mat4f rotation_b = mat4f::from_quat(body_b.quaternion);
 
     if (is_translation_fully_constrained(constraint)) {
         // the point part, at the fixed offsets
@@ -724,7 +724,7 @@ bool solve_position(SixDOFConstraint &constraint, Bodies &bodies, float delta_ti
             Vec3f r2;
             Vec3f u;
             get_position_constraint_properties(r1_plus_u, r2, u, constraint, body_a, body_b);
-            const Quatf constraint_body1_to_world = quatf::multiply(quatf::load(body_a.quaternion), constraint.constraint_to_body1);
+            const Quatf constraint_body1_to_world = quatf::multiply(body_a.quaternion, constraint.constraint_to_body1);
 
             const Vec3f unit_axis = vec3f::make(i == 0 ? 1.0f : 0.0f, i == 1 ? 1.0f : 0.0f, i == 2 ? 1.0f : 0.0f);
             const Vec3f translation_axis = vec3f::transform_quat(unit_axis, constraint_body1_to_world);

@@ -143,8 +143,8 @@ void test_collectors_any_early_out(TestCtx &ctx) {
     Ref<Shape> a = sphere::create({.radius = 1.0f});
     Ref<Shape> b = sphere::create({.radius = 1.0f});
     const SubShapeIdBuilder no_sub_shape = {sub_shape::EMPTY_SUB_SHAPE_ID, 0};
-    const Transformf transform_a = {{0, 0, 0}, {0, 0, 0, 1}, {1, 1, 1}};
-    const Transformf transform_b = {{1.5f, 0, 0}, {0, 0, 0, 1}, {1, 1, 1}};
+    const Transform transform_a = pose({0, 0, 0});
+    const Transform transform_b = pose({1.5f, 0, 0});
     convex::collide_convex_vs_convex(any_collide, collide_shape::default_settings(), a, no_sub_shape, transform_a, b, no_sub_shape,
                                      transform_b);
     CHECK(ctx, any_collide.hits.length == 1 && collide_shape::hit(any_collide)->penetration == 0.01f);
@@ -216,12 +216,12 @@ static void no_surface_normal(SurfaceNormalResult &, const Shape *, SubShapeId) 
 static int32_t no_material(const Shape *, SubShapeId) { return -1; }
 static void no_supporting_face(SupportingFaceResult &io, Vec3f, const Shape *, SubShapeId) { io.face.num_vertices = 0; }
 static void no_cast_ray(CastRayCollector &, const CastRaySettings &, const Rayf &, const Shape *,
-                        const SubShapeIdBuilder &, const Transformf &) {}
+                        const SubShapeIdBuilder &, const Transform &) {}
 static void no_collide_point(CollidePointCollector &, const CollidePointSettings &, Vec3f,
-                             const Shape *, const SubShapeIdBuilder &, const Transformf &) {}
+                             const Shape *, const SubShapeIdBuilder &, const Transform &) {}
 static void collide_marker(CollideShapeCollector &c, const CollideShapeSettings &, const Shape *,
-                           const SubShapeIdBuilder &, const Transformf &, const Shape *, const SubShapeIdBuilder &,
-                           const Transformf &) {
+                           const SubShapeIdBuilder &, const Transform &, const Shape *, const SubShapeIdBuilder &,
+                           const Transform &) {
     c.early_out_fraction = 42.0f;
 }
 
@@ -244,7 +244,7 @@ void test_shape_tables(TestCtx &ctx) {
     CHECK(ctx, get_shape_inner_radius(&shape) == 2.0f);
     MassProperties mp = mass_properties::create();
     compute_mass_properties(mp, &shape);
-    CHECK(ctx, mp.mass == 1.0f && mp.inertia.m[0] == 1.0f);
+    CHECK(ctx, mp.mass == 1.0f && elements(mp.inertia).m[0] == 1.0f);
     GetLeafShapeResult leaf;
     get_leaf_shape(leaf, &shape, 1234);
     CHECK(ctx, leaf.shape == &shape && leaf.remainder == 1234);
@@ -300,7 +300,7 @@ void test_world_tier_types(TestCtx &ctx) {
 
     // world settings carry the defaults; the layers are the only part that needs releasing
     WorldSettings settings = world_settings::create();
-    CHECK(ctx, settings.gravity.y == -9.81f && settings.gravity_enabled && settings.solver.velocity_iterations == 10);
+    CHECK(ctx, vec3f::y(settings.gravity) == -9.81f && settings.gravity_enabled && settings.solver.velocity_iterations == 10);
     CHECK(ctx, settings.narrowphase.speculative_contact_distance == 0.02f && !settings.narrowphase.collide_with_backfaces);
     CHECK_NEAR(ctx, settings.narrowphase.normal_cos_max_delta_rotation, scalar::cos(5.0f * scalar::DEGREES_TO_RADIANS), 1e-6f);
     CHECK(ctx, settings.sleeping.time_before_sleep == 0.5f && settings.ccd.linear_cast_threshold == 0.05f);

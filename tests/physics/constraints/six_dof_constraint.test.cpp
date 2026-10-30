@@ -16,8 +16,8 @@ static const float DT = 1.0f / 60.0f;
 /** settings with the translation axes fixed and the rotation axes free */
 static SixDOFConstraintSettings translation_fixed_settings(const Float3 &pivot) {
     SixDOFConstraintSettings settings;
-    settings.point_a = pivot;
-    settings.point_b = pivot;
+    settings.point_a = vec3f::load(pivot);
+    settings.point_b = vec3f::load(pivot);
     for (uint32_t i = 0; i < 3; i++) {
         settings.limit_min[i] = __FLT_MAX__;
         settings.limit_max[i] = -__FLT_MAX__;
@@ -39,7 +39,7 @@ static float rotation_angle(Quatf q) { return 2.0f * scalar::acos(scalar::min(1.
 
 /** the angle of q2 * q1^-1, the relative rotation of two bodies whose rest pose is equal orientations */
 static float relative_angle(const RigidBody *a, const RigidBody *b) {
-    return rotation_angle(quatf::multiply(quatf::load(b->quaternion), quatf::conjugate(quatf::load(a->quaternion))));
+    return rotation_angle(quatf::multiply(b->quaternion, quatf::conjugate(a->quaternion)));
 }
 
 // every axis fixed, on a body free to turn only about y: the rotation sum has zero columns for the locked axes, which
@@ -62,9 +62,9 @@ void test_six_dof_constraint_holds_the_free_axis_of_a_body_with_locked_rotation(
         settings.limit_max[i] = -__FLT_MAX__;
     }
     scene.ids.push(six_dof_constraint::create(*scene.world, base, ball, settings));
-    ball->motion_properties.angular_velocity = {0.0f, 5.0f, 0.0f};
+    ball->motion_properties.angular_velocity = vec3f::make(0.0f, 5.0f, 0.0f);
     for (uint32_t i = 0; i < 30; i++) step_constraint_scene(scene, DT, vec3f::load(GRAVITY));
-    CHECK_NEAR(ctx, ball->motion_properties.angular_velocity.y, 0.0f, 1e-3f);
+    CHECK_NEAR(ctx, vec3f::y(ball->motion_properties.angular_velocity), 0.0f, 1e-3f);
     CHECK(ctx, relative_angle(base, ball) < 0.01f);
     release_constraint_scene(scene);
 }
@@ -77,8 +77,12 @@ void test_six_dof_constraint_create(TestCtx &ctx) {
     // everything free by default; motor springs at 2 hz, critically damped, on every axis
     const ConstraintId id = six_dof_constraint::create(
         *scene.world, a, b,
-        {.point_a = {1.0f, 0.0f, 0.0f}, .point_b = {1.0f, 0.0f, 0.0f}, .axis_x_a = {0.0f, 2.0f, 0.0f},
-         .axis_y_a = {0.0f, 0.0f, 3.0f}, .axis_x_b = {0.0f, 2.0f, 0.0f}, .axis_y_b = {0.0f, 0.0f, 3.0f}});
+        {.point_a = vec3f::make(1.0f, 0.0f, 0.0f),
+         .point_b = vec3f::make(1.0f, 0.0f, 0.0f),
+         .axis_x_a = vec3f::make(0.0f, 2.0f, 0.0f),
+         .axis_y_a = vec3f::make(0.0f, 0.0f, 3.0f),
+         .axis_x_b = vec3f::make(0.0f, 2.0f, 0.0f),
+         .axis_y_b = vec3f::make(0.0f, 0.0f, 3.0f)});
     const SixDOFConstraint *constraint = six_dof_constraint::get(*scene.world, id);
     CHECK(ctx, constraint != nullptr && constraint_id::type(id) == ConstraintType::SIX_DOF);
     CHECK(ctx, a->constraint_ids.length == 1 && b->constraint_ids.length == 1);
@@ -93,8 +97,8 @@ void test_six_dof_constraint_create(TestCtx &ctx) {
     CHECK(ctx, vec3f::distance(world_point(b, constraint->local_space_position2), vec3f::make(1.0f, 0.0f, 0.0f)) < 1e-5f);
     // constraint x, y and z through either body are the given world axes
     for (uint32_t body = 0; body < 2; body++) {
-        const Quatf to_world = body == 0 ? quatf::multiply(quatf::load(a->quaternion), constraint->constraint_to_body1)
-                                         : quatf::multiply(quatf::load(b->quaternion), constraint->constraint_to_body2);
+        const Quatf to_world = body == 0 ? quatf::multiply(a->quaternion, constraint->constraint_to_body1)
+                                         : quatf::multiply(b->quaternion, constraint->constraint_to_body2);
         const Vec3f x = vec3f::transform_quat(vec3f::axis_x(), to_world);
         const Vec3f z = vec3f::transform_quat(vec3f::axis_z(), to_world);
         CHECK(ctx, vec3f::distance(x, vec3f::make(0.0f, 1.0f, 0.0f)) < 1e-5f);
@@ -178,7 +182,7 @@ void test_six_dof_constraint_translation_locked_is_a_point_constraint(TestCtx &c
     RigidBody *ball = add_body(scene, MotionType::DYNAMIC, {1.0f, 9.0f, 0.0f});
     RigidBody *base2 = add_body(scene, MotionType::STATIC, pivot2);
     RigidBody *ball2 = add_body(scene, MotionType::DYNAMIC, {6.0f, 9.0f, 0.0f});
-    scene.ids.push(point_constraint::create(*scene.world, base, ball, {.point_a = pivot, .point_b = pivot}));
+    scene.ids.push(point_constraint::create(*scene.world, base, ball, {.point_a = vec3f::load(pivot), .point_b = vec3f::load(pivot)}));
     const ConstraintId id =
         six_dof_constraint::create(*scene.world, base2, ball2, translation_fixed_settings(pivot2));
     scene.ids.push(id);
@@ -186,24 +190,24 @@ void test_six_dof_constraint_translation_locked_is_a_point_constraint(TestCtx &c
     CHECK(ctx, constraint->fixed_axis == 0b000111 && constraint->free_axis == 0b111000);
     RigidBody *const balls[2] = {ball, ball2};
     for (RigidBody *body : balls) {
-        body->motion_properties.linear_velocity = {0.0f, 1.0f, 3.0f};
-        body->motion_properties.angular_velocity = {1.0f, -2.0f, 0.5f};
+        body->motion_properties.linear_velocity = vec3f::make(0.0f, 1.0f, 3.0f);
+        body->motion_properties.angular_velocity = vec3f::make(1.0f, -2.0f, 0.5f);
     }
 
     float worst_position = 0.0f;
     float worst_rotation = 0.0f;
     for (int i = 0; i < 120; i++) {
         step_constraint_scene(scene, DT, vec3f::load(GRAVITY));
-        const Vec3f shifted = vec3f::subtract(vec3f::load(ball2->center_of_mass_position), vec3f::load(offset));
-        worst_position = scalar::max(worst_position, vec3f::distance(shifted, vec3f::load(ball->center_of_mass_position)));
+        const Vec3f shifted = vec3f::subtract(ball2->center_of_mass_position, vec3f::load(offset));
+        worst_position = scalar::max(worst_position, vec3f::distance(shifted, ball->center_of_mass_position));
         worst_rotation = scalar::max(worst_rotation, relative_angle(ball, ball2));
     }
     CHECK(ctx, worst_position < 1e-5f);
     CHECK(ctx, worst_rotation < 1e-3f);
-    CHECK(ctx, vec3f::distance(vec3f::load(ball2->motion_properties.angular_velocity), vec3f::load(ball->motion_properties.angular_velocity)) < 1e-4f);
+    CHECK(ctx, vec3f::distance(ball2->motion_properties.angular_velocity, ball->motion_properties.angular_velocity) < 1e-4f);
     // and it is a pendulum: one meter from its pivot, free to spin
-    CHECK_NEAR(ctx, vec3f::distance(vec3f::load(ball2->center_of_mass_position), vec3f::load(pivot2)), scalar::sqrt(2.0f), 1e-2f);
-    CHECK(ctx, vec3f::length(vec3f::load(ball2->motion_properties.angular_velocity)) > 1.0f);
+    CHECK_NEAR(ctx, vec3f::distance(ball2->center_of_mass_position, vec3f::load(pivot2)), scalar::sqrt(2.0f), 1e-2f);
+    CHECK(ctx, vec3f::length(ball2->motion_properties.angular_velocity) > 1.0f);
     release_constraint_scene(scene);
 }
 
@@ -217,7 +221,7 @@ void test_six_dof_constraint_all_locked_is_a_fixed_constraint(TestCtx &ctx) {
     RigidBody *base2 = add_body(scene, MotionType::STATIC, {5.0f, 10.0f, 0.0f});
     RigidBody *ball2 = add_body(scene, MotionType::DYNAMIC, {6.0f, 9.5f, 0.0f}, tilt);
     const ConstraintId fixed_id = fixed_constraint::create(
-        *scene.world, base, ball, {.point_a = {0.5f, 10.0f, 0.0f}, .point_b = {0.5f, 10.0f, 0.0f}});
+        *scene.world, base, ball, {.point_a = vec3f::make(0.5f, 10.0f, 0.0f), .point_b = vec3f::make(0.5f, 10.0f, 0.0f)});
     scene.ids.push(fixed_id);
     SixDOFConstraintSettings settings = translation_fixed_settings({5.5f, 10.0f, 0.0f});
     for (uint32_t i = 3; i < 6; i++) {
@@ -230,8 +234,8 @@ void test_six_dof_constraint_all_locked_is_a_fixed_constraint(TestCtx &ctx) {
     CHECK(ctx, constraint->fixed_axis == 0b111111 && constraint->free_axis == 0);
     RigidBody *const balls[2] = {ball, ball2};
     for (RigidBody *body : balls) {
-        body->motion_properties.linear_velocity = {2.0f, 1.0f, -1.0f};
-        body->motion_properties.angular_velocity = {3.0f, 0.0f, -2.0f};
+        body->motion_properties.linear_velocity = vec3f::make(2.0f, 1.0f, -1.0f);
+        body->motion_properties.angular_velocity = vec3f::make(3.0f, 0.0f, -2.0f);
     }
 
     float worst_position = 0.0f;
@@ -239,19 +243,19 @@ void test_six_dof_constraint_all_locked_is_a_fixed_constraint(TestCtx &ctx) {
     float worst_drift = 0.0f;
     for (int i = 0; i < 120; i++) {
         step_constraint_scene(scene, DT, vec3f::load(GRAVITY));
-        const Vec3f shifted = vec3f::subtract(vec3f::load(ball2->center_of_mass_position), vec3f::load(offset));
-        worst_position = scalar::max(worst_position, vec3f::distance(shifted, vec3f::load(ball->center_of_mass_position)));
+        const Vec3f shifted = vec3f::subtract(ball2->center_of_mass_position, vec3f::load(offset));
+        worst_position = scalar::max(worst_position, vec3f::distance(shifted, ball->center_of_mass_position));
         worst_rotation = scalar::max(worst_rotation, relative_angle(ball, ball2));
-        if (i >= 10) worst_drift = scalar::max(worst_drift, vec3f::distance(vec3f::load(ball2->center_of_mass_position), vec3f::make(6.0f, 9.5f, 0.0f)));
+        if (i >= 10) worst_drift = scalar::max(worst_drift, vec3f::distance(ball2->center_of_mass_position, vec3f::make(6.0f, 9.5f, 0.0f)));
     }
     // the same pose as the fixed constraint's body throughout
     CHECK(ctx, worst_position < 2e-3f);
     CHECK(ctx, worst_rotation < 2e-3f);
     // held: back at the weld after the kick, hanging there under gravity
     CHECK(ctx, worst_drift < 2e-2f);
-    CHECK(ctx, vec3f::distance(vec3f::load(ball2->center_of_mass_position), vec3f::make(6.0f, 9.5f, 0.0f)) < 5e-3f);
-    CHECK(ctx, rotation_angle(quatf::multiply(quatf::load(ball2->quaternion), quatf::conjugate(quatf::load(tilt)))) < 5e-3f);
-    CHECK(ctx, vec3f::length(vec3f::load(ball2->motion_properties.angular_velocity)) < 1e-2f);
+    CHECK(ctx, vec3f::distance(ball2->center_of_mass_position, vec3f::make(6.0f, 9.5f, 0.0f)) < 5e-3f);
+    CHECK(ctx, rotation_angle(quatf::multiply(ball2->quaternion, quatf::conjugate(quatf::load(tilt)))) < 5e-3f);
+    CHECK(ctx, vec3f::length(ball2->motion_properties.angular_velocity) < 1e-2f);
     release_constraint_scene(scene);
 }
 
@@ -267,27 +271,27 @@ void test_six_dof_constraint_limited_translation(TestCtx &ctx) {
     }
     RigidBody *ball = nullptr;
     const SixDOFConstraint *constraint = make_joint(scene, ball, settings);
-    ball->motion_properties.linear_velocity = {3.0f, 1.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(3.0f, 1.0f, 0.0f);
 
     float farthest = 0.0f;
     for (int i = 0; i < 60; i++) {
         step_constraint_scene(scene, DT, vec3f::load(GRAVITY));
-        farthest = scalar::max(farthest, ball->center_of_mass_position.x);
+        farthest = scalar::max(farthest, vec3f::x(ball->center_of_mass_position));
     }
     CHECK(ctx, farthest < 0.3f + 3.0f * DT);
-    CHECK_NEAR(ctx, ball->center_of_mass_position.x, 0.3f, 1e-2f);
+    CHECK_NEAR(ctx, vec3f::x(ball->center_of_mass_position), 0.3f, 1e-2f);
     CHECK_NEAR(ctx, constraint->displacement[0], 0.3f, 2e-2f);
-    CHECK(ctx, scalar::abs(ball->center_of_mass_position.y) < 1e-2f && scalar::abs(ball->center_of_mass_position.z) < 1e-2f);
-    CHECK(ctx, 2.0f * scalar::acos(scalar::min(1.0f, scalar::abs(ball->quaternion.w))) < 1e-3f);
+    CHECK(ctx, scalar::abs(vec3f::y(ball->center_of_mass_position)) < 1e-2f && scalar::abs(vec3f::z(ball->center_of_mass_position)) < 1e-2f);
+    CHECK(ctx, 2.0f * scalar::acos(scalar::min(1.0f, scalar::abs(quatf::w(ball->quaternion)))) < 1e-3f);
 
-    ball->motion_properties.linear_velocity = {-3.0f, 0.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(-3.0f, 0.0f, 0.0f);
     float nearest = 0.0f;
     for (int i = 0; i < 60; i++) {
         step_constraint_scene(scene, DT, vec3f::load(GRAVITY));
-        nearest = scalar::min(nearest, ball->center_of_mass_position.x);
+        nearest = scalar::min(nearest, vec3f::x(ball->center_of_mass_position));
     }
     CHECK(ctx, nearest > -0.2f - 3.0f * DT);
-    CHECK_NEAR(ctx, ball->center_of_mass_position.x, -0.2f, 1e-2f);
+    CHECK_NEAR(ctx, vec3f::x(ball->center_of_mass_position), -0.2f, 1e-2f);
     release_constraint_scene(scene);
 }
 
@@ -300,20 +304,20 @@ void test_six_dof_constraint_swing_limits(TestCtx &ctx) {
     RigidBody *ball = nullptr;
     const SixDOFConstraint *constraint = make_joint(scene, ball, settings);
     CHECK(ctx, constraint->free_axis == (1u << 3));
-    ball->motion_properties.angular_velocity = {2.0f, 0.0f, 3.0f};
+    ball->motion_properties.angular_velocity = vec3f::make(2.0f, 0.0f, 3.0f);
 
     float widest = 0.0f;
     for (int i = 0; i < 90; i++) {
         step_constraint_scene(scene, DT, vec3f::zero());
         Quatf swing, twist;
-        swing_twist_constraint_part::get_swing_twist(swing, twist, quatf::load(ball->quaternion));
+        swing_twist_constraint_part::get_swing_twist(swing, twist, ball->quaternion);
         widest = scalar::max(widest, rotation_angle(swing));
     }
     CHECK(ctx, widest < 0.4f + 3.0f * DT);
     CHECK_NEAR(ctx, widest, 0.4f, 3.0f * DT);
     // the twist keeps spinning
-    CHECK(ctx, vec3f::length(vec3f::load(ball->motion_properties.angular_velocity)) > 0.5f);
-    CHECK(ctx, vec3f::length(vec3f::load(ball->center_of_mass_position)) < 1e-3f);
+    CHECK(ctx, vec3f::length(ball->motion_properties.angular_velocity) > 0.5f);
+    CHECK(ctx, vec3f::length(ball->center_of_mass_position) < 1e-3f);
     release_constraint_scene(scene);
 }
 
@@ -333,9 +337,9 @@ void test_six_dof_constraint_motors(TestCtx &ctx) {
     six_dof_constraint::set_motor_state(*constraint, SixDOFConstraint::Axis::TRANSLATION_X, MotorState::VELOCITY);
     six_dof_constraint::set_target_velocity_cs(*constraint, vec3f::make(1.5f, 0.0f, 0.0f));
     for (int i = 0; i < 30; i++) step_constraint_scene(scene, DT, vec3f::load(GRAVITY));
-    CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.x, 1.5f, 1e-3f);
-    CHECK(ctx, scalar::abs(ball->center_of_mass_position.y) < 1e-2f);
-    CHECK_NEAR(ctx, ball->center_of_mass_position.x, 0.75f, 3e-2f);
+    CHECK_NEAR(ctx, vec3f::x(ball->motion_properties.linear_velocity), 1.5f, 1e-3f);
+    CHECK(ctx, scalar::abs(vec3f::y(ball->center_of_mass_position)) < 1e-2f);
+    CHECK_NEAR(ctx, vec3f::x(ball->center_of_mass_position), 0.75f, 3e-2f);
 
     // a rotation position motor about z, translation locked and rotation free, settles on the target
     RigidBody *spinner = nullptr;
@@ -344,10 +348,10 @@ void test_six_dof_constraint_motors(TestCtx &ctx) {
     six_dof_constraint::set_target_orientation_cs(*rotor, axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.5f));
     for (int i = 0; i < 180; i++) step_constraint_scene(scene, DT, vec3f::zero());
     Vec3f axis;
-    const float angle = axis_angle_of(axis, quatf::load(spinner->quaternion));
+    const float angle = axis_angle_of(axis, spinner->quaternion);
     CHECK_NEAR(ctx, angle, 0.5f, 2e-3f);
     CHECK(ctx, vec3f::distance(axis, vec3f::make(0.0f, 0.0f, 1.0f)) < 1e-3f);
-    CHECK(ctx, vec3f::length(vec3f::load(spinner->motion_properties.angular_velocity)) < 1e-2f);
+    CHECK(ctx, vec3f::length(spinner->motion_properties.angular_velocity) < 1e-2f);
     release_constraint_scene(scene);
 }
 
@@ -370,7 +374,7 @@ void test_six_dof_constraint_solve_velocity_reports_impulses(TestCtx &ctx) {
     ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     SixDOFConstraint *fixed = make_joint(scene, ball, all_fixed_settings());
-    ball->motion_properties.linear_velocity = {1.0f, 0.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(1.0f, 0.0f, 0.0f);
     six_dof_constraint::setup_velocity(*fixed, scene.world->bodies, DT);
     CHECK(ctx, six_dof_constraint::solve_velocity(*fixed, scene.world->bodies, DT));
     // the velocity is now consistent, nothing more to apply
@@ -378,7 +382,7 @@ void test_six_dof_constraint_solve_velocity_reports_impulses(TestCtx &ctx) {
 
     RigidBody *free_ball = nullptr;
     SixDOFConstraint *free_joint = make_joint(scene, free_ball, {});
-    free_ball->motion_properties.linear_velocity = {1.0f, 0.0f, 0.0f};
+    free_ball->motion_properties.linear_velocity = vec3f::make(1.0f, 0.0f, 0.0f);
     six_dof_constraint::setup_velocity(*free_joint, scene.world->bodies, DT);
     CHECK(ctx, !six_dof_constraint::solve_velocity(*free_joint, scene.world->bodies, DT));
     release_constraint_scene(scene);
@@ -388,7 +392,7 @@ void test_six_dof_constraint_axis_set_change_clears_warm_start(TestCtx &ctx) {
     ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     SixDOFConstraint *constraint = make_joint(scene, ball, all_fixed_settings());
-    ball->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(0.0f, -1.0f, 0.0f);
     solve_six_dof_velocities(scene, *constraint);
     CHECK(ctx, vec3f::y(constraint->point_constraint_part.total_lambda) != 0.0f);
 
@@ -409,11 +413,11 @@ void test_six_dof_constraint_runtime_fixed_and_free_axes(TestCtx &ctx) {
         ConstraintScene scene = make_constraint_scene();
         RigidBody *ball = nullptr;
         SixDOFConstraint *constraint = make_joint(scene, ball, {});
-        ball->center_of_mass_position.x = 2.0f;
+        ball->center_of_mass_position = vec3f::make(2.0f, vec3f::y(ball->center_of_mass_position), vec3f::z(ball->center_of_mass_position));
         six_dof_constraint::make_fixed_axis(*constraint, SixDOFConstraint::Axis::TRANSLATION_X);
         CHECK(ctx, constraint->limit_min[0] == 0.0f && constraint->limit_max[0] == 0.0f);
         for (uint32_t i = 0; i < 4; i++) six_dof_constraint::solve_position(*constraint, scene.world->bodies, DT, 1.0f);
-        CHECK_NEAR(ctx, ball->center_of_mass_position.x, 0.0f, 1e-5f);
+        CHECK_NEAR(ctx, vec3f::x(ball->center_of_mass_position), 0.0f, 1e-5f);
         release_constraint_scene(scene);
     }
 
@@ -450,8 +454,8 @@ void test_six_dof_constraint_position_solve_uses_fresh_rotations(TestCtx &ctx) {
     SixDOFConstraint *constraint = six_dof_constraint::get(*scene.world, id);
 
     // the ball's center is a unit from the joint; turn it 0.3 about z around the joint: no point error, a rotation error
-    ball->quaternion = stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.3f);
-    vec3f::store(ball->center_of_mass_position, vec3f::transform_quat(vec3f::axis_x(), quatf::load(ball->quaternion)));
+    ball->quaternion = axis_angle(vec3f::axis_z(), 0.3f);
+    ball->center_of_mass_position = vec3f::transform_quat(vec3f::axis_x(), ball->quaternion);
     CHECK(ctx, vec3f::length(world_point(ball, constraint->local_space_position2)) < 1e-6f);
 
     six_dof_constraint::solve_position(*constraint, scene.world->bodies, DT, 1.0f);
@@ -475,9 +479,9 @@ void test_six_dof_constraint_fixed_rotation_offsets_euler_zyx(TestCtx &ctx) {
 
     // the rest orientation composes the offsets z * y * x
     const Quatf rest = quatf::multiply(axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.3f), axis_angle(vec3f::make(1.0f, 0.0f, 0.0f), 0.4f));
-    quatf::store(ball->quaternion, rest);
+    ball->quaternion = rest;
     six_dof_constraint::solve_position(*constraint, scene.world->bodies, DT, 1.0f);
-    CHECK(ctx, rotation_angle(quatf::multiply(quatf::load(ball->quaternion), quatf::conjugate(rest))) < 1e-4f);
+    CHECK(ctx, rotation_angle(quatf::multiply(ball->quaternion, quatf::conjugate(rest))) < 1e-4f);
     release_constraint_scene(scene);
 }
 
@@ -497,10 +501,10 @@ void test_six_dof_constraint_motor_limits_and_targets(TestCtx &ctx) {
         six_dof_constraint::set_target_angular_velocity_cs(*constraint, vec3f::make(100.0f, 0.0f, 0.0f));
         six_dof_constraint::set_target_velocity_cs(*constraint, vec3f::make(100.0f, 0.0f, 0.0f));
         solve_six_dof_velocities(scene, *constraint);
-        const float expected_angular = 3.0f * DT * ball->motion_properties.inv_inertia_diagonal.x;
+        const float expected_angular = 3.0f * DT * vec3f::x(ball->motion_properties.inv_inertia_diagonal);
         const float expected_linear = 5.0f * DT * ball->motion_properties.inv_mass;
-        CHECK_NEAR(ctx, ball->motion_properties.angular_velocity.x, expected_angular, expected_angular * 1e-4f);
-        CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.x, expected_linear, expected_linear * 1e-4f);
+        CHECK_NEAR(ctx, vec3f::x(ball->motion_properties.angular_velocity), expected_angular, expected_angular * 1e-4f);
+        CHECK_NEAR(ctx, vec3f::x(ball->motion_properties.linear_velocity), expected_linear, expected_linear * 1e-4f);
         release_constraint_scene(scene);
     }
 
@@ -524,7 +528,7 @@ void test_six_dof_constraint_motor_limits_and_targets(TestCtx &ctx) {
         six_dof_constraint::set_motor_state(*constraint, SixDOFConstraint::Axis::ROTATION_X, MotorState::POSITION);
         constraint->target_orientation = quatf::normalize(quatf::make(1e-6f, 1.0f, 0.0f, 1e-6f));
         solve_six_dof_velocities(scene, *constraint);
-        CHECK(ctx, ball->motion_properties.angular_velocity.x > 0.0f);
+        CHECK(ctx, vec3f::x(ball->motion_properties.angular_velocity) > 0.0f);
         release_constraint_scene(scene);
     }
 }
@@ -542,7 +546,7 @@ void test_six_dof_constraint_position_and_velocity_motors(TestCtx &ctx) {
     six_dof_constraint::set_target_velocity_cs(*constraint, vec3f::make(2.0f, 0.0f, 0.0f));
     six_dof_constraint::set_target_angular_velocity_cs(*constraint, vec3f::make(0.0f, 0.0f, 2.0f));
     solve_six_dof_velocities(scene, *constraint);
-    CHECK_NEAR(ctx, ball->motion_properties.linear_velocity.x, 1.0f, 1e-4f);
-    CHECK(ctx, ball->motion_properties.angular_velocity.z > 0.0f);
+    CHECK_NEAR(ctx, vec3f::x(ball->motion_properties.linear_velocity), 1.0f, 1e-4f);
+    CHECK(ctx, vec3f::z(ball->motion_properties.angular_velocity) > 0.0f);
     release_constraint_scene(scene);
 }

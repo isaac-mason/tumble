@@ -219,8 +219,8 @@ void test_constraints_island_solves_in_creation_order_across_types(TestCtx &ctx)
     RigidBody *a = add_body(scene, MotionType::DYNAMIC, {0.0f, 0.0f, 0.0f});
     RigidBody *b = add_body(scene, MotionType::DYNAMIC, {1.0f, 0.0f, 0.0f});
     RigidBody *c = add_body(scene, MotionType::DYNAMIC, {2.0f, 0.0f, 0.0f});
-    const ConstraintId hinge = hinge_constraint::create(*scene.world, a, b, {.point_a = {0.5f, 0.0f, 0.0f}, .point_b = {0.5f, 0.0f, 0.0f}});
-    const ConstraintId point = point_constraint::create(*scene.world, b, c, {.point_a = {1.5f, 0.0f, 0.0f}, .point_b = {1.5f, 0.0f, 0.0f}});
+    const ConstraintId hinge = hinge_constraint::create(*scene.world, a, b, {.point_a = vec3f::make(0.5f, 0.0f, 0.0f), .point_b = vec3f::make(0.5f, 0.0f, 0.0f)});
+    const ConstraintId point = point_constraint::create(*scene.world, b, c, {.point_a = vec3f::make(1.5f, 0.0f, 0.0f), .point_b = vec3f::make(1.5f, 0.0f, 0.0f)});
     const ConstraintId distance = distance_constraint::create(*scene.world, a, c, {});
     world::step(*scene.world, 1.0f / 60.0f);
 
@@ -263,8 +263,8 @@ void test_constraints_sleeping_and_disabled(TestCtx &ctx) {
     all.push(ac);
     constraints::warm_start_velocity_constraints(scene.world->constraints, scene.world->bodies, all, 1.0f);
     all.release();
-    CHECK(ctx, a->motion_properties.linear_velocity.x == 0.0f && a->motion_properties.linear_velocity.y == 0.0f);
-    CHECK(ctx, b->motion_properties.linear_velocity.y != 0.0f && b->motion_properties.linear_velocity.x == 0.0f);
+    CHECK(ctx, vec3f::x(a->motion_properties.linear_velocity) == 0.0f && vec3f::y(a->motion_properties.linear_velocity) == 0.0f);
+    CHECK(ctx, vec3f::y(b->motion_properties.linear_velocity) != 0.0f && vec3f::x(b->motion_properties.linear_velocity) == 0.0f);
     release_constraint_scene(scene);
 }
 
@@ -276,7 +276,7 @@ void test_constraints_island_solve(TestCtx &ctx) {
     RigidBody *previous = pivot;
     for (uint32_t i = 0; i < 3; i++) {
         links[i] = add_body(scene, MotionType::DYNAMIC, {(float)i + 1.0f, 10.0f, 0.0f});
-        const Float3 joint = {(float)i + 0.5f, 10.0f, 0.0f};
+        const Vec3f joint = vec3f::make((float)i + 0.5f, 10.0f, 0.0f);
         scene.ids.push(point_constraint::create(*scene.world, previous, links[i], {.point_a = joint, .point_b = joint}));
         previous = links[i];
     }
@@ -295,7 +295,7 @@ void test_constraints_island_solve(TestCtx &ctx) {
                                                    world_point(body_b, joint->local_space_position2)));
     }
     CHECK(ctx, worst < 2e-2f);
-    CHECK(ctx, links[2]->center_of_mass_position.y < 8.0f);
+    CHECK(ctx, vec3f::y(links[2]->center_of_mass_position) < 8.0f);
 
     // an empty island applies nothing
     collections::Array<ConstraintId> none = {};

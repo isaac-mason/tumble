@@ -132,9 +132,7 @@ static void record_world_contact(World &world, const ContactEvent &event) {
     pair->point = event.points_a[0];
     pair->normal = event.normal;
     pair->penetration_depth = event.penetration;
-    const Float3 &velocity_a = body_a.motion_properties.linear_velocity;
-    const Float3 &velocity_b = body_b.motion_properties.linear_velocity;
-    pair->relative_velocity = {velocity_b.x - velocity_a.x, velocity_b.y - velocity_a.y, velocity_b.z - velocity_a.z};
+    pair->relative_velocity = vec3f::subtract(body_b.motion_properties.linear_velocity, body_a.motion_properties.linear_velocity);
 }
 
 void record_world_contacts(World &world, uint32_t first_added, uint32_t first_persisted) {
@@ -154,11 +152,11 @@ void record_character_contacts(World &world, const KCC &character) {
         if (!inner->observes_contacts && !body->observes_contacts) continue;
         ContactPair *pair = record(world.contact_pairs, side_of(*inner, sub_shape::EMPTY_SUB_SHAPE_ID), side_of(*body, contact.sub_shape_id));
         if (pair == nullptr) continue;
-        vec3f::store(pair->point, contact.position);
+        pair->point = contact.position;
         // the contact's normal points at the character
-        vec3f::store(pair->normal, vec3f::negate(contact.contact_normal));
+        pair->normal = vec3f::negate(contact.contact_normal);
         pair->penetration_depth = contact.distance < 0.0f ? -contact.distance : 0.0f;
-        vec3f::store(pair->relative_velocity, vec3f::subtract(contact.linear_velocity, character.linear_velocity));
+        pair->relative_velocity = vec3f::subtract(contact.linear_velocity, character.linear_velocity);
     }
 }
 

@@ -3,9 +3,9 @@
 #include <stdint.h>
 
 #include "tumble/config.h"
+#include "tumble/math/plane3f.h"
 #include "tumble/math/types.h"
 #include "tumble/math/vec3f.h"
-#include "tumble/math/vec4f.h"
 #include "tumble/physics/body/body_id.h"
 #include "tumble/physics/body/motion_type.h"
 #include "tumble/physics/body/sub_shape.h"
@@ -199,7 +199,7 @@ struct KCC {
      * in character space: a contact behind it can support the character, one in front only collides. signed
      * distance(point) = dot(point, normal) + constant
      */
-    Vec4f supporting_volume_plane;
+    Plane supporting_volume_plane;
 
     GroundInfo ground;
 
@@ -240,7 +240,7 @@ struct KCCSettings {
     /** held by the character */
     Shape *shape = nullptr;
     /** local, from the character's position */
-    Float3 shape_offset = {0.0f, 0.0f, 0.0f};
+    Vec3f shape_offset = vec3f::zero();
 
     /** kg */
     float mass = 70.0f;
@@ -248,7 +248,7 @@ struct KCCSettings {
     float max_strength = 100.0f;
 
     /** normalised by create */
-    Float3 up = {0.0f, 1.0f, 0.0f};
+    Vec3f up = vec3f::axis_y();
     /** radians */
     float max_slope_angle = 50.0f * 3.14159265358979323846f / 180.0f;
     /** the look-ahead for predictive contacts */
@@ -276,10 +276,11 @@ struct KCCSettings {
 
     /**
      * with has_supporting_volume_plane, what can support the character, in its own space: a capsule might use
-     * {{0, 1, 0}, -radius} for stricter filtering. without, the plane is up at -1e10, which accepts any contact
+     * plane3f::make(vec3f::axis_y(), -radius) for stricter filtering. without, the plane is up at -1e10, which accepts
+     * any contact
      */
     bool has_supporting_volume_plane = false;
-    Plane3f supporting_volume_plane = {{0.0f, 1.0f, 0.0f}, 0.0f};
+    Plane supporting_volume_plane = plane3f::make(vec3f::axis_y(), 0.0f);
 
     /** carried by the inner body */
     uint64_t user_data = 0;
@@ -293,8 +294,8 @@ struct KCCSettings {
 
 struct KCCUpdateSettings {
     /** floor sticking's step down */
-    Float3 stick_to_floor_step_down = {0.0f, -0.5f, 0.0f};
-    Float3 walk_stairs_step_up = {0.0f, 0.4f, 0.0f};
+    Vec3f stick_to_floor_step_down = vec3f::make(0.0f, -0.5f, 0.0f);
+    Vec3f walk_stairs_step_up = vec3f::make(0.0f, 0.4f, 0.0f);
     /** the least forward movement that counts as a stair */
     float walk_stairs_min_step_forward = 0.02f;
     /** how far ahead the floor is tested */
@@ -302,7 +303,7 @@ struct KCCUpdateSettings {
     /** a forward contact is within this cosine, cos(75 degrees) */
     float walk_stairs_cos_angle_forward_contact = 0.25881904510f;
     /** stepped down after a stair walk */
-    Float3 walk_stairs_step_down_extra = {0.0f, 0.0f, 0.0f};
+    Vec3f walk_stairs_step_down_extra = vec3f::zero();
 };
 
 inline void add_ref(const KCC *character) { __atomic_fetch_add(&character->ref_count, 1, __ATOMIC_RELAXED); }

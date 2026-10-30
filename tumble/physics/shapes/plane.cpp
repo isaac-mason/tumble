@@ -15,13 +15,13 @@ namespace plane {
 Shape *create(const PlaneShapeSettings &settings) {
     PlaneShape *shape = shapes::allocate<PlaneShape>();
     // normalise the whole equation so the plane stays where it was described
-    const float normal_length = vec3f::length(vec3f::load(settings.plane.normal));
-    vec3f::store(shape->plane.normal, vec3f::scale(vec3f::load(settings.plane.normal), 1.0f / normal_length));
-    shape->plane.constant = settings.plane.constant / normal_length;
+    const Vec3f normal = plane3f::normal(settings.plane);
+    const float normal_length = vec3f::length(normal);
+    shape->plane = plane3f::make(vec3f::scale(normal, 1.0f / normal_length), plane3f::constant(settings.plane) / normal_length);
     shape->half_extent = settings.half_extent;
     shape->material_id = settings.material_id;
     // always at the origin
-    vec3f::store(shape->center_of_mass, vec3f::zero());
+    shape->center_of_mass = vec3f::zero();
 
     update(shape);
 
@@ -37,19 +37,19 @@ static void destroy(Shape *shape) {
 /** scales a plane by a per-axis scale, non-uniform and negative included */
 static Plane scale_plane(const Plane &plane, Vec3f scale) {
     // scaled normal = normal / scale (component-wise division)
-    const Vec3f scaled_normal = vec3f::divide(plane.normal, scale);
+    const Vec3f scaled_normal = vec3f::divide(plane3f::normal(plane), scale);
     const float scaled_normal_length = vec3f::length(scaled_normal);
     const float inverse_length = 1.0f / scaled_normal_length;
-    return {vec3f::scale(scaled_normal, inverse_length), plane.constant / scaled_normal_length};
+    return plane3f::make(vec3f::scale(scaled_normal, inverse_length), plane3f::constant(plane) / scaled_normal_length);
 }
 
 /** transforms a plane by a rotation + translation; no renormalisation, the transform is orthogonal */
 static Plane transform_plane(const Plane &plane, const Mat4f &transform) {
     // transform normal by rotation part (3x3 multiply)
-    const Vec3f normal = mat4f::multiply3x3_vec(transform, plane.normal);
+    const Vec3f normal = mat4f::multiply3x3_vec(transform, plane3f::normal(plane));
 
     // update constant: constant - translation . transformed normal
-    return {normal, plane.constant - vec3f::dot(mat4f::get_translation(transform), normal)};
+    return plane3f::make(normal, plane3f::constant(plane) - vec3f::dot(mat4f::get_translation(transform), normal));
 }
 
 /** an orthogonal basis for a plane normal, for the quad representation */
@@ -91,7 +91,7 @@ static void get_quad_vertices(Vec3f out[4], Vec3f center, Vec3f perp1, Vec3f per
 }
 
 static void get_plane_vertices(Vec3f out[4], const Shape *shape) {
-    const Vec3f normal = vec3f::load(shapes::as<PlaneShape>(shape).plane.normal);
+    const Vec3f normal = plane3f::normal(shapes::as<PlaneShape>(shape).plane);
 
     // create orthogonal basis
     Vec3f perp1, perp2;
@@ -102,16 +102,16 @@ static void get_plane_vertices(Vec3f out[4], const Shape *shape) {
     perp2 = vec3f::scale(perp2, shapes::as<PlaneShape>(shape).half_extent);
 
     // point on plane: -normal * constant
-    const Vec3f point = vec3f::scale(normal, -shapes::as<PlaneShape>(shape).plane.constant);
+    const Vec3f point = vec3f::scale(normal, -plane3f::constant(shapes::as<PlaneShape>(shape).plane));
 
     get_quad_vertices(out, point, perp1, perp2);
 }
 
-static Box3f &compute_plane_local_bounds(Box3f &out, const Shape *shape) {
+static AABox compute_plane_local_bounds(const Shape *shape) {
     Vec3f vertices[4];
     get_plane_vertices(vertices, shape);
 
-    const Vec3f offset = vec3f::scale(vec3f::load(shapes::as<PlaneShape>(shape).plane.normal), shapes::as<PlaneShape>(shape).half_extent);
+    const Vec3f offset = vec3f::scale(plane3f::normal(shapes::as<PlaneShape>(shape).plane), shapes::as<PlaneShape>(shape).half_extent);
 
     // encapsulate all vertices and points behind the plane
     AABox bounds = aabox::empty();
@@ -121,11 +121,11 @@ static Box3f &compute_plane_local_bounds(Box3f &out, const Shape *shape) {
         // also include the point half extent behind the plane
         bounds = aabox::expand_by_point(bounds, vec3f::subtract(vertices[i], offset));
     }
-    return aabox::store(out, bounds);
+    return bounds;
 }
 
 void update(Shape *shape) {
-    compute_plane_local_bounds(shape->aabb, shape);
+    shape->aabb = compute_plane_local_bounds(shape);
     shape->volume = 0.0f;
 }
 
@@ -134,12 +134,12 @@ void update(Shape *shape) {
 void compute_mass_properties(MassProperties &out, const Shape *) {
     // planes are static only: no mass, no inertia
     out.mass = 0.0f;
-    mat4f::store(out.inertia, mat4f::zero());
+    out.inertia = mat4f::zero();
 }
 
 void get_surface_normal(SurfaceNormalResult &io, const Shape *shape, SubShapeId) {
     // the plane normal is always the surface normal
-    io.normal = vec3f::load(shapes::as<PlaneShape>(shape).plane.normal);
+    io.normal = plane3f::normal(shapes::as<PlaneShape>(shape).plane);
 }
 
 void get_supporting_face(SupportingFaceResult &io, Vec3f, const Shape *shape, SubShapeId) {
@@ -170,16 +170,16 @@ float get_inner_radius(const Shape *) {
 }
 
 /** the plane in world space: scaled, then moved by the transform's rotation and translation */
-static Plane world_plane(const Shape *shape, const Transformf &transform) {
-    const Plane scaled_plane = scale_plane(plane3f::load(shapes::as<PlaneShape>(shape).plane), vec3f::load(transform.scale));
-    const Mat4f rotation_translation = mat4f::from_rotation_translation(quatf::load(transform.quaternion), vec3f::load(transform.position));
+static Plane world_plane(const Shape *shape, const Transform &transform) {
+    const Plane scaled_plane = scale_plane(shapes::as<PlaneShape>(shape).plane, transform.scale);
+    const Mat4f rotation_translation = mat4f::from_rotation_translation(transform.quaternion, transform.position);
     return transform_plane(scaled_plane, rotation_translation);
 }
 
 /* cast ray */
 
 void cast_ray_vs_plane(CastRayCollector &collector, const CastRaySettings &settings, const Rayf &ray,
-                       const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
+                       const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform) {
     // transform plane to world space
     const Plane plane = world_plane(shape, transform);
 
@@ -197,7 +197,7 @@ void cast_ray_vs_plane(CastRayCollector &collector, const CastRaySettings &setti
     }
 
     // ray direction against the plane normal
-    const float dot = vec3f::dot(ray.direction, plane.normal);
+    const float dot = vec3f::dot(ray.direction, plane3f::normal(plane));
 
     // parallel to plane?
     if (dot == 0.0f) return;
@@ -226,7 +226,7 @@ void cast_ray_vs_plane(CastRayCollector &collector, const CastRaySettings &setti
 
 void collide_point_vs_plane(CollidePointCollector &collector, const CollidePointSettings &,
                             Vec3f point, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                            const Transformf &transform_b) {
+                            const Transform &transform_b) {
     // transform plane to world space
     const Plane plane = world_plane(shape_b, transform_b);
 
@@ -255,10 +255,10 @@ static void get_adaptive_plane_supporting_face(SupportingFace &out_face, const S
 
     // create orthogonal basis
     Vec3f perp1, perp2;
-    get_orthogonal_basis(world.normal, perp1, perp2);
+    get_orthogonal_basis(plane3f::normal(world), perp1, perp2);
 
     // size based on the convex shape's bounding box diagonal
-    const float size = vec3f::length(aabox::size(aabox::load(convex_shape->aabb)));
+    const float size = vec3f::length(aabox::size(convex_shape->aabb));
 
     perp1 = vec3f::scale(perp1, size);
     perp2 = vec3f::scale(perp2, size);
@@ -273,16 +273,16 @@ static void get_adaptive_plane_supporting_face(SupportingFace &out_face, const S
 static Support collide_convex_vs_plane_support;
 
 void collide_convex_vs_plane(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                             const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                             const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                             const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                             const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     // scale plane b
-    const Plane scaled_plane = scale_plane(plane3f::load(shapes::as<PlaneShape>(shape_b).plane), vec3f::load(transform_b.scale));
+    const Plane scaled_plane = scale_plane(shapes::as<PlaneShape>(shape_b).plane, transform_b.scale);
 
     // transform b: the plane's world transform, no scale (already applied to the plane)
-    Mat4f plane_to_world = mat4f::from_rotation_translation(quatf::load(transform_b.quaternion), vec3f::load(transform_b.position));
+    Mat4f plane_to_world = mat4f::from_rotation_translation(transform_b.quaternion, transform_b.position);
 
     // transform a, built once and reused
-    const Mat4f convex_to_world = mat4f::from_rotation_translation(quatf::load(transform_a.quaternion), vec3f::load(transform_a.position));
+    const Mat4f convex_to_world = mat4f::from_rotation_translation(transform_a.quaternion, transform_a.position);
 
     Mat4f inv_convex_to_world;
     mat4f::invert(inv_convex_to_world, convex_to_world);
@@ -291,11 +291,11 @@ void collide_convex_vs_plane(CollideShapeCollector &collector, const CollideShap
     const Mat4f combined_transform = mat4f::multiply(inv_convex_to_world, plane_to_world);
     const Plane local_plane = transform_plane(scaled_plane, combined_transform);
 
-    const Vec3f normal = local_plane.normal;
+    const Vec3f normal = plane3f::normal(local_plane);
 
     // support function for the convex shape with its scale applied
     Support &support = collide_convex_vs_plane_support;
-    shapes::set_shape_support(support, shape_a, SupportFunctionMode::DEFAULT, vec3f::load(transform_a.scale));
+    shapes::set_shape_support(support, shape_a, SupportFunctionMode::DEFAULT, transform_a.scale);
 
     // support point in the direction opposite the plane normal
     const Vec3f negated_normal = vec3f::negate(normal);
@@ -329,11 +329,11 @@ void collide_convex_vs_plane(CollideShapeCollector &collector, const CollideShap
         // gather supporting faces if requested
         if (settings.collect_faces) {
             // supporting face of the convex shape in world space; the direction is local
-            shapes::get_shape_supporting_face(hit.face_a, shape_a, sub_shape_id_a.value, normal, convex_to_world, vec3f::load(transform_a.scale));
+            shapes::get_shape_supporting_face(hit.face_a, shape_a, sub_shape_id_a.value, normal, convex_to_world, transform_a.scale);
 
             // adaptive supporting face for the plane
             if (hit.face_a.num_vertices > 0) {
-                get_adaptive_plane_supporting_face(hit.face_b, shape_a, vec3f::load(transform_a.position), scaled_plane, plane_to_world);
+                get_adaptive_plane_supporting_face(hit.face_b, shape_a, transform_a.position, scaled_plane, plane_to_world);
             }
         }
 
@@ -348,25 +348,25 @@ void collide_convex_vs_plane(CollideShapeCollector &collector, const CollideShap
 static Support cast_convex_vs_plane_support;
 
 void cast_convex_vs_plane(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *shape_a,
-                          const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
-                          const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                          const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a, Vec3f displacement_a,
+                          const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     // move the cast into the plane's space: a's start transform and the displacement relative to b
-    const Mat4f a_to_world = mat4f::from_rotation_translation(quatf::load(transform_a.quaternion), vec3f::load(transform_a.position));
-    const Mat4f b_to_world = mat4f::from_rotation_translation(quatf::load(transform_b.quaternion), vec3f::load(transform_b.position));
+    const Mat4f a_to_world = mat4f::from_rotation_translation(transform_a.quaternion, transform_a.position);
+    const Mat4f b_to_world = mat4f::from_rotation_translation(transform_b.quaternion, transform_b.position);
     Mat4f inv_b_to_world, a_to_b;
     mat4f::invert(inv_b_to_world, b_to_world);
     a_to_b = mat4f::multiply(inv_b_to_world, a_to_world);
 
-    const Quatf inv_quat_b = quatf::conjugate(quatf::load(transform_b.quaternion));
+    const Quatf inv_quat_b = quatf::conjugate(transform_b.quaternion);
     const Vec3f direction_in_b = vec3f::transform_quat(displacement_a, inv_quat_b);
 
     // in the plane's space only the scale remains to be applied to the plane
-    const Plane plane = scale_plane(plane3f::load(shapes::as<PlaneShape>(shape_b).plane), vec3f::load(transform_b.scale));
-    const Vec3f normal = plane.normal;
+    const Plane plane = scale_plane(shapes::as<PlaneShape>(shape_b).plane, transform_b.scale);
+    const Vec3f normal = plane3f::normal(plane);
 
     // support function
     Support &support = cast_convex_vs_plane_support;
-    shapes::set_shape_support(support, shape_a, SupportFunctionMode::DEFAULT, vec3f::load(transform_a.scale));
+    shapes::set_shape_support(support, shape_a, SupportFunctionMode::DEFAULT, transform_a.scale);
 
     // support point of the convex shape opposite the plane normal, in the plane's space
     const Vec3f normal_in_convex_space = mat4f::multiply3x3_transposed_vec(a_to_b, normal);
@@ -443,7 +443,7 @@ void cast_convex_vs_plane(CastShapeCollector &collector, const CastShapeSettings
         // the convex shape's transform at the hit
         const Mat4f shape_to_world = mat4f::multiply(com_hit, a_to_b);
 
-        shapes::get_shape_supporting_face(hit.face_a, shape_a, sub_shape_id_a.value, normal_in_convex_space, shape_to_world, vec3f::load(transform_a.scale));
+        shapes::get_shape_supporting_face(hit.face_a, shape_a, sub_shape_id_a.value, normal_in_convex_space, shape_to_world, transform_a.scale);
 
         if (hit.face_a.num_vertices > 0) {
             const Vec3f shape_to_world_position = mat4f::get_translation(shape_to_world);

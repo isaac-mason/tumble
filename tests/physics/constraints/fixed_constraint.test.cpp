@@ -12,14 +12,14 @@ static const Float3 GRAVITY = {0.0f, -9.81f, 0.0f};
 
 /** b's center of mass in a's frame */
 static Vec3f offset_in_a(const RigidBody *a, const RigidBody *b) {
-    const Vec3f offset = vec3f::subtract(vec3f::load(b->center_of_mass_position), vec3f::load(a->center_of_mass_position));
-    return vec3f::transform_quat(offset, quatf::conjugate(quatf::load(a->quaternion)));
+    const Vec3f offset = vec3f::subtract(b->center_of_mass_position, a->center_of_mass_position);
+    return vec3f::transform_quat(offset, quatf::conjugate(a->quaternion));
 }
 
 /** the angle of the rotation q2 * inv_initial_orientation * q1^-1, the fixed constraint's rotation error */
 static float rotation_error(const FixedConstraint &constraint, const RigidBody *a, const RigidBody *b) {
-    const Quatf inv_a = quatf::conjugate(quatf::load(a->quaternion));
-    const Quatf diff = quatf::multiply(quatf::multiply(quatf::load(b->quaternion), constraint.inv_initial_orientation), inv_a);
+    const Quatf inv_a = quatf::conjugate(a->quaternion);
+    const Quatf diff = quatf::multiply(quatf::multiply(b->quaternion, constraint.inv_initial_orientation), inv_a);
     const float w = scalar::min(1.0f, scalar::abs(quatf::w(diff)));
     return 2.0f * scalar::acos(w);
 }
@@ -29,7 +29,7 @@ void test_fixed_constraint_create_world_space(TestCtx &ctx) {
     RigidBody *a = add_body(scene, MotionType::DYNAMIC, {0.0f, 1.0f, 0.0f}, stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.7f));
     RigidBody *b = add_body(scene, MotionType::DYNAMIC, {2.0f, 1.0f, 0.0f}, stored_axis_angle(vec3f::make(1.0f, 1.0f, 0.0f), -1.1f));
     const ConstraintId id =
-        fixed_constraint::create(*scene.world, a, b, {.point_a = {1.0f, 1.0f, 0.0f}, .point_b = {1.0f, 1.0f, 0.0f}});
+        fixed_constraint::create(*scene.world, a, b, {.point_a = vec3f::make(1.0f, 1.0f, 0.0f), .point_b = vec3f::make(1.0f, 1.0f, 0.0f)});
     FixedConstraint *constraint = fixed_constraint::get(*scene.world, id);
     CHECK(ctx, constraint != nullptr && constraint_id::type(id) == ConstraintType::FIXED);
 
@@ -40,9 +40,9 @@ void test_fixed_constraint_create_world_space(TestCtx &ctx) {
     CHECK(ctx, a->constraint_ids.length == 1 && b->constraint_ids.length == 1);
 
     // the rest pose survives a rotation of the pair as a whole
-    const Float4 turn = stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.9f);
-    rotate_body(a, quatf::load(turn));
-    rotate_body(b, quatf::load(turn));
+    const Quatf turn = axis_angle(vec3f::axis_z(), 0.9f);
+    rotate_body(a, turn);
+    rotate_body(b, turn);
     CHECK(ctx, rotation_error(*constraint, a, b) < 1e-3f);
     release_constraint_scene(scene);
 }
@@ -53,11 +53,14 @@ void test_fixed_constraint_create_local_space(TestCtx &ctx) {
     RigidBody *b = add_body(scene, MotionType::DYNAMIC, {2.0f, 0.0f, 0.0f}, stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.5f));
 
     // local space: points as given, and the inverse initial orientation straight from the axes
-    const Float3 x2 = {0.0f, 2.0f, 0.0f};
-    const Float3 y2 = {-3.0f, 0.0f, 0.0f};
-    const ConstraintId id = fixed_constraint::create(
-        *scene.world, a, b,
-        {.point_a = {1.0f, 0.0f, 0.0f}, .point_b = {-1.0f, 0.0f, 0.0f}, .axis_x_b = x2, .axis_y_b = y2, .space = ConstraintSpace::LOCAL});
+    const Vec3f x2 = vec3f::make(0.0f, 2.0f, 0.0f);
+    const Vec3f y2 = vec3f::make(-3.0f, 0.0f, 0.0f);
+    const ConstraintId id = fixed_constraint::create(*scene.world, a, b,
+                                                     {.point_a = vec3f::make(1.0f, 0.0f, 0.0f),
+                                                      .point_b = vec3f::make(-1.0f, 0.0f, 0.0f),
+                                                      .axis_x_b = x2,
+                                                      .axis_y_b = y2,
+                                                      .space = ConstraintSpace::LOCAL});
     const FixedConstraint *constraint = fixed_constraint::get(*scene.world, id);
     CHECK(ctx, vec3f::exact_equals(constraint->local_space_position1, vec3f::make(1.0f, 0.0f, 0.0f)));
     CHECK(ctx, vec3f::exact_equals(constraint->local_space_position2, vec3f::make(-1.0f, 0.0f, 0.0f)));
@@ -82,7 +85,7 @@ void test_fixed_constraint_auto_detect_point(TestCtx &ctx) {
 
     // equal masses: the midpoint
     const ConstraintId id =
-        fixed_constraint::create(*scene.world, a, b, {.point_a = {9.0f, 9.0f, 9.0f}, .auto_detect_point = true});
+        fixed_constraint::create(*scene.world, a, b, {.point_a = vec3f::splat(9.0f), .auto_detect_point = true});
     const FixedConstraint *constraint = fixed_constraint::get(*scene.world, id);
     CHECK(ctx, vec3f::distance(constraint->local_space_position1, vec3f::make(1.0f, 0.0f, 0.0f)) < 1e-5f);
     CHECK(ctx, vec3f::distance(constraint->local_space_position2, vec3f::make(-1.0f, 0.0f, 0.0f)) < 1e-5f);
@@ -125,21 +128,21 @@ void test_fixed_constraint_holds_pose(TestCtx &ctx) {
     RigidBody *wall = add_body(scene, MotionType::STATIC, {0.0f, 5.0f, 0.0f});
     const Float4 rest_rotation = stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), 0.3f);
     RigidBody *body = add_body(scene, MotionType::DYNAMIC, {1.5f, 5.0f, 0.0f}, rest_rotation);
-    const Float3 rest_position = body->center_of_mass_position;
+    const Vec3f rest_position = body->center_of_mass_position;
     const ConstraintId id =
-        fixed_constraint::create(*scene.world, wall, body, {.point_a = {0.5f, 5.0f, 0.0f}, .point_b = {0.5f, 5.0f, 0.0f}});
+        fixed_constraint::create(*scene.world, wall, body, {.point_a = vec3f::make(0.5f, 5.0f, 0.0f), .point_b = vec3f::make(0.5f, 5.0f, 0.0f)});
     scene.ids.push(id);
-    body->motion_properties.linear_velocity = {0.0f, 3.0f, 1.0f};
-    body->motion_properties.angular_velocity = {1.0f, 2.0f, 0.5f};
+    body->motion_properties.linear_velocity = vec3f::make(0.0f, 3.0f, 1.0f);
+    body->motion_properties.angular_velocity = vec3f::make(1.0f, 2.0f, 0.5f);
 
     const float dt = 1.0f / 60.0f;
     for (int i = 0; i < 120; i++) step_constraint_scene(scene, dt, vec3f::load(GRAVITY));
 
     const FixedConstraint *constraint = fixed_constraint::get(*scene.world, id);
-    CHECK(ctx, vec3f::distance(vec3f::load(body->center_of_mass_position), vec3f::load(rest_position)) < 1e-2f);
-    CHECK(ctx, scalar::abs(quatf::dot(quatf::load(body->quaternion), quatf::load(rest_rotation))) > scalar::cos(0.5f * 1e-2f));
+    CHECK(ctx, vec3f::distance(body->center_of_mass_position, rest_position) < 1e-2f);
+    CHECK(ctx, scalar::abs(quatf::dot(body->quaternion, quatf::load(rest_rotation))) > scalar::cos(0.5f * 1e-2f));
     CHECK(ctx, rotation_error(*constraint, wall, body) < 1e-2f);
-    CHECK(ctx, vec3f::length(vec3f::load(body->motion_properties.angular_velocity)) < 1e-2f);
+    CHECK(ctx, vec3f::length(body->motion_properties.angular_velocity) < 1e-2f);
 
     // the impulses that hold it: the translation one carries its weight each step
     const Vec3f lambda_position = fixed_constraint::get_total_lambda_position(*constraint);
@@ -157,8 +160,8 @@ void test_fixed_constraint_joins_two_dynamic_bodies(TestCtx &ctx) {
     RigidBody *b = add_body(scene, MotionType::DYNAMIC, {1.0f, 0.5f, 0.0f}, stored_axis_angle(vec3f::make(1.0f, 0.0f, 1.0f), 0.8f));
     const ConstraintId id = fixed_constraint::create(*scene.world, a, b, {.auto_detect_point = true});
     scene.ids.push(id);
-    a->motion_properties.angular_velocity = {0.0f, 4.0f, 0.0f};
-    b->motion_properties.linear_velocity = {-2.0f, 0.0f, 1.0f};
+    a->motion_properties.angular_velocity = vec3f::make(0.0f, 4.0f, 0.0f);
+    b->motion_properties.linear_velocity = vec3f::make(-2.0f, 0.0f, 1.0f);
 
     // b's center of mass in a's frame at rest
     const Vec3f rest_offset = offset_in_a(a, b);
@@ -170,6 +173,6 @@ void test_fixed_constraint_joins_two_dynamic_bodies(TestCtx &ctx) {
     CHECK(ctx, vec3f::distance(offset_in_a(a, b), rest_offset) < 1e-2f);
     CHECK(ctx, rotation_error(*constraint, a, b) < 1e-2f);
     // the pair has turned as a whole
-    CHECK(ctx, scalar::abs(quatf::dot(quatf::load(a->quaternion), quatf::identity())) < 0.99f);
+    CHECK(ctx, scalar::abs(quatf::dot(a->quaternion, quatf::identity())) < 0.99f);
     release_constraint_scene(scene);
 }

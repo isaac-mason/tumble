@@ -3,8 +3,10 @@
 #include <stdint.h>
 
 #include "tumble/config.h"
+#include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
 #include "tumble/physics/body/bodies.h"
 #include "tumble/physics/body/body_id.h"
 #include "tumble/physics/body/dof.h"
@@ -35,9 +37,9 @@ struct RigidBodySettings {
     /** the user's own value for the body, reported back with it in events */
     uint64_t user_data = 0;
 
-    Float3 position = {0.0f, 0.0f, 0.0f};
+    Vec3f position = vec3f::zero();
 
-    Float4 quaternion = {0.0f, 0.0f, 0.0f, 1.0f};
+    Quatf quaternion = quatf::identity();
 
     MotionQuality motion_quality = MotionQuality::DISCRETE;
 
@@ -106,6 +108,7 @@ struct RigidBody {
         MASS_AND_INERTIA_PROVIDED = 2,
     };
 
+    /** INVALID_BODY_ID once removed, so a record answers only to the id of the body it holds */
     BodyId id;
 
     /** the id's index: the slot in Bodies::pool */
@@ -120,18 +123,18 @@ struct RigidBody {
     Ref<Shape> shape;
 
     /** at the shape's origin, world space */
-    Float3 position;
+    Vec3f position;
 
-    Float4 quaternion;
+    Quatf quaternion;
 
     /** world space */
-    Float3 center_of_mass_position;
+    Vec3f center_of_mass_position;
 
     /**
      * the centre of mass its shape had when the body last took it, so set_shape with the same shape after the shape
      * changed in place keeps the constraints' anchors where they were on the body
      */
-    Float3 shape_center_of_mass;
+    Vec3f shape_center_of_mass;
 
     MotionType motion_type;
 
@@ -177,7 +180,7 @@ struct RigidBody {
     bool caches_pairs;
 
     /** world space */
-    Box3f aabb;
+    AABox aabb;
 
     uint32_t object_layer;
 
@@ -231,7 +234,7 @@ bool remove(World &world, RigidBody *body);
 RigidBody *get(const World &world, BodyId body_id);
 
 /** world space; zero for a body that is not dynamic */
-Float4x4 &get_inverse_inertia(Float4x4 &out, RigidBody *body);
+Mat4f get_inverse_inertia(RigidBody *body);
 
 /** from the transform and the shape */
 void update_center_of_mass_position(RigidBody *body);
@@ -298,9 +301,6 @@ Vec3f get_world_space_surface_normal(const RigidBody *body, SubShapeId sub_shape
 
 /** the material id of the part of the body's shape a sub shape id names, as a hit or a contact gives it; -1 for none */
 int32_t get_material(const RigidBody *body, SubShapeId sub_shape_id);
-
-/** queried relative to the shape's origin, not the centre of mass */
-Float3 &get_surface_normal(Float3 &out, const RigidBody *body, const Float3 &world_position, SubShapeId sub_shape_id);
 
 GetLeafShapeResult create_get_leaf_shape_result();
 

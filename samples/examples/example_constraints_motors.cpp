@@ -23,10 +23,8 @@ static struct {
     int counter;
 } state;
 
-static const Float4 IDENTITY = {0.0f, 0.0f, 0.0f, 1.0f};
-
 /** text centred on a world point, over the scene */
-static RigidBody *add_static_box(App &app, Float3 half_extents, Float3 position) {
+static RigidBody *add_static_box(App &app, Vec3f half_extents, Vec3f position) {
     RigidBodySettings settings;
     settings.shape = app::keep(app, box::create({.half_extents = half_extents}));
     settings.object_layer = state.layers.not_moving;
@@ -39,19 +37,20 @@ static RigidBody *add_static_box(App &app, Float3 half_extents, Float3 position)
 
 /** a windmill turned by a velocity motor on its hinge, and a ball rolled into it */
 static void make_windmill(App &app) {
-    const Float3 center = {-20.0f, 10.0f, 0.0f};
-    RigidBody *hub = add_static_box(app, {0.25f, 0.25f, 0.25f}, center);
+    const float center_x = -20.0f;
+    const Vec3f center = vec3f::make(center_x, 10.0f, 0.0f);
+    RigidBody *hub = add_static_box(app, vec3f::splat(0.25f), center);
 
     const float wing_half_extent = 4.0f;
     const float wing_thickness = 0.5f;
     const float wing_offset = 5.0f;
-    Shape *across = app::keep(app, box::create({.half_extents = {wing_half_extent, wing_thickness, wing_thickness}, .convex_radius = 0.05f}));
-    Shape *upright = app::keep(app, box::create({.half_extents = {wing_thickness, wing_half_extent, wing_thickness}, .convex_radius = 0.05f}));
+    Shape *across = app::keep(app, box::create({.half_extents = vec3f::make(wing_half_extent, wing_thickness, wing_thickness), .convex_radius = 0.05f}));
+    Shape *upright = app::keep(app, box::create({.half_extents = vec3f::make(wing_thickness, wing_half_extent, wing_thickness), .convex_radius = 0.05f}));
     const CompoundShapeSettings::Child wings[] = {
-        {.position = {wing_offset, 0.0f, 0.0f}, .quaternion = IDENTITY, .shape = across},
-        {.position = {-wing_offset, 0.0f, 0.0f}, .quaternion = IDENTITY, .shape = across},
-        {.position = {0.0f, wing_offset, 0.0f}, .quaternion = IDENTITY, .shape = upright},
-        {.position = {0.0f, -wing_offset, 0.0f}, .quaternion = IDENTITY, .shape = upright},
+        {.position = vec3f::make(wing_offset, 0.0f, 0.0f), .quaternion = quatf::identity(), .shape = across},
+        {.position = vec3f::make(-wing_offset, 0.0f, 0.0f), .quaternion = quatf::identity(), .shape = across},
+        {.position = vec3f::make(0.0f, wing_offset, 0.0f), .quaternion = quatf::identity(), .shape = upright},
+        {.position = vec3f::make(0.0f, -wing_offset, 0.0f), .quaternion = quatf::identity(), .shape = upright},
     };
     RigidBodySettings settings;
     settings.shape = app::keep(app, compound::create({.children = wings, .num_children = 4}));
@@ -65,10 +64,10 @@ static void make_windmill(App &app) {
     const ConstraintId hinge_id = hinge_constraint::create(*app.world, hub, rotor,
                                                                           {.point_a = center,
                                                                            .point_b = center,
-                                                                           .hinge_axis_a = {0.0f, 0.0f, 1.0f},
-                                                                           .hinge_axis_b = {0.0f, 0.0f, 1.0f},
-                                                                           .normal_axis_a = {1.0f, 0.0f, 0.0f},
-                                                                           .normal_axis_b = {1.0f, 0.0f, 0.0f}});
+                                                                           .hinge_axis_a = vec3f::axis_z(),
+                                                                           .hinge_axis_b = vec3f::axis_z(),
+                                                                           .normal_axis_a = vec3f::axis_x(),
+                                                                           .normal_axis_b = vec3f::axis_x()});
     HingeConstraint *hinge = hinge_constraint::get(*app.world, hinge_id);
     hinge_constraint::set_motor_state(*hinge, MotorState::VELOCITY);
     hinge_constraint::set_target_angular_velocity(*hinge, -5.0f);
@@ -77,52 +76,52 @@ static void make_windmill(App &app) {
     ball.shape = app::keep(app, sphere::create({.radius = 2.0f}));
     ball.object_layer = state.layers.moving;
     ball.motion_type = MotionType::DYNAMIC;
-    ball.position = {center.x - 20.0f, 2.0f, 0.0f};
+    ball.position = vec3f::make(center_x - 20.0f, 2.0f, 0.0f);
     ball.restitution = 0.45f;
     ball.friction = 0.5f;
     RigidBody *ball_body = rigid_body::create(*app.world, ball);
     rigid_body::set_linear_velocity(*app.world, ball_body, vec3f::make(25.0f, 0.0f, 0.0f));
 
     // a wall behind the ball, and walls right and above keeping it in
-    add_static_box(app, {0.2f, 15.0f, 5.0f}, {center.x - 25.0f, 15.0f, 0.0f});
-    add_static_box(app, {0.2f, 150.0f, 50.0f}, {50.0f, 0.0f, 0.0f});
-    add_static_box(app, {150.0f, 0.2f, 50.0f}, {0.0f, 75.0f, 0.0f});
+    add_static_box(app, vec3f::make(0.2f, 15.0f, 5.0f), vec3f::make(center_x - 25.0f, 15.0f, 0.0f));
+    add_static_box(app, vec3f::make(0.2f, 150.0f, 50.0f), vec3f::make(50.0f, 0.0f, 0.0f));
+    add_static_box(app, vec3f::make(150.0f, 0.2f, 50.0f), vec3f::make(0.0f, 75.0f, 0.0f));
 }
 
 /** a box on a platform, driven along it by a position motor to each marker in turn */
 static void make_slider(App &app) {
-    add_static_box(app, {12.5f, 0.25f, 2.0f}, {18.0f, 0.25f, 0.0f});
-    RigidBody *target = add_static_box(app, {0.5f, 2.0f, 2.0f}, {30.0f, 2.0f, 0.0f});
+    add_static_box(app, vec3f::make(12.5f, 0.25f, 2.0f), vec3f::make(18.0f, 0.25f, 0.0f));
+    RigidBody *target = add_static_box(app, vec3f::make(0.5f, 2.0f, 2.0f), vec3f::make(30.0f, 2.0f, 0.0f));
 
     RigidBodySettings settings;
-    settings.shape = app::keep(app, box::create({.half_extents = {0.75f, 0.75f, 0.75f}}));
+    settings.shape = app::keep(app, box::create({.half_extents = vec3f::splat(0.75f)}));
     settings.object_layer = state.layers.moving;
     settings.motion_type = MotionType::DYNAMIC;
-    settings.position = {15.0f, 1.25f, 0.0f};
+    settings.position = vec3f::make(15.0f, 1.25f, 0.0f);
     settings.restitution = 0.0f;
     settings.friction = 0.5f;
     settings.allow_sleeping = false;
     state.slider_box = rigid_body::create(*app.world, settings);
 
-    Shape *marker = app::keep(app, box::create({.half_extents = {1.0f, 4.0f, 0.75f}}));
+    Shape *marker = app::keep(app, box::create({.half_extents = vec3f::make(1.0f, 4.0f, 0.75f)}));
     for (int i = 0; i < SLIDER_OFFSET_COUNT; i++) {
         RigidBodySettings marker_settings;
         marker_settings.shape = marker;
         marker_settings.object_layer = state.layers.not_moving;
         marker_settings.motion_type = MotionType::STATIC;
-        marker_settings.position = {28.0f - SLIDER_OFFSETS[i], 2.0f, -2.75f};
+        marker_settings.position = vec3f::make(28.0f - SLIDER_OFFSETS[i], 2.0f, -2.75f);
         marker_settings.restitution = 0.0f;
         marker_settings.friction = 0.5f;
         rigid_body::create(*app.world, marker_settings);
     }
 
     state.slider = slider_constraint::create(*app.world, state.slider_box, target,
-                                             {.point_a = {15.0f, 1.25f, 0.0f},
-                                              .point_b = {28.0f, 1.25f, 0.0f},
-                                              .slider_axis_a = {1.0f, 0.0f, 0.0f},
-                                              .slider_axis_b = {1.0f, 0.0f, 0.0f},
-                                              .normal_axis_a = {0.0f, 1.0f, 0.0f},
-                                              .normal_axis_b = {0.0f, 1.0f, 0.0f}});
+                                             {.point_a = vec3f::make(15.0f, 1.25f, 0.0f),
+                                              .point_b = vec3f::make(28.0f, 1.25f, 0.0f),
+                                              .slider_axis_a = vec3f::axis_x(),
+                                              .slider_axis_b = vec3f::axis_x(),
+                                              .normal_axis_a = vec3f::axis_y(),
+                                              .normal_axis_b = vec3f::axis_y()});
     SliderConstraint *slider = slider_constraint::get(*app.world, state.slider);
     slider_constraint::set_motor_state(*slider, MotorState::POSITION);
     slider_constraint::set_target_position(*slider, 0.0f);
@@ -133,7 +132,7 @@ static void init(App &app) {
     // starts near the box's spawn point
     state.counter = 4;
     app.world = app::create_world(state.layers);
-    add_static_box(app, {200.0f, 0.5f, 50.0f}, {0.0f, -0.5f, 0.0f});
+    add_static_box(app, vec3f::make(200.0f, 0.5f, 50.0f), vec3f::make(0.0f, -0.5f, 0.0f));
     make_windmill(app);
     make_slider(app);
     camera::look_at(app.camera, {0.0f, 15.0f, 35.0f}, {0.0f, 5.0f, 0.0f});

@@ -3,8 +3,10 @@
 
 #include "wasm/adapters.h"
 
+#include "tumble/math/plane3f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
+#include "tumble/math/transform.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/math/vec4f.h"
 #include "tumble/physics/body/rigid_body.h"
@@ -22,6 +24,17 @@
 using namespace tumble;
 
 namespace adapters {
+
+// the packed forms js reads, from the core's register types
+static Float3 float3_of(Vec3f v) {
+    Float3 out;
+    return vec3f::store(out, v);
+}
+
+static Float4 float4_of(Quatf q) {
+    Float4 out;
+    return quatf::store(out, q);
+}
 
 namespace wasm {
 
@@ -92,7 +105,6 @@ void find_pairs(tumble::World *world) { update::find_pairs(*world); }
 void narrowphase(tumble::World *world) { update::narrowphase(*world); }
 void solve(tumble::World *world) { update::solve(*world); }
 void step_end(tumble::World *world) { update::step_end(*world); }
-uint32_t woken(const tumble::World *world) { return world->events.woken; }
 
 void set_materials(tumble::World *world, const float *friction_restitution, uint32_t count) {
     collections::Array<WorldMaterial> materials;
@@ -101,104 +113,11 @@ void set_materials(tumble::World *world, const float *friction_restitution, uint
     tumble::world::set_materials(*world, materials.data, count);
 }
 
-void get_gravity(Float3 &out, const tumble::World *world) { out = world->settings.gravity; }
+void get_gravity(Float3 &out, const tumble::World *world) { vec3f::store(out, world->settings.gravity); }
 
-void set_gravity(tumble::World *world, const Float3 &gravity) { world->settings.gravity = gravity; }
+void set_gravity(tumble::World *world, const Float3 &gravity) { world->settings.gravity = vec3f::load(gravity); }
 
 }  // namespace world
-
-namespace events {
-
-static void split(uint32_t &low, uint32_t &high, uint64_t value) {
-    low = (uint32_t)value;
-    high = (uint32_t)(value >> 32);
-}
-
-uint32_t pairs(const tumble::World *world) { return world->events.pairs.length; }
-
-bool read_pair(PairEvent &out, const tumble::World *world, uint32_t index) {
-    if (index >= world->events.pairs.length) return false;
-    const tumble::PairEvent &event = world->events.pairs[index];
-    out.body_a = event.body_id_a;
-    out.body_b = event.body_id_b;
-    split(out.user_data_a_low, out.user_data_a_high, event.user_data_a);
-    split(out.user_data_b_low, out.user_data_b_high, event.user_data_b);
-    return true;
-}
-
-static void copy_contact(ContactEvent &out, const tumble::ContactEvent &event) {
-    out.body_a = event.body_id_a;
-    out.body_b = event.body_id_b;
-    split(out.user_data_a_low, out.user_data_a_high, event.user_data_a);
-    split(out.user_data_b_low, out.user_data_b_high, event.user_data_b);
-    out.sub_shape_a = event.sub_shape_id_a;
-    out.sub_shape_b = event.sub_shape_id_b;
-    out.material_a = event.material_id_a;
-    out.material_b = event.material_id_b;
-    out.normal = event.normal;
-    out.penetration = event.penetration;
-    out.num_points = event.num_points;
-    for (uint32_t i = 0; i < manifold::MAX_CONTACT_POINTS; i++) {
-        out.points_a[i] = event.points_a[i];
-        out.points_b[i] = event.points_b[i];
-    }
-    out.settings = event.settings;
-}
-
-uint32_t contacts_added(const tumble::World *world) { return world->events.contacts_added.length; }
-
-bool read_contact_added(ContactEvent &out, const tumble::World *world, uint32_t index) {
-    if (index >= world->events.contacts_added.length) return false;
-    copy_contact(out, world->events.contacts_added[index]);
-    return true;
-}
-
-uint32_t contacts_persisted(const tumble::World *world) { return world->events.contacts_persisted.length; }
-
-bool read_contact_persisted(ContactEvent &out, const tumble::World *world, uint32_t index) {
-    if (index >= world->events.contacts_persisted.length) return false;
-    copy_contact(out, world->events.contacts_persisted[index]);
-    return true;
-}
-
-uint32_t contacts_removed(const tumble::World *world) { return world->events.contacts_removed.length; }
-
-bool read_contact_removed(ContactRemovedEvent &out, const tumble::World *world, uint32_t index) {
-    if (index >= world->events.contacts_removed.length) return false;
-    const tumble::ContactRemovedEvent &event = world->events.contacts_removed[index];
-    out = {event.body_id_a, event.body_id_b, event.sub_shape_id_a, event.sub_shape_id_b};
-    return true;
-}
-
-bool reject_pair(tumble::World *world, uint32_t index) {
-    if (index >= world->events.pairs.length) return false;
-    world->events.pairs[index].rejected = true;
-    return true;
-}
-
-static bool reject_contact(collections::Array<tumble::ContactEvent> &contacts, uint32_t index) {
-    if (index >= contacts.length) return false;
-    contacts[index].rejected = true;
-    return true;
-}
-
-bool reject_contact_added(tumble::World *world, uint32_t index) { return reject_contact(world->events.contacts_added, index); }
-bool reject_contact_persisted(tumble::World *world, uint32_t index) { return reject_contact(world->events.contacts_persisted, index); }
-
-static bool change_contact(collections::Array<tumble::ContactEvent> &contacts, uint32_t index, const ContactSettings &settings) {
-    if (index >= contacts.length) return false;
-    tumble::events::change_contact(contacts[index]) = settings;
-    return true;
-}
-
-bool change_contact_added(tumble::World *world, uint32_t index, const ContactSettings &settings) {
-    return change_contact(world->events.contacts_added, index, settings);
-}
-bool change_contact_persisted(tumble::World *world, uint32_t index, const ContactSettings &settings) {
-    return change_contact(world->events.contacts_persisted, index, settings);
-}
-
-}  // namespace events
 
 namespace activation {
 
@@ -209,8 +128,7 @@ bool read_event(ActivationEvent &out, const tumble::World *world, uint32_t index
     if (index >= events.length) return false;
     const BodyActivationEvent &event = events[index];
     out.body = event.body_id;
-    out.user_data_low = (uint32_t)event.user_data;
-    out.user_data_high = (uint32_t)(event.user_data >> 32);
+    out.user_data = event.user_data;
     out.activated = event.activated ? 1 : 0;
     return true;
 }
@@ -243,11 +161,11 @@ uint32_t read(tumble::World *world) {
             const tumble::RigidBody &body = *bodies.pool[index];
             ActiveBodyRow &row = state.rows.data[state.rows.length++];
             row.body = body.id;
-            row.position = body.position;
-            row.quaternion = body.quaternion;
-            row.center_of_mass_position = body.center_of_mass_position;
-            row.linear_velocity = body.motion_properties.linear_velocity;
-            row.angular_velocity = body.motion_properties.angular_velocity;
+            vec3f::store(row.position, body.position);
+            quatf::store(row.quaternion, body.quaternion);
+            vec3f::store(row.center_of_mass_position, body.center_of_mass_position);
+            vec3f::store(row.linear_velocity, body.motion_properties.linear_velocity);
+            vec3f::store(row.angular_velocity, body.motion_properties.angular_velocity);
         }
     }
     return state.rows.length;
@@ -261,7 +179,7 @@ namespace rigid_body {
 
 void default_settings(BodySettings &out) {
     const tumble::RigidBodySettings d = {};
-    out = {d.shape, d.object_layer, (uint32_t)d.motion_type, (uint32_t)d.user_data, (uint32_t)(d.user_data >> 32), d.position, d.quaternion,
+    out = {d.shape, d.object_layer, (uint32_t)d.motion_type, d.user_data, float3_of(d.position), float4_of(d.quaternion),
            (uint32_t)d.motion_quality, d.allowed_degrees_of_freedom, d.gravity_factor, d.linear_damping, d.angular_damping, d.max_linear_velocity,
            d.max_angular_velocity, d.num_velocity_steps_override, d.num_position_steps_override, d.friction, d.restitution,
            (uint32_t)d.friction_combine_mode, (uint32_t)d.restitution_combine_mode, d.collision_groups, d.collision_mask, d.use_manifold_reduction,
@@ -274,9 +192,9 @@ BodyId create(tumble::World *world, const BodySettings &s) {
     settings.shape = s.shape;
     settings.object_layer = s.object_layer;
     settings.motion_type = (MotionType)s.motion_type;
-    settings.user_data = (uint64_t)s.user_data_high << 32 | s.user_data_low;
-    settings.position = s.position;
-    settings.quaternion = s.quaternion;
+    settings.user_data = s.user_data;
+    settings.position = vec3f::load(s.position);
+    settings.quaternion = quatf::load(s.quaternion);
     settings.motion_quality = (MotionQuality)s.motion_quality;
     settings.allowed_degrees_of_freedom = s.allowed_degrees_of_freedom;
     settings.gravity_factor = s.gravity_factor;
@@ -316,51 +234,6 @@ bool remove(tumble::World *world, BodyId id) {
     return body != nullptr && tumble::rigid_body::remove(*world, body);
 }
 
-bool exists(tumble::World *world, BodyId id) { return tumble::rigid_body::get(*world, id) != nullptr; }
-
-bool get_position(Float3 &out, tumble::World *world, BodyId id) {
-    const tumble::RigidBody *body = resolve(world, id);
-    if (body == nullptr) return false;
-    out = body->position;
-    return true;
-}
-
-bool get_quaternion(Float4 &out, tumble::World *world, BodyId id) {
-    const tumble::RigidBody *body = resolve(world, id);
-    if (body == nullptr) return false;
-    out = body->quaternion;
-    return true;
-}
-
-bool get_transform(Float3 &out_position, Float4 &out_quaternion, tumble::World *world, BodyId id) {
-    const tumble::RigidBody *body = resolve(world, id);
-    if (body == nullptr) return false;
-    out_position = body->position;
-    out_quaternion = body->quaternion;
-    return true;
-}
-
-bool get_center_of_mass_position(Float3 &out, tumble::World *world, BodyId id) {
-    const tumble::RigidBody *body = resolve(world, id);
-    if (body == nullptr) return false;
-    out = body->center_of_mass_position;
-    return true;
-}
-
-bool get_linear_velocity(Float3 &out, tumble::World *world, BodyId id) {
-    const tumble::RigidBody *body = resolve(world, id);
-    if (body == nullptr) return false;
-    out = body->motion_properties.linear_velocity;
-    return true;
-}
-
-bool get_angular_velocity(Float3 &out, tumble::World *world, BodyId id) {
-    const tumble::RigidBody *body = resolve(world, id);
-    if (body == nullptr) return false;
-    out = body->motion_properties.angular_velocity;
-    return true;
-}
-
 bool get_velocity_at_point(Float3 &out, tumble::World *world, BodyId id, const Float3 &point) {
     const tumble::RigidBody *body = resolve(world, id);
     if (body == nullptr) return false;
@@ -368,52 +241,9 @@ bool get_velocity_at_point(Float3 &out, tumble::World *world, BodyId id, const F
     return true;
 }
 
-bool get_aabb(Box3f &out, tumble::World *world, BodyId id) {
-    const tumble::RigidBody *body = resolve(world, id);
-    if (body == nullptr) return false;
-    out = body->aabb;
-    return true;
-}
-
-float get_mass(tumble::World *world, BodyId id) {
-    const tumble::RigidBody *body = resolve(world, id);
-    if (body == nullptr || body->motion_properties.inv_mass <= 0.0f) return 0.0f;
-    return 1.0f / body->motion_properties.inv_mass;
-}
-
-uint32_t get_motion_type(tumble::World *world, BodyId id) {
-    const tumble::RigidBody *body = resolve(world, id);
-    return body == nullptr ? 0 : (uint32_t)body->motion_type;
-}
-
-uint32_t get_object_layer(tumble::World *world, BodyId id) {
-    const tumble::RigidBody *body = resolve(world, id);
-    return body == nullptr ? 0 : body->object_layer;
-}
-
-uint32_t get_user_data_low(tumble::World *world, BodyId id) {
-    const tumble::RigidBody *body = resolve(world, id);
-    return body == nullptr ? 0 : (uint32_t)body->user_data;
-}
-
-uint32_t get_user_data_high(tumble::World *world, BodyId id) {
-    const tumble::RigidBody *body = resolve(world, id);
-    return body == nullptr ? 0 : (uint32_t)(body->user_data >> 32);
-}
-
-Shape *get_shape(tumble::World *world, BodyId id) {
-    const tumble::RigidBody *body = resolve(world, id);
-    return body == nullptr ? nullptr : body->shape;
-}
-
 int32_t get_material(tumble::World *world, BodyId id, uint32_t sub_shape_id) {
     const tumble::RigidBody *body = resolve(world, id);
     return body == nullptr ? -1 : tumble::rigid_body::get_material(body, sub_shape_id);
-}
-
-bool is_sleeping(tumble::World *world, BodyId id) {
-    const tumble::RigidBody *body = resolve(world, id);
-    return body != nullptr && tumble::rigid_body::is_sleeping(*body);
 }
 
 bool set_position(tumble::World *world, BodyId id, const Float3 &position, bool wake) {
@@ -549,27 +379,6 @@ bool wake(tumble::World *world, BodyId id) {
     return true;
 }
 
-bool set_user_data(tumble::World *world, BodyId id, uint32_t low, uint32_t high) {
-    tumble::RigidBody *body = resolve(world, id);
-    if (body == nullptr) return false;
-    body->user_data = (uint64_t)high << 32 | low;
-    return true;
-}
-
-bool set_friction(tumble::World *world, BodyId id, float friction) {
-    tumble::RigidBody *body = resolve(world, id);
-    if (body == nullptr) return false;
-    body->friction = friction;
-    return true;
-}
-
-bool set_restitution(tumble::World *world, BodyId id, float restitution) {
-    tumble::RigidBody *body = resolve(world, id);
-    if (body == nullptr) return false;
-    body->restitution = restitution;
-    return true;
-}
-
 }  // namespace rigid_body
 
 /** a shape made for js, which holds one reference to it until shape::release */
@@ -581,8 +390,8 @@ static Shape *held_by_js(Shape *shape) {
 namespace shape {
 
 uint32_t get_type(const Shape *shape) { return (uint32_t)shape->type; }
-void get_local_bounds(Box3f &out, const Shape *shape) { out = shape->aabb; }
-void get_center_of_mass(Float3 &out, const Shape *shape) { out = shape->center_of_mass; }
+void get_local_bounds(Box3f &out, const Shape *shape) { aabox::store(out, shape->aabb); }
+void get_center_of_mass(Float3 &out, const Shape *shape) { vec3f::store(out, shape->center_of_mass); }
 float get_volume(const Shape *shape) { return shape->volume; }
 void get_mass_properties(MassProperties &out, const Shape *shape) { shapes::compute_mass_properties(out, shape); }
 
@@ -671,13 +480,27 @@ Shape *create() { return held_by_js(tumble::empty::create()); }
 
 namespace convex_hull {
 
-void default_settings(tumble::ConvexHullShapeSettings &out) { out = {}; }
+void default_settings(ConvexHullSettings &out) {
+    const tumble::ConvexHullShapeSettings d;
+    out = {nullptr, 0, d.convex_radius, d.hull_tolerance, d.max_error_convex_radius, d.bake_support_adjacency, d.density, d.material_id};
+}
 
-bool create(ConvexHullCreate &out, const tumble::ConvexHullShapeSettings &settings) {
+void create(ConvexHullCreate &out, const ConvexHullSettings &s) {
+    tumble::collections::Array<Vec3f> positions;
+    positions.resize(s.num_positions);
+    for (uint32_t i = 0; i < s.num_positions; i++) positions[i] = vec3f::load(s.positions, i * 3);
+    tumble::ConvexHullShapeSettings settings;
+    settings.positions = positions.data;
+    settings.num_positions = s.num_positions;
+    settings.convex_radius = s.convex_radius;
+    settings.hull_tolerance = s.hull_tolerance;
+    settings.max_error_convex_radius = s.max_error_convex_radius;
+    settings.bake_support_adjacency = s.bake_support_adjacency;
+    settings.density = s.density;
+    settings.material_id = s.material_id;
     tumble::ConvexHullShape::BuildResult result = tumble::ConvexHullShape::BuildResult::SUCCESS;
     out.shape = held_by_js(tumble::convex_hull::create(settings, &result));
     out.result = (int32_t)result;
-    return out.shape != nullptr;
 }
 
 
@@ -1464,7 +1287,9 @@ static const tumble::Filter &with_groups(const tumble::World &world, tumble::Fil
     return *filter;
 }
 
-static Transformf transform_of(const Float3 &position, const Float4 &quaternion, const Float3 &scale) { return {position, quaternion, scale}; }
+static Transform transform_of(const Float3 &position, const Float4 &quaternion, const Float3 &scale) {
+    return transform::make(vec3f::load(position), quatf::load(quaternion), vec3f::load(scale));
+}
 
 void default_cast_ray_settings(CastRaySettings &out) { out = cast_ray::default_settings(); }
 
@@ -1480,11 +1305,7 @@ uint32_t cast_ray(tumble::World *world, uint32_t kind, float early_out_fraction,
     return scratch().ray_collector.hits.length;
 }
 
-bool read_cast_ray_hit(CastRayHit &out, uint32_t index) {
-    if (index >= scratch().ray_collector.hits.length) return false;
-    out = scratch().ray_collector.hits[index];
-    return true;
-}
+const uint32_t *cast_ray_hits() { return reinterpret_cast<const uint32_t *>(scratch().ray_collector.hits.data); }
 
 void default_cast_shape_settings(CastShapeSettings &out) {
     const tumble::CastShapeSettings d = cast_shape::default_settings();
@@ -1567,7 +1388,7 @@ uint32_t collide_shape(tumble::World *world, uint32_t kind, float early_out_frac
     scratch().collide_shape_collector.kind = (CollectorKind)kind;
     collide_shape::reset(scratch().collide_shape_collector);
     scratch().collide_shape_collector.early_out_fraction = early_out_fraction;
-    const Transformf transform = transform_of(position, quaternion, scale);
+    const Transform transform = transform_of(position, quaternion, scale);
     const tumble::Filter &query_filter = with_groups(*world, filter, collision_groups, collision_mask);
     if (internal_edge_removal) {
         tumble::query::collide_shape_with_internal_edge_removal(*world, scratch().collide_shape_collector, settings, shape, transform, query_filter);
@@ -1601,11 +1422,7 @@ uint32_t collide_point(tumble::World *world, uint32_t kind, const CollidePointSe
     return scratch().collide_point_collector.hits.length;
 }
 
-bool read_collide_point_hit(CollidePointHit &out, uint32_t index) {
-    if (index >= scratch().collide_point_collector.hits.length) return false;
-    out = scratch().collide_point_collector.hits[index];
-    return true;
-}
+const uint32_t *collide_point_hits() { return reinterpret_cast<const uint32_t *>(scratch().collide_point_collector.hits.data); }
 
 }  // namespace query
 
@@ -1642,11 +1459,6 @@ namespace kcc {
 
 using tumble::KCC;
 
-static Float3 float3_of(Vec3f v) {
-    Float3 out;
-    return vec3f::store(out, v);
-}
-
 /** the policy's listener for the length of a call; none for no policy, which treats every body as the defaults do */
 struct PolicyListener {
     tumble::KCC::Listener listener;
@@ -1659,10 +1471,12 @@ struct PolicyListener {
 
 void default_settings(KCCSettings &out) {
     const tumble::KCCSettings d;
-    out = {d.shape, d.shape_offset, d.mass, d.max_strength, d.up, d.max_slope_angle, d.predictive_contact_distance, d.character_padding,
-           d.max_collision_iterations, d.max_constraint_iterations, d.collision_tolerance, d.penetration_recovery_speed, d.min_time_remaining,
-           d.max_num_hits, d.hit_reduction_cos_max_angle, (uint32_t)d.back_face_mode, d.enhanced_internal_edge_removal, d.has_supporting_volume_plane,
-           d.supporting_volume_plane, (uint32_t)d.user_data, (uint32_t)(d.user_data >> 32), d.observes_contacts, d.inner_rigid_body_shape,
+    Plane3f supporting_volume_plane;
+    plane3f::store(supporting_volume_plane, d.supporting_volume_plane);
+    out = {d.shape, float3_of(d.shape_offset), d.mass, d.max_strength, float3_of(d.up), d.max_slope_angle, d.predictive_contact_distance,
+           d.character_padding, d.max_collision_iterations, d.max_constraint_iterations, d.collision_tolerance, d.penetration_recovery_speed,
+           d.min_time_remaining, d.max_num_hits, d.hit_reduction_cos_max_angle, (uint32_t)d.back_face_mode, d.enhanced_internal_edge_removal,
+           d.has_supporting_volume_plane, supporting_volume_plane, d.user_data, d.observes_contacts, d.inner_rigid_body_shape,
            d.inner_rigid_body_object_layer};
 }
 
@@ -1671,10 +1485,10 @@ void default_update_settings(tumble::KCCUpdateSettings &out) { out = {}; }
 KCC *create(const KCCSettings &s, const Float3 &position, const Float4 &quaternion) {
     tumble::KCCSettings settings;
     settings.shape = s.shape;
-    settings.shape_offset = s.shape_offset;
+    settings.shape_offset = vec3f::load(s.shape_offset);
     settings.mass = s.mass;
     settings.max_strength = s.max_strength;
-    settings.up = s.up;
+    settings.up = vec3f::load(s.up);
     settings.max_slope_angle = s.max_slope_angle;
     settings.predictive_contact_distance = s.predictive_contact_distance;
     settings.character_padding = s.character_padding;
@@ -1688,8 +1502,8 @@ KCC *create(const KCCSettings &s, const Float3 &position, const Float4 &quaterni
     settings.back_face_mode = (tumble::KCC::BackFaceMode)s.back_face_mode;
     settings.enhanced_internal_edge_removal = s.enhanced_internal_edge_removal;
     settings.has_supporting_volume_plane = s.has_supporting_volume_plane;
-    settings.supporting_volume_plane = s.supporting_volume_plane;
-    settings.user_data = (uint64_t)s.user_data_high << 32 | s.user_data_low;
+    settings.supporting_volume_plane = plane3f::load(s.supporting_volume_plane);
+    settings.user_data = s.user_data;
     settings.observes_contacts = s.observes_contacts;
     settings.inner_rigid_body_shape = s.inner_rigid_body_shape;
     settings.inner_rigid_body_object_layer = s.inner_rigid_body_object_layer;
@@ -1724,11 +1538,11 @@ void set_linear_velocity(KCC *character, const Float3 &velocity) { character->li
 
 void get_tuning(KCCTuning &out, const KCC *character) {
     const KCC &c = *character;
+    const Vec3f plane_normal = plane3f::normal(c.supporting_volume_plane);
     out = {float3_of(c.shape_offset), c.mass, c.max_strength, float3_of(c.up), c.max_slope_angle, c.predictive_contact_distance,
            c.character_padding, c.max_collision_iterations, c.max_constraint_iterations, c.collision_tolerance, c.penetration_recovery_speed,
            c.min_time_remaining, c.max_num_hits, c.hit_reduction_cos_max_angle, (uint32_t)c.back_face_mode, c.enhanced_internal_edge_removal,
-           {vec4f::x(c.supporting_volume_plane), vec4f::y(c.supporting_volume_plane), vec4f::z(c.supporting_volume_plane),
-            vec4f::w(c.supporting_volume_plane)}};
+           {vec3f::x(plane_normal), vec3f::y(plane_normal), vec3f::z(plane_normal), plane3f::constant(c.supporting_volume_plane)}};
 }
 
 void set_tuning(KCC *character, const KCCTuning &t) {
@@ -1750,8 +1564,8 @@ void set_tuning(KCC *character, const KCCTuning &t) {
     c.hit_reduction_cos_max_angle = t.hit_reduction_cos_max_angle;
     c.back_face_mode = (tumble::KCC::BackFaceMode)t.back_face_mode;
     c.enhanced_internal_edge_removal = t.enhanced_internal_edge_removal;
-    c.supporting_volume_plane = vec4f::make(t.supporting_volume_plane.x, t.supporting_volume_plane.y, t.supporting_volume_plane.z,
-                                            t.supporting_volume_plane.w);
+    const Float4 &plane = t.supporting_volume_plane;
+    c.supporting_volume_plane = plane3f::make(vec3f::make(plane.x, plane.y, plane.z), plane.w);
 }
 
 uint8_t *contacts(KCC *character) { return reinterpret_cast<uint8_t *>(character->contacts.data); }
@@ -1933,18 +1747,16 @@ static void read_pair(ContactPair &out, const tumble::World *world, uint32_t han
     out = {handle,
            pair.a.body_id,
            pair.a.sub_shape_id,
-           (uint32_t)pair.a.user_data,
-           (uint32_t)(pair.a.user_data >> 32),
+           pair.a.user_data,
            pair.a.is_sensor,
            pair.b.body_id,
            pair.b.sub_shape_id,
-           (uint32_t)pair.b.user_data,
-           (uint32_t)(pair.b.user_data >> 32),
+           pair.b.user_data,
            pair.b.is_sensor,
-           pair.point,
-           pair.normal,
+           float3_of(pair.point),
+           float3_of(pair.normal),
            pair.penetration_depth,
-           pair.relative_velocity,
+           float3_of(pair.relative_velocity),
            pair.added};
 }
 

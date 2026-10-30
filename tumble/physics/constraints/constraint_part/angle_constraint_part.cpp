@@ -18,11 +18,11 @@ static float calculate_inverse_effective_mass(AngleConstraintPart &part, RigidBo
     // calculate I^-1 * axis for both bodies
     part.inv_i1_axis = body_a.motion_type == MotionType::DYNAMIC
                            ? motion_properties::multiply_world_space_inverse_inertia_by_vector(body_a.motion_properties,
-                                                                                               quatf::load(body_a.quaternion), world_space_axis)
+                                                                                               body_a.quaternion, world_space_axis)
                            : vec3f::zero();
     part.inv_i2_axis = body_b.motion_type == MotionType::DYNAMIC
                            ? motion_properties::multiply_world_space_inverse_inertia_by_vector(body_b.motion_properties,
-                                                                                               quatf::load(body_b.quaternion), world_space_axis)
+                                                                                               body_b.quaternion, world_space_axis)
                            : vec3f::zero();
 
     // K = J M^-1 J^T = axis . (I1^-1 + I2^-1) . axis; since J = [0, -a, 0, a], K = a . I1^-1 . a + a . I2^-1 . a
@@ -130,10 +130,10 @@ bool solve_velocity_constraint(AngleConstraintPart &part, RigidBody &body_a, Rig
     // J * v = axis . (w1 - w2)
     float jv = 0.0f;
     if (body_a.motion_type != MotionType::STATIC) {
-        jv += vec3f::dot(world_space_axis, vec3f::load(body_a.motion_properties.angular_velocity));
+        jv += vec3f::dot(world_space_axis, body_a.motion_properties.angular_velocity);
     }
     if (body_b.motion_type != MotionType::STATIC) {
-        jv -= vec3f::dot(world_space_axis, vec3f::load(body_b.motion_properties.angular_velocity));
+        jv -= vec3f::dot(world_space_axis, body_b.motion_properties.angular_velocity);
     }
 
     // lambda = -K^-1 * (J v + b)

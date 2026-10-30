@@ -25,8 +25,6 @@ static constexpr float SUPPORT_HEIGHT = 3.5f;
 static constexpr float BOX_HALF_EXTENT = 0.25f;
 static constexpr float CORNER_SPHERE_RADIUS = 0.12f;
 
-static const Float4 IDENTITY = {0.0f, 0.0f, 0.0f, 1.0f};
-
 static struct {
     app::Layers layers;
     Shape *sphere_box;
@@ -40,24 +38,26 @@ static struct {
 
 static void make_bridge(App &app) {
     collections::Array<CompoundShapeSettings::Child> children = {};
-    const auto add = [&](Shape *shape, Float3 position, Float4 quaternion) {
+    const auto add = [&](Shape *shape, Vec3f position, Quatf quaternion) {
         children.push({.position = position, .quaternion = quaternion, .shape = shape});
     };
-    const auto beam = [&](Float3 half_extents) { return app::keep(app, box::create({.half_extents = half_extents, .convex_radius = 0.01f})); };
+    const auto beam = [&](Float3 half_extents) {
+        return app::keep(app, box::create({.half_extents = vec3f::load(half_extents), .convex_radius = 0.01f}));
+    };
 
     Shape *plank = beam({BRIDGE_LENGTH / PLANKS / 2.0f + 0.05f, DECK_THICKNESS / 2.0f, BRIDGE_WIDTH / 2.0f});
     for (int i = 0; i < PLANKS; i++) {
-        add(plank, {-BRIDGE_LENGTH / 2.0f + (float)i / (float)(PLANKS - 1) * BRIDGE_LENGTH, BRIDGE_HEIGHT, 0.0f}, IDENTITY);
+        add(plank, vec3f::make(-BRIDGE_LENGTH / 2.0f + (float)i / (float)(PLANKS - 1) * BRIDGE_LENGTH, BRIDGE_HEIGHT, 0.0f), quatf::identity());
     }
 
     Shape *rail = beam({BRIDGE_LENGTH / 2.0f, BEAM_THICKNESS, BEAM_THICKNESS});
     Shape *post = beam({BEAM_THICKNESS, 0.6f, BEAM_THICKNESS});
     for (int side = 0; side < 2; side++) {
         const float z = (side == 0 ? -1.0f : 1.0f) * (BRIDGE_WIDTH / 2.0f + 0.2f);
-        add(rail, {0.0f, BRIDGE_HEIGHT + 0.3f, z}, IDENTITY);
-        add(rail, {0.0f, BRIDGE_HEIGHT + 1.2f, z}, IDENTITY);
+        add(rail, vec3f::make(0.0f, BRIDGE_HEIGHT + 0.3f, z), quatf::identity());
+        add(rail, vec3f::make(0.0f, BRIDGE_HEIGHT + 1.2f, z), quatf::identity());
         for (int i = 0; i < POSTS; i++) {
-            add(post, {-BRIDGE_LENGTH / 2.0f + (float)i / (float)(POSTS - 1) * BRIDGE_LENGTH, BRIDGE_HEIGHT + 0.75f, z}, IDENTITY);
+            add(post, vec3f::make(-BRIDGE_LENGTH / 2.0f + (float)i / (float)(POSTS - 1) * BRIDGE_LENGTH, BRIDGE_HEIGHT + 0.75f, z), quatf::identity());
         }
     }
 
@@ -70,7 +70,7 @@ static void make_bridge(App &app) {
         const float x = -BRIDGE_LENGTH / 2.0f + (float)i / (float)(TRUSSES - 1) * BRIDGE_LENGTH;
         for (int side = 0; side < 2; side++) {
             const float z = (side == 0 ? -1.0f : 1.0f) * (BRIDGE_WIDTH / 2.0f - 0.3f);
-            add(support, {x, BRIDGE_HEIGHT - SUPPORT_HEIGHT / 2.0f, z}, IDENTITY);
+            add(support, vec3f::make(x, BRIDGE_HEIGHT - SUPPORT_HEIGHT / 2.0f, z), quatf::identity());
         }
         if (i == TRUSSES - 1) continue;
         const float next_x = -BRIDGE_LENGTH / 2.0f + (float)(i + 1) / (float)(TRUSSES - 1) * BRIDGE_LENGTH;
@@ -78,20 +78,18 @@ static void make_bridge(App &app) {
             const float angle = (cross == 0 ? 1.0f : -1.0f) * atan2f(BRIDGE_WIDTH, next_x - x);
             const float tilt = atan2f(1.5f, next_x - x);
             Eulerf euler;
-            Float4 quaternion;
-            quatf::store(quaternion, quatf::from_euler(eulerf::set(euler, tilt, angle, 0.0f, EulerOrder::XYZ)));
-            add(brace, {(x + next_x) / 2.0f, BRIDGE_HEIGHT - 1.5f, 0.0f}, quaternion);
+            add(brace, vec3f::make((x + next_x) / 2.0f, BRIDGE_HEIGHT - 1.5f, 0.0f), quatf::from_euler(eulerf::set(euler, tilt, angle, 0.0f, EulerOrder::XYZ)));
         }
     }
 
     // two beams along the bottom, and the cross beams between them
     Shape *bottom_beam = beam({BRIDGE_LENGTH / 2.0f, BEAM_THICKNESS * 1.5f, BEAM_THICKNESS * 1.5f});
     for (int side = 0; side < 2; side++) {
-        add(bottom_beam, {0.0f, BRIDGE_HEIGHT - SUPPORT_HEIGHT, (side == 0 ? -1.0f : 1.0f) * (BRIDGE_WIDTH / 2.0f - 0.3f)}, IDENTITY);
+        add(bottom_beam, vec3f::make(0.0f, BRIDGE_HEIGHT - SUPPORT_HEIGHT, (side == 0 ? -1.0f : 1.0f) * (BRIDGE_WIDTH / 2.0f - 0.3f)), quatf::identity());
     }
     Shape *cross_beam = beam({BEAM_THICKNESS, BEAM_THICKNESS * 1.5f, BRIDGE_WIDTH / 2.0f - 0.3f});
     for (int i = 0; i < POSTS; i++) {
-        add(cross_beam, {-BRIDGE_LENGTH / 2.0f + (float)i / (float)(POSTS - 1) * BRIDGE_LENGTH, BRIDGE_HEIGHT - SUPPORT_HEIGHT, 0.0f}, IDENTITY);
+        add(cross_beam, vec3f::make(-BRIDGE_LENGTH / 2.0f + (float)i / (float)(POSTS - 1) * BRIDGE_LENGTH, BRIDGE_HEIGHT - SUPPORT_HEIGHT, 0.0f), quatf::identity());
     }
 
     RigidBodySettings bridge;
@@ -110,7 +108,7 @@ static Shape *make_sphere_box(App &app) {
     CompoundShapeSettings::Child corners[8];
     for (int i = 0; i < 8; i++) {
         const float h = BOX_HALF_EXTENT;
-        corners[i] = {.position = {(i & 4) ? -h : h, (i & 2) ? -h : h, (i & 1) ? -h : h}, .quaternion = IDENTITY, .shape = corner};
+        corners[i] = {.position = vec3f::make((i & 4) ? -h : h, (i & 2) ? -h : h, (i & 1) ? -h : h), .quaternion = quatf::identity(), .shape = corner};
     }
     return app::keep(app, static_compound::create({.children = corners, .num_children = 8}));
 }
@@ -120,8 +118,10 @@ static RigidBody *spawn_box(App &app) {
     settings.shape = state.sphere_box;
     settings.object_layer = state.layers.moving;
     settings.motion_type = MotionType::DYNAMIC;
-    settings.position = {(seeded::next(state.random) - 0.5f) * (BRIDGE_LENGTH - 4.0f), BRIDGE_HEIGHT + 5.0f + seeded::next(state.random) * 3.0f,
-                         (seeded::next(state.random) - 0.5f) * (BRIDGE_WIDTH - 0.5f)};
+    const float x = (seeded::next(state.random) - 0.5f) * (BRIDGE_LENGTH - 4.0f);
+    const float y = BRIDGE_HEIGHT + 5.0f + seeded::next(state.random) * 3.0f;
+    const float z = (seeded::next(state.random) - 0.5f) * (BRIDGE_WIDTH - 0.5f);
+    settings.position = vec3f::make(x, y, z);
     settings.restitution = 0.3f;
     settings.friction = 0.5f;
     return rigid_body::create(*app.world, settings);

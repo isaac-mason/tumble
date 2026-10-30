@@ -124,9 +124,6 @@ static Float3 stored(Vec3f v) {
 
 static bool not_chassis(const RigidBody *body, void *chassis) { return body != static_cast<const RigidBody *>(chassis); }
 
-static Vec3f chassis_position() { return vec3f::load(state.chassis->position); }
-static Quatf chassis_quaternion() { return quatf::load(state.chassis->quaternion); }
-
 /** the impulse along the normal that takes out a fifth of the bodies' relative velocity there */
 static float resolve_single_bilateral_constraint(RigidBody *body_1, Vec3f position_1, RigidBody *body_2, Vec3f position_2,
                                                  Vec3f normal) {
@@ -139,11 +136,9 @@ static float resolve_single_bilateral_constraint(RigidBody *body_1, Vec3f positi
 }
 
 static float compute_impulse_denominator(RigidBody *body, Vec3f position, Vec3f normal) {
-    Float4x4 inverse_inertia;
-    rigid_body::get_inverse_inertia(inverse_inertia, body);
-    const Vec3f r0 = vec3f::subtract(position, vec3f::load(body->position));
+    const Vec3f r0 = vec3f::subtract(position, body->position);
     const Vec3f c0 = vec3f::cross(r0, normal);
-    const Vec3f m = mat4f::multiply3x3_vec(mat4f::load(inverse_inertia), c0);
+    const Vec3f m = mat4f::multiply3x3_vec(rigid_body::get_inverse_inertia(body), c0);
     return body->motion_properties.inv_mass + vec3f::dot(normal, vec3f::cross(m, r0));
 }
 
@@ -158,8 +153,8 @@ static float calc_rolling_friction(RigidBody *body_0, RigidBody *body_1, Vec3f p
 }
 
 static void update_wheel_transform_world(Wheel &wheel) {
-    const Quatf rotation = chassis_quaternion();
-    wheel.chassis_connection_point_world = vec3f::add(chassis_position(), vec3f::transform_quat(wheel.options.chassis_connection_point_local, rotation));
+    const Quatf rotation = state.chassis->quaternion;
+    wheel.chassis_connection_point_world = vec3f::add(state.chassis->position, vec3f::transform_quat(wheel.options.chassis_connection_point_local, rotation));
     wheel.direction_world = vec3f::transform_quat(wheel.options.direction_local, rotation);
     wheel.axle_world = vec3f::transform_quat(wheel.options.axle_local, rotation);
 }
@@ -172,7 +167,7 @@ static void update_wheel_transforms() {
         const Vec3f right = vec3f::normalize(wheel.options.axle_local);
         const Quatf steering = quatf::set_axis_angle(up, wheel.steering);
         const Quatf rotating = quatf::set_axis_angle(right, wheel.rotation);
-        wheel.world_quaternion = quatf::normalize(quatf::multiply(quatf::multiply(chassis_quaternion(), steering), rotating));
+        wheel.world_quaternion = quatf::normalize(quatf::multiply(quatf::multiply(state.chassis->quaternion, steering), rotating));
         wheel.world_position = vec3f::scale_and_add(wheel.chassis_connection_point_world, wheel.direction_world, wheel.suspension_length);
     }
 }
@@ -248,7 +243,7 @@ static void update_wheel_suspension(World &world) {
                                                        0.5f * (options.suspension_rest_length + options.max_suspension_travel));
         const MotionProperties &motion = state.chassis->motion_properties;
         const Vec3f r_cross_up = vec3f::cross(force_point, vec3f::negate(options.direction_local));
-        const float angular = vec3f::dot(r_cross_up, vec3f::multiply(r_cross_up, vec3f::load(motion.inv_inertia_diagonal)));
+        const float angular = vec3f::dot(r_cross_up, vec3f::multiply(r_cross_up, motion.inv_inertia_diagonal));
         const float effective_mass = 1.0f / (motion.inv_mass + angular);
         const float omega = 2.0f * scalar::PI * options.suspension_frequency;
         // stiffer on a surface at an angle to the suspension, up to ten times
@@ -327,8 +322,8 @@ static void update_friction(World &world, float delta_time) {
         }
     }
 
-    const Vec3f position = chassis_position();
-    const Quatf rotation = chassis_quaternion();
+    const Vec3f position = state.chassis->position;
+    const Quatf rotation = state.chassis->quaternion;
     for (Wheel &wheel : state.wheels) {
         if (wheel.forward_impulse != 0.0f) {
             rigid_body::add_impulse_at_position(world, state.chassis, vec3f::scale(wheel.forward_world, wheel.forward_impulse), wheel.hit_point_world);
@@ -350,7 +345,7 @@ static void update_wheel_rotation(float delta_time) {
         const Vec3f velocity = rigid_body::get_velocity_at_point(state.chassis, wheel.chassis_connection_point_world);
         if (wheel.in_contact_with_ground) {
             // rolling with the ground: the chassis' velocity along its forward axis in the ground's plane
-            Vec3f forward = vec3f::transform_quat(vec3f::axis_z(), chassis_quaternion());
+            Vec3f forward = vec3f::transform_quat(vec3f::axis_z(), state.chassis->quaternion);
             forward = vec3f::scale_and_add(forward, wheel.hit_normal_world, -vec3f::dot(forward, wheel.hit_normal_world));
             wheel.delta_rotation = vec3f::dot(forward, velocity) * delta_time / wheel.options.radius;
         }
@@ -433,11 +428,11 @@ static void init(App &app) {
     make_track(app);
 
     RigidBodySettings chassis;
-    chassis.shape = app::keep(app, box::create({.half_extents = {CHASSIS_HALF_WIDTH, CHASSIS_HALF_HEIGHT, CHASSIS_HALF_LENGTH}, .convex_radius = 0.05f}));
+    chassis.shape = app::keep(app, box::create({.half_extents = vec3f::make(CHASSIS_HALF_WIDTH, CHASSIS_HALF_HEIGHT, CHASSIS_HALF_LENGTH), .convex_radius = 0.05f}));
     chassis.object_layer = state.layers.moving;
     chassis.motion_type = MotionType::DYNAMIC;
-    chassis.position = {-16.0f, 10.0f, 90.0f};
-    quatf::store(chassis.quaternion, quatf::set_axis_angle(vec3f::axis_y(), -60.0f * scalar::DEGREES_TO_RADIANS));
+    chassis.position = vec3f::make(-16.0f, 10.0f, 90.0f);
+    chassis.quaternion = quatf::set_axis_angle(vec3f::axis_y(), -60.0f * scalar::DEGREES_TO_RADIANS);
     chassis.mass = 150.0f;
     chassis.restitution = 0.0f;
     chassis.friction = 0.5f;
@@ -563,7 +558,7 @@ static void update(App &app, float delta_time) {
         }
         if (state.show_suspension) {
             // beside the ray, outboard
-            const Float3 offset = vec::rotate(state.chassis->quaternion, {i % 2 == 0 ? -0.1f : 0.1f, 0.0f, 0.0f});
+            const Float3 offset = stored(vec3f::transform_quat(vec3f::make(i % 2 == 0 ? -0.1f : 0.1f, 0.0f, 0.0f), state.chassis->quaternion));
             const Float3 top = vec::add(origin, offset);
             renderer::line(frame, top, vec::scale_and_add(top, direction, fmaxf(0.0f, wheel.suspension_length)), {0.0f, 1.0f, 1.0f, 1.0f});
         }

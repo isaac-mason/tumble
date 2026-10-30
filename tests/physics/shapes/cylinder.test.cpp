@@ -31,14 +31,13 @@ void test_cylinder_create(TestCtx &ctx) {
 
     // bounds: radius in x and z, half height in y; centre of mass at the origin
     c = cylinder::create({.half_height = 2.0f, .radius = 1.5f});
-    CHECK(ctx, c->aabb.min.x == -1.5f && c->aabb.min.y == -2.0f && c->aabb.min.z == -1.5f);
-    CHECK(ctx, c->aabb.max.x == 1.5f && c->aabb.max.y == 2.0f && c->aabb.max.z == 1.5f);
-    CHECK(ctx, vec3f::exact_equals(vec3f::load(c->center_of_mass), vec3f::make(0.0f, 0.0f, 0.0f)));
+    CHECK(ctx, near3(c->aabb.min, -1.5f, -2.0f, -1.5f, 0.0f) && near3(c->aabb.max, 1.5f, 2.0f, 1.5f, 0.0f));
+    CHECK(ctx, vec3f::exact_equals(c->center_of_mass, vec3f::make(0.0f, 0.0f, 0.0f)));
 
     // update after a change
     shapes::as<CylinderShape>(c).radius = 0.5f;
     cylinder::update(c);
-    CHECK(ctx, c->aabb.max.x == 0.5f);
+    CHECK(ctx, vec3f::x(c->aabb.max) == 0.5f);
     CHECK_NEAR(ctx, c->volume, scalar::PI * 0.25f * 4.0f, 1e-5f);
     c = nullptr;
 }
@@ -79,7 +78,8 @@ void test_cylinder_mass_properties(TestCtx &ctx) {
     // m = rho pi r^2 2h; I_yy = m r^2 / 2; I_xx = I_zz = m r^2 / 4 + m (2h)^2 / 12
     const float m = 100.0f * scalar::PI * 0.25f * 2.0f;
     CHECK_NEAR(ctx, props.mass, m, 1e-3f);
-    const float *inertia = props.inertia.m;
+    const Float4x4 inertia_elements = elements(props.inertia);
+    const float *inertia = inertia_elements.m;
     CHECK_NEAR(ctx, inertia[5], m * 0.25f / 2.0f, 1e-3f);
     CHECK_NEAR(ctx, inertia[0], m * 0.25f / 4.0f + m * 4.0f / 12.0f, 1e-3f);
     CHECK(ctx, inertia[10] == inertia[0]);

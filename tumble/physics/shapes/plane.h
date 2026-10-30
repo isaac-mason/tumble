@@ -3,6 +3,8 @@
 #include <stdint.h>
 
 #include "tumble/config.h"
+#include "tumble/math/plane3f.h"
+#include "tumble/math/vec3f.h"
 #include "tumble/physics/shapes/shapes.h"
 
 TUMBLE_NAMESPACE_BEGIN
@@ -12,7 +14,7 @@ TUMBLE_NAMESPACE_BEGIN
 
 struct PlaneShape : Shape {
     static constexpr ShapeType TYPE = ShapeType::PLANE;
-    Plane3f plane;
+    Plane plane;
     /** the bounded extent the plane is treated as having */
     float half_extent;
 };
@@ -25,7 +27,7 @@ constexpr float DEFAULT_PLANE_HALF_EXTENT = 1000.0f;
 
 struct PlaneShapeSettings {
     /** point . normal + constant = 0; the normal is normalised by create */
-    Plane3f plane = {{0.0f, 1.0f, 0.0f}, 0.0f};
+    Plane plane = plane3f::make(vec3f::axis_y(), 0.0f);
     /** half extent of the plane's bounded representation */
     float half_extent = plane::DEFAULT_PLANE_HALF_EXTENT;
     int32_t material_id = -1;
@@ -46,19 +48,19 @@ int32_t get_material(const Shape *shape, SubShapeId sub_shape_id);
 float get_inner_radius(const Shape *shape);
 
 void cast_ray_vs_plane(CastRayCollector &collector, const CastRaySettings &settings, const Rayf &ray,
-                       const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform);
+                       const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform);
 void collide_point_vs_plane(CollidePointCollector &collector, const CollidePointSettings &settings,
                             Vec3f point, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                            const Transformf &transform_b);
+                            const Transform &transform_b);
 
 /** convex a against plane b: a's support point opposite the plane normal, in a's space */
 void collide_convex_vs_plane(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                             const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                             const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                             const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                             const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 /** convex a swept by `displacement_a` against plane b, in the plane's space */
 void cast_convex_vs_plane(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *shape_a,
-                          const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
-                          const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                          const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a, Vec3f displacement_a,
+                          const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 
 ShapeDef def();
 

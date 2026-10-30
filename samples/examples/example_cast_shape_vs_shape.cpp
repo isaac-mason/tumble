@@ -4,6 +4,7 @@
 #include "app/vec.h"
 #include "imgui.h"
 #include "tumble/math/quatf.h"
+#include "tumble/math/transform.h"
 #include "tumble/physics/collision/narrowphase.h"
 #include "tumble/physics/shapes/box.h"
 #include "tumble/physics/shapes/capsule.h"
@@ -76,15 +77,17 @@ static Float3 to_float3(Vec3f v) {
     return out;
 }
 
-static Float4 quat_from_degrees(float x, float y, float z, EulerOrder order) {
+static Quatf quat_from_degrees(float x, float y, float z, EulerOrder order) {
+    return quatf::from_euler({x * scalar::DEGREES_TO_RADIANS, y * scalar::DEGREES_TO_RADIANS, z * scalar::DEGREES_TO_RADIANS, order});
+}
+
+static Float4 quaternion_of(const Pose &pose) {
     Float4 out;
-    quatf::store(out, quatf::from_euler({x * scalar::DEGREES_TO_RADIANS, y * scalar::DEGREES_TO_RADIANS, z * scalar::DEGREES_TO_RADIANS, order}));
+    quatf::store(out, quat_from_degrees(pose.rotation_degrees.x, pose.rotation_degrees.y, pose.rotation_degrees.z, EulerOrder::XYZ));
     return out;
 }
 
-static Float4 quaternion_of(const Pose &pose) { return quat_from_degrees(pose.rotation_degrees.x, pose.rotation_degrees.y, pose.rotation_degrees.z, EulerOrder::XYZ); }
-
-static Transformf transform_of(const Pose &pose) { return {pose.position, quaternion_of(pose), {1.0f, 1.0f, 1.0f}}; }
+static Transform transform_of(const Pose &pose) { return transform::make(vec3f::load(pose.position), quatf::load(quaternion_of(pose))); }
 
 static void edit_pose(const char *label, Pose &pose) {
     ImGui::PushID(label);
@@ -95,11 +98,11 @@ static void edit_pose(const char *label, Pose &pose) {
 }
 
 static Shape *two_boxes(App &app, bool is_static) {
-    Shape *upper = app::keep(app, box::create({.half_extents = {0.8f, 0.5f, 0.8f}}));
-    Shape *lower = app::keep(app, box::create({.half_extents = {0.6f, 0.7f, 0.6f}}));
+    Shape *upper = app::keep(app, box::create({.half_extents = vec3f::make(0.8f, 0.5f, 0.8f)}));
+    Shape *lower = app::keep(app, box::create({.half_extents = vec3f::make(0.6f, 0.7f, 0.6f)}));
     const CompoundShapeSettings::Child children[] = {
-        {.position = {-1.2f, 0.8f, 0.0f}, .quaternion = quat_from_degrees(0.0f, 45.0f, 0.0f, EulerOrder::ZYX), .shape = upper},
-        {.position = {1.0f, -0.6f, 0.0f}, .quaternion = quat_from_degrees(30.0f, -30.0f, 15.0f, EulerOrder::ZYX), .shape = lower},
+        {.position = vec3f::make(-1.2f, 0.8f, 0.0f), .quaternion = quat_from_degrees(0.0f, 45.0f, 0.0f, EulerOrder::ZYX), .shape = upper},
+        {.position = vec3f::make(1.0f, -0.6f, 0.0f), .quaternion = quat_from_degrees(30.0f, -30.0f, 15.0f, EulerOrder::ZYX), .shape = lower},
     };
     if (is_static) return app::keep(app, static_compound::create({.children = children, .num_children = 2}));
     return app::keep(app, compound::create({.children = children, .num_children = 2}));
@@ -107,7 +110,7 @@ static Shape *two_boxes(App &app, bool is_static) {
 
 static void make_shapes(App &app) {
     state.shapes[OPTION_SPHERE] = app::keep(app, sphere::create({.radius = 1.0f}));
-    state.shapes[OPTION_BOX] = app::keep(app, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}));
+    state.shapes[OPTION_BOX] = app::keep(app, box::create({.half_extents = vec3f::splat(1.0f)}));
     state.shapes[OPTION_CAPSULE] = app::keep(app, capsule::create({.half_height_of_cylinder = 1.0f, .radius = 1.0f}));
 
     // suzanne is both the triangle mesh and the hull here
@@ -116,15 +119,18 @@ static void make_shapes(App &app) {
                                                                                                    .num_positions = suzanne.positions.length / 3,
                                                                                                    .indices = suzanne.indices.data,
                                                                                                    .num_indices = suzanne.indices.length}));
-    state.shapes[OPTION_CONVEX_HULL] = app::keep(app, convex_hull::create({.positions = suzanne.positions.data, .num_positions = suzanne.positions.length / 3, .convex_radius = 0.0f}));
+    collections::Array<Vec3f> suzanne_points = model::points(suzanne);
+    state.shapes[OPTION_CONVEX_HULL] =
+        app::keep(app, convex_hull::create({.positions = suzanne_points.data, .num_positions = suzanne_points.length, .convex_radius = 0.0f}));
+    suzanne_points.release();
     model::release(suzanne);
 
     state.shapes[OPTION_COMPOUND] = two_boxes(app, false);
     state.shapes[OPTION_STATIC_COMPOUND] = two_boxes(app, true);
 
-    Shape *rotated = app::keep(app, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}));
+    Shape *rotated = app::keep(app, box::create({.half_extents = vec3f::splat(1.0f)}));
     state.shapes[OPTION_TRANSFORMED_BOX] = app::keep(
-        app, transformed::create({.shape = rotated, .position = {0.0f, 0.0f, 0.0f}, .quaternion = quat_from_degrees(25.0f, 30.0f, 45.0f, EulerOrder::ZYX)}));
+        app, transformed::create({.shape = rotated, .position = vec3f::zero(), .quaternion = quat_from_degrees(25.0f, 30.0f, 45.0f, EulerOrder::ZYX)}));
 }
 
 /** crashcat's setup: both shapes back where they started, the sweep 10 m along x from a */
@@ -154,8 +160,9 @@ static void draw_face(DrawList &frame, const SupportingFace &face, Color color) 
 }
 
 static void update(App &app, float) {
-    const Transformf transform_a = transform_of(state.pose_a);
-    const Transformf transform_b = transform_of(state.pose_b);
+    const Transform transform_a = transform_of(state.pose_a);
+    const Transform transform_b = transform_of(state.pose_b);
+    const Float4 quaternion_a = quaternion_of(state.pose_a);
     const Shape *shape_a = state.shapes[state.shape_a];
     const Shape *shape_b = state.shapes[state.shape_b];
     const Vec3f start = vec3f::load(state.pose_a.position);
@@ -174,9 +181,9 @@ static void update(App &app, float) {
     state.hit = state.collector.hits.length > 0 && state.collector.hits[0].status == CastShapeStatus::COLLIDING ? &state.collector.hits[0] : nullptr;
 
     DrawList &frame = app::frame(app);
-    const Mat4 model_a = matrix::compose(transform_a.position, transform_a.quaternion);
+    const Mat4 model_a = matrix::compose(state.pose_a.position, quaternion_a);
     renderer::mesh(app.renderer, renderer::mesh_of(app.renderer, shape_a), model_a, hex(state.hit ? 0x00ff00 : 0x4488ff));
-    renderer::mesh(app.renderer, renderer::mesh_of(app.renderer, shape_b), matrix::compose(transform_b.position, transform_b.quaternion),
+    renderer::mesh(app.renderer, renderer::mesh_of(app.renderer, shape_b), matrix::compose(state.pose_b.position, quaternion_of(state.pose_b)),
                    hex(state.hit ? 0x00ff00 : 0xff8844));
     renderer::point(frame, state.displacement_endpoint, 0.2f, hex(0x00ff00));
     renderer::line(frame, state.pose_a.position, state.displacement_endpoint, hex(0x00ff00));
@@ -184,7 +191,7 @@ static void update(App &app, float) {
     if (state.hit == nullptr) return;
     const CastShapeHit &hit = *state.hit;
     const Vec3f hit_position = vec3f::scale_and_add(start, displacement, hit.fraction);
-    renderer::mesh(app.renderer, renderer::mesh_of(app.renderer, shape_a), matrix::compose(to_float3(hit_position), transform_a.quaternion),
+    renderer::mesh(app.renderer, renderer::mesh_of(app.renderer, shape_a), matrix::compose(to_float3(hit_position), quaternion_a),
                    hex(0xffff00, 0.3f));
     draw_face(frame, hit.face_a, hex(0xff0000));
     draw_face(frame, hit.face_b, hex(0x00ff00));

@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include "cgltf.h"
+#include "tumble/math/vec3f.h"
 
 using namespace tumble;
 
@@ -92,6 +93,14 @@ void release(Model &model) {
     model.colors.release();
     model.indices.release();
     model.loaded = false;
+}
+
+collections::Array<Vec3f> points(const Model &model, uint32_t max_points) {
+    const uint32_t count = model.positions.length / 3 < max_points ? model.positions.length / 3 : max_points;
+    collections::Array<Vec3f> out = {};
+    out.reserve(count);
+    for (uint32_t i = 0; i < count; i++) out.push(vec3f::load(model.positions.data, i * 3));
+    return out;
 }
 
 }

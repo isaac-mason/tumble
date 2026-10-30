@@ -27,7 +27,7 @@ static struct {
     float motor_speed;
 } state;
 
-static Float4 quat_z(float angle) { return {0.0f, 0.0f, scalar::sin(0.5f * angle), scalar::cos(0.5f * angle)}; }
+static Quatf quat_z(float angle) { return quatf::set_axis_angle(vec3f::axis_z(), angle); }
 
 static void update_motor_targets(App &app) {
     for (int i = 0; i < state.num_crank_hinges; i++) {
@@ -35,10 +35,9 @@ static void update_motor_targets(App &app) {
     }
 }
 
-static RigidBody *add_part(App &app, Float3 full_extents, Float3 position, float angle) {
+static RigidBody *add_part(App &app, Vec3f full_extents, Vec3f position, float angle) {
     RigidBodySettings settings;
-    settings.shape =
-        app::keep(app, box::create({.half_extents = {0.5f * full_extents.x, 0.5f * full_extents.y, 0.5f * full_extents.z}, .convex_radius = 0.02f}));
+    settings.shape = app::keep(app, box::create({.half_extents = vec3f::scale(full_extents, 0.5f), .convex_radius = 0.02f}));
     settings.object_layer = state.layers.moving;
     settings.motion_type = MotionType::DYNAMIC;
     settings.position = position;
@@ -52,15 +51,14 @@ static RigidBody *add_part(App &app, Float3 full_extents, Float3 position, float
 }
 
 /** a hinge about z between points local to each body */
-static ConstraintId hinge(App &app, RigidBody *a, RigidBody *b, Float3 point_a, Float3 point_b,
-                                         MotorSettings motor = {}) {
+static ConstraintId hinge(App &app, RigidBody *a, RigidBody *b, Vec3f point_a, Vec3f point_b, MotorSettings motor = {}) {
     return hinge_constraint::create(*app.world, a, b,
                                     {.point_a = point_a,
                                      .point_b = point_b,
-                                     .hinge_axis_a = {0.0f, 0.0f, 1.0f},
-                                     .hinge_axis_b = {0.0f, 0.0f, 1.0f},
-                                     .normal_axis_a = {1.0f, 0.0f, 0.0f},
-                                     .normal_axis_b = {1.0f, 0.0f, 0.0f},
+                                     .hinge_axis_a = vec3f::axis_z(),
+                                     .hinge_axis_b = vec3f::axis_z(),
+                                     .normal_axis_a = vec3f::axis_x(),
+                                     .normal_axis_b = vec3f::axis_x(),
                                      .space = ConstraintSpace::LOCAL,
                                      .motor_settings = motor});
 }
@@ -70,33 +68,35 @@ static void make_leg_set(App &app, float side, float crank_phase) {
     const float leg_z = side * (0.5f * CHASSIS_DEPTH + 0.5f * PART_DEPTH);
     const float body_pivot_z = side * 0.5f * CHASSIS_DEPTH;
 
-    const Float3 upper_front_leg_full = {1.0f, 3.0f, PART_DEPTH};
-    const Float3 crank_full = {0.5f, 1.0f, PART_DEPTH};
-    const Float3 front_leg_full = {1.0f, LEG_LENGTH, PART_DEPTH};
-    const Float3 horizontal_bar_full = {1.0f, BODY_WIDTH, PART_DEPTH};
-    const Float3 back_leg_full = {1.0f, LEG_LENGTH, PART_DEPTH};
+    const float upper_front_leg_length = 3.0f;
+    const float crank_length = 1.0f;
+    const float horizontal_bar_length = BODY_WIDTH;
 
-    RigidBody *upper_front_leg = add_part(app, upper_front_leg_full, {-2.0f, 0.5f, leg_z}, scalar::PI / 3.0f);
-    hinge(app, upper_front_leg, state.chassis, {0.0f, -0.5f * upper_front_leg_full.y, 0.0f}, {0.0f, BODY_WIDTH * 0.2f, body_pivot_z});
+    RigidBody *upper_front_leg =
+        add_part(app, vec3f::make(1.0f, upper_front_leg_length, PART_DEPTH), vec3f::make(-2.0f, 0.5f, leg_z), scalar::PI / 3.0f);
+    hinge(app, upper_front_leg, state.chassis, vec3f::make(0.0f, -0.5f * upper_front_leg_length, 0.0f),
+          vec3f::make(0.0f, BODY_WIDTH * 0.2f, body_pivot_z));
 
-    RigidBody *crank = add_part(app, crank_full, {BODY_WIDTH * -0.5f, -1.5f / 2.0f, leg_z}, crank_phase);
-    state.crank_hinges[state.num_crank_hinges++] = hinge(app, crank, state.chassis, {0.0f, 0.5f * crank_full.y, 0.0f}, {0.0f, BODY_WIDTH * 0.5f, body_pivot_z},
-                                                         {.min_torque_limit = -1e6f, .max_torque_limit = 1e6f});
+    RigidBody *crank = add_part(app, vec3f::make(0.5f, crank_length, PART_DEPTH), vec3f::make(BODY_WIDTH * -0.5f, -1.5f / 2.0f, leg_z), crank_phase);
+    state.crank_hinges[state.num_crank_hinges++] =
+        hinge(app, crank, state.chassis, vec3f::make(0.0f, 0.5f * crank_length, 0.0f), vec3f::make(0.0f, BODY_WIDTH * 0.5f, body_pivot_z),
+              {.min_torque_limit = -1e6f, .max_torque_limit = 1e6f});
     hinge_constraint::set_motor_state(*hinge_constraint::get(*app.world, state.crank_hinges[state.num_crank_hinges - 1]), MotorState::VELOCITY);
     update_motor_targets(app);
 
-    RigidBody *front_leg = add_part(app, front_leg_full, {BODY_WIDTH * -0.5f, -1.0f, leg_z}, scalar::PI / -6.0f);
-    hinge(app, front_leg, crank, {0.0f, 0.0f, 0.0f}, {0.0f, -0.5f * crank_full.y, 0.0f});
+    RigidBody *front_leg = add_part(app, vec3f::make(1.0f, LEG_LENGTH, PART_DEPTH), vec3f::make(BODY_WIDTH * -0.5f, -1.0f, leg_z), scalar::PI / -6.0f);
+    hinge(app, front_leg, crank, vec3f::zero(), vec3f::make(0.0f, -0.5f * crank_length, 0.0f));
 
-    RigidBody *horizontal_bar = add_part(app, horizontal_bar_full, {0.0f, 0.0f, leg_z}, scalar::PI / -2.5f);
-    hinge(app, horizontal_bar, front_leg, {0.0f, -0.5f * horizontal_bar_full.y, 0.0f}, {0.0f, 0.0f, 0.0f});
+    RigidBody *horizontal_bar =
+        add_part(app, vec3f::make(1.0f, horizontal_bar_length, PART_DEPTH), vec3f::make(0.0f, 0.0f, leg_z), scalar::PI / -2.5f);
+    hinge(app, horizontal_bar, front_leg, vec3f::make(0.0f, -0.5f * horizontal_bar_length, 0.0f), vec3f::zero());
 
-    RigidBody *back_leg = add_part(app, back_leg_full, {BODY_WIDTH * 0.5f, 0.0f, leg_z}, scalar::PI / 4.0f);
-    hinge(app, back_leg, state.chassis, {0.0f, 0.0f, 0.0f}, {0.0f, -BODY_WIDTH * 0.5f, body_pivot_z});
+    RigidBody *back_leg = add_part(app, vec3f::make(1.0f, LEG_LENGTH, PART_DEPTH), vec3f::make(BODY_WIDTH * 0.5f, 0.0f, leg_z), scalar::PI / 4.0f);
+    hinge(app, back_leg, state.chassis, vec3f::zero(), vec3f::make(0.0f, -BODY_WIDTH * 0.5f, body_pivot_z));
 
     // closing the linkage's loops
-    hinge(app, upper_front_leg, front_leg, {0.0f, 1.5f, 0.0f}, {0.0f, 2.5f, 0.0f});
-    hinge(app, back_leg, horizontal_bar, {0.0f, 2.5f, 0.0f}, {0.0f, 5.0f, 0.0f});
+    hinge(app, upper_front_leg, front_leg, vec3f::make(0.0f, 1.5f, 0.0f), vec3f::make(0.0f, 2.5f, 0.0f));
+    hinge(app, back_leg, horizontal_bar, vec3f::make(0.0f, 2.5f, 0.0f), vec3f::make(0.0f, 5.0f, 0.0f));
 }
 
 static void init(App &app) {
@@ -105,10 +105,10 @@ static void init(App &app) {
     app.world = app::create_world(state.layers, {0.0f, -40.0f, 0.0f});
 
     RigidBodySettings ground;
-    ground.shape = app::keep(app, box::create({.half_extents = {5000.0f, 0.5f, 5000.0f}}));
+    ground.shape = app::keep(app, box::create({.half_extents = vec3f::make(5000.0f, 0.5f, 5000.0f)}));
     ground.object_layer = state.layers.not_moving;
     ground.motion_type = MotionType::STATIC;
-    ground.position = {0.0f, -5.5f, 0.0f};
+    ground.position = vec3f::make(0.0f, -5.5f, 0.0f);
     ground.restitution = 0.0f;
     ground.friction = 0.5f;
     ground.collision_groups = GROUP_GROUND;
@@ -118,7 +118,8 @@ static void init(App &app) {
     // turned a quarter about z: its height along world y, its length along world x
     RigidBodySettings chassis;
     chassis.shape =
-        app::keep(app, box::create({.half_extents = {0.5f * BODY_HEIGHT, 0.5f * BODY_WIDTH, 0.5f * CHASSIS_DEPTH}, .convex_radius = 0.05f, .density = 1.0f}));
+        app::keep(app, box::create({.half_extents = vec3f::make(0.5f * BODY_HEIGHT, 0.5f * BODY_WIDTH, 0.5f * CHASSIS_DEPTH), .convex_radius = 0.05f,
+                                    .density = 1.0f}));
     chassis.object_layer = state.layers.moving;
     chassis.motion_type = MotionType::DYNAMIC;
     chassis.quaternion = quat_z(0.5f * scalar::PI);
@@ -139,7 +140,9 @@ static void init(App &app) {
 
 static void follow_robot(App &app, float) {
     // the camera stays where it is and turns to follow the robot
-    camera::look_at(app.camera, app.camera.eye, state.chassis->center_of_mass_position);
+    Float3 target;
+    vec3f::store(target, state.chassis->center_of_mass_position);
+    camera::look_at(app.camera, app.camera.eye, target);
 }
 
 static void ui(App &app) {

@@ -48,8 +48,8 @@ RigidBody *body_at(const TreeScene &world, uint32_t index) { return world.physic
 
 /** a dynamic box body filling the given world-space box. */
 RigidBody *make_body(TreeScene &world, float min_x, float min_y, float min_z, float max_x, float max_y, float max_z) {
-    const Float3 half_extents = {(max_x - min_x) * 0.5f, (max_y - min_y) * 0.5f, (max_z - min_z) * 0.5f};
-    const Float3 center = {(min_x + max_x) * 0.5f, (min_y + max_y) * 0.5f, (min_z + max_z) * 0.5f};
+    const Vec3f half_extents = vec3f::make((max_x - min_x) * 0.5f, (max_y - min_y) * 0.5f, (max_z - min_z) * 0.5f);
+    const Vec3f center = vec3f::make((min_x + max_x) * 0.5f, (min_y + max_y) * 0.5f, (min_z + max_z) * 0.5f);
     RigidBody *body = rigid_body::create(*world.physics,
                                          {.shape = box::create({.half_extents = half_extents}),
                                           .object_layer = 0,
@@ -62,7 +62,7 @@ RigidBody *make_body(TreeScene &world, float min_x, float min_y, float min_z, fl
 }
 
 void move_by(TreeScene &world, RigidBody *body, const Float3 &delta) {
-    rigid_body::set_position(*world.physics, body, vec3f::add(vec3f::load(body->position), vec3f::load(delta)), false);
+    rigid_body::set_position(*world.physics, body, vec3f::add(body->position, vec3f::load(delta)), false);
 }
 
 /** the unit boxes [2i, 2i+1] on a grid of `side` per axis; `side_y` layers high. */
@@ -150,8 +150,7 @@ bool tree_valid(TreeScene &world, uint32_t *max_depth = nullptr) {
                 seen[id]++;
                 const uint32_t location = (uint32_t)body->broadphase_node;
                 ok = ok && (location & 0x3fffffffu) == index && (location >> 30) == i;
-                Box3f fat;
-                ok = ok && aabox::contains(aabox::load(slot), aabox::load(body->aabb)) && equal_boxes(quad_tree::read_body_bounds(fat, tree, *body), slot);
+                ok = ok && aabox::contains(aabox::load(slot), body->aabb) && equal_boxes(quad_tree::read_body_bounds(tree, *body), aabox::load(slot));
                 continue;
             }
             const uint32_t child = quad_tree::node_index(id);
@@ -187,8 +186,7 @@ bool tree_valid(TreeScene &world, uint32_t *max_depth = nullptr) {
 void test_quad_tree_add(TestCtx &ctx) {
     TreeScene world = make_world();
     QuadTree &tree = world.tree;
-    Box3f all;
-    CHECK(ctx, tree.num_bodies == 0 && !tree.dirty && aabox::is_empty(aabox::load(quad_tree::bounds(all, tree))));
+    CHECK(ctx, tree.num_bodies == 0 && !tree.dirty && aabox::is_empty(quad_tree::bounds(tree)));
 
     // the first four take the root's slots in order, each its fat box
     RigidBody *first = nullptr;
@@ -198,8 +196,7 @@ void test_quad_tree_add(TestCtx &ctx) {
         if (i == 0) first = body;
         CHECK(ctx, (uint32_t)body->broadphase_node == (current_root(tree) | (i << 30)));
     }
-    Box3f fat, expected;
-    CHECK(ctx, equal_boxes(quad_tree::read_body_bounds(fat, tree, *first), aabox::store(expected, aabox::expand_by_margin(aabox::load(first->aabb), 0.05f))));
+    CHECK(ctx, equal_boxes(quad_tree::read_body_bounds(tree, *first), aabox::expand_by_margin(first->aabb, 0.05f)));
     CHECK(ctx, tree.dirty && tree.num_bodies == 4);
     const uint32_t old_root = current_root(tree);
 
@@ -211,8 +208,9 @@ void test_quad_tree_add(TestCtx &ctx) {
     CHECK(ctx, tree.nodes[new_root].child_node_id[0] == quad_tree::from_node_index(old_root));
     CHECK(ctx, (uint32_t)fifth->broadphase_node == (new_root | (1u << 30)));
     CHECK(ctx, tree_valid(world));
-    CHECK_NEAR(ctx, quad_tree::bounds(all, tree).min.x, -0.05f, 1e-6f);
-    CHECK_NEAR(ctx, all.max.x, 9.05f, 1e-6f);
+    const AABox all = quad_tree::bounds(tree);
+    CHECK_NEAR(ctx, vec3f::x(all.min), -0.05f, 1e-6f);
+    CHECK_NEAR(ctx, vec3f::x(all.max), 9.05f, 1e-6f);
 
     release_world(world);
 }
@@ -257,8 +255,7 @@ void test_quad_tree_rebuild(TestCtx &ctx) {
     for (uint32_t i = 0; i < world.count; i++) quad_tree::remove(tree, body_at(world, i));
     CHECK(ctx, tree.num_bodies == 0 && tree_valid(world));
     quad_tree::rebuild(tree, world.physics->bodies);
-    Box3f all;
-    CHECK(ctx, tree_valid(world) && aabox::is_empty(aabox::load(quad_tree::bounds(all, tree))));
+    CHECK(ctx, tree_valid(world) && aabox::is_empty(quad_tree::bounds(tree)));
     CHECK(ctx, tree.nodes.length - tree.free_nodes.length == 1);
 
     release_world(world);
@@ -270,19 +267,19 @@ void test_quad_tree_update(TestCtx &ctx) {
     QuadTree &tree = world.tree;
     quad_tree::rebuild(tree, world.physics->bodies);
     RigidBody *body = body_at(world, 20);
-    Box3f before, after, expected;
-    quad_tree::read_body_bounds(before, tree, *body);
+    const AABox before = quad_tree::read_body_bounds(tree, *body);
 
     // inside the fat margin: no escape, nothing marked
     move_by(world, body, {0.03f, 0.0f, 0.0f});
     CHECK(ctx, !quad_tree::update(tree, body) && !tree.dirty);
-    CHECK(ctx, equal_boxes(quad_tree::read_body_bounds(after, tree, *body), before));
+    CHECK(ctx, equal_boxes(quad_tree::read_body_bounds(tree, *body), before));
 
     // out of it: the fat box is replaced (it moves with the body, it does not just grow), the path up is changed and holds it
     move_by(world, body, {3.0f, 1.0f, 0.0f});
     CHECK(ctx, quad_tree::update(tree, body) && tree.dirty);
-    CHECK(ctx, equal_boxes(quad_tree::read_body_bounds(after, tree, *body), aabox::store(expected, aabox::expand_by_margin(aabox::load(body->aabb), 0.05f))));
-    CHECK(ctx, after.min.x > before.max.x - 1.0f);
+    const AABox after = quad_tree::read_body_bounds(tree, *body);
+    CHECK(ctx, equal_boxes(after, aabox::expand_by_margin(body->aabb, 0.05f)));
+    CHECK(ctx, vec3f::x(after.min) > vec3f::x(before.max) - 1.0f);
     for (uint32_t index = (uint32_t)body->broadphase_node & 0x3fffffffu; index != quad_tree::INVALID_NODE_INDEX; index = tree.nodes[index].parent_node_index) {
         CHECK(ctx, tree.nodes[index].is_changed);
     }
@@ -291,7 +288,7 @@ void test_quad_tree_update(TestCtx &ctx) {
     // back to where it was: the box shrinks back with it
     move_by(world, body, {-3.0f, -1.0f, 0.0f});
     CHECK(ctx, quad_tree::update(tree, body));
-    CHECK(ctx, equal_boxes(quad_tree::read_body_bounds(after, tree, *body), aabox::store(expected, aabox::expand_by_margin(aabox::load(body->aabb), 0.05f))));
+    CHECK(ctx, equal_boxes(quad_tree::read_body_bounds(tree, *body), aabox::expand_by_margin(body->aabb, 0.05f)));
 
     release_world(world);
 }
@@ -304,23 +301,26 @@ void test_quad_tree_queries(TestCtx &ctx) {
 
     // an aabb over the 3 x 3 x 3 corner: exactly its 27 boxes
     BodyVisitor visitor = visitor_for(visits);
-    quad_tree::intersect_aabb(world.physics->bodies, world.tree, {{-0.5f, -0.5f, -0.5f}, {4.5f, 4.5f, 4.5f}}, world.filter, visitor);
+    quad_tree::intersect_aabb(world.physics->bodies, world.tree, aabox::make(vec3f::splat(-0.5f), vec3f::splat(4.5f)), world.filter, visitor);
     CHECK(ctx, visits->total == 27);
-    CHECK(ctx, visited_exactly(world, visits, [](const RigidBody &b) { return b.aabb.max.x <= 5.0f && b.aabb.max.y <= 5.0f && b.aabb.max.z <= 5.0f; }));
+    CHECK(ctx, visited_exactly(world, visits, [](const RigidBody &b) {
+              return vec3f::x(b.aabb.max) <= 5.0f && vec3f::y(b.aabb.max) <= 5.0f && vec3f::z(b.aabb.max) <= 5.0f;
+          }));
 
     // a box in a gap, inside the fat margins: the fat leaves reach it, the bodies do not
-    const Box3f gap = {{1.02f, 1.02f, 1.02f}, {1.03f, 1.03f, 1.03f}};
+    const AABox gap = aabox::make(vec3f::splat(1.02f), vec3f::splat(1.03f));
     visitor = visitor_for(visits);
     quad_tree::intersect_aabb(world.physics->bodies, world.tree, gap, world.filter, visitor);
     CHECK(ctx, visits->total == 0);
     visitor = visitor_for(visits);
     quad_tree::intersect_aabb_fat_leaves(world.physics->bodies, world.tree, gap, visitor);
-    CHECK(ctx, visits->total == 1 && body_at(world, visits->first)->aabb.min.x == 0.0f);
+    CHECK(ctx, visits->total == 1 && vec3f::x(body_at(world, visits->first)->aabb.min) == 0.0f);
 
     // a point inside one box, and on the shared face of none (faces included)
     visitor = visitor_for(visits);
     quad_tree::intersect_point(world.physics->bodies, world.tree, vec3f::make(4.5f, 2.5f, 6.5f), world.filter, visitor);
-    CHECK(ctx, visits->total == 1 && body_at(world, visits->first)->aabb.min.x == 4.0f && body_at(world, visits->first)->aabb.min.z == 6.0f);
+    CHECK(ctx, visits->total == 1 && vec3f::x(body_at(world, visits->first)->aabb.min) == 4.0f &&
+                   vec3f::z(body_at(world, visits->first)->aabb.min) == 6.0f);
     visitor = visitor_for(visits);
     quad_tree::intersect_point(world.physics->bodies, world.tree, vec3f::make(5.0f, 2.5f, 6.5f), world.filter, visitor);
     CHECK(ctx, visits->total == 1);
@@ -333,11 +333,11 @@ void test_quad_tree_queries(TestCtx &ctx) {
     // straight up through the column at x = 2, z = 3: its five boxes, closest first
     const Float3 origin = {4.5f, -5.0f, 6.5f};
     const Float3 up = {0.0f, 1.0f, 0.0f};
-    const auto in_column = [](const RigidBody &b) { return b.aabb.min.x == 4.0f && b.aabb.min.z == 6.0f; };
+    const auto in_column = [](const RigidBody &b) { return vec3f::x(b.aabb.min) == 4.0f && vec3f::z(b.aabb.min) == 6.0f; };
     visitor = visitor_for(visits);
     quad_tree::cast_ray(world.physics->bodies, world.tree, {vec3f::load(origin), vec3f::load(up), 20.0f}, world.filter, visitor);
     CHECK(ctx, visits->total == 5 && visited_exactly(world, visits, in_column));
-    CHECK(ctx, visits->first >= 0 && body_at(world, visits->first)->aabb.min.y == 0.0f);
+    CHECK(ctx, visits->first >= 0 && vec3f::y(body_at(world, visits->first)->aabb.min) == 0.0f);
 
     // too short to reach past the third layer
     visitor = visitor_for(visits);
@@ -346,23 +346,27 @@ void test_quad_tree_queries(TestCtx &ctx) {
 
     // a closest-hit visitor prunes everything behind the first box
     float *fractions = util::alloc<float>(MAX_BODIES);
-    for (uint32_t i = 0; i < world.count; i++) fractions[i] = (body_at(world, i)->aabb.min.y - origin.y) / 20.0f;
+    for (uint32_t i = 0; i < world.count; i++) fractions[i] = (vec3f::y(body_at(world, i)->aabb.min) - origin.y) / 20.0f;
     visits->fraction_of = fractions;
     visitor = visitor_for(visits);
     quad_tree::cast_ray(world.physics->bodies, world.tree, {vec3f::load(origin), vec3f::load(up), 20.0f}, world.filter, visitor);
-    CHECK(ctx, visits->total == 1 && body_at(world, visits->first)->aabb.min.y == 0.0f);
+    CHECK(ctx, visits->total == 1 && vec3f::y(body_at(world, visits->first)->aabb.min) == 0.0f);
     visits->fraction_of = nullptr;
 
     // a box swept along +x straddling the rows z = 1 and z = 2 at y = 0: both rows
     visitor = visitor_for(visits);
-    quad_tree::cast_aabb(world.physics->bodies, world.tree, {{-5.75f, 0.25f, 2.75f}, {-4.25f, 0.75f, 4.25f}}, vec3f::make(30.0f, 0.0f, 0.0f), world.filter, visitor);
+    quad_tree::cast_aabb(world.physics->bodies, world.tree, aabox::make(vec3f::make(-5.75f, 0.25f, 2.75f), vec3f::make(-4.25f, 0.75f, 4.25f)),
+                         vec3f::make(30.0f, 0.0f, 0.0f), world.filter, visitor);
     CHECK(ctx, visits->total == 10);
-    CHECK(ctx, visited_exactly(world, visits, [](const RigidBody &b) { return b.aabb.min.y == 0.0f && (b.aabb.min.z == 2.0f || b.aabb.min.z == 4.0f); }));
-    CHECK(ctx, body_at(world, visits->first)->aabb.min.x == 0.0f);
+    CHECK(ctx, visited_exactly(world, visits, [](const RigidBody &b) {
+              return vec3f::y(b.aabb.min) == 0.0f && (vec3f::z(b.aabb.min) == 2.0f || vec3f::z(b.aabb.min) == 4.0f);
+          }));
+    CHECK(ctx, vec3f::x(body_at(world, visits->first)->aabb.min) == 0.0f);
 
     // a still cast is an overlap test of the start bounds
     visitor = visitor_for(visits);
-    quad_tree::cast_aabb(world.physics->bodies, world.tree, {{1.5f, 0.25f, 2.25f}, {4.5f, 0.75f, 2.75f}}, vec3f::make(0.0f, 0.0f, 0.0f), world.filter, visitor);
+    quad_tree::cast_aabb(world.physics->bodies, world.tree, aabox::make(vec3f::make(1.5f, 0.25f, 2.25f), vec3f::make(4.5f, 0.75f, 2.75f)),
+                         vec3f::make(0.0f, 0.0f, 0.0f), world.filter, visitor);
     CHECK(ctx, visits->total == 2);
 
     util::free(fractions);
@@ -371,7 +375,9 @@ void test_quad_tree_queries(TestCtx &ctx) {
 }
 
 /** whether the segment origin + t displacement, t in [0, 1], enters the box (faces included) */
-bool segment_enters(const Float3 &origin, const Float3 &displacement, const Box3f &box) {
+bool segment_enters(const Float3 &origin, const Float3 &displacement, const AABox &register_box) {
+    Box3f box;
+    aabox::store(box, register_box);
     const float o[3] = {origin.x, origin.y, origin.z};
     const float d[3] = {displacement.x, displacement.y, displacement.z};
     const float lo[3] = {box.min.x, box.min.y, box.min.z};
@@ -395,7 +401,10 @@ bool segment_enters(const Float3 &origin, const Float3 &displacement, const Box3
     return t_min <= t_max;
 }
 
-bool boxes_overlap(const Box3f &a, const Box3f &b) {
+bool boxes_overlap(const AABox &register_a, const AABox &register_b) {
+    Box3f a, b;
+    aabox::store(a, register_a);
+    aabox::store(b, register_b);
     return a.min.x <= b.max.x && a.max.x >= b.min.x && a.min.y <= b.max.y && a.max.y >= b.min.y && a.min.z <= b.max.z && a.max.z >= b.min.z;
 }
 
@@ -425,11 +434,10 @@ void test_quad_tree_agrees_with_brute_force(TestCtx &ctx) {
                 }
             } else if (b->broadphase_node != -1) {
                 // the body escapes when its box leaves its fat box
-                Box3f fat;
-                quad_tree::read_body_bounds(fat, world.tree, *b);
+                const AABox fat = quad_tree::read_body_bounds(world.tree, *b);
                 move_by(world, b, {(lcg32_unit(seed) - 0.5f) * 0.4f, 0.0f, (lcg32_unit(seed) - 0.5f) * 0.4f});
                 const bool escaped = quad_tree::update(world.tree, b);
-                escapes_right = escapes_right && escaped == !aabox::contains(aabox::load(fat), aabox::load(b->aabb));
+                escapes_right = escapes_right && escaped == !aabox::contains(fat, b->aabb);
             }
         }
         if (round % 2 == 1) quad_tree::rebuild(world.tree, world.physics->bodies);
@@ -442,8 +450,7 @@ void test_quad_tree_agrees_with_brute_force(TestCtx &ctx) {
     for (uint32_t i = 0; i < world.count; i++) {
         RigidBody *b = body_at(world, i);
         if (b->broadphase_node == -1) continue;
-        Box3f fat;
-        fat_holds = fat_holds && aabox::contains(aabox::load(quad_tree::read_body_bounds(fat, world.tree, *b)), aabox::load(b->aabb));
+        fat_holds = fat_holds && aabox::contains(quad_tree::read_body_bounds(world.tree, *b), b->aabb);
     }
     CHECK(ctx, fat_holds);
 
@@ -460,28 +467,24 @@ void test_quad_tree_agrees_with_brute_force(TestCtx &ctx) {
                 agrees = agrees && visits->times[i] == (b.broadphase_node != -1 && expected(b) ? 1u : 0u);
             }
         };
-        const Box3f region = {{x, 0, z}, {x + 12.0f, 20.0f, z + 12.0f}};
+        const AABox region = aabox::make(vec3f::make(x, 0, z), vec3f::make(x + 12.0f, 20.0f, z + 12.0f));
         check([&](BodyVisitor &v) { quad_tree::intersect_aabb(world.physics->bodies, world.tree, region, world.filter, v); },
               [&](const RigidBody &b) { return boxes_overlap(b.aabb, region); });
         check([&](BodyVisitor &v) { quad_tree::intersect_aabb_fat_leaves(world.physics->bodies, world.tree, region, v); },
-              [&](const RigidBody &b) {
-                  Box3f fat;
-                  return boxes_overlap(quad_tree::read_body_bounds(fat, world.tree, b), region);
-              });
+              [&](const RigidBody &b) { return boxes_overlap(quad_tree::read_body_bounds(world.tree, b), region); });
         const Rayf ray = {vec3f::make(x, 40.0f, z), vec3f::make(0.36f, -0.8f, 0.48f), 60.0f};
         check([&](BodyVisitor &v) { quad_tree::cast_ray(world.physics->bodies, world.tree, ray, world.filter, v); },
               [&](const RigidBody &b) { return segment_enters({x, 40.0f, z}, {0.36f * 60.0f, -0.8f * 60.0f, 0.48f * 60.0f}, b.aabb); });
         // a box cast is its centre cast against every box grown by its half extents
-        const Box3f swept = {{x, 2.0f, -10.0f}, {x + 1.5f, 3.5f, -8.5f}};
+        const AABox swept = aabox::make(vec3f::make(x, 2.0f, -10.0f), vec3f::make(x + 1.5f, 3.5f, -8.5f));
         check([&](BodyVisitor &v) { quad_tree::cast_aabb(world.physics->bodies, world.tree, swept, vec3f::make(0.0f, 0.0f, 120.0f), world.filter, v); },
               [&](const RigidBody &b) {
-                  const Box3f grown = {{b.aabb.min.x - 0.75f, b.aabb.min.y - 0.75f, b.aabb.min.z - 0.75f},
-                                       {b.aabb.max.x + 0.75f, b.aabb.max.y + 0.75f, b.aabb.max.z + 0.75f}};
+                  const AABox grown = aabox::make(vec3f::subtract(b.aabb.min, vec3f::splat(0.75f)), vec3f::add(b.aabb.max, vec3f::splat(0.75f)));
                   return segment_enters({x + 0.75f, 2.75f, -9.25f}, {0.0f, 0.0f, 120.0f}, grown);
               });
-        const Float3 point = {x, lcg32_unit(seed) * 30.0f, z};
-        check([&](BodyVisitor &v) { quad_tree::intersect_point(world.physics->bodies, world.tree, vec3f::load(point), world.filter, v); },
-              [&](const RigidBody &b) { return aabox::contains_point(aabox::load(b.aabb), vec3f::load(point)); });
+        const Vec3f point = vec3f::make(x, lcg32_unit(seed) * 30.0f, z);
+        check([&](BodyVisitor &v) { quad_tree::intersect_point(world.physics->bodies, world.tree, point, world.filter, v); },
+              [&](const RigidBody &b) { return aabox::contains_point(b.aabb, point); });
     }
     CHECK(ctx, agrees);
 

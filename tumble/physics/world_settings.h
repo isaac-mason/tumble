@@ -4,6 +4,7 @@
 
 #include "tumble/config.h"
 #include "tumble/math/types.h"
+#include "tumble/math/vec3f.h"
 #include "tumble/physics/layers.h"
 
 TUMBLE_NAMESPACE_BEGIN
@@ -77,7 +78,7 @@ struct WorldSettings {
 
     Layers layers;
     /** m/s2 */
-    Float3 gravity = {0.0f, -9.81f, 0.0f};
+    Vec3f gravity = vec3f::make(0.0f, -9.81f, 0.0f);
     bool gravity_enabled = true;
     Contacts contacts;
     Narrowphase narrowphase;

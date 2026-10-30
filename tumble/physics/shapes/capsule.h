@@ -34,7 +34,7 @@ Shape *create(const CapsuleShapeSettings &settings);
 void update(Shape *shape);
 
 float compute_capsule_volume(float half_height_of_cylinder, float radius);
-void compute_capsule_local_bounds(Box3f &out, float half_height_of_cylinder, float radius);
+AABox compute_capsule_local_bounds(float half_height_of_cylinder, float radius);
 Vec3f compute_capsule_center_of_mass();
 
 void set_support(Support &out, const Shape *shape, SupportFunctionMode mode, Vec3f scale);

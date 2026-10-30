@@ -4,6 +4,7 @@
 #include "app/examples.h"
 #include "app/vec.h"
 #include "imgui.h"
+#include "tumble/math/transform.h"
 #include "tumble/physics/query.h"
 #include "tumble/physics/shapes/box.h"
 
@@ -33,17 +34,17 @@ static void init(App &app) {
     WorldSettings settings = world_settings::create();
     state.layer = world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
     world_settings::enable_collision(settings, state.layer, state.layer);
-    settings.gravity = {0.0f, 0.0f, 0.0f};
+    settings.gravity = vec3f::zero();
     app.world = world::create(settings);
 
     RigidBodySettings box_settings;
-    box_settings.shape = app::keep(app, box::create({.half_extents = {2.0f, 2.0f, 2.0f}}));
+    box_settings.shape = app::keep(app, box::create({.half_extents = vec3f::splat(2.0f)}));
     box_settings.object_layer = state.layer;
     box_settings.motion_type = MotionType::STATIC;
-    box_settings.position = {0.0f, 2.0f, 0.0f};
+    box_settings.position = vec3f::make(0.0f, 2.0f, 0.0f);
     rigid_body::create(*app.world, box_settings);
 
-    state.query_shape = app::keep(app, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}));
+    state.query_shape = app::keep(app, box::create({.half_extents = vec3f::splat(0.5f)}));
     state.filter = filter::create(app.world->settings.layers);
     state.collector = collide_shape::create_collector(CollectorKind::ALL);
 
@@ -58,13 +59,15 @@ static void update(App &app, float) {
     // crashcat's clock, as steps
     const float time = (float)state.steps / 60.0f;
     const float x = sinf(time * FREQUENCY) * AMPLITUDE;
-    const Transformf transform = {{x, 2.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}};
+    const Float3 position = {x, 2.0f, 0.0f};
+    const Float4 quaternion = {0.0f, 0.0f, 0.0f, 1.0f};
 
     collide_shape::reset(state.collector);
-    query::collide_shape(*app.world, state.collector, collide_shape::default_settings(), state.query_shape, transform, state.filter);
+    query::collide_shape(*app.world, state.collector, collide_shape::default_settings(), state.query_shape,
+                         transform::make(vec3f::load(position), quatf::load(quaternion)), state.filter);
     state.hit = state.collector.hits.length > 0;
 
-    renderer::mesh(app.renderer, renderer::mesh_of(app.renderer, state.query_shape), matrix::compose(transform.position, transform.quaternion),
+    renderer::mesh(app.renderer, renderer::mesh_of(app.renderer, state.query_shape), matrix::compose(position, quaternion),
                    state.hit ? hex(0x00ff00, 0.7f) : hex(0xff00ff, 0.7f));
     app::label(app, {x, 4.5f, 0.0f}, state.hit ? "hit" : "no hit", {4.0f, 1.0f, 0.5f, hex(0x5f5f5f), state.hit ? hex(0x4caf50) : hex(0xf44336)});
 }

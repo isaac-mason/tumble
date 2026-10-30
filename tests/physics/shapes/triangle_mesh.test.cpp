@@ -92,22 +92,22 @@ static const uint32_t TRIANGLE_INDICES_FLIPPED[3] = {0, 2, 1};
 static const float BIG_TRIANGLE_POSITIONS[9] = {0, 0, 0, 2, 0, 0, 0, 2, 0};
 
 static void collide(CollideShapeCollector &collector, const CollideShapeSettings &settings, const Shape *a,
-                    const Transformf &transform_a, const Shape *b, const Transformf &transform_b) {
+                    const Transform &transform_a, const Shape *b, const Transform &transform_b) {
     shapes::collide_fn(a->type, b->type)(collector, settings, a, NO_SUB_SHAPE, transform_a, b, NO_SUB_SHAPE, transform_b);
 }
 
 static void cast(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *a,
-                 const Transformf &transform_a, const Float3 &displacement, const Shape *b, const Transformf &transform_b) {
+                 const Transform &transform_a, const Float3 &displacement, const Shape *b, const Transform &transform_b) {
     shapes::cast_fn(a->type, b->type)(collector, settings, a, NO_SUB_SHAPE, transform_a, vec3f::load(displacement), b, NO_SUB_SHAPE, transform_b);
 }
 
 static void ray_cast(CastRayCollector &collector, const CastRaySettings &settings, const Shape *s,
-                     const Transformf &transform, const Float3 &origin, const Float3 &direction, float length) {
+                     const Transform &transform, const Float3 &origin, const Float3 &direction, float length) {
     const Rayf ray = {vec3f::load(origin), vec3f::load(direction), length};
     shapes::def_of(s).cast_ray(collector, settings, ray, s, NO_SUB_SHAPE, transform);
 }
 
-static bool point_inside(const Shape *s, const Transformf &transform, const Float3 &point) {
+static bool point_inside(const Shape *s, const Transform &transform, const Float3 &point) {
     CollidePointCollector collector = collide_point::create_collector(CollectorKind::ANY);
     shapes::def_of(s).collide_point(collector, collide_point::default_settings(), vec3f::load(point), s, NO_SUB_SHAPE, transform);
     const bool inside = collector.has_hit;
@@ -145,29 +145,29 @@ void test_triangle_mesh_create_and_mass(TestCtx &ctx) {
     CHECK(ctx, mesh_data(s).triangle_count == 1);
     CHECK(ctx, s->material_id == -1);
     // vertices (0,0,0), (1,0,0), (0,1,0): the bounds are exactly [0,0,0] to [1,1,0]
-    CHECK(ctx, s->aabb.min.x == 0.0f && s->aabb.min.y == 0.0f && s->aabb.min.z == 0.0f);
-    CHECK(ctx, s->aabb.max.x == 1.0f && s->aabb.max.y == 1.0f && s->aabb.max.z == 0.0f);
-    CHECK(ctx, s->center_of_mass.x == 0.0f && s->center_of_mass.y == 0.0f && s->center_of_mass.z == 0.0f);
+    CHECK(ctx, near3(s->aabb.min, 0.0f, 0.0f, 0.0f, 0.0f) && near3(s->aabb.max, 1.0f, 1.0f, 0.0f, 0.0f));
+    CHECK(ctx, vec3f::exact_equals(s->center_of_mass, vec3f::zero()));
     CHECK(ctx, s->volume == 0.0f);
 
     // static geometry: zero mass, unit inertia; no sphere fits inside a sheet
     MassProperties props;
     shapes::compute_mass_properties(props, s);
     CHECK(ctx, props.mass == 0.0f);
-    CHECK(ctx, props.inertia.m[0] == 1.0f && props.inertia.m[5] == 1.0f && props.inertia.m[10] == 1.0f && props.inertia.m[1] == 0.0f);
+    const Float4x4 inertia = elements(props.inertia);
+    CHECK(ctx, inertia.m[0] == 1.0f && inertia.m[5] == 1.0f && inertia.m[10] == 1.0f && inertia.m[1] == 0.0f);
     CHECK(ctx, shapes::get_shape_inner_radius(s) == 0.0f);
 
     // update recomputes the bounds from the bvh root
-    s->aabb = {{9, 9, 9}, {9, 9, 9}};
+    s->aabb = aabox::make(vec3f::splat(9.0f), vec3f::splat(9.0f));
     triangle_mesh::update(s);
-    CHECK(ctx, s->aabb.max.x == 1.0f && s->aabb.max.y == 1.0f && s->aabb.min.z == 0.0f);
+    CHECK(ctx, vec3f::x(s->aabb.max) == 1.0f && vec3f::y(s->aabb.max) == 1.0f && vec3f::z(s->aabb.min) == 0.0f);
     drop(s);
 
     const float two_positions[12] = {0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1};
     const uint32_t two_indices[6] = {0, 1, 2, 1, 2, 3};
     Ref<Shape> two = mesh(two_positions, two_indices);
     CHECK(ctx, mesh_data(two).triangle_count == 2);
-    CHECK(ctx, two->aabb.max.z == 1.0f);
+    CHECK(ctx, vec3f::z(two->aabb.max) == 1.0f);
     drop(two);
 
     // shape and mesh return every byte
@@ -380,7 +380,7 @@ void test_triangle_mesh_ray_closed_cube(TestCtx &ctx) {
 
     // the cube turned a quarter about y and moved to x = 10: (x, y, z) -> (z, y, -x) + (10, 0, 0), so it spans
     // x in [10, 11], z in [-1, 0]; a ray down from above at (10.4, 3, -0.3) meets the top at y = 1 after 2 of 4
-    const Transformf turned = pose({10, 0, 0}, stored_axis_angle(vec3f::make(0, 1, 0), scalar::PI * 0.5f));
+    const Transform turned = pose({10, 0, 0}, stored_axis_angle(vec3f::make(0, 1, 0), scalar::PI * 0.5f));
     cast_ray::reset(closest);
     ray_cast(closest, RAY_FRONT, cube, turned, {10.4f, 3, -0.3f}, {0, -1, 0}, 4);
     CHECK(ctx, closest.has_hit);
@@ -448,7 +448,7 @@ void test_triangle_mesh_collide_point(TestCtx &ctx) {
     CHECK(ctx, !point_inside(cube, pose({0, 0, 0}), {2.5f, 0.3f, 0.6f}));
 
     // turned a quarter about y and moved to x = 10: spans x in [10, 11], z in [-1, 0]
-    const Transformf turned = pose({10, 0, 0}, stored_axis_angle(vec3f::make(0, 1, 0), scalar::PI * 0.5f));
+    const Transform turned = pose({10, 0, 0}, stored_axis_angle(vec3f::make(0, 1, 0), scalar::PI * 0.5f));
     CHECK(ctx, point_inside(cube, turned, {10.6f, 0.3f, -0.2f}));
     CHECK(ctx, !point_inside(cube, turned, {10.6f, 0.3f, 0.2f}));
 
@@ -606,7 +606,7 @@ void test_triangle_mesh_convex_collide(TestCtx &ctx) {
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
 
     // a box 0.3 into the face from above: the axis down into the triangle
-    Ref<Shape> cube = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.0f, .material_id = 6});
+    Ref<Shape> cube = box::create({.half_extents = vec3f::splat(0.5f), .convex_radius = 0.0f, .material_id = 6});
     collide(collector, settings, cube, pose({0.5f, 0.5f, 0.2f}), tri, pose({0, 0, 0}));
     CHECK(ctx, collector.hits.length == 1);
     CHECK_NEAR(ctx, collector.hits[0].penetration, 0.3f, 1e-4f);
@@ -620,7 +620,7 @@ void test_triangle_mesh_convex_collide(TestCtx &ctx) {
     collide(collector, settings, pill, pose({0.5f, 0.5f, 0.15f}), tri, pose({0, 0, 0}));
     CHECK(ctx, collector.hits.length == 1);
     CHECK_NEAR(ctx, collector.hits[0].penetration, 0.15f, 1e-4f);
-    Ref<Shape> small = box::create({.half_extents = {0.3f, 0.3f, 0.3f}});
+    Ref<Shape> small = box::create({.half_extents = vec3f::splat(0.3f)});
     collide_shape::reset(collector);
     collide(collector, settings, small, pose({2.2f, 0, 0}), tri, pose({0, 0, 0}));
     CHECK(ctx, collector.hits.length == 1);
@@ -661,9 +661,9 @@ void test_triangle_mesh_convex_collide(TestCtx &ctx) {
     CHECK_NEAR(ctx, deepest_penetration(collector), 0.1f, 1e-4f);
     for (uint32_t i = 0; i < collector.hits.length; i++) {
         const uint32_t t = triangle_of(floor, collector.hits[i].sub_shape_id_b);
-        Box3f bounds;
-        triangle_mesh_data::calculate_triangle_aabb(bounds, mesh_data(floor), t);
-        CHECK(ctx, bounds.max.x >= 5.0f - 1e-6f && bounds.min.x <= 5.6f && bounds.max.z >= 5.3f && bounds.min.z <= 5.9f);
+        const AABox bounds = triangle_mesh_data::calculate_triangle_aabb(mesh_data(floor), t);
+        CHECK(ctx, vec3f::x(bounds.max) >= 5.0f - 1e-6f && vec3f::x(bounds.min) <= 5.6f && vec3f::z(bounds.max) >= 5.3f &&
+                       vec3f::z(bounds.min) <= 5.9f);
     }
 
     cube = nullptr;
@@ -676,7 +676,7 @@ void test_triangle_mesh_convex_collide(TestCtx &ctx) {
 void test_triangle_mesh_box_sliding_on_grid(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> floor = grid(6, 1.0f);
-    Ref<Shape> crate = box::create({.half_extents = {0.3f, 0.3f, 0.3f}, .convex_radius = 0.0f});
+    Ref<Shape> crate = box::create({.half_extents = vec3f::splat(0.3f), .convex_radius = 0.0f});
     const Float3 slide = {1, 0, 0};
 
     // active edges with no movement hint (the default), with the slide as the hint, and off
@@ -734,7 +734,7 @@ void test_triangle_mesh_box_sliding_on_grid(TestCtx &ctx) {
     for (uint32_t i = 0; i < cast_collector.hits.length; i++) CHECK(ctx, vec3f::dot(unit(cast_collector.hits[i].penetration_axis), vec3f::load(slide)) <= 1e-4f);
     // the grid turned half way round about y and moved back over [0, 6]^2: the hint is world space, so it is
     // turned into the mesh's space with it and the slide is still unimpeded
-    const Transformf turned = pose({6, 0, 6}, stored_axis_angle(vec3f::make(0, 1, 0), scalar::PI));
+    const Transform turned = pose({6, 0, 6}, stored_axis_angle(vec3f::make(0, 1, 0), scalar::PI));
     cast_shape::reset(cast_collector);
     cast(cast_collector, cast_settings, crate, pose({1.0f, 0.4f, 2.43f}), {3, -0.4f, 0}, floor, turned);
     CHECK(ctx, cast_collector.hits.length > 2);
@@ -929,7 +929,7 @@ void test_triangle_mesh_cast_onto_ramp(TestCtx &ctx) {
     const float flat_positions[12] = {-5, 0, -5, 5, 0, -5, 5, 0, 5, -5, 0, 5};
     const uint32_t flat_indices[6] = {0, 2, 1, 0, 3, 2};
     Ref<Shape> flat = mesh(flat_positions, flat_indices);
-    const Transformf tilted = pose({0, 1, 0}, stored_axis_angle(vec3f::make(0, 0, 1), angle));
+    const Transform tilted = pose({0, 1, 0}, stored_axis_angle(vec3f::make(0, 0, 1), angle));
     cast_shape::reset(collector);
     cast(collector, settings, ball, pose(start), {0, -8, 0}, flat, tilted);
     CHECK(ctx, collector.has_hit);
@@ -958,7 +958,7 @@ void test_triangle_mesh_convex_cast(TestCtx &ctx) {
     const CastShapeSettings settings = cast_shape::default_settings();
     CastShapeCollector collector = cast_shape::create_collector(CollectorKind::ALL);
     Ref<Shape> down = mesh(TRIANGLE_POSITIONS, TRIANGLE_INDICES_FLIPPED);
-    Ref<Shape> cube = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.0f, .material_id = 3});
+    Ref<Shape> cube = box::create({.half_extents = vec3f::splat(0.5f), .convex_radius = 0.0f, .material_id = 3});
 
     // up from z = -2 by 2.5 into the face: its top at -1.5 meets z = 0 after 1.5 of 2.5
     cast(collector, settings, cube, pose({0.25f, 0.25f, -2}), {0, 0, 2.5f}, down, pose({0, 0, 0}));
@@ -1028,7 +1028,7 @@ void test_triangle_mesh_closest_cast_orders_overlaps(TestCtx &ctx) {
     const uint32_t indices[12] = {0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7};
     Ref<Shape> meshes[2] = {mesh(left_first, indices), mesh(right_first, indices)};
     Ref<Shape> ball = sphere::create({.radius = 0.5f});
-    Ref<Shape> crate = box::create({.half_extents = {0.25f, 0.5f, 0.25f}, .convex_radius = 0.0f});
+    Ref<Shape> crate = box::create({.half_extents = vec3f::make(0.25f, 0.5f, 0.25f), .convex_radius = 0.0f});
 
     for (Shape *m : meshes) {
         // a radius 0.5 sphere at (0, 0.4) starts 0.1 into the left quad and 0.4 into the right: the deeper wins
@@ -1059,7 +1059,7 @@ void test_triangle_mesh_closest_cast_orders_overlaps(TestCtx &ctx) {
 void test_triangle_mesh_scaled_poses(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> quad = mesh(QUAD_POSITIONS, QUAD_INDICES);
-    Ref<Shape> cube = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> cube = box::create({.half_extents = vec3f::splat(0.5f)});
     Ref<Shape> ball = sphere::create({.radius = 1.0f});
     const CollideShapeSettings settings = collide_shape::default_settings();
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
@@ -1128,7 +1128,7 @@ void test_triangle_mesh_scaled_poses(TestCtx &ctx) {
     CollideShapeSettings faces = settings;
     faces.collect_faces = true;
     Ref<Shape> tri = mesh(TRIANGLE_POSITIONS, TRIANGLE_INDICES);
-    Ref<Shape> sharp = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.0f});
+    Ref<Shape> sharp = box::create({.half_extents = vec3f::splat(0.5f), .convex_radius = 0.0f});
     collide_shape::reset(collector);
     collide(collector, faces, sharp, pose({1, 1, 0.4f}), tri, pose({0, 0, 0}, identity, {2, 3, 1}));
     CHECK(ctx, collector.hits.length > 0 && collector.hits[0].face_b.num_vertices == 3);
@@ -1157,7 +1157,7 @@ void test_triangle_mesh_reversed_pairs(TestCtx &ctx) {
     const int32_t materials[2] = {5, 5};
     Ref<Shape> quad = mesh(positions, indices, materials);
     Ref<Shape> ball = sphere::create({.radius = 0.5f, .material_id = 1});
-    Ref<Shape> crate = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.0f, .material_id = 2});
+    Ref<Shape> crate = box::create({.half_extents = vec3f::splat(0.5f), .convex_radius = 0.0f, .material_id = 2});
 
     // the mesh as a against a sphere 0.1 into it: the axis moves the sphere (b) out, up
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
@@ -1242,8 +1242,8 @@ void test_triangle_mesh_mirrored_faces(TestCtx &ctx) {
     dispatch::init();
     // mirrored in x the quad spans x in [-1, 0] and still faces +y; the triangle face each hit reports must too
     Ref<Shape> quad = mesh(QUAD_POSITIONS, QUAD_INDICES);
-    const Transformf mirrored = pose({0, 0, 0}, {0, 0, 0, 1}, {-1, 1, 1});
-    Ref<Shape> crate = box::create({.half_extents = {0.25f, 0.25f, 0.25f}, .convex_radius = 0.0f});
+    const Transform mirrored = pose({0, 0, 0}, {0, 0, 0, 1}, {-1, 1, 1});
+    Ref<Shape> crate = box::create({.half_extents = vec3f::splat(0.25f), .convex_radius = 0.0f});
     Ref<Shape> ball = sphere::create({.radius = 0.25f});
 
     CastShapeSettings cast_settings = cast_shape::default_settings();

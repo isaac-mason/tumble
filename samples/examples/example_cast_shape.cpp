@@ -6,6 +6,7 @@
 #include "app/vec.h"
 #include "imgui.h"
 #include "tumble/math/quatf.h"
+#include "tumble/math/transform.h"
 #include "tumble/physics/query.h"
 #include "tumble/physics/shapes/box.h"
 #include "tumble/physics/shapes/capsule.h"
@@ -148,7 +149,7 @@ static void update_from_options(App &app) {
     const float distance = 2.0f * amount;
     const float scale = 1.0f + (0.2f - 1.0f) * amount;
     Shape *shape = state.shapes[state.shape_type];
-    if (state.mesh_count > 1) shape = app::keep(app, scaled::create({.shape = shape, .scale = {scale, scale, scale}}));
+    if (state.mesh_count > 1) shape = app::keep(app, scaled::create({.shape = shape, .scale = vec3f::splat(scale)}));
 
     for (int i = 0; i < state.mesh_count; i++) {
         MeshObject mesh;
@@ -160,8 +161,8 @@ static void update_from_options(App &app) {
         settings.shape = shape;
         settings.object_layer = state.layers.moving;
         settings.motion_type = MotionType::STATIC;
-        settings.position = mesh.position;
-        settings.quaternion = mesh.spin.quaternion;
+        settings.position = vec3f::load(mesh.position);
+        settings.quaternion = quatf::load(mesh.spin.quaternion);
         mesh.body = rigid_body::create(*app.world, settings);
         app::set_color(app, mesh.body, hex(0xe91e63));
         state.meshes.push(mesh);
@@ -187,10 +188,10 @@ static void init(App &app) {
 
     state.shapes[TORUS_KNOT] = make_torus_knot(app);
     state.shapes[SPHERE] = app::keep(app, sphere::create({.radius = 1.0f}));
-    state.shapes[BOX] = app::keep(app, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}));
+    state.shapes[BOX] = app::keep(app, box::create({.half_extents = vec3f::splat(1.0f)}));
     state.shapes[CAPSULE] = app::keep(app, capsule::create({.half_height_of_cylinder = 1.0f, .radius = 0.5f}));
     state.cast_shapes[CAST_SPHERE] = app::keep(app, sphere::create({.radius = 0.1f}));
-    state.cast_shapes[CAST_BOX] = app::keep(app, box::create({.half_extents = {0.1f, 0.1f, 0.1f}}));
+    state.cast_shapes[CAST_BOX] = app::keep(app, box::create({.half_extents = vec3f::splat(0.1f)}));
     state.cast_shapes[CAST_CAPSULE] = app::keep(app, capsule::create({.half_height_of_cylinder = 0.1f, .radius = 0.075f}));
     update_from_options(app);
 
@@ -224,10 +225,10 @@ static void update(App &app, float) {
     for (uint32_t i = 0; i < state.shapecasters.length; i++) {
         const Float3 origin = vec::rotate(state.shapecasters[i].quaternion, {POINT_DISTANCE, 0.0f, 0.0f});
         const Float3 displacement = vec::scale(vec::normalize(vec::scale(origin, -1.0f)), POINT_DISTANCE);
-        const Transformf transform = {origin, identity, {1.0f, 1.0f, 1.0f}};
+        const Transform start = transform::make(vec3f::load(origin), quatf::load(identity));
 
         cast_shape::reset(state.collector);
-        query::cast_shape(*app.world, state.collector, cast_shape::default_settings(), cast, transform, vec3f::load(displacement), state.filter);
+        query::cast_shape(*app.world, state.collector, cast_shape::default_settings(), cast, start, vec3f::load(displacement), state.filter);
         const CastShapeHit *hit = cast_shape::hit(state.collector);
         // the shape's centre where it first touches, or the end of the cast without a hit
         const Float3 end = vec::scale_and_add(origin, displacement, hit != nullptr ? hit->fraction : 1.0f);

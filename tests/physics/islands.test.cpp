@@ -24,9 +24,9 @@ RigidBody *add_sphere(IslandScene &scene, MotionType motion_type, const Float3 &
 /** a touching contact between two unit spheres side by side along x */
 void touch(TestCtx &ctx, IslandScene &scene, RigidBody *a, RigidBody *b) {
     Float3 point;
-    vec3f::store(point, vec3f::lerp(vec3f::load(a->position), vec3f::load(b->position), 0.5f));
+    vec3f::store(point, vec3f::lerp(a->position, b->position, 0.5f));
     Float3 normal;
-    vec3f::store(normal, unit(vec3f::subtract(vec3f::load(b->position), vec3f::load(a->position))));
+    vec3f::store(normal, unit(vec3f::subtract(b->position, a->position)));
     CHECK(ctx, add_contact(scene.contact, a, b, touching_manifold(&point, 1, normal)));
 }
 
@@ -82,7 +82,7 @@ void test_islands_link_bodies_unions_to_the_lowest(TestCtx &ctx) {
 void test_islands_three_touching_bodies_one_island(TestCtx &ctx) {
     IslandScene scene = make_island_scene();
     RigidBody *ground =
-        add_contact_body(scene.contact, box::create({.half_extents = {20.0f, 0.5f, 20.0f}}), MotionType::STATIC, {0.0f, -0.5f, 0.0f});
+        add_contact_body(scene.contact, box::create({.half_extents = vec3f::make(20.0f, 0.5f, 20.0f)}), MotionType::STATIC, {0.0f, -0.5f, 0.0f});
     RigidBody *a = add_sphere(scene, MotionType::DYNAMIC, {0.0f, 0.5f, 0.0f});
     RigidBody *b = add_sphere(scene, MotionType::DYNAMIC, {1.0f, 0.5f, 0.0f});
     RigidBody *c = add_sphere(scene, MotionType::DYNAMIC, {2.0f, 0.5f, 0.0f});
@@ -153,7 +153,7 @@ void test_islands_user_constraint_links_two_islands(TestCtx &ctx) {
 
     // a joint between them makes one island holding the constraint
     const ConstraintId joint =
-        point_constraint::create(*scene.contact.world, a, b, {.point_a = {2.5f, 0.0f, 0.0f}, .point_b = {2.5f, 0.0f, 0.0f}});
+        point_constraint::create(*scene.contact.world, a, b, {.point_a = vec3f::make(2.5f, 0.0f, 0.0f), .point_b = vec3f::make(2.5f, 0.0f, 0.0f)});
     build(scene, true);
     CHECK(ctx, scene.contact.world->islands.islands.length == 1);
     const Islands::Island &island = islands::sorted_island(scene.contact.world->islands, 0);
@@ -163,7 +163,7 @@ void test_islands_user_constraint_links_two_islands(TestCtx &ctx) {
 
     // a joint to a static anchor goes with the dynamic body's island and links no static body in
     const ConstraintId hang = point_constraint::create(*scene.contact.world, anchor, b,
-                                                                      {.point_a = {5.0f, 10.0f, 0.0f}, .point_b = {5.0f, 10.0f, 0.0f}});
+                                                                      {.point_a = vec3f::make(5.0f, 10.0f, 0.0f), .point_b = vec3f::make(5.0f, 10.0f, 0.0f)});
     build(scene, true);
     CHECK(ctx, scene.contact.world->islands.islands.length == 1 && islands::sorted_island(scene.contact.world->islands, 0).constraint_ids.length == 2);
     CHECK(ctx, islands::sorted_island(scene.contact.world->islands, 0).body_indices.length == 2);
@@ -209,7 +209,7 @@ void test_islands_iteration_counts(TestCtx &ctx) {
     // a constraint asking for 12 velocity steps and the default position steps raises the lone island's counts
     RigidBody *anchor = add_sphere(scene, MotionType::STATIC, {10.0f, 5.0f, 0.0f});
     point_constraint::create(*scene.contact.world, anchor, body_other,
-                             {.point_a = {10.0f, 5.0f, 0.0f}, .point_b = {10.0f, 5.0f, 0.0f}, .num_velocity_steps_override = 12});
+                             {.point_a = vec3f::make(10.0f, 5.0f, 0.0f), .point_b = vec3f::make(10.0f, 5.0f, 0.0f), .num_velocity_steps_override = 12});
     build(scene, true);
     const Islands::Island &raised = islands::sorted_island(scene.contact.world->islands, (uint32_t)island_of(scene, body_other));
     CHECK(ctx, raised.num_velocity_steps == 12 && raised.num_position_steps == 5);

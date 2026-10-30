@@ -43,13 +43,13 @@ struct ConeConstraint {
 
 struct ConeConstraintSettings {
     /** pivot point on body a */
-    Float3 point_a = {0.0f, 0.0f, 0.0f};
+    Vec3f point_a = vec3f::zero();
     /** twist axis on body a (normalized on create) */
-    Float3 twist_axis_a = {1.0f, 0.0f, 0.0f};
+    Vec3f twist_axis_a = vec3f::axis_x();
     /** pivot point on body b */
-    Float3 point_b = {0.0f, 0.0f, 0.0f};
+    Vec3f point_b = vec3f::zero();
     /** twist axis on body b (normalized on create) */
-    Float3 twist_axis_b = {1.0f, 0.0f, 0.0f};
+    Vec3f twist_axis_b = vec3f::axis_x();
     /** half cone angle in radians (0 = no swing, pi/2 = a 90 degree cone) */
     float half_cone_angle = 0.0f;
     ConstraintSpace space = ConstraintSpace::WORLD;

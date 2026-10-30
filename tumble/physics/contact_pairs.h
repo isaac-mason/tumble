@@ -46,12 +46,12 @@ struct ContactPair {
     Side a;
     Side b;
     /** the first contact point on a */
-    Float3 point;
+    Vec3f point;
     /** a to b */
-    Float3 normal;
+    Vec3f normal;
     float penetration_depth;
     /** b's linear velocity less a's */
-    Float3 relative_velocity;
+    Vec3f relative_velocity;
     /** not there the step before */
     bool added;
     Key key;

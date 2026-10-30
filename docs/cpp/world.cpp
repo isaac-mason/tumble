@@ -83,7 +83,7 @@ int main() {
     /* SNIPPET_START: settings */
     ObjectLayers layers;
     WorldSettings settings = make_settings(layers);
-    settings.gravity = {0.0f, -20.0f, 0.0f};
+    settings.gravity = vec3f::make(0.0f, -20.0f, 0.0f);
     settings.solver.velocity_iterations = 8;
     settings.sleeping.time_before_sleep = 1.0f;
     World *world = world::create(settings);
@@ -92,26 +92,26 @@ int main() {
     World *preview = world::create(settings);
     /* SNIPPET_END: settings */
 
-    Ref<Shape> ground_shape = box::create({.half_extents = {20.0f, 0.5f, 20.0f}});
+    Ref<Shape> ground_shape = box::create({.half_extents = vec3f::make(20.0f, 0.5f, 20.0f)});
     Ref<Shape> ball_shape = sphere::create({.radius = 0.5f});
     rigid_body::create(*world, {
         .shape = ground_shape,
         .object_layer = layers.not_moving,
         .motion_type = MotionType::STATIC,
-        .position = {0.0f, -0.5f, 0.0f},
+        .position = vec3f::make(0.0f, -0.5f, 0.0f),
     });
     RigidBody *ball = rigid_body::create(*world, {
         .shape = ball_shape,
         .object_layer = layers.moving,
         .motion_type = MotionType::DYNAMIC,
-        .position = {0.0f, 3.0f, 0.0f},
+        .position = vec3f::make(0.0f, 3.0f, 0.0f),
     });
     RigidBody *ghost = rigid_body::create(*world, {
         .shape = ball_shape,
         .object_layer = layers.moving,
         .motion_type = MotionType::DYNAMIC,
         .user_data = 7,
-        .position = {2.0f, 0.5f, 0.0f},
+        .position = vec3f::make(2.0f, 0.5f, 0.0f),
     });
 
     /* SNIPPET_START: fixed-step */
@@ -161,8 +161,8 @@ int main() {
 
     /* HIDE_START */
     // the ball came to rest on the ground; the ghost, whose pairs were rejected, fell through it
-    const bool ball_rests = ball->position.y > 0.45f && ball->position.y < 0.55f;
-    if (!ball_rests || ghost->position.y > 0.0f || preview == world) return 1;
+    const bool ball_rests = vec3f::y(ball->position) > 0.45f && vec3f::y(ball->position) < 0.55f;
+    if (!ball_rests || vec3f::y(ghost->position) > 0.0f || preview == world) return 1;
     /* HIDE_END */
 
     world::destroy(preview);

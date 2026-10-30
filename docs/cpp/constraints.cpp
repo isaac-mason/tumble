@@ -18,9 +18,9 @@ int main() {
     world_settings::enable_collision(settings, moving, not_moving);
     World *world = world::create(settings);
     Ref<Shape> nothing = empty::create();
-    Ref<Shape> door_shape = box::create({.half_extents = {0.5f, 1.0f, 0.05f}});
+    Ref<Shape> door_shape = box::create({.half_extents = vec3f::make(0.5f, 1.0f, 0.05f)});
     Ref<Shape> ball_shape = sphere::create({.radius = 0.25f});
-    Ref<Shape> block_shape = box::create({.half_extents = {0.5f, 0.1f, 0.5f}});
+    Ref<Shape> block_shape = box::create({.half_extents = vec3f::make(0.5f, 0.1f, 0.5f)});
 
     {
         /* SNIPPET_START: hinge */
@@ -31,21 +31,21 @@ int main() {
             .shape = nothing,
             .object_layer = not_moving,
             .motion_type = MotionType::STATIC,
-            .position = {0.0f, 1.0f, 0.0f},
+            .position = vec3f::make(0.0f, 1.0f, 0.0f),
         });
         RigidBody *door = rigid_body::create(*world, {
             .shape = door_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {0.5f, 1.0f, 0.0f},
+            .position = vec3f::make(0.5f, 1.0f, 0.0f),
         });
         const ConstraintId hinge_id = hinge_constraint::create(*world, frame, door, {
-            .point_a = {0.0f, 1.0f, 0.0f},
-            .point_b = {0.0f, 1.0f, 0.0f},
-            .hinge_axis_a = {0.0f, 1.0f, 0.0f},
-            .hinge_axis_b = {0.0f, 1.0f, 0.0f},
-            .normal_axis_a = {1.0f, 0.0f, 0.0f},
-            .normal_axis_b = {1.0f, 0.0f, 0.0f},
+            .point_a = vec3f::make(0.0f, 1.0f, 0.0f),
+            .point_b = vec3f::make(0.0f, 1.0f, 0.0f),
+            .hinge_axis_a = vec3f::make(0.0f, 1.0f, 0.0f),
+            .hinge_axis_b = vec3f::make(0.0f, 1.0f, 0.0f),
+            .normal_axis_a = vec3f::make(1.0f, 0.0f, 0.0f),
+            .normal_axis_b = vec3f::make(1.0f, 0.0f, 0.0f),
             .limits_min = 0.0f,
             .limits_max = 0.5f * scalar::PI,
             .motor_settings = {.min_torque_limit = -100.0f, .max_torque_limit = 100.0f},
@@ -81,23 +81,23 @@ int main() {
             .shape = nothing,
             .object_layer = not_moving,
             .motion_type = MotionType::STATIC,
-            .position = {10.0f, 5.0f, 0.0f},
+            .position = vec3f::make(10.0f, 5.0f, 0.0f),
         });
         RigidBody *bob = rigid_body::create(*world, {
             .shape = ball_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {12.0f, 5.0f, 0.0f},
+            .position = vec3f::make(12.0f, 5.0f, 0.0f),
         });
         point_constraint::create(*world, anchor, bob, {
-            .point_a = {10.0f, 5.0f, 0.0f},
-            .point_b = {10.0f, 5.0f, 0.0f},
+            .point_a = vec3f::make(10.0f, 5.0f, 0.0f),
+            .point_b = vec3f::make(10.0f, 5.0f, 0.0f),
         });
         /* SNIPPET_END: point */
         /* HIDE_START */
         steps(*world, 90);
-        const float dx = bob->position.x - 10.0f, dy = bob->position.y - 5.0f;
-        if (!near(scalar::sqrt(dx * dx + dy * dy), 2.0f, 0.02f) || bob->position.y > 4.9f) return 1;
+        const float dx = vec3f::x(bob->position) - 10.0f, dy = vec3f::y(bob->position) - 5.0f;
+        if (!near(scalar::sqrt(dx * dx + dy * dy), 2.0f, 0.02f) || vec3f::y(bob->position) > 4.9f) return 1;
         /* HIDE_END */
 
         /* SNIPPET_START: distance */
@@ -106,11 +106,11 @@ int main() {
             .shape = ball_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {14.0f, 5.0f, 0.0f},
+            .position = vec3f::make(14.0f, 5.0f, 0.0f),
         });
         distance_constraint::create(*world, anchor, jumper, {
-            .point_a = {10.0f, 5.0f, 0.0f},
-            .point_b = {14.0f, 5.0f, 0.0f},
+            .point_a = vec3f::make(10.0f, 5.0f, 0.0f),
+            .point_b = vec3f::make(14.0f, 5.0f, 0.0f),
             .min_distance = 0.0f,
             .max_distance = 3.0f,
             .spring_settings = {
@@ -122,7 +122,7 @@ int main() {
         /* SNIPPET_END: distance */
         /* HIDE_START */
         steps(*world, 240);
-        const float jx = jumper->position.x - 10.0f, jy = jumper->position.y - 5.0f;
+        const float jx = vec3f::x(jumper->position) - 10.0f, jy = vec3f::y(jumper->position) - 5.0f;
         if (scalar::sqrt(jx * jx + jy * jy) > 3.3f) return 1;
         /* HIDE_END */
     }
@@ -136,19 +136,19 @@ int main() {
             .shape = nothing,
             .object_layer = not_moving,
             .motion_type = MotionType::STATIC,
-            .position = {20.0f, 0.0f, 0.0f},
+            .position = vec3f::make(20.0f, 0.0f, 0.0f),
         });
         RigidBody *platform = rigid_body::create(*world, {
             .shape = block_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {20.0f, 0.0f, 0.0f},
+            .position = vec3f::make(20.0f, 0.0f, 0.0f),
         });
         const ConstraintId lift_id = slider_constraint::create(*world, rail, platform, {
-            .slider_axis_a = {0.0f, 1.0f, 0.0f},
-            .slider_axis_b = {0.0f, 1.0f, 0.0f},
-            .normal_axis_a = {1.0f, 0.0f, 0.0f},
-            .normal_axis_b = {1.0f, 0.0f, 0.0f},
+            .slider_axis_a = vec3f::make(0.0f, 1.0f, 0.0f),
+            .slider_axis_b = vec3f::make(0.0f, 1.0f, 0.0f),
+            .normal_axis_a = vec3f::make(1.0f, 0.0f, 0.0f),
+            .normal_axis_b = vec3f::make(1.0f, 0.0f, 0.0f),
             .auto_detect_point = true,
             .limits_min = 0.0f,
             .limits_max = 5.0f,
@@ -162,7 +162,7 @@ int main() {
         /* HIDE_START */
         steps(*world, 240);
         if (!near(slider_constraint::get_current_position(*world, *slider_constraint::get(*world, lift_id)), 2.0f, 0.005f)) return 1;
-        if (!near(platform->position.y, 2.0f, 0.005f)) return 1;
+        if (!near(vec3f::y(platform->position), 2.0f, 0.005f)) return 1;
         /* HIDE_END */
     }
 
@@ -173,20 +173,20 @@ int main() {
             .shape = block_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {30.0f, 3.0f, 0.0f},
+            .position = vec3f::make(30.0f, 3.0f, 0.0f),
         });
         RigidBody *right = rigid_body::create(*world, {
             .shape = block_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {31.0f, 3.0f, 0.0f},
+            .position = vec3f::make(31.0f, 3.0f, 0.0f),
         });
         fixed_constraint::create(*world, left, right, {.auto_detect_point = true});
         /* SNIPPET_END: fixed */
         /* HIDE_START */
         steps(*world, 60);
-        const float apart_x = right->position.x - left->position.x, apart_y = right->position.y - left->position.y;
-        if (!near(apart_x, 1.0f, 0.01f) || !near(apart_y, 0.0f, 0.01f) || left->position.y > 2.5f) return 1;
+        const Vec3f apart = vec3f::subtract(right->position, left->position);
+        if (!near(vec3f::x(apart), 1.0f, 0.01f) || !near(vec3f::y(apart), 0.0f, 0.01f) || vec3f::y(left->position) > 2.5f) return 1;
         /* HIDE_END */
     }
 
@@ -198,21 +198,21 @@ int main() {
             .shape = nothing,
             .object_layer = not_moving,
             .motion_type = MotionType::STATIC,
-            .position = {40.0f, 3.0f, 0.0f},
+            .position = vec3f::make(40.0f, 3.0f, 0.0f),
         });
         RigidBody *arm = rigid_body::create(*world, {
             .shape = ball_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {40.5f, 3.0f, 0.0f},
+            .position = vec3f::make(40.5f, 3.0f, 0.0f),
         });
         swing_twist_constraint::create(*world, torso, arm, {
-            .point_a = {40.0f, 3.0f, 0.0f},
-            .point_b = {40.0f, 3.0f, 0.0f},
-            .twist_axis_a = {1.0f, 0.0f, 0.0f},
-            .plane_axis_a = {0.0f, 0.0f, 1.0f},
-            .twist_axis_b = {1.0f, 0.0f, 0.0f},
-            .plane_axis_b = {0.0f, 0.0f, 1.0f},
+            .point_a = vec3f::make(40.0f, 3.0f, 0.0f),
+            .point_b = vec3f::make(40.0f, 3.0f, 0.0f),
+            .twist_axis_a = vec3f::make(1.0f, 0.0f, 0.0f),
+            .plane_axis_a = vec3f::make(0.0f, 0.0f, 1.0f),
+            .twist_axis_b = vec3f::make(1.0f, 0.0f, 0.0f),
+            .plane_axis_b = vec3f::make(0.0f, 0.0f, 1.0f),
             .normal_half_cone_angle = 0.25f * scalar::PI,
             .plane_half_cone_angle = 0.25f * scalar::PI,
             .twist_min_angle = -scalar::PI / 6.0f,
@@ -222,34 +222,34 @@ int main() {
         /* HIDE_START */
         steps(*world, 120);
         // gravity pulls the arm down until the cone stops it 45 degrees below the twist axis
-        const float ax = arm->position.x - 40.0f, ay = arm->position.y - 3.0f;
+        const float ax = vec3f::x(arm->position) - 40.0f, ay = vec3f::y(arm->position) - 3.0f;
         if (!near(scalar::atan2(-ay, ax), 0.25f * scalar::PI, 0.05f)) return 1;
         RigidBody *cone_arm = rigid_body::create(*world, {
             .shape = ball_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {40.5f, 6.0f, 0.0f},
+            .position = vec3f::make(40.5f, 6.0f, 0.0f),
         });
         RigidBody *cone_anchor = rigid_body::create(*world, {
             .shape = nothing,
             .object_layer = not_moving,
             .motion_type = MotionType::STATIC,
-            .position = {40.0f, 6.0f, 0.0f},
+            .position = vec3f::make(40.0f, 6.0f, 0.0f),
         });
         /* HIDE_END */
 
         /* SNIPPET_START: cone */
         cone_constraint::create(*world, cone_anchor, cone_arm, {
-            .point_a = {40.0f, 6.0f, 0.0f},
-            .twist_axis_a = {1.0f, 0.0f, 0.0f},
-            .point_b = {40.0f, 6.0f, 0.0f},
-            .twist_axis_b = {1.0f, 0.0f, 0.0f},
+            .point_a = vec3f::make(40.0f, 6.0f, 0.0f),
+            .twist_axis_a = vec3f::make(1.0f, 0.0f, 0.0f),
+            .point_b = vec3f::make(40.0f, 6.0f, 0.0f),
+            .twist_axis_b = vec3f::make(1.0f, 0.0f, 0.0f),
             .half_cone_angle = 0.25f * scalar::PI,
         });
         /* SNIPPET_END: cone */
         /* HIDE_START */
         steps(*world, 120);
-        const float cx = cone_arm->position.x - 40.0f, cy = cone_arm->position.y - 6.0f;
+        const float cx = vec3f::x(cone_arm->position) - 40.0f, cy = vec3f::y(cone_arm->position) - 6.0f;
         if (!near(scalar::atan2(-cy, cx), 0.25f * scalar::PI, 0.05f)) return 1;
         /* HIDE_END */
     }
@@ -262,18 +262,18 @@ int main() {
             .shape = nothing,
             .object_layer = not_moving,
             .motion_type = MotionType::STATIC,
-            .position = {50.0f, 3.0f, 0.0f},
+            .position = vec3f::make(50.0f, 3.0f, 0.0f),
         });
         RigidBody *cart = rigid_body::create(*world, {
             .shape = block_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {50.0f, 3.0f, 0.0f},
+            .position = vec3f::make(50.0f, 3.0f, 0.0f),
         });
 
         SixDOFConstraintSettings rails;
-        rails.point_a = {50.0f, 3.0f, 0.0f};
-        rails.point_b = {50.0f, 3.0f, 0.0f};
+        rails.point_a = vec3f::make(50.0f, 3.0f, 0.0f);
+        rails.point_b = vec3f::make(50.0f, 3.0f, 0.0f);
         for (uint32_t axis = 0; axis < SixDOFConstraint::Axis::NUM; axis++) {
             rails.limit_min[axis] = 0.0f;
             rails.limit_max[axis] = 0.0f;
@@ -289,7 +289,7 @@ int main() {
         /* HIDE_START */
         steps(*world, 60);
         // held up against gravity, stopped at the end of its rail
-        if (!near(cart->position.y, 3.0f, 0.02f) || cart->position.x > 51.05f) return 1;
+        if (!near(vec3f::y(cart->position), 3.0f, 0.02f) || vec3f::x(cart->position) > 51.05f) return 1;
         /* HIDE_END */
     }
 

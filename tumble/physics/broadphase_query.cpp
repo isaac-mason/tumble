@@ -37,10 +37,8 @@ void cast_ray(World &world, BodyCastCollector &collector, const Rayf &ray, const
 }
 
 void collide_aabb(World &world, BodyCollector &collector, const AABox &box, const Filter &filter) {
-    Box3f bounds;
-    aabox::store(bounds, box);
     BodyVisitor visitor = overlap_visitor(collector);
-    broadphase::intersect_aabb(world.broadphase, world.bodies, bounds, filter, visitor);
+    broadphase::intersect_aabb(world.broadphase, world.bodies, box, filter, visitor);
 }
 
 void collide_sphere(World &world, BodyCollector &collector, Vec3f center, float radius, const Filter &filter) {
@@ -59,10 +57,8 @@ void collide_oriented_box(World &world, BodyCollector &collector, const Oriented
 }
 
 void cast_aabb(World &world, BodyCastCollector &collector, const AABox &box, Vec3f displacement, const Filter &filter) {
-    Box3f bounds;
-    aabox::store(bounds, box);
     BodyVisitor visitor = cast_visitor(collector);
-    broadphase::cast_aabb(world.broadphase, world.bodies, bounds, displacement, filter, visitor);
+    broadphase::cast_aabb(world.broadphase, world.bodies, box, displacement, filter, visitor);
 }
 
 }  // namespace broadphase_query

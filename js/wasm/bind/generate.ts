@@ -11,12 +11,14 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-type Scalar = 'u8' | 'u16' | 'u32' | 'i32' | 'f32' | 'f64' | 'bool' | 'void';
+type Scalar = 'u8' | 'u16' | 'u32' | 'i32' | 'f32' | 'f64' | 'u64' | 'bool' | 'void';
 type StructKind = 'value' | 'embedded' | 'handle' | 'value-in' | 'value-out' | 'ptr-array';
 type TypeRef =
     | { kind: 'void'; count: number; ref: boolean; const: boolean }
     | { kind: 'scalar' | 'ptr-scalar'; scalar: Scalar; count: number; ref: boolean; const: boolean; bits?: boolean }
-    | { kind: StructKind; cpp: string | null; count: number; ref: boolean; const: boolean };
+    | { kind: StructKind; cpp: string | null; count: number; ref: boolean; const: boolean }
+    /** a record's field holding a growable array: the element's type, and the byte offsets of its data pointer and length */
+    | { kind: 'array'; element: TypeRef; data: number; length: number; count: number; ref: boolean; const: boolean };
 type ParamDesc = { name: string | null; type: TypeRef };
 type FunctionDesc = {
     cpp: string;
@@ -27,14 +29,19 @@ type FunctionDesc = {
     jsNamespace: string | null;
 };
 type FieldDesc = { name: string; offset: number; type: TypeRef; writable: boolean; doc: string | null };
+/** how js finds a record by an id with no call: byte offsets from the root, and the id's index mask */
+type IdLookup = { root: string; data: number; length: number; id: number; indexMask: number };
 type StructDesc = {
     cpp: string;
     js: string | null;
     value: boolean;
     tuple: boolean;
+    /** a SIMD register type crossing as its lanes; a three lane one writes its z again in lane 3 */
+    lanes: boolean;
     size: number;
     align: number;
     doc: string | null;
+    idLookup: IdLookup | null;
     fields: FieldDesc[];
 };
 type EnumDesc = { name: string; doc: string | null; values: Array<{ name: string; value: number; doc: string | null }> };
@@ -126,7 +133,8 @@ const structsByCpp = new Map<string, StructDesc>();
 for (const s of schema.structs) structsByCpp.set(s.cpp, s);
 
 function structOf(t: TypeRef, where: string): StructDesc {
-    if (t.kind === 'void' || t.kind === 'scalar' || t.kind === 'ptr-scalar') throw new Error(`${where}: not a struct type`);
+    if (t.kind === 'void' || t.kind === 'scalar' || t.kind === 'ptr-scalar' || t.kind === 'array')
+        throw new Error(`${where}: not a struct type`);
     if (t.cpp === null) throw new Error(`${where}: uses a struct that the manifest does not register`);
     const s = structsByCpp.get(t.cpp);
     if (!s) throw new Error(`${where}: unknown struct ${t.cpp}`);
@@ -144,6 +152,8 @@ const VIEW: Record<Exclude<Scalar, 'void'>, { view: string; shift: number }> = {
     i32: { view: 'i32', shift: 2 },
     f32: { view: 'f32', shift: 2 },
     f64: { view: 'f64', shift: 3 },
+    // two u32 words, low first; the read and write helpers handle it
+    u64: { view: 'u32', shift: 3 },
     bool: { view: 'u8', shift: 0 },
 };
 
@@ -154,6 +164,7 @@ const CPP_SCALAR: Record<Scalar, string> = {
     i32: 'int32_t',
     f32: 'float',
     f64: 'double',
+    u64: 'uint64_t',
     bool: 'bool',
     void: 'void',
 };
@@ -185,17 +196,22 @@ function align16(n: number): number {
     return (n + 15) & ~15;
 }
 
-/** a scalar read at a byte address expression, over `mem`. */
+/** a scalar read at a byte address expression, over `mem`. a u64 reads as a number, exact up to 2^53. */
 function scalarRead(scalar: Exclude<Scalar, 'void'>, addr: string): string {
+    if (scalar === 'u64') return `mem.u32[(${addr}) >> 2]! + mem.u32[(${addr} + 4) >> 2]! * 0x100000000`;
     const v = VIEW[scalar];
     const read = v.shift === 0 ? `mem.${v.view}[${addr}]!` : `mem.${v.view}[(${addr}) >> ${v.shift}]!`;
     return scalar === 'bool' ? `${read} !== 0` : read;
 }
 
-function scalarWrite(scalar: Exclude<Scalar, 'void'>, addr: string, value: string): string {
+/** the statements writing a scalar at a byte address expression, over `mem`. */
+function scalarWrite(scalar: Exclude<Scalar, 'void'>, addr: string, value: string): string[] {
+    if (scalar === 'u64') {
+        return [`mem.u32[(${addr}) >> 2] = ${value} >>> 0;`, `mem.u32[(${addr} + 4) >> 2] = Math.floor(${value} / 0x100000000);`];
+    }
     const v = VIEW[scalar];
     const stored = scalar === 'bool' ? `${value} ? 1 : 0` : value;
-    return v.shift === 0 ? `mem.${v.view}[${addr}] = ${stored};` : `mem.${v.view}[(${addr}) >> ${v.shift}] = ${stored};`;
+    return [v.shift === 0 ? `mem.${v.view}[${addr}] = ${stored};` : `mem.${v.view}[(${addr}) >> ${v.shift}] = ${stored};`];
 }
 
 const DATA_VIEW: Record<Exclude<Scalar, 'void'>, string> = {
@@ -205,17 +221,25 @@ const DATA_VIEW: Record<Exclude<Scalar, 'void'>, string> = {
     i32: 'Int32',
     f32: 'Float32',
     f64: 'Float64',
+    u64: 'Uint32',
     bool: 'Uint8',
 };
 
 /** a scalar read at `offset + at` of a little-endian DataView named `view`. */
 function viewRead(scalar: Exclude<Scalar, 'void'>, at: number): string {
+    if (scalar === 'u64') return `view.getUint32(offset + ${at}, true) + view.getUint32(offset + ${at + 4}, true) * 0x100000000`;
     const read = `view.get${DATA_VIEW[scalar]}(offset + ${at}${scalarBytes(scalar) > 1 ? ', true' : ''})`;
     return scalar === 'bool' ? `${read} !== 0` : read;
 }
 
 /** the statements writing a scalar at `offset + at` of a little-endian DataView named `view`. */
 function viewWrite(scalar: Exclude<Scalar, 'void'>, at: number, value: string): string[] {
+    if (scalar === 'u64') {
+        return [
+            `view.setUint32(offset + ${at}, ${value} >>> 0, true);`,
+            `view.setUint32(offset + ${at + 4}, Math.floor(${value} / 0x100000000), true);`,
+        ];
+    }
     const stored = scalar === 'bool' ? `${value} ? 1 : 0` : value;
     return [`view.set${DATA_VIEW[scalar]}(offset + ${at}, ${stored}${scalarBytes(scalar) > 1 ? ', true' : ''});`];
 }
@@ -228,18 +252,30 @@ function scalarTsType(scalar: Scalar): string {
     return scalar === 'bool' ? 'boolean' : 'number';
 }
 
-/** scalars' address typed by the scalar, an array of handles' by the handle; a void * is a plain number, which any address converts to. */
+/**
+ * scalars' address typed by the scalar, an array of handles' by the handle, values' (a record's field pointing at them)
+ * by the value; a void * is a plain number, which any address converts to.
+ */
 function pointerTsType(t: TypeRef, where: string): string {
     const pointer = 'Pointer';
     if (t.kind === 'ptr-scalar') return t.scalar === 'void' ? 'number' : `${pointer}<'${t.scalar}'>`;
-    if (t.kind === 'ptr-array') return `${pointer}<${jsOf(t, where)}>`;
+    if (t.kind === 'ptr-array' || t.kind === 'value-in' || t.kind === 'value-out') return `${pointer}<${jsOf(t, where)}>`;
     throw new Error(`${where}: ${t.kind} is not a pointer`);
 }
 
 // ---- value types: a js type, a create(), and flattened read/write over memory ----
 
-/** `address` marks an address word: the js type it reads as, and whether 0 reads as null (a handle). */
-type Leaf = { offset: number; scalar: Exclude<Scalar, 'void'>; expr: string; address?: { type: string; nullable: boolean } };
+/**
+ * `address` marks an address word: the js type it reads as, and whether 0 reads as null (a handle). `writeOnly` marks a
+ * lane written and never read: a Vec3f's copy of z in lane 3.
+ */
+type Leaf = {
+    offset: number;
+    scalar: Exclude<Scalar, 'void'>;
+    expr: string;
+    address?: { type: string; nullable: boolean };
+    writeOnly?: boolean;
+};
 
 /** what a leaf stores: a handle's null as 0. */
 function leafStored(leaf: Leaf): string {
@@ -282,6 +318,8 @@ function leavesOf(s: StructDesc, base: number, path: string): Leaf[] {
             throw new Error(`${where}: a value holds scalars, values, handles and pointers, not ${t.kind}`);
         }
     }
+    // a three lane register type keeps z again in lane 3
+    if (s.lanes && s.fields.length === 3) out.push({ ...out[2]!, offset: base + 12, writeOnly: true });
     return out;
 }
 
@@ -375,8 +413,10 @@ function emitViewAccess(name: string, leaves: Leaf[]): string[] {
     lines.push('    },');
     lines.push('    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */');
     lines.push(`    readFrom(out: ${name}, view: DataView, offset: number): ${name} {`);
-    for (const leaf of leaves)
+    for (const leaf of leaves) {
+        if (leaf.writeOnly) continue;
         lines.push(`        ${leaf.expr.replace(/^value/, 'out')} = ${leafRead(leaf, viewRead(leaf.scalar, leaf.offset))};`);
+    }
     lines.push('        return out;');
     lines.push('    },');
     return lines;
@@ -397,6 +437,7 @@ function emitValue(s: StructDesc): string[] {
     lines.push(`    read(out: ${name}, address: number): ${name} {`);
     lines.push('        const mem = wasm.mem;');
     for (const leaf of leaves) {
+        if (leaf.writeOnly) continue;
         const read = leafRead(leaf, scalarRead(leaf.scalar, `address + ${leaf.offset}`));
         lines.push(`        ${leaf.expr.replace(/^value/, 'out')} = ${read};`);
     }
@@ -405,10 +446,47 @@ function emitValue(s: StructDesc): string[] {
     lines.push("    /** writes the value at a byte address of the wasm's memory. */");
     lines.push(`    write(address: number, value: ${name}): void {`);
     lines.push('        const mem = wasm.mem;');
-    for (const leaf of leaves) lines.push(`        ${scalarWrite(leaf.scalar, `address + ${leaf.offset}`, leafStored(leaf))}`);
+    for (const leaf of leaves)
+        for (const statement of scalarWrite(leaf.scalar, `address + ${leaf.offset}`, leafStored(leaf))) lines.push(`        ${statement}`);
     lines.push('    },');
+    lines.push(...emitWritableFields(s));
     lines.push(...emitViewAccess(name, leaves));
     lines.push('};');
+    return lines;
+}
+
+/**
+ * a value's writable fields, each read or written alone at the byte address of a value in the wasm's memory: for a value
+ * the wasm keeps, changed where it lies (a step's contact, rejected)
+ */
+function emitWritableFields(s: StructDesc): string[] {
+    const lines: string[] = [];
+    for (const f of s.fields) {
+        if (!f.writable) continue;
+        const t = f.type;
+        const where = `${s.cpp}::${f.name}`;
+        const js = capitalize(camel(f.name));
+        const at = `address + ${f.offset}`;
+        if (s.tuple) throw new Error(`${where}: a tuple's fields are not written alone`);
+        if (t.kind === 'scalar' && t.count === 1 && t.scalar !== 'void') {
+            lines.push(`    /** the field of the value at a byte address of the wasm's memory, set in place. */`);
+            lines.push(`    set${js}(address: number, value: ${scalarTsType(t.scalar)}): void {`);
+            lines.push('        const mem = wasm.mem;');
+            for (const statement of scalarWrite(t.scalar, at, 'value')) lines.push(`        ${statement}`);
+            lines.push('    },');
+        } else if (t.kind === 'value' && t.count === 1) {
+            const target = jsOf(t, where);
+            lines.push(`    /** the field of the value at a byte address of the wasm's memory, read or written in place. */`);
+            lines.push(`    read${js}(out: ${target}, address: number): ${target} {`);
+            lines.push(`        return ${target}.read(out, ${at});`);
+            lines.push('    },');
+            lines.push(`    write${js}(address: number, value: ${target}): void {`);
+            lines.push(`        ${target}.write(${at}, value);`);
+            lines.push('    },');
+        } else {
+            throw new Error(`${where}: a writable field of a value is a scalar or a value`);
+        }
+    }
     return lines;
 }
 
@@ -433,7 +511,7 @@ function jsParamType(p: ParamDesc, where: string): string {
     const t = p.type;
     switch (t.kind) {
         case 'scalar':
-            if (t.scalar === 'f64') throw new Error(`${where}: an f64 crosses only as a field`);
+            if (t.scalar === 'f64' || t.scalar === 'u64') throw new Error(`${where}: an ${t.scalar} crosses only as a field`);
             return scalarTsType(t.scalar);
         case 'ptr-scalar':
         case 'ptr-array':
@@ -451,7 +529,8 @@ function jsParamType(p: ParamDesc, where: string): string {
 /**
  * the body and signature of a bound function as a property of its namespace object, or as an exported function of the
  * module (`moduleLevel`). out-params come first, then in-params, each in c order; a function returning nothing with one
- * out-param returns it, filled. a handle returned by a call that allocates is never null: a 0 there is an error, thrown.
+ * out-param returns it, filled, and one returning a bool fills its out-params only when it returns true. a handle
+ * returned by a call that allocates is never null: a 0 there is an error, thrown.
  */
 function emitFunction(f: FunctionDesc, indent: string, moduleLevel: boolean): string[] {
     const where = f.cpp;
@@ -470,7 +549,7 @@ function emitFunction(f: FunctionDesc, indent: string, moduleLevel: boolean): st
     if (returnsOut) returnType = jsOf(outs[0]!.type, where);
     else if (nothing) returnType = 'void';
     else if (r.kind === 'scalar') {
-        if (r.scalar === 'f64') throw new Error(`${where}: an f64 crosses only as a field`);
+        if (r.scalar === 'f64' || r.scalar === 'u64') throw new Error(`${where}: an ${r.scalar} crosses only as a field`);
         returnType = scalarTsType(r.scalar);
     } else if (r.kind === 'ptr-scalar' || r.kind === 'ptr-array') returnType = pointerTsType(r, where);
     else if (r.kind === 'handle') returnType = f.grows ? jsOf(r, where) : `${jsOf(r, where)} | null`;
@@ -517,8 +596,11 @@ function emitFunction(f: FunctionDesc, indent: string, moduleLevel: boolean): st
     if (`${indent}    ${flatCall}`.length <= LINE_WIDTH || args.length === 0) body.push(flatCall);
     else body.push(callee, ...args.map((arg) => `    ${arg},`), ');');
     if (f.grows) body.push('wasm.grew();');
+    const reportsSuccess = r.kind === 'scalar' && r.scalar === 'bool' && outs.length > 0;
+    if (reportsSuccess) body.push('if (r === 0) return false;');
     for (const p of outs) body.push(`${jsOf(p.type, where)}.read(${p.js}, scratch + ${offsets.get(p.js)});`);
-    if (returnsOut) body.push(`return ${outs[0]!.js};`);
+    if (reportsSuccess) body.push('return true;');
+    else if (returnsOut) body.push(`return ${outs[0]!.js};`);
     else if (r.kind === 'handle' && f.grows) {
         body.push('if (r === 0) wasm.check();');
         body.push(`return r as ${jsOf(r, where)};`);
@@ -562,6 +644,8 @@ function recordFieldType(f: FieldDesc, where: string): string {
             return scalarTsType(t.scalar);
         case 'ptr-scalar':
         case 'ptr-array':
+        case 'value-in':
+        case 'value-out':
             return pointerTsType(t, where);
         case 'handle':
             return `${jsOf(t, where)} | null`;
@@ -588,7 +672,9 @@ function recordFieldCreate(f: FieldDesc, where: string): string {
         case 'handle':
             return 'null';
         case 'ptr-scalar':
-        case 'ptr-array': {
+        case 'ptr-array':
+        case 'value-in':
+        case 'value-out': {
             const type = pointerTsType(t, where);
             return type === 'number' ? '0' : `0 as ${type}`;
         }
@@ -600,7 +686,7 @@ function recordFieldCreate(f: FieldDesc, where: string): string {
 /** every scalar of a record's plain object, as leavesOf does for a value. */
 function recordLeavesOf(s: StructDesc, base: number, path: string): Leaf[] {
     const out: Leaf[] = [];
-    for (const f of s.fields) {
+    for (const f of plainFields(s)) {
         const t = f.type;
         const where = `${s.cpp}::${f.name}`;
         const expr = `${path}.${camel(f.name)}`;
@@ -613,6 +699,8 @@ function recordLeavesOf(s: StructDesc, base: number, path: string): Leaf[] {
                 break;
             case 'ptr-scalar':
             case 'ptr-array':
+            case 'value-in':
+            case 'value-out':
                 out.push({ offset, scalar: 'u32', expr, address: { type: pointerTsType(t, where), nullable: false } });
                 break;
             case 'handle':
@@ -634,18 +722,46 @@ function recordLeavesOf(s: StructDesc, base: number, path: string): Leaf[] {
     return out;
 }
 
+/** the fields a record's plain object holds: all but its arrays, which are the wasm's memory and cross no realm */
+function plainFields(s: StructDesc): FieldDesc[] {
+    return s.fields.filter((f) => f.type.kind !== 'array');
+}
+
 function recordValueType(s: StructDesc): string {
     const name = recordValueName(s);
-    const fields = s.fields.map((f) => `${camel(f.name)}: ${recordFieldType(f, `${s.cpp}::${f.name}`)}`);
+    const fields = plainFields(s).map((f) => `${camel(f.name)}: ${recordFieldType(f, `${s.cpp}::${f.name}`)}`);
     const flat = `{ ${fields.join('; ')} }`;
     return `export type ${name} = ${flat};`.length <= LINE_WIDTH ? flat : `{\n${fields.map((f) => `    ${f};`).join('\n')}\n}`;
 }
 
 function recordValueCreate(s: StructDesc): string[] {
-    const parts = s.fields.map((f) => `${camel(f.name)}: ${recordFieldCreate(f, `${s.cpp}::${f.name}`)}`);
+    const parts = plainFields(s).map((f) => `${camel(f.name)}: ${recordFieldCreate(f, `${s.cpp}::${f.name}`)}`);
     const flat = `        return { ${parts.join(', ')} };`;
     if (flat.length <= LINE_WIDTH) return [flat];
     return ['        return {', ...parts.map((p) => `            ${p},`), '        };'];
+}
+
+/**
+ * `get(root, id)`: the record an id names, found as the core finds it with no call into the wasm, every offset a literal.
+ * the id's index is a slot of the root's array of record pointers, and the slot's record is the id's while it holds it
+ */
+function emitIdLookup(s: StructDesc, lookup: IdLookup): string[] {
+    const name = structJsName(s);
+    const record = name[0]!.toLowerCase() + name.slice(1);
+    const rootStruct = structsByCpp.get(lookup.root);
+    if (!rootStruct) throw new Error(`${s.cpp}: an id lookup starts from ${lookup.root}, which the manifest does not register`);
+    const root = structJsName(rootStruct);
+    const param = root[0]!.toLowerCase() + root.slice(1);
+    return [
+        `    /** the ${name} the id names, or null for an id naming none. */`,
+        `    get(${param}: ${root}, id: number): ${name} | null {`,
+        '        const mem = wasm.mem;',
+        `        const index = id & 0x${lookup.indexMask.toString(16)};`,
+        `        if (index >= mem.u32[(${param} + ${lookup.length}) >> 2]!) return null;`,
+        `        const ${record} = mem.u32[(mem.u32[(${param} + ${lookup.data}) >> 2]! >> 2) + index]!;`,
+        `        return mem.u32[${lookup.id === 0 ? record : `(${record} + ${lookup.id})`} >> 2] === id ? (${record} as ${name}) : null;`,
+        '    },',
+    ];
 }
 
 function emitFields(s: StructDesc): string[] {
@@ -662,6 +778,7 @@ function emitFields(s: StructDesc): string[] {
     lines.push(...recordValueCreate(s));
     lines.push('    },');
     lines.push(...emitViewAccess(recordValueName(s), recordLeavesOf(s, 0, 'value')));
+    if (s.idLookup !== null) lines.push('', ...emitIdLookup(s, s.idLookup));
     for (const f of s.fields) {
         const t = f.type;
         const where = `${s.cpp}::${f.name}`;
@@ -680,13 +797,15 @@ function emitFields(s: StructDesc): string[] {
                 if (f.writable) {
                     lines.push(`    set${capitalize(js)}(${self}: ${name}, value: ${scalarTsType(t.scalar)}): void {`);
                     lines.push('        const mem = wasm.mem;');
-                    lines.push(`        ${scalarWrite(t.scalar, addr, 'value')}`);
+                    for (const statement of scalarWrite(t.scalar, addr, 'value')) lines.push(`        ${statement}`);
                     lines.push('    },');
                 }
                 break;
             }
             case 'ptr-scalar':
-            case 'ptr-array': {
+            case 'ptr-array':
+            case 'value-in':
+            case 'value-out': {
                 const type = pointerTsType(t, where);
                 const read = scalarRead('u32', addr);
                 lines.push(`    ${js}(${self}: ${name}): ${type} {`);
@@ -696,7 +815,7 @@ function emitFields(s: StructDesc): string[] {
                 if (f.writable) {
                     lines.push(`    set${capitalize(js)}(${self}: ${name}, value: ${type}): void {`);
                     lines.push('        const mem = wasm.mem;');
-                    lines.push(`        ${scalarWrite('u32', addr, 'value')}`);
+                    lines.push(`        ${scalarWrite('u32', addr, 'value')[0]}`);
                     lines.push('    },');
                 }
                 break;
@@ -711,7 +830,7 @@ function emitFields(s: StructDesc): string[] {
                 if (f.writable) {
                     lines.push(`    set${capitalize(js)}(${self}: ${name}, value: ${target} | null): void {`);
                     lines.push('        const mem = wasm.mem;');
-                    lines.push(`        ${scalarWrite('u32', addr, 'value === null ? 0 : value')}`);
+                    lines.push(`        ${scalarWrite('u32', addr, 'value === null ? 0 : value')[0]}`);
                     lines.push('    },');
                 }
                 break;
@@ -748,9 +867,67 @@ function emitFields(s: StructDesc): string[] {
                 }
                 break;
             }
+            case 'array':
+                lines.push(...emitArrayField(s, f, t));
+                break;
             default:
                 throw new Error(`${where}: ${t.kind} cannot be a field of a record`);
         }
+    }
+    return lines;
+}
+
+type ArrayType = Extract<TypeRef, { kind: 'array' }>;
+
+/** the members an array field gives its record: its length, and its elements by index */
+function arrayMembers(f: FieldDesc, t: ArrayType): string[] {
+    const js = camel(f.name);
+    return t.element.kind === 'value' ? [`${js}Length`, `${js}Address`, `read${capitalize(js)}`] : [`${js}Length`, `${js}At`];
+}
+
+/**
+ * an array field read where it lies: `<name>Length`, and for elements that are values `read<Name>(out, record, index)`
+ * and `<name>Address(record, index)` (to read or write an element's fields in place), for scalars and handles
+ * `<name>At(record, index)`
+ */
+function emitArrayField(s: StructDesc, f: FieldDesc, t: ArrayType): string[] {
+    const name = structJsName(s);
+    const self = name[0]!.toLowerCase() + name.slice(1);
+    const where = `${s.cpp}::${f.name}`;
+    const js = camel(f.name);
+    const data = scalarRead('u32', `${self} + ${f.offset + t.data}`);
+    const element = t.element;
+    const lines: string[] = [];
+    lines.push(`    ${js}Length(${self}: ${name}): number {`);
+    lines.push('        const mem = wasm.mem;');
+    lines.push(`        return ${scalarRead('u32', `${self} + ${f.offset + t.length}`)};`);
+    lines.push('    },');
+    if (element.kind === 'value') {
+        const target = jsOf(element, where);
+        const size = structOf(element, where).size;
+        lines.push(`    /** the address of the element at index, to read or write its fields in place. */`);
+        lines.push(`    ${js}Address(${self}: ${name}, index: number): number {`);
+        lines.push('        const mem = wasm.mem;');
+        lines.push(`        return ${data} + index * ${size};`);
+        lines.push('    },');
+        lines.push(`    read${capitalize(js)}(out: ${target}, ${self}: ${name}, index: number): ${target} {`);
+        lines.push('        const mem = wasm.mem;');
+        lines.push(`        return ${target}.read(out, ${data} + index * ${size});`);
+        lines.push('    },');
+    } else if (element.kind === 'scalar' && element.scalar !== 'void') {
+        lines.push(`    ${js}At(${self}: ${name}, index: number): ${scalarTsType(element.scalar)} {`);
+        lines.push('        const mem = wasm.mem;');
+        lines.push(`        return ${scalarRead(element.scalar, `${data} + index * ${scalarBytes(element.scalar)}`)};`);
+        lines.push('    },');
+    } else if (element.kind === 'handle') {
+        const target = jsOf(element, where);
+        lines.push(`    ${js}At(${self}: ${name}, index: number): ${target} | null {`);
+        lines.push('        const mem = wasm.mem;');
+        lines.push(`        const a = ${scalarRead('u32', `${data} + index * 4`)};`);
+        lines.push(`        return a === 0 ? null : (a as ${target});`);
+        lines.push('    },');
+    } else {
+        throw new Error(`${where}: an array holds values, scalars or handles, not ${element.kind}`);
     }
     return lines;
 }
@@ -797,6 +974,8 @@ function emitNamespace(ns: Namespace): string[] {
         lines.push(...docLines(ns.record.doc, ''));
         lines.push(`export type ${ns.name} = Handle<'${ns.name}'>;`);
     }
+    if (ns.record !== null && ns.record.idLookup !== null && ns.record.fields.length === 0)
+        throw new Error(`${ns.record.cpp}: an id lookup finds a record to read fields of, and it has none`);
     // a record with no bound fields is an opaque handle: no plain object, no layout
     if (ns.record !== null && ns.record.fields.length > 0) {
         const valueName = recordValueName(ns.record);
@@ -807,8 +986,13 @@ function emitNamespace(ns: Namespace): string[] {
         );
         lines.push(`export type ${valueName} = ${recordValueType(ns.record)};`);
         for (const member of ['size', 'align', 'offset', 'createValue', 'writeTo', 'readFrom']) claim(member, ns.record.cpp);
+        if (ns.record.idLookup !== null) claim('get', ns.record.cpp);
         for (const f of ns.record.fields) {
             const js = camel(f.name);
+            if (f.type.kind === 'array') {
+                for (const member of arrayMembers(f, f.type)) claim(member, `${ns.record.cpp}::${f.name}`);
+                continue;
+            }
             claim(f.type.kind === 'value' ? `read${capitalize(js)}` : js, `${ns.record.cpp}::${f.name}`);
             if (f.writable)
                 claim(f.type.kind === 'value' ? `write${capitalize(js)}` : `set${capitalize(js)}`, `${ns.record.cpp}::${f.name}`);

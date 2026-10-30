@@ -78,7 +78,7 @@ static void add_static(App &app, Shape *shape, Float3 position) {
     settings.shape = shape;
     settings.object_layer = state.layers.not_moving;
     settings.motion_type = MotionType::STATIC;
-    settings.position = position;
+    settings.position = vec3f::load(position);
     rigid_body::create(*app.world, settings);
 }
 
@@ -91,7 +91,7 @@ static Agent make_agent(App &app, float x, float z) {
     settings.inner_rigid_body_shape = state.agent_shape;
     settings.inner_rigid_body_object_layer = state.layers.moving;
     settings.has_supporting_volume_plane = true;
-    settings.supporting_volume_plane = {{0.0f, 1.0f, 0.0f}, -AGENT_RADIUS};
+    settings.supporting_volume_plane = plane3f::make(vec3f::axis_y(), -AGENT_RADIUS);
     const Float3 position = {x, SPAWN_Y, z};
     Ref<KCC> character = kcc::create(settings, vec3f::load(position), quatf::identity());
     kcc::add(*app.world, *character);
@@ -135,10 +135,13 @@ static void init(App &app) {
                                {0, -bound, bound + thickness, thickness},
                                {bound, 0, thickness, bound + thickness},
                                {-bound, 0, thickness, bound + thickness}};
-    for (const float *wall : walls) add_static(app, app::keep(app, box::create({.half_extents = {wall[2], height, wall[3]}})), {wall[0], height, wall[1]});
+    for (const float *wall : walls) {
+        add_static(app, app::keep(app, box::create({.half_extents = vec3f::make(wall[2], height, wall[3])})), {wall[0], height, wall[1]});
+    }
     Shape *pill = app::keep(app, capsule::create({.half_height_of_cylinder = AGENT_HALF_HEIGHT, .radius = AGENT_RADIUS}));
-    state.agent_shape =
-        app::keep(app, transformed::create({.shape = pill, .position = {0, AGENT_HALF_HEIGHT + AGENT_RADIUS, 0}, .quaternion = {0, 0, 0, 1}}));
+    state.agent_shape = app::keep(app, transformed::create({.shape = pill,
+                                                            .position = vec3f::make(0, AGENT_HALF_HEIGHT + AGENT_RADIUS, 0),
+                                                            .quaternion = quatf::identity()}));
     respawn_agents(app);
     camera::look_at(app.camera, {0, 40, 70}, {0, 0, 0});
 }

@@ -40,8 +40,10 @@ static void init(App &app) {
         settings.shape = ball;
         settings.object_layer = state.layers.moving;
         settings.motion_type = MotionType::DYNAMIC;
-        settings.position = {side * seeded::range(state.random, 50.0f, 100.0f), seeded::range(state.random, -50.0f, 50.0f),
-                             seeded::range(state.random, -10.0f, 10.0f)};
+        const float x = side * seeded::range(state.random, 50.0f, 100.0f);
+        const float y = seeded::range(state.random, -50.0f, 50.0f);
+        const float z = seeded::range(state.random, -10.0f, 10.0f);
+        settings.position = vec3f::make(x, y, z);
         settings.linear_damping = LINEAR_DAMPING;
         settings.angular_damping = ANGULAR_DAMPING;
         settings.friction = 0.1f;
@@ -53,7 +55,7 @@ static void init(App &app) {
     pointer.shape = app::keep(app, sphere::create({.radius = POINTER_RADIUS}));
     pointer.object_layer = state.layers.moving;
     pointer.motion_type = MotionType::KINEMATIC;
-    pointer.position = state.pointer_position;
+    pointer.position = vec3f::load(state.pointer_position);
     pointer.restitution = 0.8f;
     pointer.friction = 0.5f;
     state.pointer = rigid_body::create(*app.world, pointer);
@@ -79,9 +81,9 @@ static void step(App &app, float delta_time) {
     const float intensity = held ? 0.3f : 0.2f;
     for (int i = 0; i < COUNT; i++) {
         RigidBody *body = state.spheres[i];
-        const Vec3f pull = vec3f::scale(vec3f::subtract(centre, vec3f::load(body->position)), intensity);
-        Float3 &velocity = body->motion_properties.linear_velocity;
-        vec3f::store(velocity, vec3f::add(vec3f::load(velocity), pull));
+        const Vec3f pull = vec3f::scale(vec3f::subtract(centre, body->position), intensity);
+        Vec3f &velocity = body->motion_properties.linear_velocity;
+        velocity = vec3f::add(velocity, pull);
     }
 }
 

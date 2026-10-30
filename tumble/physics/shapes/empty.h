@@ -24,10 +24,10 @@ void get_supporting_face(SupportingFaceResult &io, Vec3f direction, const Shape 
 int32_t get_material(const Shape *shape, SubShapeId sub_shape_id);
 /** no-op */
 void cast_ray(CastRayCollector &collector, const CastRaySettings &settings, const Rayf &ray, const Shape *shape,
-              const SubShapeIdBuilder &sub_shape_id, const Transformf &transform);
+              const SubShapeIdBuilder &sub_shape_id, const Transform &transform);
 /** no-op */
 void collide_point(CollidePointCollector &collector, const CollidePointSettings &settings, Vec3f point,
-                   const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                   const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 
 /** no support: not convex */
 ShapeDef def();

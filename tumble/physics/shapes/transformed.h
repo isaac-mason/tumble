@@ -3,6 +3,8 @@
 #include <stdint.h>
 
 #include "tumble/config.h"
+#include "tumble/math/quatf.h"
+#include "tumble/math/vec3f.h"
 #include "tumble/physics/shapes/shapes.h"
 
 TUMBLE_NAMESPACE_BEGIN
@@ -13,15 +15,15 @@ struct TransformedShape : Shape {
     static constexpr ShapeType TYPE = ShapeType::TRANSFORMED;
     /** held */
     Ref<Shape> shape;
-    Float3 position;
-    Float4 quaternion;
+    Vec3f position;
+    Quatf quaternion;
 };
 
 struct TransformedShapeSettings {
     /** the caller's; outlives every transformed shape over it */
     Shape *shape = nullptr;
-    Float3 position = {0.0f, 0.0f, 0.0f};
-    Float4 quaternion = {0.0f, 0.0f, 0.0f, 1.0f};
+    Vec3f position = vec3f::zero();
+    Quatf quaternion = quatf::identity();
 };
 
 namespace transformed {
@@ -40,25 +42,25 @@ void get_leaf_shape(GetLeafShapeResult &out, const Shape *shape, SubShapeId sub_
 void get_sub_shape_transformed_shape(GetSubShapeTransformedShapeResult &out, const Shape *shape, SubShapeId sub_shape_id);
 
 void cast_ray_vs_transformed(CastRayCollector &collector, const CastRaySettings &settings, const Rayf &ray,
-                             const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform);
+                             const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform);
 void collide_point_vs_transformed(CollidePointCollector &collector, const CollidePointSettings &settings,
                                   Vec3f point, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                                  const Transformf &transform_b);
+                                  const Transform &transform_b);
 
 /** a's inner shape at a's accumulated transform against b, through the collide table */
 void collide_transformed_vs_shape(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                                  const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                                  const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                                  const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                                  const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 /** a against b's inner shape at b's accumulated transform, through the collide table */
 void collide_shape_vs_transformed(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                                  const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                                  const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                                  const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                                  const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 void cast_transformed_vs_shape(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *shape_a,
-                               const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
-                               const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                               const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a, Vec3f displacement_a,
+                               const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 void cast_shape_vs_transformed(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *shape_a,
-                               const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
-                               const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b);
+                               const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a, Vec3f displacement_a,
+                               const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b);
 
 ShapeDef def();
 

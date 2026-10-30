@@ -33,11 +33,11 @@ const Islands::Island *island_of(const World &world, const RigidBody &body) {
 }
 
 RigidBody *add_floor(WorldScene &scene, float half_extent = 10.0f) {
-    return add_body(scene, box::create({.half_extents = {half_extent, 0.5f, half_extent}}), MotionType::STATIC, {0.0f, -0.5f, 0.0f});
+    return add_body(scene, box::create({.half_extents = vec3f::make(half_extent, 0.5f, half_extent)}), MotionType::STATIC, {0.0f, -0.5f, 0.0f});
 }
 
 RigidBody *add_unit_box(WorldScene &scene, const Float3 &position) {
-    return add_body(scene, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}), MotionType::DYNAMIC, position);
+    return add_body(scene, box::create({.half_extents = vec3f::splat(0.5f)}), MotionType::DYNAMIC, position);
 }
 
 /** a mesh shape over flat xyz positions and triangle indices */
@@ -78,13 +78,13 @@ void test_update_position_and_aabb_follow_center_of_mass(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     RigidBody *body = add_body(scene, sphere::create({.radius = 0.5f}), MotionType::DYNAMIC, {1.0f, 10.0f, 2.0f});
     step_world(*scene.world);
-    CHECK(ctx, body->center_of_mass_position.y < 10.0f);
-    CHECK_NEAR(ctx, body->position.y, body->center_of_mass_position.y, 1e-6f);
-    CHECK_NEAR(ctx, body->aabb.min.y, body->position.y - 0.5f, 1e-5f);
-    CHECK_NEAR(ctx, body->aabb.max.y, body->position.y + 0.5f, 1e-5f);
+    CHECK(ctx, vec3f::y(body->center_of_mass_position) < 10.0f);
+    CHECK_NEAR(ctx, vec3f::y(body->position), vec3f::y(body->center_of_mass_position), 1e-6f);
+    CHECK_NEAR(ctx, vec3f::y(body->aabb.min), vec3f::y(body->position) - 0.5f, 1e-5f);
+    CHECK_NEAR(ctx, vec3f::y(body->aabb.max), vec3f::y(body->position) + 0.5f, 1e-5f);
     // one step of gravity from rest: v = g dt (damped), x = v dt
-    CHECK_NEAR(ctx, body->motion_properties.linear_velocity.y, -9.81f * WORLD_TEST_DELTA_TIME * (1.0f - 0.05f * WORLD_TEST_DELTA_TIME), 1e-5f);
-    CHECK_NEAR(ctx, body->position.y, 10.0f + body->motion_properties.linear_velocity.y * WORLD_TEST_DELTA_TIME, 1e-5f);
+    CHECK_NEAR(ctx, vec3f::y(body->motion_properties.linear_velocity), -9.81f * WORLD_TEST_DELTA_TIME * (1.0f - 0.05f * WORLD_TEST_DELTA_TIME), 1e-5f);
+    CHECK_NEAR(ctx, vec3f::y(body->position), 10.0f + vec3f::y(body->motion_properties.linear_velocity) * WORLD_TEST_DELTA_TIME, 1e-5f);
     release_world_scene(scene);
 }
 
@@ -95,19 +95,19 @@ void test_update_forces_consumed_by_step_and_zero_step(TestCtx &ctx) {
     step_world(*scene.world);
     CHECK(ctx, body->motion_properties.force.x == 0.0f && body->motion_properties.force.y == 0.0f && body->motion_properties.force.z == 0.0f);
     // a = F/m over one step (the unit box of density 1000 has m = 1000)
-    CHECK_NEAR(ctx, body->motion_properties.linear_velocity.x, 3.0f / 1000.0f * WORLD_TEST_DELTA_TIME * (1.0f - 0.05f * WORLD_TEST_DELTA_TIME),
+    CHECK_NEAR(ctx, vec3f::x(body->motion_properties.linear_velocity), 3.0f / 1000.0f * WORLD_TEST_DELTA_TIME * (1.0f - 0.05f * WORLD_TEST_DELTA_TIME),
                1e-9f);
 
     // a step of no time moves nothing and leaves the force for the next step, as jolt's
     rigid_body::add_force(*scene.world, body, vec3f::make(3.0f, 0.0f, 0.0f), true);
-    const Float3 position = body->position;
-    const float velocity = body->motion_properties.linear_velocity.x;
+    const Vec3f position = body->position;
+    const float velocity = vec3f::x(body->motion_properties.linear_velocity);
     step_world(*scene.world, 0.0f);
     CHECK(ctx, body->motion_properties.force.x == 3.0f);
-    CHECK(ctx, body->position.x == position.x && body->position.y == position.y);
+    CHECK(ctx, vec3f::x(body->position) == vec3f::x(position) && vec3f::y(body->position) == vec3f::y(position));
     step_world(*scene.world);
     CHECK(ctx, body->motion_properties.force.x == 0.0f);
-    CHECK(ctx, body->motion_properties.linear_velocity.x > velocity);
+    CHECK(ctx, vec3f::x(body->motion_properties.linear_velocity) > velocity);
     release_world_scene(scene);
 }
 
@@ -159,10 +159,10 @@ void test_update_islands_join_dynamic_bodies_only(TestCtx &ctx) {
     for (MotionType m1 : types) {
         for (MotionType m2 : types) {
             for (MotionType m3 : types) {
-                WorldScene scene = make_world_scene(ctx, [](WorldSettings &settings) { settings.gravity = {0.0f, 0.0f, 0.0f}; });
-                RigidBody *b1 = add_body(scene, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}), m1, {0.0f, 0.0f, 0.0f});
-                RigidBody *b2 = add_body(scene, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}), m2, {1.99f, 0.0f, 0.0f});
-                RigidBody *b3 = add_body(scene, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}), m3, {3.98f, 0.0f, 0.0f});
+                WorldScene scene = make_world_scene(ctx, [](WorldSettings &settings) { settings.gravity = vec3f::zero(); });
+                RigidBody *b1 = add_body(scene, box::create({.half_extents = vec3f::splat(1.0f)}), m1, {0.0f, 0.0f, 0.0f});
+                RigidBody *b2 = add_body(scene, box::create({.half_extents = vec3f::splat(1.0f)}), m2, {1.99f, 0.0f, 0.0f});
+                RigidBody *b3 = add_body(scene, box::create({.half_extents = vec3f::splat(1.0f)}), m3, {3.98f, 0.0f, 0.0f});
                 step_world(*scene.world);
 
                 const bool dynamic1 = m1 == MotionType::DYNAMIC, dynamic2 = m2 == MotionType::DYNAMIC, dynamic3 = m3 == MotionType::DYNAMIC;
@@ -244,7 +244,7 @@ void test_update_sleeping_body_woken_by_collision(TestCtx &ctx) {
     RigidBody *sleeping_body = add_unit_box(scene, {0.0f, 0.5f, 0.0f});
     rigid_body::sleep(*scene.world, sleeping_body);
     RigidBody *active_body = add_unit_box(scene, {0.0f, 1.5f, 0.0f});
-    active_body->motion_properties.linear_velocity = {0.0f, -1.0f, 0.0f};
+    active_body->motion_properties.linear_velocity = vec3f::make(0.0f, -1.0f, 0.0f);
     CHECK(ctx, rigid_body::is_sleeping(*sleeping_body) && !rigid_body::is_sleeping(*active_body));
 
     step_world(*scene.world);
@@ -258,7 +258,7 @@ void test_update_sleeping_body_on_floor_woken_by_falling_body(TestCtx &ctx) {
     RigidBody *sleeping_body = add_unit_box(scene, {0.0f, 0.5f, 0.0f});
     rigid_body::sleep(*scene.world, sleeping_body);
     RigidBody *falling_body = add_unit_box(scene, {0.0f, 2.0f, 0.0f});
-    falling_body->motion_properties.linear_velocity = {0.0f, -5.0f, 0.0f};
+    falling_body->motion_properties.linear_velocity = vec3f::make(0.0f, -5.0f, 0.0f);
 
     for (uint32_t i = 0; i < 30 && rigid_body::is_sleeping(*sleeping_body); i++) step_world(*scene.world);
     CHECK(ctx, !rigid_body::is_sleeping(*sleeping_body));
@@ -268,16 +268,16 @@ void test_update_sleeping_body_on_floor_woken_by_falling_body(TestCtx &ctx) {
 void test_update_falling_body_lands_on_sleeping_body(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     add_floor(scene);
-    RigidBody *sleeping_body = add_body(scene, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}), MotionType::DYNAMIC, {0.0f, 1.0f, 0.0f});
+    RigidBody *sleeping_body = add_body(scene, box::create({.half_extents = vec3f::splat(1.0f)}), MotionType::DYNAMIC, {0.0f, 1.0f, 0.0f});
     rigid_body::sleep(*scene.world, sleeping_body);
     RigidBody *falling_body = add_unit_box(scene, {0.0f, 3.0f, 0.0f});
 
     for (uint32_t i = 0; i < 120; i++) step_world(*scene.world);
 
     // resting on the sleeping body's top at y = 2, which stayed on the floor
-    CHECK(ctx, falling_body->position.y > 2.0f);
-    CHECK_NEAR(ctx, falling_body->position.y, 2.5f, 0.03f);
-    CHECK_NEAR(ctx, sleeping_body->position.y, 1.0f, 0.03f);
+    CHECK(ctx, vec3f::y(falling_body->position) > 2.0f);
+    CHECK_NEAR(ctx, vec3f::y(falling_body->position), 2.5f, 0.03f);
+    CHECK_NEAR(ctx, vec3f::y(sleeping_body->position), 1.0f, 0.03f);
     release_world_scene(scene);
 }
 
@@ -313,7 +313,7 @@ void test_update_capsule_falls_onto_sleeping_capsule(TestCtx &ctx) {
 
     RigidBody *target = nullptr;
     for (uint32_t i = 0; i < 50 && target == nullptr; i++) {
-        if (rigid_body::is_sleeping(*capsules[i]) && scalar::abs(capsules[i]->position.x) < 2.0f && scalar::abs(capsules[i]->position.z) < 2.0f) {
+        if (rigid_body::is_sleeping(*capsules[i]) && scalar::abs(vec3f::x(capsules[i]->position)) < 2.0f && scalar::abs(vec3f::z(capsules[i]->position)) < 2.0f) {
             target = capsules[i];
         }
     }
@@ -321,9 +321,9 @@ void test_update_capsule_falls_onto_sleeping_capsule(TestCtx &ctx) {
     if (target == nullptr) return;
 
     RigidBody *falling = add_body(scene, capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f}), MotionType::DYNAMIC,
-                                  {target->position.x, target->position.y + 3.0f, target->position.z});
+                                  {vec3f::x(target->position), vec3f::y(target->position) + 3.0f, vec3f::z(target->position)});
     for (uint32_t i = 0; i < 120; i++) step_world(*scene.world);
-    CHECK(ctx, falling->position.y > 1.0f);
+    CHECK(ctx, vec3f::y(falling->position) > 1.0f);
     release_world_scene(scene);
 }
 
@@ -352,9 +352,9 @@ void test_update_capsule_falls_onto_sleeping_capsule_after_respawns(TestCtx &ctx
     if (target == nullptr) return;
 
     RigidBody *falling = add_body(scene, capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.3f}), MotionType::DYNAMIC,
-                                  {target->position.x, target->position.y + 3.0f, target->position.z});
+                                  {vec3f::x(target->position), vec3f::y(target->position) + 3.0f, vec3f::z(target->position)});
     for (uint32_t i = 0; i < 120; i++) step_world(*scene.world);
-    CHECK(ctx, falling->position.y > 1.0f);
+    CHECK(ctx, vec3f::y(falling->position) > 1.0f);
     release_world_scene(scene);
 }
 
@@ -382,13 +382,13 @@ void test_update_large_capsule_falls_onto_sleeping_capsules(TestCtx &ctx) {
 
     RigidBodySettings settings =
         body_settings(capsule::create({.half_height_of_cylinder = 1.0f, .radius = 1.0f}), scene.moving, MotionType::DYNAMIC,
-                      {target->position.x, 25.0f, target->position.z});
+                      {vec3f::x(target->position), 25.0f, vec3f::z(target->position)});
     settings.restitution = 0.0f;
     settings.friction = 0.5f;
     RigidBody *falling = rigid_body::create(*scene.world, settings);
     for (uint32_t i = 0; i < 180; i++) step_world(*scene.world);
     // stacked capsule centres are at least radius + radius apart
-    CHECK(ctx, falling->position.y > 3.0f);
+    CHECK(ctx, vec3f::y(falling->position) > 3.0f);
     release_world_scene(scene);
 }
 
@@ -406,7 +406,7 @@ void test_update_body_at_rest_sleeps_and_impulse_wakes(TestCtx &ctx) {
     rigid_body::add_impulse(*scene.world, body, vec3f::make(0.0f, 5.0f, 0.0f));
     step_world(*scene.world);
     CHECK(ctx, !rigid_body::is_sleeping(*body));
-    CHECK(ctx, body->position.y > 0.0f);
+    CHECK(ctx, vec3f::y(body->position) > 0.0f);
     release_world_scene(scene);
 }
 
@@ -440,13 +440,13 @@ void test_update_contacts_removed_once_on_sleep_and_added_on_wake(TestCtx &ctx) 
     CHECK(ctx, added == 0 && removed == 0);
 
     // wake: a clean narrowphase re-adds, not a cache hit into zero contacts
-    const float y_before = box_body->position.y;
+    const float y_before = vec3f::y(box_body->position);
     rigid_body::wake(*scene.world, box_body);
     step_world(*scene.world);
     CHECK(ctx, !rigid_body::is_sleeping(*box_body));
     CHECK(ctx, scene.world->events.contacts_added.length > 0);
     CHECK(ctx, pair_contact_count(*scene.world, *box_body, *floor) > 0);
-    CHECK_NEAR(ctx, box_body->position.y, y_before, 0.05f);
+    CHECK_NEAR(ctx, vec3f::y(box_body->position), y_before, 0.05f);
     release_world_scene(scene);
 }
 
@@ -460,8 +460,8 @@ uint32_t added_contact_points(const World &world, const RigidBody &body, Float3 
         const ContactEvent &event = world.events.contacts_added[i];
         const bool body_is_a = event.body_index_a == body.index;
         for (uint32_t j = 0; j < event.num_points && count < max_points; j++, count++) {
-            out_on_body[count] = body_is_a ? event.points_a[j] : event.points_b[j];
-            out_on_other[count] = body_is_a ? event.points_b[j] : event.points_a[j];
+            vec3f::store(out_on_body[count], body_is_a ? event.points_a[j] : event.points_b[j]);
+            vec3f::store(out_on_other[count], body_is_a ? event.points_b[j] : event.points_a[j]);
         }
     }
     return count;
@@ -473,10 +473,10 @@ void test_update_capsule_lying_on_box_gets_two_points(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     // a 2 m static box with its top at y = 1, and a capsule (radius 0.5, cylinder half height 0.5) lying along x with its
     // bottom line 1 cm into the box's top
-    RigidBody *box_body = add_body(scene, box::create({.half_extents = {1.0f, 1.0f, 1.0f}}), MotionType::STATIC, {0.0f, 0.0f, 0.0f});
+    RigidBody *box_body = add_body(scene, box::create({.half_extents = vec3f::splat(1.0f)}), MotionType::STATIC, {0.0f, 0.0f, 0.0f});
     RigidBodySettings settings = body_settings(capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.5f}), scene.moving,
                                                            MotionType::DYNAMIC, {0.0f, 1.49f, 0.0f});
-    settings.quaternion = stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), scalar::PI / 2.0f);
+    settings.quaternion = axis_angle(vec3f::axis_z(), scalar::PI / 2.0f);
     rigid_body::create(*scene.world, settings);
 
     step_world(*scene.world);
@@ -504,9 +504,9 @@ void test_update_box_resting_along_capsule_gets_two_points(TestCtx &ctx) {
     // a static capsule lying along x with its top line at y = 0.5, and a dynamic box whose bottom face sits 1 cm into it
     RigidBodySettings settings = body_settings(capsule::create({.half_height_of_cylinder = 0.5f, .radius = 0.5f}),
                                                            scene.not_moving, MotionType::STATIC, {0.0f, 0.0f, 0.0f});
-    settings.quaternion = stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), scalar::PI / 2.0f);
+    settings.quaternion = axis_angle(vec3f::axis_z(), scalar::PI / 2.0f);
     RigidBody *capsule_body = rigid_body::create(*scene.world, settings);
-    add_body(scene, box::create({.half_extents = {1.0f, 0.5f, 0.5f}}), MotionType::DYNAMIC, {0.0f, 0.99f, 0.0f});
+    add_body(scene, box::create({.half_extents = vec3f::make(1.0f, 0.5f, 0.5f)}), MotionType::DYNAMIC, {0.0f, 0.99f, 0.0f});
 
     step_world(*scene.world);
 
@@ -550,7 +550,7 @@ void test_update_box_on_tessellated_mesh_prunes_to_quad(TestCtx &ctx) {
         }
     }
     add_body(scene, make_mesh(positions, (CELLS + 1) * (CELLS + 1), indices, CELLS * CELLS * 6), MotionType::STATIC, {0.0f, 0.0f, 0.0f});
-    RigidBody *box_body = add_body(scene, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}), MotionType::DYNAMIC, {0.0f, 0.49f, 0.0f});
+    RigidBody *box_body = add_body(scene, box::create({.half_extents = vec3f::splat(0.5f)}), MotionType::DYNAMIC, {0.0f, 0.49f, 0.0f});
 
     uint32_t max_points = 0;
     for (uint32_t i = 0; i < 30; i++) {
@@ -560,9 +560,9 @@ void test_update_box_on_tessellated_mesh_prunes_to_quad(TestCtx &ctx) {
         }
     }
     CHECK(ctx, max_points == 4);
-    CHECK_NEAR(ctx, box_body->position.y, 0.5f, 0.05f);
-    CHECK(ctx, scalar::abs(box_body->position.x) < 0.01f);
-    CHECK(ctx, scalar::abs(box_body->position.z) < 0.01f);
+    CHECK_NEAR(ctx, vec3f::y(box_body->position), 0.5f, 0.05f);
+    CHECK(ctx, scalar::abs(vec3f::x(box_body->position)) < 0.01f);
+    CHECK(ctx, scalar::abs(vec3f::z(box_body->position)) < 0.01f);
     release_world_scene(scene);
 }
 
@@ -596,15 +596,15 @@ void check_rejected_pair_never_contacts(TestCtx &ctx, WorldScene &scene) {
     update::step_end(*scene.world);
 
     // rejected every step, the ball falls through the floor as if it were not there
-    float previous_y = ball->position.y;
+    float previous_y = vec3f::y(ball->position);
     for (uint32_t i = 0; i < 60; i++) {
         step_rejecting_pairs(*scene.world);
         CHECK(ctx, scene.world->events.contacts_added.length == 0 && scene.world->events.contacts_persisted.length == 0);
-        CHECK(ctx, ball->position.y < previous_y);
-        previous_y = ball->position.y;
+        CHECK(ctx, vec3f::y(ball->position) < previous_y);
+        previous_y = vec3f::y(ball->position);
     }
     CHECK(ctx, body_contact_count(*scene.world, *ball) == 0);
-    CHECK(ctx, ball->position.y < -3.0f);
+    CHECK(ctx, vec3f::y(ball->position) < -3.0f);
 }
 
 }  // namespace
@@ -646,7 +646,7 @@ void conveyor_contact(ContactEvent &contact) {
     ContactSettings &settings = events::change_contact(contact);
     settings.combined_friction = 1.0f;
     // body 2's surface relative to body 1's: the floor (made first, so body a) moving +x at 2 m/s gives -2
-    settings.relative_linear_surface_velocity = {-2.0f, 0.0f, 0.0f};
+    settings.relative_linear_surface_velocity = vec3f::make(-2.0f, 0.0f, 0.0f);
 }
 
 }  // namespace
@@ -659,7 +659,7 @@ void test_update_contact_reject_falls_through_floor(TestCtx &ctx) {
 
     // the boxes rest on the floor until the caller rejects the first one's contacts
     step_world(*scene.world);
-    CHECK_NEAR(ctx, box_body->position.y, 0.5f, 0.01f);
+    CHECK_NEAR(ctx, vec3f::y(box_body->position), 0.5f, 0.01f);
 
     for (uint32_t i = 0; i < 60; i++) {
         step_changing_contacts(*scene.world, [](ContactEvent &contact) {
@@ -668,8 +668,8 @@ void test_update_contact_reject_falls_through_floor(TestCtx &ctx) {
         });
     }
     // fell freely through the floor, while the control box still rests on it
-    CHECK(ctx, box_body->position.y < -3.0f);
-    CHECK_NEAR(ctx, control->position.y, 0.5f, 0.02f);
+    CHECK(ctx, vec3f::y(box_body->position) < -3.0f);
+    CHECK_NEAR(ctx, vec3f::y(control->position), 0.5f, 0.02f);
     release_world_scene(scene);
 }
 
@@ -680,14 +680,14 @@ void test_update_contact_change_conveyor_moves_resting_box(TestCtx &ctx) {
 
     // settled first, still
     for (uint32_t i = 0; i < 10; i++) step_world(*scene.world);
-    CHECK(ctx, scalar::abs(box_body->motion_properties.linear_velocity.x) < 1e-3f);
+    CHECK(ctx, scalar::abs(vec3f::x(box_body->motion_properties.linear_velocity)) < 1e-3f);
 
     for (uint32_t i = 0; i < 60; i++) step_changing_contacts(*scene.world, conveyor_contact);
     // carried along with the belt's surface, still resting on it
-    CHECK_NEAR(ctx, box_body->motion_properties.linear_velocity.x, 2.0f, 0.02f);
-    CHECK(ctx, box_body->position.x > 1.0f);
-    CHECK_NEAR(ctx, box_body->position.y, 0.5f, 0.02f);
-    CHECK(ctx, scalar::abs(box_body->position.z) < 1e-3f);
+    CHECK_NEAR(ctx, vec3f::x(box_body->motion_properties.linear_velocity), 2.0f, 0.02f);
+    CHECK(ctx, vec3f::x(box_body->position) > 1.0f);
+    CHECK_NEAR(ctx, vec3f::y(box_body->position), 0.5f, 0.02f);
+    CHECK(ctx, scalar::abs(vec3f::z(box_body->position)) < 1e-3f);
     release_world_scene(scene);
 }
 
@@ -713,7 +713,7 @@ void test_update_events_start_unrejected_and_cleared_at_begin(TestCtx &ctx) {
     for (uint32_t i = 0; i < world.events.contacts_persisted.length; i++) {
         const ContactEvent &event = world.events.contacts_persisted[i];
         CHECK(ctx, event.body_id_a < event.body_id_b);
-        CHECK_NEAR(ctx, event.normal.y, 1.0f, 1e-4f);
+        CHECK_NEAR(ctx, vec3f::y(event.normal), 1.0f, 1e-4f);
     }
     update::solve(world);
     update::step_end(world);
@@ -738,8 +738,8 @@ void test_update_stack_of_ten_stands(TestCtx &ctx) {
         for (uint32_t i = 0; i < 10; i++) stack[i] = add_unit_box(scene, {0.0f, 0.5f + (float)i, 0.0f});
         for (uint32_t step = 0; step < 900 && count_sleeping(stack, 10) < 10; step++) step_world(*scene.world);
         for (uint32_t i = 0; i < 10; i++) {
-            CHECK_NEAR(ctx, stack[i]->position.y, 0.5f + (float)i, 0.02f * (float)(i + 1));
-            CHECK(ctx, scalar::abs(stack[i]->position.x) < 0.5f && scalar::abs(stack[i]->position.z) < 0.5f);
+            CHECK_NEAR(ctx, vec3f::y(stack[i]->position), 0.5f + (float)i, 0.02f * (float)(i + 1));
+            CHECK(ctx, scalar::abs(vec3f::x(stack[i]->position)) < 0.5f && scalar::abs(vec3f::z(stack[i]->position)) < 0.5f);
         }
         release_world_scene(scene);
     }
@@ -756,11 +756,11 @@ WorldScene build_pile(TestCtx &ctx) {
         const float offset_z = 0.03f * (float)(i % 4) - 0.04f;
         const Float3 position = {offset_x, 0.6f + 1.1f * (float)i, offset_z};
         Shape *shape;
-        if (i % 3 == 0) shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+        if (i % 3 == 0) shape = box::create({.half_extents = vec3f::splat(0.5f)});
         else if (i % 3 == 1) shape = sphere::create({.radius = 0.45f});
         else shape = capsule::create({.half_height_of_cylinder = 0.3f, .radius = 0.3f});
         RigidBodySettings settings = body_settings(shape, scene.moving, MotionType::DYNAMIC, position);
-        settings.quaternion = stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.1f * (float)i);
+        settings.quaternion = axis_angle(vec3f::axis_z(), 0.1f * (float)i);
         rigid_body::create(*scene.world, settings);
     }
     return scene;
@@ -781,17 +781,17 @@ void test_update_landed_box_not_launched_by_a_longer_step(TestCtx &ctx) {
     float previous_velocity = 0.0f;
     for (uint32_t i = 0; i < 400; i++) {
         step_world(*scene.world, short_step);
-        const float velocity = top->motion_properties.linear_velocity.y;
+        const float velocity = vec3f::y(top->motion_properties.linear_velocity);
         if (previous_velocity < -2.0f && scalar::abs(velocity) < 0.5f) break;
         previous_velocity = velocity;
     }
-    CHECK_NEAR(ctx, top->position.y, 1.5f, 0.05f);
+    CHECK_NEAR(ctx, vec3f::y(top->position), 1.5f, 0.05f);
 
     // 32 times longer steps: the warm start scales by at most 4, which the solver takes back, so the box stays put
-    float highest = top->position.y;
+    float highest = vec3f::y(top->position);
     for (uint32_t i = 0; i < 30; i++) {
         step_world(*scene.world, short_step * 32.0f);
-        highest = scalar::max(highest, top->position.y);
+        highest = scalar::max(highest, vec3f::y(top->position));
     }
     CHECK(ctx, highest < 1.51f);
     release_world_scene(scene);
@@ -802,13 +802,13 @@ void test_update_new_shape_not_given_the_old_shapes_cached_contacts(TestCtx &ctx
     add_floor(scene);
     RigidBody *box = add_unit_box(scene, {0.0f, 0.5f, 0.0f});
     for (uint32_t i = 0; i < 60; i++) step_world(*scene.world);
-    CHECK_NEAR(ctx, box->position.y, 0.5f, 0.01f);
+    CHECK_NEAR(ctx, vec3f::y(box->position), 0.5f, 0.01f);
 
     // twice as tall, its bottom a half metre into the floor: the pair barely moved, but its cached contacts are the old
     // shape's, so it runs the narrowphase and is pushed out
-    rigid_body::set_shape(*scene.world, box, box::create({.half_extents = {0.5f, 1.0f, 0.5f}}), false);
+    rigid_body::set_shape(*scene.world, box, box::create({.half_extents = vec3f::make(0.5f, 1.0f, 0.5f)}), false);
     for (uint32_t i = 0; i < 120; i++) step_world(*scene.world);
-    CHECK_NEAR(ctx, box->position.y, 1.0f, 0.03f);
+    CHECK_NEAR(ctx, vec3f::y(box->position), 1.0f, 0.03f);
     release_world_scene(scene);
 }
 
@@ -821,7 +821,7 @@ void test_update_speculative_friction_acts_at_each_bodys_point(TestCtx &ctx) {
     // the sphere first, so it is body a
     RigidBody *ball = add_body(scene, sphere::create({.radius = radius}), MotionType::DYNAMIC, {0.0f, radius + gap, 0.0f});
     add_floor(scene);
-    ball->motion_properties.linear_velocity = {1.0f, 0.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(1.0f, 0.0f, 0.0f);
 
     step_world(*scene.world);
 
@@ -915,7 +915,7 @@ void test_update_weight_hanging_from_static_anchor_stays_asleep(TestCtx &ctx) {
     RigidBody *anchor = add_body(scene, sphere::create({.radius = 0.1f}), MotionType::STATIC, {0.0f, 10.0f, 0.0f});
     RigidBody *weight = add_body(scene, sphere::create({.radius = 0.5f}), MotionType::DYNAMIC, {0.0f, 7.0f, 0.0f});
     distance_constraint::create(*scene.world, weight, anchor,
-                                {.point_a = {0.0f, 7.0f, 0.0f}, .point_b = {0.0f, 10.0f, 0.0f}});
+                                {.point_a = vec3f::make(0.0f, 7.0f, 0.0f), .point_b = vec3f::make(0.0f, 10.0f, 0.0f)});
 
     bool slept = false;
     for (uint32_t i = 0; i < 300 && !slept; i++) {
@@ -927,7 +927,7 @@ void test_update_weight_hanging_from_static_anchor_stays_asleep(TestCtx &ctx) {
     // the static anchor is never active, so nothing wakes the weight again
     for (uint32_t i = 0; i < 120; i++) step_world(*scene.world);
     CHECK(ctx, rigid_body::is_sleeping(*weight));
-    CHECK(ctx, vec3f::length(vec3f::load(weight->motion_properties.linear_velocity)) == 0.0f);
+    CHECK(ctx, vec3f::length(weight->motion_properties.linear_velocity) == 0.0f);
     release_world_scene(scene);
 }
 
@@ -946,11 +946,11 @@ void test_update_determinism_two_worlds_bit_identical(TestCtx &ctx) {
             const float offset_z = 0.03f * (float)(i % 4) - 0.04f;
             const Float3 position = {offset_x, 0.6f + 1.1f * (float)i, offset_z};
             Shape *shape;
-            if (i % 3 == 0) shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+            if (i % 3 == 0) shape = box::create({.half_extents = vec3f::splat(0.5f)});
             else if (i % 3 == 1) shape = sphere::create({.radius = 0.45f});
             else shape = capsule::create({.half_height_of_cylinder = 0.3f, .radius = 0.3f});
             RigidBodySettings settings_body = body_settings(shape, scene.moving, MotionType::DYNAMIC, position);
-            settings_body.quaternion = stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), 0.1f * (float)i);
+            settings_body.quaternion = axis_angle(vec3f::axis_z(), 0.1f * (float)i);
             rigid_body::create(*scene.world, settings_body);
         }
     }
@@ -967,12 +967,12 @@ void test_update_determinism_two_worlds_bit_identical(TestCtx &ctx) {
         identical = identical && bits_equal(&a.position, &b.position, sizeof(Float3)) &&
                     bits_equal(&a.quaternion, &b.quaternion, sizeof(Float4)) &&
                     bits_equal(&a.motion_properties.linear_velocity, &b.motion_properties.linear_velocity, sizeof(Float3));
-        any_moved = any_moved || a.position.y < 0.6f + 1.1f * (float)(i - 1) - 0.5f;
+        any_moved = any_moved || vec3f::y(a.position) < 0.6f + 1.1f * (float)(i - 1) - 0.5f;
     }
     CHECK(ctx, identical);
     // the pile actually fell and collided
     CHECK(ctx, any_moved);
-    CHECK(ctx, bodies_a.pool[12]->position.y < 10.0f);
+    CHECK(ctx, vec3f::y(bodies_a.pool[12]->position) < 10.0f);
     release_world_scene(scene_a);
     release_world_scene(scene_b);
 }
@@ -999,31 +999,31 @@ void test_update_active_list_and_deactivations_name_the_bodies_that_moved(TestCt
     RigidBody *falling = add_unit_box(scene, {0.0f, 5.0f, 0.0f});
     RigidBody *sleeping_box = add_unit_box(scene, {4.0f, 0.5f, 0.0f});
     rigid_body::sleep(*scene.world, sleeping_box);
-    RigidBody *kinematic = add_body(scene, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}), MotionType::KINEMATIC, {-4.0f, 3.0f, 0.0f});
-    kinematic->motion_properties.linear_velocity = {1.0f, 0.0f, 0.0f};
+    RigidBody *kinematic = add_body(scene, box::create({.half_extents = vec3f::splat(0.5f)}), MotionType::KINEMATIC, {-4.0f, 3.0f, 0.0f});
+    kinematic->motion_properties.linear_velocity = vec3f::make(1.0f, 0.0f, 0.0f);
     RigidBody *all[4] = {floor, falling, sleeping_box, kinematic};
     body_activation::flush(recorder, nullptr);
 
-    Float3 before[4];
+    Vec3f before[4];
     for (uint32_t i = 0; i < 4; i++) before[i] = all[i]->position;
     step_world(*scene.world);
 
     // a body whose pose changed is listed, and the listed are the two awake bodies
     CHECK(ctx, world::get_num_active_bodies(*scene.world) == 2 && recorder.events.length == 0);
     for (uint32_t i = 0; i < 4; i++) {
-        const bool changed = !vec3f::exact_equals(vec3f::load(before[i]), vec3f::load(all[i]->position));
+        const bool changed = !vec3f::exact_equals(before[i], all[i]->position);
         CHECK(ctx, changed == listed(recorder, all[i]));
     }
 
     // a step of 0 moves nothing
     for (uint32_t i = 0; i < 4; i++) before[i] = all[i]->position;
     step_world(*scene.world, 0.0f);
-    for (uint32_t i = 0; i < 4; i++) CHECK(ctx, vec3f::exact_equals(vec3f::load(before[i]), vec3f::load(all[i]->position)));
+    for (uint32_t i = 0; i < 4; i++) CHECK(ctx, vec3f::exact_equals(before[i], all[i]->position));
 
     // the step a body falls asleep in names it; the steps after do not
     scene.world->settings.gravity_enabled = false;
-    falling->motion_properties.linear_velocity = {0.0f, 0.0f, 0.0f};
-    kinematic->motion_properties.linear_velocity = {0.0f, 0.0f, 0.0f};
+    falling->motion_properties.linear_velocity = vec3f::zero();
+    kinematic->motion_properties.linear_velocity = vec3f::zero();
     rigid_body::set_motion_type(*scene.world, kinematic, MotionType::STATIC, false);
     body_activation::flush(recorder, nullptr);
     bool slept_listed = false;
@@ -1056,7 +1056,7 @@ WorldScene make_single_layer_world() {
 }
 
 RigidBody *make_pair_box(WorldScene &scene, const Float3 &position, MotionType motion_type = MotionType::DYNAMIC, float gravity_factor = 1.0f) {
-    RigidBodySettings settings = body_settings(box::create({.half_extents = {0.5f, 0.5f, 0.5f}}), scene.moving, motion_type, position);
+    RigidBodySettings settings = body_settings(box::create({.half_extents = vec3f::splat(0.5f)}), scene.moving, motion_type, position);
     if (motion_type == MotionType::DYNAMIC) settings.mass = 1.0f;
     settings.gravity_factor = gravity_factor;
     return rigid_body::create(*scene.world, settings);
@@ -1083,7 +1083,7 @@ void test_update_removal_purge_then_steps(TestCtx &ctx) {
 
 void test_update_hub_with_spokes_then_steps(TestCtx &ctx) {
     WorldScene scene = make_single_layer_world();
-    Shape *spoke_shape = box::create({.half_extents = {0.1f, 0.1f, 0.1f}});
+    Shape *spoke_shape = box::create({.half_extents = vec3f::splat(0.1f)});
     RigidBody *hub = make_pair_box(scene, {0.0f, 0.0f, 0.0f}, MotionType::DYNAMIC, 0.0f);
     RigidBody *spokes[4];
     const Float3 spoke_positions[4] = {{0.58f, 0.0f, 0.0f}, {-0.58f, 0.0f, 0.0f}, {0.0f, 0.58f, 0.0f}, {0.0f, -0.58f, 0.0f}};
@@ -1120,7 +1120,7 @@ void test_update_determinism_stack_60_steps(TestCtx &ctx) {
         make_pair_box(scene, {0.05f, 1.4f, 0.03f});
         make_pair_box(scene, {-0.03f, 2.6f, 0.02f});
         for (uint32_t i = 0; i < 60; i++) step_world(*scene.world);
-        for (uint32_t i = 0; i < 4; i++) positions[run][i] = scene.world->bodies.pool[i]->position;
+        for (uint32_t i = 0; i < 4; i++) vec3f::store(positions[run][i], scene.world->bodies.pool[i]->position);
         release_world_scene(scene);
     }
     for (uint32_t i = 0; i < 4; i++) CHECK(ctx, bits_equal(&positions[0][i], &positions[1][i], sizeof(Float3)));

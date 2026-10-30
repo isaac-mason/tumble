@@ -11,8 +11,8 @@ namespace empty {
 Shape *create() {
     EmptyShape *shape = shapes::allocate<EmptyShape>();
     // zero-size bounds at the origin
-    shape->aabb = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
-    vec3f::store(shape->center_of_mass, vec3f::zero());
+    shape->aabb = aabox::make(vec3f::zero(), vec3f::zero());
+    shape->center_of_mass = vec3f::zero();
     shape->volume = 0.0f;
     return shape;
 }
@@ -24,7 +24,7 @@ static void destroy(Shape *shape) {
 void compute_mass_properties(MassProperties &out, const Shape *) {
     // unit mass and inertia, so a dynamic body without a shape still integrates
     out.mass = 1.0f;
-    mat4f::store(out.inertia, mat4f::identity());
+    out.inertia = mat4f::identity();
 }
 
 void get_surface_normal(SurfaceNormalResult &io, const Shape *, SubShapeId) {
@@ -42,10 +42,10 @@ void get_supporting_face(SupportingFaceResult &io, Vec3f, const Shape *, SubShap
 int32_t get_material(const Shape *, SubShapeId) { return -1; }
 
 void cast_ray(CastRayCollector &, const CastRaySettings &, const Rayf &, const Shape *,
-              const SubShapeIdBuilder &, const Transformf &) {}
+              const SubShapeIdBuilder &, const Transform &) {}
 
 void collide_point(CollidePointCollector &, const CollidePointSettings &, Vec3f, const Shape *,
-                   const SubShapeIdBuilder &, const Transformf &) {}
+                   const SubShapeIdBuilder &, const Transform &) {}
 
 ShapeDef def() {
     ShapeDef shape_def = {};

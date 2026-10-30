@@ -18,10 +18,10 @@ static HingeConstraint *make_spinner(ConstraintScene &scene, RigidBody *&ball, c
     RigidBody *base = add_body(scene, MotionType::STATIC, ZERO);
     ball = add_body(scene, MotionType::DYNAMIC, ZERO);
     HingeConstraintSettings settings = extra;
-    settings.hinge_axis_a = {0.0f, 0.0f, 1.0f};
-    settings.hinge_axis_b = {0.0f, 0.0f, 1.0f};
-    settings.normal_axis_a = {1.0f, 0.0f, 0.0f};
-    settings.normal_axis_b = {1.0f, 0.0f, 0.0f};
+    settings.hinge_axis_a = vec3f::axis_z();
+    settings.hinge_axis_b = vec3f::axis_z();
+    settings.normal_axis_a = vec3f::axis_x();
+    settings.normal_axis_b = vec3f::axis_x();
     const ConstraintId id = hinge_constraint::create(*scene.world, base, ball, settings);
     scene.ids.push(id);
     return hinge_constraint::get(*scene.world, id);
@@ -34,12 +34,12 @@ void test_hinge_constraint_create(TestCtx &ctx) {
 
     // world space: axes normalized and taken to body space, positions relative to the centers of mass
     const ConstraintId id = hinge_constraint::create(*scene.world, a, b,
-                                                                    {.point_a = {1.0f, 0.0f, 0.0f},
-                                                                     .point_b = {1.0f, 0.0f, 0.0f},
-                                                                     .hinge_axis_a = {0.0f, 0.0f, 3.0f},
-                                                                     .hinge_axis_b = {0.0f, 0.0f, 3.0f},
-                                                                     .normal_axis_a = {2.0f, 0.0f, 0.0f},
-                                                                     .normal_axis_b = {2.0f, 0.0f, 0.0f},
+                                                                    {.point_a = vec3f::make(1.0f, 0.0f, 0.0f),
+                                                                     .point_b = vec3f::make(1.0f, 0.0f, 0.0f),
+                                                                     .hinge_axis_a = vec3f::make(0.0f, 0.0f, 3.0f),
+                                                                     .hinge_axis_b = vec3f::make(0.0f, 0.0f, 3.0f),
+                                                                     .normal_axis_a = vec3f::make(2.0f, 0.0f, 0.0f),
+                                                                     .normal_axis_b = vec3f::make(2.0f, 0.0f, 0.0f),
                                                                      .limits_min = -scalar::PI,
                                                                      .limits_max = 1.0f});
     HingeConstraint *constraint = hinge_constraint::get(*scene.world, id);
@@ -73,12 +73,12 @@ void test_hinge_constraint_create(TestCtx &ctx) {
     RigidBody *d = add_body(scene, MotionType::DYNAMIC, {0.0f, 1.0f, 0.0f});
     const ConstraintId local_id =
         hinge_constraint::create(*scene.world, c, d,
-                                 {.point_a = {0.0f, 0.5f, 0.0f},
-                                  .point_b = {0.0f, -0.5f, 0.0f},
-                                  .hinge_axis_a = {1.0f, 0.0f, 0.0f},
-                                  .hinge_axis_b = {1.0f, 0.0f, 0.0f},
-                                  .normal_axis_a = {0.0f, 1.0f, 0.0f},
-                                  .normal_axis_b = {0.0f, 1.0f, 0.0f},
+                                 {.point_a = vec3f::make(0.0f, 0.5f, 0.0f),
+                                  .point_b = vec3f::make(0.0f, -0.5f, 0.0f),
+                                  .hinge_axis_a = vec3f::axis_x(),
+                                  .hinge_axis_b = vec3f::axis_x(),
+                                  .normal_axis_a = vec3f::axis_y(),
+                                  .normal_axis_b = vec3f::axis_y(),
                                   .space = ConstraintSpace::LOCAL,
                                   .limits_min = -1.0f,
                                   .limits_max = 1.0f});
@@ -88,7 +88,7 @@ void test_hinge_constraint_create(TestCtx &ctx) {
     CHECK(ctx, same_bits(local->inv_initial_orientation, quatf::make(0.0f, 0.0f, 0.0f, 1.0f)));
     hinge_constraint::setup_velocity(*local, scene.world->bodies, DT);
     CHECK(ctx, scalar::abs(hinge_constraint::get_current_angle(*local)) < 1e-6f);
-    d->quaternion = stored_axis_angle(vec3f::make(1.0f, 0.0f, 0.0f), -0.4f);
+    d->quaternion = axis_angle(vec3f::axis_x(), -0.4f);
     hinge_constraint::setup_velocity(*local, scene.world->bodies, DT);
     CHECK_NEAR(ctx, hinge_constraint::get_current_angle(*local), -0.4f, 1e-5f);
 
@@ -133,18 +133,17 @@ void test_hinge_constraint_holds_axis(TestCtx &ctx) {
     RigidBody *ball = add_body(scene, MotionType::DYNAMIC, {1.0f, 0.0f, 0.0f});
     const ConstraintId id = hinge_constraint::create(
         *scene.world, pivot, ball,
-        {.hinge_axis_a = {0.0f, 0.0f, 1.0f}, .hinge_axis_b = {0.0f, 0.0f, 1.0f}, .normal_axis_a = {1.0f, 0.0f, 0.0f},
-         .normal_axis_b = {1.0f, 0.0f, 0.0f}});
+        {.hinge_axis_a = vec3f::axis_z(), .hinge_axis_b = vec3f::axis_z(), .normal_axis_a = vec3f::axis_x(), .normal_axis_b = vec3f::axis_x()});
     scene.ids.push(id);
     const HingeConstraint *constraint = hinge_constraint::get(*scene.world, id);
-    ball->motion_properties.linear_velocity = {0.0f, 0.0f, 2.0f};
-    ball->motion_properties.angular_velocity = {2.0f, 3.0f, 0.0f};
+    ball->motion_properties.linear_velocity = vec3f::make(0.0f, 0.0f, 2.0f);
+    ball->motion_properties.angular_velocity = vec3f::make(2.0f, 3.0f, 0.0f);
 
     float worst_axis = 0.0f;
     float worst_anchor = 0.0f;
     for (int i = 0; i < 180; i++) {
         step_constraint_scene(scene, DT, vec3f::load(GRAVITY));
-        const Vec3f axis2 = vec3f::transform_quat(constraint->local_space_hinge_axis2, quatf::load(ball->quaternion));
+        const Vec3f axis2 = vec3f::transform_quat(constraint->local_space_hinge_axis2, ball->quaternion);
         worst_axis = scalar::max(worst_axis, vec3f::distance(axis2, vec3f::make(0.0f, 0.0f, 1.0f)));
         worst_anchor = scalar::max(worst_anchor, vec3f::length(world_point(ball, constraint->local_space_position2)));
     }
@@ -152,13 +151,13 @@ void test_hinge_constraint_holds_axis(TestCtx &ctx) {
     CHECK(ctx, worst_axis < 2e-2f);
     CHECK(ctx, worst_anchor < 2e-2f);
     // it swings in the plane: no motion along z, and it turns about z only
-    CHECK(ctx, scalar::abs(ball->center_of_mass_position.z) < 1e-2f);
-    CHECK(ctx, scalar::abs(ball->motion_properties.linear_velocity.z) < 1e-2f);
-    CHECK(ctx, scalar::abs(ball->motion_properties.angular_velocity.x) < 1e-2f);
-    CHECK(ctx, scalar::abs(ball->motion_properties.angular_velocity.y) < 1e-2f);
-    CHECK_NEAR(ctx, vec3f::length(vec3f::load(ball->center_of_mass_position)), 1.0f, 1e-2f);
+    CHECK(ctx, scalar::abs(vec3f::z(ball->center_of_mass_position)) < 1e-2f);
+    CHECK(ctx, scalar::abs(vec3f::z(ball->motion_properties.linear_velocity)) < 1e-2f);
+    CHECK(ctx, scalar::abs(vec3f::x(ball->motion_properties.angular_velocity)) < 1e-2f);
+    CHECK(ctx, scalar::abs(vec3f::y(ball->motion_properties.angular_velocity)) < 1e-2f);
+    CHECK_NEAR(ctx, vec3f::length(ball->center_of_mass_position), 1.0f, 1e-2f);
     // it fell: the pendulum is moving
-    CHECK(ctx, ball->center_of_mass_position.y < -0.1f);
+    CHECK(ctx, vec3f::y(ball->center_of_mass_position) < -0.1f);
     release_constraint_scene(scene);
 }
 
@@ -166,7 +165,7 @@ void test_hinge_constraint_limits(TestCtx &ctx) {
     ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     HingeConstraint *constraint = make_spinner(scene, ball, {.limits_min = -0.5f, .limits_max = 0.5f});
-    ball->motion_properties.angular_velocity = {0.0f, 0.0f, 3.0f};
+    ball->motion_properties.angular_velocity = vec3f::make(0.0f, 0.0f, 3.0f);
 
     float widest = 0.0f;
     for (int i = 0; i < 90; i++) {
@@ -176,12 +175,12 @@ void test_hinge_constraint_limits(TestCtx &ctx) {
     // it stops at the upper limit, overshooting by at most one step's turn since the limit engages once crossed
     CHECK(ctx, widest < 0.5f + 3.0f * DT);
     CHECK_NEAR(ctx, hinge_constraint::get_current_angle(*constraint), 0.5f, 1e-2f);
-    CHECK(ctx, scalar::abs(ball->motion_properties.angular_velocity.z) < 1e-2f);
+    CHECK(ctx, scalar::abs(vec3f::z(ball->motion_properties.angular_velocity)) < 1e-2f);
     // at the max limit the impulse only pushes back
     CHECK(ctx, constraint->rotation_limits_constraint_part.total_lambda <= 0.0f);
 
     // and the other way to the lower limit
-    ball->motion_properties.angular_velocity = {0.0f, 0.0f, -3.0f};
+    ball->motion_properties.angular_velocity = vec3f::make(0.0f, 0.0f, -3.0f);
     float lowest = 0.0f;
     for (int i = 0; i < 90; i++) {
         step_constraint_scene(scene, DT, vec3f::zero());
@@ -202,21 +201,21 @@ void test_hinge_constraint_velocity_motor(TestCtx &ctx) {
 
     // an unlimited motor reaches its target speed in a step and holds it
     step_constraint_scene(scene, DT, vec3f::zero());
-    CHECK_NEAR(ctx, ball->motion_properties.angular_velocity.z, 2.0f, 1e-3f);
+    CHECK_NEAR(ctx, vec3f::z(ball->motion_properties.angular_velocity), 2.0f, 1e-3f);
     for (int i = 0; i < 59; i++) step_constraint_scene(scene, DT, vec3f::zero());
-    CHECK_NEAR(ctx, ball->motion_properties.angular_velocity.z, 2.0f, 1e-4f);
-    CHECK(ctx, scalar::abs(ball->motion_properties.angular_velocity.x) < 1e-4f);
+    CHECK_NEAR(ctx, vec3f::z(ball->motion_properties.angular_velocity), 2.0f, 1e-4f);
+    CHECK(ctx, scalar::abs(vec3f::x(ball->motion_properties.angular_velocity)) < 1e-4f);
     // it turned 2 radians in the second
-    const Vec3f normal2 = vec3f::transform_quat(vec3f::axis_x(), quatf::load(ball->quaternion));
+    const Vec3f normal2 = vec3f::transform_quat(vec3f::axis_x(), ball->quaternion);
     CHECK_NEAR(ctx, scalar::atan2(vec3f::y(normal2), vec3f::x(normal2)), 2.0f, 1e-2f);
 
     // a torque limit of I rad/s^2 accelerates it from rest at 1 rad/s^2
-    ball->motion_properties.angular_velocity = ZERO;
+    ball->motion_properties.angular_velocity = vec3f::zero();
     hinge_constraint::reset_warm_start(*constraint);
     constraint->motor_settings.min_torque_limit = -SPHERE_INERTIA;
     constraint->motor_settings.max_torque_limit = SPHERE_INERTIA;
     for (int i = 0; i < 60; i++) step_constraint_scene(scene, DT, vec3f::zero());
-    CHECK_NEAR(ctx, ball->motion_properties.angular_velocity.z, 1.0f, 1e-3f);
+    CHECK_NEAR(ctx, vec3f::z(ball->motion_properties.angular_velocity), 1.0f, 1e-3f);
     release_constraint_scene(scene);
 }
 
@@ -233,7 +232,7 @@ void test_hinge_constraint_position_motor(TestCtx &ctx) {
     // the default 2 hz critically damped spring settles on the target
     for (int i = 0; i < 180; i++) step_constraint_scene(scene, DT, vec3f::zero());
     CHECK_NEAR(ctx, hinge_constraint::get_current_angle(*constraint), 0.8f, 2e-3f);
-    CHECK(ctx, scalar::abs(ball->motion_properties.angular_velocity.z) < 1e-2f);
+    CHECK(ctx, scalar::abs(vec3f::z(ball->motion_properties.angular_velocity)) < 1e-2f);
 
     // a motor with no spring does nothing
     constraint->motor_settings.spring.frequency_or_stiffness = 0.0f;
@@ -248,12 +247,12 @@ void test_hinge_constraint_friction(TestCtx &ctx) {
     ConstraintScene scene = make_constraint_scene();
     RigidBody *ball = nullptr;
     make_spinner(scene, ball, {.max_friction_torque = SPHERE_INERTIA});
-    ball->motion_properties.angular_velocity = {0.0f, 0.0f, 3.0f};
+    ball->motion_properties.angular_velocity = vec3f::make(0.0f, 0.0f, 3.0f);
     for (int i = 0; i < 60; i++) step_constraint_scene(scene, DT, vec3f::zero());
-    CHECK_NEAR(ctx, ball->motion_properties.angular_velocity.z, 2.0f, 1e-3f);
+    CHECK_NEAR(ctx, vec3f::z(ball->motion_properties.angular_velocity), 2.0f, 1e-3f);
     // and stops it without turning it back
     for (int i = 0; i < 180; i++) step_constraint_scene(scene, DT, vec3f::zero());
-    CHECK(ctx, scalar::abs(ball->motion_properties.angular_velocity.z) < 1e-4f);
+    CHECK(ctx, scalar::abs(vec3f::z(ball->motion_properties.angular_velocity)) < 1e-4f);
     release_constraint_scene(scene);
 }
 
@@ -276,17 +275,17 @@ void test_hinge_constraint_local_space_rest_with_rotated_bodies(TestCtx &ctx) {
         ConstraintScene scene = make_constraint_scene();
         RigidBody *a = add_body(scene, MotionType::DYNAMIC, {0.0f, 0.0f, 0.0f}, rotations[c][0]);
         RigidBody *b = add_body(scene, MotionType::DYNAMIC, {0.0f, 2.0f, 0.0f}, rotations[c][1]);
-        const Quatf inv_a = quatf::conjugate(quatf::load(a->quaternion));
-        const Quatf inv_b = quatf::conjugate(quatf::load(b->quaternion));
+        const Quatf inv_a = quatf::conjugate(a->quaternion);
+        const Quatf inv_b = quatf::conjugate(b->quaternion);
 
         HingeConstraintSettings settings;
         settings.space = ConstraintSpace::LOCAL;
-        settings.point_a = {0.0f, 1.0f, 0.0f};
-        settings.point_b = {0.0f, -1.0f, 0.0f};
-        vec3f::store(settings.hinge_axis_a, vec3f::transform_quat(world_hinge, inv_a));
-        vec3f::store(settings.hinge_axis_b, vec3f::transform_quat(world_hinge, inv_b));
-        vec3f::store(settings.normal_axis_a, vec3f::transform_quat(world_normal, inv_a));
-        vec3f::store(settings.normal_axis_b, vec3f::transform_quat(world_normal, inv_b));
+        settings.point_a = vec3f::make(0.0f, 1.0f, 0.0f);
+        settings.point_b = vec3f::make(0.0f, -1.0f, 0.0f);
+        settings.hinge_axis_a = vec3f::transform_quat(world_hinge, inv_a);
+        settings.hinge_axis_b = vec3f::transform_quat(world_hinge, inv_b);
+        settings.normal_axis_a = vec3f::transform_quat(world_normal, inv_a);
+        settings.normal_axis_b = vec3f::transform_quat(world_normal, inv_b);
         settings.max_friction_torque = 1.0f;
         const ConstraintId id = hinge_constraint::create(*scene.world, a, b, settings);
         HingeConstraint *constraint = hinge_constraint::get(*scene.world, id);
@@ -310,10 +309,10 @@ void test_hinge_constraint_axes_a_hair_apart(TestCtx &ctx) {
     const float angle = 9e-7f;
     HingeConstraintSettings settings;
     settings.space = ConstraintSpace::LOCAL;
-    settings.hinge_axis_a = {0.0f, 0.0f, 1.0f};
-    settings.hinge_axis_b = {0.0f, 0.0f, 1.0f};
-    settings.normal_axis_a = {1.0f, 0.0f, 0.0f};
-    settings.normal_axis_b = {scalar::cos(angle), scalar::sin(angle), 0.0f};
+    settings.hinge_axis_a = vec3f::axis_z();
+    settings.hinge_axis_b = vec3f::axis_z();
+    settings.normal_axis_a = vec3f::axis_x();
+    settings.normal_axis_b = vec3f::make(scalar::cos(angle), scalar::sin(angle), 0.0f);
     const ConstraintId id = hinge_constraint::create(*scene.world, base, ball, settings);
     const HingeConstraint *hair = hinge_constraint::get(*scene.world, id);
     // r0^-1 = c2 c1^-1 turns by the hair about the hinge axis
@@ -332,7 +331,7 @@ void test_hinge_constraint_position_and_velocity_motor(TestCtx &ctx) {
         hinge_constraint::set_target_angular_velocity(*constraint, 2.0f);
         hinge_constraint::set_target_angle(*constraint, 0.0f);
         solve_hinge_velocities(scene, *constraint);
-        CHECK(ctx, ball->motion_properties.angular_velocity.z > 0.0f);
+        CHECK(ctx, vec3f::z(ball->motion_properties.angular_velocity) > 0.0f);
         release_constraint_scene(scene);
     }
 
@@ -346,7 +345,7 @@ void test_hinge_constraint_position_and_velocity_motor(TestCtx &ctx) {
         hinge_constraint::set_motor_state(*constraint, MotorState::POSITION_AND_VELOCITY);
         hinge_constraint::set_target_angular_velocity(*constraint, 2.0f);
         solve_hinge_velocities(scene, *constraint);
-        CHECK_NEAR(ctx, ball->motion_properties.angular_velocity.z, 1.0f, 1e-4f);
+        CHECK_NEAR(ctx, vec3f::z(ball->motion_properties.angular_velocity), 1.0f, 1e-4f);
         release_constraint_scene(scene);
     }
 }

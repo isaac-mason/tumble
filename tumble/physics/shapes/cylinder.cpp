@@ -42,8 +42,8 @@ static void destroy(Shape *shape) {
 /** V = pi * r^2 * (2h) */
 static float calculate_volume(float half_height, float radius) { return scalar::PI * radius * radius * 2.0f * half_height; }
 
-static void calculate_aabb(Box3f &out, float half_height, float radius) {
-    out = {{-radius, -half_height, -radius}, {radius, half_height, radius}};
+static AABox calculate_aabb(float half_height, float radius) {
+    return aabox::make(vec3f::make(-radius, -half_height, -radius), vec3f::make(radius, half_height, radius));
 }
 
 void update(Shape *shape) {
@@ -55,8 +55,8 @@ void update(Shape *shape) {
     // the convex radius fits the smallest dimension
     cylinder.convex_radius = scalar::min(cylinder.convex_radius, scalar::min(cylinder.half_height, cylinder.radius));
 
-    calculate_aabb(shape->aabb, cylinder.half_height, cylinder.radius);
-    vec3f::store(shape->center_of_mass, vec3f::zero());
+    shape->aabb = calculate_aabb(cylinder.half_height, cylinder.radius);
+    shape->center_of_mass = vec3f::zero();
     shape->volume = calculate_volume(cylinder.half_height, cylinder.radius);
 }
 
@@ -77,7 +77,7 @@ void compute_mass_properties(MassProperties &out, const Shape *shape) {
     const float ixx = 0.5f * iyy + (mass * 4.0f * h * h) / 12.0f;
     const float izz = ixx;
 
-    out.inertia = {{ixx, 0, 0, 0, 0, iyy, 0, 0, 0, 0, izz, 0, 0, 0, 0, 1.0f}};
+    out.inertia = mat4f::from_scaling(vec3f::make(ixx, iyy, izz));
 }
 
 void get_surface_normal(SurfaceNormalResult &io, const Shape *shape, SubShapeId) {

@@ -17,8 +17,8 @@ struct ContactSettings {
     float inv_inertia_scale_1 = 1.0f;
     float inv_inertia_scale_2 = 1.0f;
     /** surface velocity of body 2 relative to body 1, world space: a conveyor belt */
-    Float3 relative_linear_surface_velocity;
-    Float3 relative_angular_surface_velocity;
+    Vec3f relative_linear_surface_velocity;
+    Vec3f relative_angular_surface_velocity;
 };
 
 TUMBLE_NAMESPACE_END

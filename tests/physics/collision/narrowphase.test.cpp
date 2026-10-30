@@ -26,7 +26,7 @@ NarrowphaseWorld make_world() {
     dispatch::init();
     NarrowphaseWorld world;
     world.sphere = sphere::create({.radius = 1.0f});
-    world.box = box::create({.half_extents = {1.0f, 1.0f, 1.0f}});
+    world.box = box::create({.half_extents = vec3f::splat(1.0f)});
     world.capsule = capsule::create({.half_height_of_cylinder = 1.0f, .radius = 0.5f});
     world.empty = empty::create();
     return world;

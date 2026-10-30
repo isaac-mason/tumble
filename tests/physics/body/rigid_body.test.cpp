@@ -49,7 +49,7 @@ static bool active_list_consistent(const Bodies &bodies) {
 void test_rigid_body_create_box_mass(TestCtx &ctx) {
     Fixture f = make_fixture();
     // a 1 x 2 x 4 box at 500 kg/m^3: m = 4000, I = m/12 (b^2 + c^2) about each axis
-    Ref<Shape> shape = box::create({.half_extents = {0.5f, 1.0f, 2.0f}, .density = 500.0f});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::make(0.5f, 1.0f, 2.0f), .density = 500.0f});
     RigidBody *body = rigid_body::create(*f.world,
                                          {.shape = shape, .object_layer = f.moving, .motion_type = MotionType::DYNAMIC, .user_data = 0x100000007ull});
     CHECK(ctx, body != nullptr);
@@ -60,8 +60,7 @@ void test_rigid_body_create_box_mass(TestCtx &ctx) {
     const float iyy = mass / 12.0f * (1.0f + 16.0f);
     const float izz = mass / 12.0f * (1.0f + 4.0f);
     // unrotated, the world inverse inertia is the inverse of the diagonal
-    Float4x4 inverse_inertia;
-    rigid_body::get_inverse_inertia(inverse_inertia, body);
+    const Float4x4 inverse_inertia = elements(rigid_body::get_inverse_inertia(body));
     const float *m = inverse_inertia.m;
     CHECK_NEAR(ctx, m[0] * ixx, 1.0f, 1e-4f);
     CHECK_NEAR(ctx, m[5] * iyy, 1.0f, 1e-4f);
@@ -83,7 +82,7 @@ void test_rigid_body_create_box_mass(TestCtx &ctx) {
     CHECK(ctx, body->broadphase_node != -1 && body->broadphase_layer == 0 && body->in_move_set);
     CHECK(ctx, body->island_index == -1 && body->ccd_body_index == -1 && body->head_pair_key == -1 && body->constraint_ids.length == 0);
     // zero velocities and accumulators; the box is centred, so the centre of mass is the position
-    CHECK(ctx, vec3f::length(vec3f::load(body->motion_properties.linear_velocity)) == 0.0f && vec3f::length(vec3f::load(body->motion_properties.force)) == 0.0f);
+    CHECK(ctx, vec3f::length(body->motion_properties.linear_velocity) == 0.0f && vec3f::length(vec3f::load(body->motion_properties.force)) == 0.0f);
     CHECK(ctx, near_point(body->center_of_mass_position, 0.0f, 0.0f, 0.0f));
     // dynamic and awake: on the active list
     CHECK(ctx, body->active_index == 0 && f.world->bodies.active_body_count == 1);
@@ -91,11 +90,8 @@ void test_rigid_body_create_box_mass(TestCtx &ctx) {
     // a static body gets no inverse mass or inertia and stays off the active list
     RigidBody *ground = rigid_body::create(*f.world, {.shape = shape, .object_layer = f.moving, .motion_type = MotionType::STATIC});
     CHECK(ctx, ground->motion_properties.inv_mass == 0.0f);
-    CHECK(ctx, vec3f::length(vec3f::load(ground->motion_properties.inv_inertia_diagonal)) == 0.0f);
-    rigid_body::get_inverse_inertia(inverse_inertia, ground);
-    bool zero = true;
-    for (int i = 0; i < 16; i++) zero = zero && inverse_inertia.m[i] == 0.0f;
-    CHECK(ctx, zero);
+    CHECK(ctx, vec3f::length(ground->motion_properties.inv_inertia_diagonal) == 0.0f);
+    CHECK(ctx, same_bits(rigid_body::get_inverse_inertia(ground), mat4f::zero()));
     CHECK(ctx, ground->active_index == sleep::INACTIVE_BODY_INDEX && f.world->bodies.active_body_count == 1);
 
     release_fixture(f);
@@ -114,23 +110,20 @@ void test_rigid_body_mass_overrides(TestCtx &ctx) {
     // full override: mass and inertia as given
     MassProperties provided = mass_properties::create();
     provided.mass = 500.0f;
-    mat4f::store(provided.inertia, mat4f::identity());
-    provided.inertia.m[0] = 100.0f;
-    provided.inertia.m[5] = 100.0f;
-    provided.inertia.m[10] = 100.0f;
+    provided.inertia = mat4f::from_scaling(vec3f::splat(100.0f));
     RigidBody *overridden = rigid_body::create(
         *f.world,
         {.shape = shape, .object_layer = f.moving, .motion_type = MotionType::DYNAMIC, .mass = 3.0f, .mass_properties_override = &provided});
     CHECK(ctx, overridden->mass_properties_override == RigidBody::MassPropertiesOverride::MASS_AND_INERTIA_PROVIDED);
     CHECK_NEAR(ctx, overridden->motion_properties.inv_mass, 1.0f / 500.0f, 1e-8f);
-    CHECK_NEAR(ctx, overridden->motion_properties.inv_inertia_diagonal.x, 1.0f / 100.0f, 1e-7f);
+    CHECK_NEAR(ctx, vec3f::x(overridden->motion_properties.inv_inertia_diagonal), 1.0f / 100.0f, 1e-7f);
 
     // mass only: the sphere's inertia 2/5 m r^2, scaled to the mass
     RigidBody *mass_only =
         rigid_body::create(*f.world, {.shape = shape, .object_layer = f.moving, .motion_type = MotionType::DYNAMIC, .mass = 10.0f});
     CHECK(ctx, mass_only->mass_properties_override == RigidBody::MassPropertiesOverride::CALCULATE_INERTIA);
     CHECK_NEAR(ctx, mass_only->motion_properties.inv_mass, 0.1f, 1e-7f);
-    CHECK_NEAR(ctx, mass_only->mass_properties.inertia.m[0], 0.4f * 10.0f, 1e-4f);
+    CHECK_NEAR(ctx, elements(mass_only->mass_properties.inertia).m[0], 0.4f * 10.0f, 1e-4f);
 
     release_fixture(f);
     shape = nullptr;
@@ -138,7 +131,7 @@ void test_rigid_body_mass_overrides(TestCtx &ctx) {
 
 void test_rigid_body_null_shape_is_empty(TestCtx &ctx) {
     Fixture f = make_fixture();
-    RigidBody *body = rigid_body::create(*f.world, {.object_layer = f.moving, .motion_type = MotionType::STATIC, .position = {1.0f, 2.0f, 3.0f}});
+    RigidBody *body = rigid_body::create(*f.world, {.object_layer = f.moving, .motion_type = MotionType::STATIC, .position = vec3f::make(1.0f, 2.0f, 3.0f)});
     CHECK(ctx, body->shape != nullptr && body->shape->type == ShapeType::EMPTY);
     CHECK(ctx, near_point(body->center_of_mass_position, 1.0f, 2.0f, 3.0f));
     // the pool's one shared empty shape, which a second shapeless body and a removed body hold too; the pool frees it
@@ -150,14 +143,16 @@ void test_rigid_body_null_shape_is_empty(TestCtx &ctx) {
 
 void test_rigid_body_aabb(TestCtx &ctx) {
     Fixture f = make_fixture();
-    Ref<Shape> shape = box::create({.half_extents = {1.0f, 0.5f, 0.25f}});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::make(1.0f, 0.5f, 0.25f)});
 
     // 30 degrees about z: the extents in x and y mix by |cos| and |sin|, z keeps its own
     const float angle = scalar::PI / 6.0f;
-    const Float4 turned = stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), angle);
-    RigidBody *body = rigid_body::create(*f.world,
-                                         {.shape = shape, .object_layer = f.moving, .motion_type = MotionType::DYNAMIC, .position = {1.0f, 2.0f, 3.0f},
-                                          .quaternion = turned});
+    const Quatf turned = axis_angle(vec3f::axis_z(), angle);
+    RigidBody *body = rigid_body::create(*f.world, {.shape = shape,
+                                                    .object_layer = f.moving,
+                                                    .motion_type = MotionType::DYNAMIC,
+                                                    .position = vec3f::make(1.0f, 2.0f, 3.0f),
+                                                    .quaternion = turned});
     const float c = scalar::cos(angle);
     const float s = scalar::sin(angle);
     const float ex = c * 1.0f + s * 0.5f;
@@ -166,15 +161,15 @@ void test_rigid_body_aabb(TestCtx &ctx) {
     CHECK(ctx, near_point(body->aabb.max, 1.0f + ex, 2.0f + ey, 3.0f + 0.25f));
 
     // any rotation: the box of the box through the rotation and translation matrix
-    const Float4 tumbled = stored_axis_angle(vec3f::make(0.3f, -0.8f, 0.5f), 1.3f);
-    rigid_body::set_transform(*f.world, body, vec3f::make(-4.0f, 0.5f, 9.0f), quatf::load(tumbled), false);
-    const Mat4f transform = mat4f::from_rotation_translation(quatf::load(tumbled), vec3f::make(-4.0f, 0.5f, 9.0f));
-    const AABox expected = aabox::transform_mat4(aabox::load(shape->aabb), transform);
-    CHECK(ctx, vec3f::distance(vec3f::load(body->aabb.min), expected.min) < 1e-5f && vec3f::distance(vec3f::load(body->aabb.max), expected.max) < 1e-5f);
+    const Quatf tumbled = axis_angle(vec3f::make(0.3f, -0.8f, 0.5f), 1.3f);
+    rigid_body::set_transform(*f.world, body, vec3f::make(-4.0f, 0.5f, 9.0f), tumbled, false);
+    const Mat4f transform = mat4f::from_rotation_translation(tumbled, vec3f::make(-4.0f, 0.5f, 9.0f));
+    const AABox expected = aabox::transform_mat4(shape->aabb, transform);
+    CHECK(ctx, vec3f::distance(body->aabb.min, expected.min) < 1e-5f && vec3f::distance(body->aabb.max, expected.max) < 1e-5f);
 
     // set_position moves the aabb with the body
     rigid_body::set_position(*f.world, body, vec3f::make(0.0f, 0.0f, 0.0f), false);
-    CHECK(ctx, vec3f::distance(vec3f::load(body->aabb.min), vec3f::add(expected.min, vec3f::make(4.0f, -0.5f, -9.0f))) < 1e-5f);
+    CHECK(ctx, vec3f::distance(body->aabb.min, vec3f::add(expected.min, vec3f::make(4.0f, -0.5f, -9.0f))) < 1e-5f);
 
     release_fixture(f);
     shape = nullptr;
@@ -182,7 +177,7 @@ void test_rigid_body_aabb(TestCtx &ctx) {
 
 void test_rigid_body_remove_and_ids(TestCtx &ctx) {
     Fixture f = make_fixture();
-    Ref<Shape> shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(0.5f)});
     const RigidBodySettings settings = {.shape = shape, .object_layer = f.moving, .motion_type = MotionType::DYNAMIC};
     RigidBody *a = rigid_body::create(*f.world, settings);
     RigidBody *b = rigid_body::create(*f.world, settings);
@@ -212,7 +207,7 @@ void test_rigid_body_remove_and_ids(TestCtx &ctx) {
     RigidBody *ground = rigid_body::create(*f.world, {.shape = shape, .object_layer = f.moving, .motion_type = MotionType::STATIC});
     CHECK(ctx, ground == c && ground->index == 0);
     CHECK(ctx, ground->motion_properties.inv_mass == 0.0f);
-    CHECK(ctx, vec3f::length(vec3f::load(ground->motion_properties.inv_inertia_diagonal)) == 0.0f);
+    CHECK(ctx, vec3f::length(ground->motion_properties.inv_inertia_diagonal) == 0.0f);
     CHECK(ctx, ground->motion_properties.num_velocity_steps_override == 0 && ground->motion_properties.num_position_steps_override == 0);
     CHECK(ctx, ground->motion_properties.world_inverse_inertia_stamp == motion_properties::STEP_STAMP_NONE);
     CHECK(ctx, rigid_body::remove(*f.world, ground));
@@ -226,7 +221,7 @@ void test_rigid_body_remove_and_ids(TestCtx &ctx) {
 void test_rigid_body_remove_drops_shape_and_step_overrides(TestCtx &ctx) {
     const size_t blocks_before = util::allocated_blocks();
     Fixture f = make_fixture();
-    Ref<Shape> shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(0.5f)});
 
     // the step overrides in the settings land in the motion properties
     RigidBody *a = rigid_body::create(*f.world,
@@ -280,20 +275,20 @@ void test_rigid_body_forces_and_impulses(TestCtx &ctx) {
     CHECK(ctx, near_point(mp.linear_velocity, 100.0f * mp.inv_mass, 0.0f, -50.0f * mp.inv_mass, 1e-7f));
 
     // an angular impulse goes through the inverse inertia: 1 / (2/5 m r^2) for a sphere
-    mp.angular_velocity = {0.0f, 0.0f, 0.0f};
+    mp.angular_velocity = vec3f::zero();
     rigid_body::add_angular_impulse(*f.world, body, vec3f::make(0.0f, 1.0f, 0.0f));
-    CHECK_NEAR(ctx, mp.angular_velocity.y, mp.inv_mass / 0.4f, 1e-7f);
+    CHECK_NEAR(ctx, vec3f::y(mp.angular_velocity), mp.inv_mass / 0.4f, 1e-7f);
 
     // an impulse off the centre of mass spins as well as pushes
-    mp.linear_velocity = {0.0f, 0.0f, 0.0f};
-    mp.angular_velocity = {0.0f, 0.0f, 0.0f};
+    mp.linear_velocity = vec3f::zero();
+    mp.angular_velocity = vec3f::zero();
     rigid_body::add_impulse_at_position(*f.world, body, vec3f::make(1.0f, 0.0f, 0.0f), vec3f::make(0.0f, 1.0f, 0.0f));
-    CHECK(ctx, mp.linear_velocity.x > 0.0f && mp.angular_velocity.z < 0.0f);
+    CHECK(ctx, vec3f::x(mp.linear_velocity) > 0.0f && vec3f::z(mp.angular_velocity) < 0.0f);
 
     // velocity clamps to the maximum
     mp.max_linear_velocity = 10.0f;
     rigid_body::add_impulse(*f.world, body, vec3f::make(1.0e7f, 0.0f, 0.0f));
-    CHECK(ctx, vec3f::length(vec3f::load(mp.linear_velocity)) <= 10.0f + 1e-4f);
+    CHECK(ctx, vec3f::length(mp.linear_velocity) <= 10.0f + 1e-4f);
 
     // static and kinematic bodies take no forces; static takes no impulses or velocities
     RigidBody *ground = rigid_body::create(*f.world, {.shape = shape, .object_layer = f.moving, .motion_type = MotionType::STATIC});
@@ -304,8 +299,8 @@ void test_rigid_body_forces_and_impulses(TestCtx &ctx) {
     rigid_body::add_angular_impulse(*f.world, ground, vec3f::make(10.0f, 0.0f, 0.0f));
     rigid_body::set_linear_velocity(*f.world, ground, vec3f::make(10.0f, 0.0f, 0.0f));
     CHECK(ctx, vec3f::length(vec3f::load(ground->motion_properties.force)) == 0.0f && vec3f::length(vec3f::load(mover->motion_properties.force)) == 0.0f);
-    CHECK(ctx, vec3f::length(vec3f::load(ground->motion_properties.linear_velocity)) == 0.0f);
-    CHECK(ctx, vec3f::length(vec3f::load(ground->motion_properties.angular_velocity)) == 0.0f);
+    CHECK(ctx, vec3f::length(ground->motion_properties.linear_velocity) == 0.0f);
+    CHECK(ctx, vec3f::length(ground->motion_properties.angular_velocity) == 0.0f);
     // a kinematic body takes velocities
     rigid_body::set_linear_velocity(*f.world, mover, vec3f::make(0.0f, 3.0f, 0.0f));
     rigid_body::add_angular_velocity(*f.world, mover, vec3f::make(0.0f, 0.0f, 1.0f));
@@ -320,7 +315,7 @@ void test_rigid_body_velocity_at_point(TestCtx &ctx) {
     Fixture f = make_fixture();
     Ref<Shape> shape = sphere::create({.radius = 1.0f});
     RigidBody *body = rigid_body::create(*f.world,
-                                         {.shape = shape, .object_layer = f.moving, .motion_type = MotionType::DYNAMIC, .position = {5.0f, 0.0f, 0.0f}});
+                                         {.shape = shape, .object_layer = f.moving, .motion_type = MotionType::DYNAMIC, .position = vec3f::make(5.0f, 0.0f, 0.0f)});
     rigid_body::set_linear_velocity(*f.world, body, vec3f::make(5.0f, 0.0f, 0.0f));
     rigid_body::set_angular_velocity(*f.world, body, vec3f::make(0.0f, 0.0f, 2.0f));
 
@@ -336,7 +331,7 @@ void test_rigid_body_velocity_at_point(TestCtx &ctx) {
 
     // a static body has none anywhere
     RigidBody *ground = rigid_body::create(*f.world, {.shape = shape, .object_layer = f.moving, .motion_type = MotionType::STATIC});
-    ground->motion_properties.linear_velocity = {1.0f, 1.0f, 1.0f};
+    ground->motion_properties.linear_velocity = vec3f::splat(1.0f);
     velocity = rigid_body::get_velocity_at_point(ground, vec3f::make(15.0f, 10.0f, 2.0f));
     CHECK(ctx, vec3f::length(velocity) == 0.0f);
 
@@ -346,7 +341,7 @@ void test_rigid_body_velocity_at_point(TestCtx &ctx) {
 
 void test_rigid_body_sleep_and_active_list(TestCtx &ctx) {
     Fixture f = make_fixture();
-    Ref<Shape> shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(0.5f)});
     const RigidBodySettings settings = {.shape = shape, .object_layer = f.moving, .motion_type = MotionType::DYNAMIC};
     RigidBody *bodies[4];
     for (int i = 0; i < 4; i++) bodies[i] = rigid_body::create(*f.world, settings);
@@ -357,7 +352,7 @@ void test_rigid_body_sleep_and_active_list(TestCtx &ctx) {
     bodies[1]->island_index = 3;
     rigid_body::sleep(*f.world, bodies[1]);
     CHECK(ctx, rigid_body::is_sleeping(*bodies[1]) && bodies[1]->active_index == sleep::INACTIVE_BODY_INDEX && bodies[1]->island_index == -1);
-    CHECK(ctx, vec3f::length(vec3f::load(bodies[1]->motion_properties.linear_velocity)) == 0.0f);
+    CHECK(ctx, vec3f::length(bodies[1]->motion_properties.linear_velocity) == 0.0f);
     CHECK(ctx, f.world->bodies.active_body_count == 3);
     CHECK(ctx, bodies[3]->active_index == 1 && f.world->bodies.active_body_indices[1] == bodies[3]->index);
     CHECK(ctx, active_list_consistent(f.world->bodies));
@@ -397,7 +392,7 @@ void test_rigid_body_sleep_and_active_list(TestCtx &ctx) {
 
 void test_rigid_body_set_motion_type(TestCtx &ctx) {
     Fixture f = make_fixture();
-    Ref<Shape> shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(0.5f)});
     RigidBody *body = rigid_body::create(*f.world, {.shape = shape, .object_layer = f.moving, .motion_type = MotionType::STATIC});
     CHECK(ctx, body->motion_properties.inv_mass == 0.0f && f.world->bodies.active_body_count == 0);
 
@@ -412,7 +407,7 @@ void test_rigid_body_set_motion_type(TestCtx &ctx) {
     body->motion_properties.world_inverse_inertia_stamp = 5;
     rigid_body::set_motion_type(*f.world, body, MotionType::STATIC, true);
     CHECK(ctx, body->active_index == sleep::INACTIVE_BODY_INDEX && f.world->bodies.active_body_count == 0);
-    CHECK(ctx, vec3f::length(vec3f::load(body->motion_properties.linear_velocity)) == 0.0f && vec3f::length(vec3f::load(body->motion_properties.angular_velocity)) == 0.0f);
+    CHECK(ctx, vec3f::length(body->motion_properties.linear_velocity) == 0.0f && vec3f::length(body->motion_properties.angular_velocity) == 0.0f);
     CHECK(ctx, body->motion_properties.world_inverse_inertia_stamp == motion_properties::STEP_STAMP_NONE);
 
     // a static body made kinematic starts active, woken or not, and stays so made dynamic
@@ -433,32 +428,32 @@ void test_rigid_body_set_motion_type(TestCtx &ctx) {
 void test_rigid_body_move_kinematic(TestCtx &ctx) {
     Fixture f = make_fixture();
     // a centre of mass off the origin, so the linear part has to follow the rotated offset
-    Ref<Shape> shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
-    shape->center_of_mass = {1.0f, 0.0f, 0.0f};
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(0.5f)});
+    shape->center_of_mass = vec3f::make(1.0f, 0.0f, 0.0f);
     RigidBody *body = rigid_body::create(*f.world, {.shape = shape, .object_layer = f.moving, .motion_type = MotionType::KINEMATIC});
     CHECK(ctx, near_point(body->center_of_mass_position, 1.0f, 0.0f, 0.0f));
 
     // to (1, 2, 3), a quarter turn about y, in half a second
     const float dt = 0.5f;
-    const Float3 target_position = {1.0f, 2.0f, 3.0f};
-    const Float4 target_quaternion = stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), scalar::PI * 0.5f);
+    const Vec3f target_position = vec3f::make(1.0f, 2.0f, 3.0f);
+    const Quatf target_quaternion = axis_angle(vec3f::axis_y(), scalar::PI * 0.5f);
     // asleep: the move wakes it, or the next step would leave it where it is
     rigid_body::sleep(*f.world, body);
     CHECK(ctx, rigid_body::is_sleeping(*body));
-    rigid_body::move_kinematic(*f.world, body, vec3f::load(target_position), quatf::load(target_quaternion), dt);
+    rigid_body::move_kinematic(*f.world, body, target_position, target_quaternion, dt);
     CHECK(ctx, !rigid_body::is_sleeping(*body));
     // the offset (1, 0, 0) turned a quarter about y is (0, 0, -1): the com goes (1, 0, 0) -> (1, 2, 2)
     CHECK(ctx, near_point(body->motion_properties.linear_velocity, 0.0f, 4.0f, 4.0f, 1e-4f));
     CHECK(ctx, near_point(body->motion_properties.angular_velocity, 0.0f, scalar::PI, 0.0f, 1e-4f));
 
     // stepping those velocities over dt lands on the target
-    const Vec3f linear_step = vec3f::scale(vec3f::load(body->motion_properties.linear_velocity), dt);
-    const Vec3f angular_step = vec3f::scale(vec3f::load(body->motion_properties.angular_velocity), dt);
+    const Vec3f linear_step = vec3f::scale(body->motion_properties.linear_velocity, dt);
+    const Vec3f angular_step = vec3f::scale(body->motion_properties.angular_velocity, dt);
     rigid_body_step::add_position_step(body, linear_step);
     rigid_body_step::add_rotation_step(body, angular_step);
     rigid_body_step::derive_transform(body);
-    CHECK(ctx, vec3f::distance(vec3f::load(body->position), vec3f::load(target_position)) < 1e-4f);
-    CHECK(ctx, scalar::abs(quatf::dot(quatf::load(body->quaternion), quatf::load(target_quaternion))) > 1.0f - 1e-5f);
+    CHECK(ctx, vec3f::distance(body->position, target_position) < 1e-4f);
+    CHECK(ctx, scalar::abs(quatf::dot(body->quaternion, target_quaternion)) > 1.0f - 1e-5f);
 
     release_fixture(f);
     shape = nullptr;
@@ -467,21 +462,20 @@ void test_rigid_body_move_kinematic(TestCtx &ctx) {
 void test_rigid_body_inverse_inertia_outside_the_step(TestCtx &ctx) {
     // the in-step setup, without the step: a rotated 1 x 2 x 4 box with rotation about y locked
     Fixture f = make_fixture();
-    Ref<Shape> shape = box::create({.half_extents = {0.5f, 1.0f, 2.0f}});
-    const Float4 rotation = stored_axis_angle(vec3f::make(0.3f, 0.8f, -0.5f), 0.9f);
-    RigidBody *body = rigid_body::create(*f.world,
-                                         {.shape = shape, .object_layer = f.moving, .motion_type = MotionType::DYNAMIC, .position = {0.0f, 10.0f, 0.0f},
-                                          .quaternion = rotation, .allowed_degrees_of_freedom = dof::DOF_ALL & ~dof::ROTATION_Y,
-                                          .angular_damping = 0.0f});
-    Float4x4 inverse_inertia;
-    rigid_body::get_inverse_inertia(inverse_inertia, body);
-    Float4x4 rotation_matrix;
-    mat4f::store(rotation_matrix, mat4f::from_quat(quatf::load(rotation)));
-    Float4x4 fresh;
-    mat4f::store(fresh, motion_properties::get_inverse_inertia_for_rotation(body->motion_properties, mat4f::load(rotation_matrix)));
-    CHECK(ctx, same_bits(mat4f::load(inverse_inertia), mat4f::load(fresh)));
+    Ref<Shape> shape = box::create({.half_extents = vec3f::make(0.5f, 1.0f, 2.0f)});
+    const Quatf rotation = axis_angle(vec3f::make(0.3f, 0.8f, -0.5f), 0.9f);
+    RigidBody *body = rigid_body::create(*f.world, {.shape = shape,
+                                                    .object_layer = f.moving,
+                                                    .motion_type = MotionType::DYNAMIC,
+                                                    .position = vec3f::make(0.0f, 10.0f, 0.0f),
+                                                    .quaternion = rotation,
+                                                    .allowed_degrees_of_freedom = dof::DOF_ALL & ~dof::ROTATION_Y,
+                                                    .angular_damping = 0.0f});
+    const Mat4f inverse_inertia = rigid_body::get_inverse_inertia(body);
+    const Mat4f fresh = motion_properties::get_inverse_inertia_for_rotation(body->motion_properties, mat4f::from_quat(rotation));
+    CHECK(ctx, same_bits(inverse_inertia, fresh));
     // a torque gets no response about the locked world y axis
-    const Vec3f response = mat4f::multiply3x3_vec(mat4f::load(inverse_inertia), vec3f::make(3.0f, -2.0f, 5.0f));
+    const Vec3f response = mat4f::multiply3x3_vec(inverse_inertia, vec3f::make(3.0f, -2.0f, 5.0f));
     CHECK(ctx, vec3f::y(response) == 0.0f && (vec3f::x(response) != 0.0f || vec3f::z(response) != 0.0f));
     // the public getter does not touch the memo
     CHECK(ctx, body->motion_properties.world_inverse_inertia_stamp == motion_properties::STEP_STAMP_NONE);
@@ -493,7 +487,7 @@ void test_rigid_body_inverse_inertia_outside_the_step(TestCtx &ctx) {
     rigid_body::set_quaternion(*f.world, body, axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), scalar::PI * 0.5f), true);
     CHECK(ctx, body->motion_properties.world_inverse_inertia_stamp == motion_properties::STEP_STAMP_NONE);
     body->motion_properties.world_inverse_inertia_stamp = 4;
-    rigid_body::set_transform(*f.world, body, vec3f::make(0.0f, 1.0f, 0.0f), quatf::load(rotation), false);
+    rigid_body::set_transform(*f.world, body, vec3f::make(0.0f, 1.0f, 0.0f), rotation, false);
     CHECK(ctx, body->motion_properties.world_inverse_inertia_stamp == motion_properties::STEP_STAMP_NONE);
 
     release_fixture(f);
@@ -502,26 +496,26 @@ void test_rigid_body_inverse_inertia_outside_the_step(TestCtx &ctx) {
 
 void test_rigid_body_center_of_mass_and_surface_normal(TestCtx &ctx) {
     Fixture f = make_fixture();
-    Ref<Shape> shape = box::create({.half_extents = {1.0f, 1.0f, 1.0f}});
-    shape->center_of_mass = {2.0f, 0.0f, 0.0f};
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(1.0f)});
+    shape->center_of_mass = vec3f::make(2.0f, 0.0f, 0.0f);
     // a quarter turn about z at (5, 10, 0): the com offset (2, 0, 0) turns to (0, 2, 0)
-    const Float4 turned = stored_axis_angle(vec3f::make(0.0f, 0.0f, 1.0f), scalar::PI * 0.5f);
-    RigidBody *body = rigid_body::create(*f.world,
-                                         {.shape = shape, .object_layer = f.moving, .motion_type = MotionType::DYNAMIC, .position = {5.0f, 10.0f, 0.0f},
-                                          .quaternion = turned});
+    const Quatf turned = axis_angle(vec3f::axis_z(), scalar::PI * 0.5f);
+    RigidBody *body = rigid_body::create(*f.world, {.shape = shape,
+                                                    .object_layer = f.moving,
+                                                    .motion_type = MotionType::DYNAMIC,
+                                                    .position = vec3f::make(5.0f, 10.0f, 0.0f),
+                                                    .quaternion = turned});
     CHECK(ctx, near_point(body->center_of_mass_position, 5.0f, 12.0f, 0.0f));
-    body->position = {0.0f, 0.0f, 0.0f};
+    body->position = vec3f::zero();
     rigid_body::update_center_of_mass_position(body);
     CHECK(ctx, near_point(body->center_of_mass_position, 0.0f, 2.0f, 0.0f));
 
     // the local +x face turned onto world +y: its normal comes back in world space
-    Float3 normal;
-    Float3 &returned = rigid_body::get_surface_normal(normal, body, {0.0f, 1.0f, 0.0f}, sub_shape::EMPTY_SUB_SHAPE_ID);
-    CHECK(ctx, &returned == &normal);
+    Vec3f normal = rigid_body::get_world_space_surface_normal(body, sub_shape::EMPTY_SUB_SHAPE_ID, vec3f::make(0.0f, 1.0f, 0.0f));
     CHECK(ctx, near_point(normal, 0.0f, 1.0f, 0.0f));
     // and relative to the shape origin, not the centre of mass
     rigid_body::set_position(*f.world, body, vec3f::make(5.0f, 10.0f, 0.0f), false);
-    rigid_body::get_surface_normal(normal, body, {5.0f, 9.0f, 0.0f}, sub_shape::EMPTY_SUB_SHAPE_ID);
+    normal = rigid_body::get_world_space_surface_normal(body, sub_shape::EMPTY_SUB_SHAPE_ID, vec3f::make(5.0f, 9.0f, 0.0f));
     CHECK(ctx, near_point(normal, 0.0f, -1.0f, 0.0f));
 
     // a leaf shape is itself; the sub-shape transform starts from the one given
@@ -530,9 +524,9 @@ void test_rigid_body_center_of_mass_and_surface_normal(TestCtx &ctx) {
     rigid_body::get_leaf_shape(leaf, shape, sub_shape::EMPTY_SUB_SHAPE_ID);
     CHECK(ctx, leaf.shape == shape && leaf.remainder == sub_shape::EMPTY_SUB_SHAPE_ID);
     GetSubShapeTransformedShapeResult transformed = rigid_body::create_get_sub_shape_transformed_shape_result();
-    rigid_body::get_sub_shape_transformed_shape(transformed, shape, sub_shape::EMPTY_SUB_SHAPE_ID, vec3f::make(1.0f, 2.0f, 3.0f), quatf::load(turned), vec3f::make(2.0f, 2.0f, 2.0f));
+    rigid_body::get_sub_shape_transformed_shape(transformed, shape, sub_shape::EMPTY_SUB_SHAPE_ID, vec3f::make(1.0f, 2.0f, 3.0f), turned, vec3f::make(2.0f, 2.0f, 2.0f));
     CHECK(ctx, transformed.shape == shape && near_point(transformed.position, 1.0f, 2.0f, 3.0f) && near_point(transformed.scale, 2.0f, 2.0f, 2.0f));
-    CHECK(ctx, same_bits(transformed.rotation, quatf::load(turned)));
+    CHECK(ctx, same_bits(transformed.rotation, turned));
 
     release_fixture(f);
     shape = nullptr;

@@ -4,6 +4,7 @@
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
+#include "tumble/math/transform.h"
 #include "tumble/math/types.h"
 #include "tumble/math/vec3f.h"
 
@@ -30,6 +31,8 @@ inline bool near3(const Float3 &a, float x, float y, float z, float eps) { retur
 inline bool equal_boxes(const Box3f &a, const Box3f &b) {
     return vec3f::exact_equals(vec3f::load(a.min), vec3f::load(b.min)) && vec3f::exact_equals(vec3f::load(a.max), vec3f::load(b.max));
 }
+
+inline bool equal_boxes(const AABox &a, const AABox &b) { return vec3f::exact_equals(a.min, b.min) && vec3f::exact_equals(a.max, b.max); }
 
 inline Vec3f unit(Vec3f v) { return vec3f::normalize(v); }
 
@@ -93,14 +96,17 @@ inline Float4 stored_axis_angle(Vec3f axis, float rad) {
     return quatf::store(out, axis_angle(axis, rad));
 }
 
-inline Transformf pose(const Float3 &position, const Float4 &quaternion = {0.0f, 0.0f, 0.0f, 1.0f}, const Float3 &scale = {1.0f, 1.0f, 1.0f}) {
-    return {position, quaternion, scale};
+/** a transform from literals: `pose({0, 1, 0})` */
+inline Transform pose(const Float3 &position, const Float4 &quaternion = {0.0f, 0.0f, 0.0f, 1.0f}, const Float3 &scale = {1.0f, 1.0f, 1.0f}) {
+    return transform::make(vec3f::load(position), quatf::load(quaternion), vec3f::load(scale));
 }
 
-inline Transformf pose(Vec3f position, const Float4 &quaternion = {0.0f, 0.0f, 0.0f, 1.0f}, const Float3 &scale = {1.0f, 1.0f, 1.0f}) {
-    Transformf out = {{}, quaternion, scale};
-    vec3f::store(out.position, position);
-    return out;
+inline Transform pose(const Float3 &position, Quatf quaternion, const Float3 &scale = {1.0f, 1.0f, 1.0f}) {
+    return transform::make(vec3f::load(position), quaternion, vec3f::load(scale));
+}
+
+inline Transform pose(Vec3f position, Quatf quaternion = quatf::identity(), Vec3f scale = vec3f::splat(1.0f)) {
+    return transform::make(position, quaternion, scale);
 }
 
 TUMBLE_NAMESPACE_END

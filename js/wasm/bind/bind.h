@@ -12,7 +12,7 @@
 // namespace of a function whose C++ one is not what js calls it (`.js_namespace("wasm")` binds `runtime::init` as
 // `Wasm.init`, `tumble_wasm_init`).
 //
-// three kinds of type cross the boundary:
+// four kinds of type cross the boundary:
 //   handles  `RECORD(World)`   objects the wasm owns, passed by pointer; js holds the
 //            address as a type of its own. exposed fields are read through the views; WRITABLE
 //            ones written too.
@@ -20,11 +20,15 @@
 //            tuple (a value's js name drops a trailing f: Transform). a function takes one by
 //            `const V &` / `const V *` (an in-param: js writes it into scratch and passes the
 //            address) or `V &` / `V *` (an out-param: the core writes it and js reads it back into
-//            an object the caller supplied). values never come back by return.
+//            an object the caller supplied). values never come back by return. `LANES_AS(Vec3f,
+//            "Vec3f", 3)` is a SIMD register type crossing as a tuple of its lanes.
+//   arrays   a record's field holding a growable array (bind::array_of), read where it lies: its length and
+//            its elements.
 //   scalars  u8/u16/u32/i32/f32/bool, and pointers to them as addresses typed by the scalar
 //            (a `void *` as a plain number, which any address converts to). an enum crosses as
-//            its underlying scalar; an f64 only as a field, read as the js number it is. a struct
-//            marked CROSSES_AS_BITS (a typed handle, one u32 `bits`) crosses as that u32.
+//            its underlying scalar; an f64 only as a field, read as the js number it is; a u64
+//            only as a field too, read as a number, exact up to 2^53. a struct marked
+//            CROSSES_AS_BITS (a typed handle, one u32 `bits`) crosses as that u32.
 //
 //   TUMBLE_BINDINGS {
 //       bind::include(b, "tumble/physics/world.h");
@@ -42,6 +46,7 @@
 #define VALUE_AS(T, js_name) bind::value<T>(b, #T, js_name)
 #define TUPLE(T) bind::tuple<T>(b, #T)
 #define TUPLE_AS(T, js_name) bind::tuple<T>(b, #T, js_name)
+#define LANES_AS(T, js_name, count) bind::lanes<T>(b, #T, js_name, count)
 
 namespace bind {
 
@@ -61,7 +66,7 @@ bool TypeInfo<T>::is_value = false;
 template <typename T>
 bool TypeInfo<T>::is_tuple = false;
 
-enum BaseKind : uint8_t { BASE_VOID, BASE_SCALAR, BASE_STRUCT };
+enum BaseKind : uint8_t { BASE_VOID, BASE_SCALAR, BASE_STRUCT, BASE_ARRAY };
 
 struct TypeRef {
     BaseKind base;
@@ -78,6 +83,10 @@ struct TypeRef {
     bool (*is_tuple)();
     /** a one-word handle struct (`{ uint32_t bits; }`, marked CROSSES_AS_BITS) that crosses as its u32. */
     bool bits;
+    /** BASE_ARRAY: the element's type, and the byte offsets of the array's data pointer and length; zero otherwise. */
+    TypeRef (*element)();
+    uint32_t data_offset;
+    uint32_t length_offset;
 };
 
 template <typename T>
@@ -97,13 +106,13 @@ template <typename T>
 struct TypeOf {
     static TypeRef get() {
         if constexpr (__is_enum(T)) return TypeOf<__underlying_type(T)>::get();
-        else if constexpr (requires { T::CROSSES_AS_BITS; }) return {BASE_SCALAR, 0, false, false, 1, "u32", nullptr, nullptr, nullptr, true};
-        else return {BASE_STRUCT, 0, false, false, 1, nullptr, cpp_of<T>, value_of<T>, tuple_of<T>, false};
+        else if constexpr (requires { T::CROSSES_AS_BITS; }) return {BASE_SCALAR, 0, false, false, 1, "u32", nullptr, nullptr, nullptr, true, nullptr, 0, 0};
+        else return {BASE_STRUCT, 0, false, false, 1, nullptr, cpp_of<T>, value_of<T>, tuple_of<T>, false, nullptr, 0, 0};
     }
 };
 template <>
 struct TypeOf<void> {
-    static TypeRef get() { return {BASE_VOID, 0, false, false, 1, nullptr, nullptr, nullptr, nullptr, false}; }
+    static TypeRef get() { return {BASE_VOID, 0, false, false, 1, nullptr, nullptr, nullptr, nullptr, false, nullptr, 0, 0}; }
 };
 template <typename T>
 struct TypeOf<const T> {
@@ -141,7 +150,7 @@ struct TypeOf<T[N]> {
 #define BIND_SCALAR(cpp_type, scalar_name)                                                                        \
     template <>                                                                                                   \
     struct TypeOf<cpp_type> {                                                                                     \
-        static TypeRef get() { return {BASE_SCALAR, 0, false, false, 1, scalar_name, nullptr, nullptr, nullptr, false}; } \
+        static TypeRef get() { return {BASE_SCALAR, 0, false, false, 1, scalar_name, nullptr, nullptr, nullptr, false, nullptr, 0, 0}; } \
     };
 BIND_SCALAR(uint8_t, "u8")
 BIND_SCALAR(uint16_t, "u16")
@@ -150,11 +159,12 @@ BIND_SCALAR(int32_t, "i32")
 BIND_SCALAR(float, "f32")
 BIND_SCALAR(bool, "bool")
 BIND_SCALAR(double, "f64")
+BIND_SCALAR(uint64_t, "u64")
 #undef BIND_SCALAR
 /** a raw address, as the heap hands out. */
 template <>
 struct TypeOf<void *> {
-    static TypeRef get() { return {BASE_SCALAR, 1, false, false, 1, "void", nullptr, nullptr, nullptr, false}; }
+    static TypeRef get() { return {BASE_SCALAR, 1, false, false, 1, "void", nullptr, nullptr, nullptr, false, nullptr, 0, 0}; }
 };
 
 // ---- the description ----
@@ -224,6 +234,18 @@ struct FieldDesc {
     const char *doc;
 };
 
+/** how js finds a record by an id with no call; see StructBinder::id_lookup. */
+struct IdLookup {
+    /** the record js passes to start from, World. */
+    const char *(*root)();
+    /** byte offsets from the root of the slots' array's data pointer and length. */
+    uint32_t data;
+    uint32_t length;
+    /** the record's field holding the id it answers to. */
+    uint32_t id;
+    uint32_t index_mask;
+};
+
 struct StructDesc {
     /** the qualified C++ name. */
     const char *cpp;
@@ -233,9 +255,13 @@ struct StructDesc {
     uint32_t align;
     bool is_value;
     bool is_tuple;
+    /** a SIMD register type crossing as its lanes (bind::lanes) */
+    bool is_lanes;
     FieldDesc fields[MAX_FIELDS];
     uint32_t field_count;
     const char *doc;
+    bool has_id_lookup;
+    IdLookup id_lookup;
 };
 
 struct EnumValue {
@@ -341,6 +367,16 @@ inline uint32_t offset_of(M T::*member) {
     return (uint32_t)(reinterpret_cast<const char *>(&(base->*member)) - reinterpret_cast<const char *>(base));
 }
 
+/**
+ * a field holding a growable array (a data pointer and a length, as tumble's collections::Array), which js reads where it
+ * lies: its length and its elements. the manifest specializes TypeOf for its array type with this.
+ */
+template <typename A, typename E>
+inline TypeRef array_of() {
+    return {BASE_ARRAY, 0, false, false, 1, nullptr, nullptr, nullptr, nullptr, false, TypeOf<E>::get, offset_of<A>(&A::data),
+            offset_of<A>(&A::length)};
+}
+
 template <typename T>
 struct StructBinder {
     StructDesc &desc;
@@ -357,6 +393,22 @@ struct StructBinder {
 
     StructBinder &doc(const char *text) {
         desc.doc = text;
+        return *this;
+    }
+
+    /**
+     * js finds the record by an id with no call: the id's index (`index_mask`) is a slot of the array of record pointers
+     * at root->*container.*array (one with data and length), and the slot's record is the id's while its id field holds
+     * it. `RigidBody.get(world, id)`.
+     */
+    template <typename Root, typename Container, typename Array, typename Id>
+    StructBinder &id_lookup(Container Root::*container, Array Container::*array, Id T::*id_field, uint32_t index_mask) {
+        static_assert(__is_same(decltype(Array::data), T **), "an id lookup's array holds pointers to the record");
+        static_assert(__is_same(decltype(Array::length), uint32_t), "an id lookup's array has a uint32_t length");
+        const uint32_t at = offset_of<Root, Container>(container) + offset_of<Container, Array>(array);
+        desc.has_id_lookup = true;
+        desc.id_lookup = {cpp_of<Root>, at + offset_of<Array>(&Array::data), at + offset_of<Array>(&Array::length),
+                          offset_of<T, Id>(id_field), index_mask};
         return *this;
     }
 };
@@ -414,6 +466,32 @@ inline StructBinder<T> tuple(Binder &b, const char *cpp, const char *js = nullpt
     TypeInfo<T>::is_value = true;
     TypeInfo<T>::is_tuple = true;
     return {desc};
+}
+
+/**
+ * a SIMD register type (Vec3f, Quatf, Mat4f) crossing as a js tuple of its first `count` f32 lanes, lane i at byte 4i:
+ * x, y, z, w up to four, one array of them past that. a three lane type (Vec3f) is written with its z again in lane 3,
+ * as the core keeps it.
+ */
+template <typename T>
+inline void lanes(Binder &b, const char *cpp, const char *js, uint32_t count) {
+    static const char *const LANE_NAMES[4] = {"x", "y", "z", "w"};
+    if (count * sizeof(float) > sizeof(T)) __builtin_trap();
+    StructDesc &desc = register_struct<T>(b, cpp, js);
+    desc.is_value = true;
+    desc.is_tuple = true;
+    desc.is_lanes = true;
+    TypeInfo<T>::is_value = true;
+    TypeInfo<T>::is_tuple = true;
+    if (count > 4) {
+        TypeRef all = TypeOf<float>::get();
+        all.count = count;
+        desc.fields[take_slot(desc.field_count, MAX_FIELDS)] = {"m", 0, all, 0, nullptr};
+        return;
+    }
+    for (uint32_t i = 0; i < count; i++) {
+        desc.fields[take_slot(desc.field_count, MAX_FIELDS)] = {LANE_NAMES[i], i * (uint32_t)sizeof(float), TypeOf<float>::get(), 0, nullptr};
+    }
 }
 
 template <typename E>

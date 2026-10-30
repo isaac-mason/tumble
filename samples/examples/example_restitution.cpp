@@ -37,7 +37,7 @@ static void init(App &app) {
     app.world = app::create_world(state.layers);
 
     RigidBodySettings floor;
-    floor.shape = app::keep(app, box::create({.half_extents = {15.0f, 1.0f, 10.0f}}));
+    floor.shape = app::keep(app, box::create({.half_extents = vec3f::make(15.0f, 1.0f, 10.0f)}));
     floor.object_layer = state.layers.not_moving;
     floor.motion_type = MotionType::STATIC;
     floor.restitution = 0.0f;
@@ -50,7 +50,7 @@ static void init(App &app) {
         settings.shape = ball;
         settings.object_layer = state.layers.moving;
         settings.motion_type = MotionType::DYNAMIC;
-        settings.position = {ball_x(i), DROP_HEIGHT, 0.0f};
+        settings.position = vec3f::make(ball_x(i), DROP_HEIGHT, 0.0f);
         settings.restitution = RESTITUTIONS[i];
         settings.friction = 0.5f;
         state.balls[i] = rigid_body::create(*app.world, settings);

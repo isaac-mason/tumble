@@ -495,8 +495,8 @@ const zone = rigidBody.create(world, {
 const entered: number[] = [];
 const sensing: Listener = {
     onContactAdded(contact) {
-        if (contact.bodyA === zone) entered.push(contact.bodyB);
-        else if (contact.bodyB === zone) entered.push(contact.bodyA);
+        if (contact.bodyIdA === zone) entered.push(contact.bodyIdB);
+        else if (contact.bodyIdB === zone) entered.push(contact.bodyIdA);
     },
 };
 ```
@@ -641,7 +641,7 @@ const listener: Listener = {
     onContactValidate(contact) {
         if (other(contact, platform) === null) return true;
         // the normal points from a to b. from the platform to a body landing on it, that is up
-        const up = contact.bodyA === platform ? contact.normal[1] : -contact.normal[1];
+        const up = contact.bodyIdA === platform ? contact.normal[1] : -contact.normal[1];
         return up > 0.5;
     },
     // called for a new contact. you can change its settings. here a pad bounces whatever lands on it
@@ -652,12 +652,12 @@ const listener: Listener = {
     // it. the surface velocity is b's minus a's
     onContactPersisted(contact, settings) {
         if (other(contact, belt) === null) return;
-        const carry = contact.bodyA === belt ? -2 : 2;
+        const carry = contact.bodyIdA === belt ? -2 : 2;
         settings.relativeLinearSurfaceVelocity = [carry, 0, 0];
     },
     // called after the solve for each contact that ended, including those of removed bodies
     onContactRemoved(removed) {
-        removed.bodyA;
+        removed.bodyIdA;
     },
 };
 updateWorld(world, listener, 1 / 60);
@@ -666,12 +666,12 @@ updateWorld(world, listener, 1 / 60);
 ```ts
 // hook events are reused, so copy what you keep. the world is mid step while hooks run. read it, but do not change it.
 // if a hook throws, no more hooks run. the step finishes, then throws the error
-const kept: { bodyA: number; normal: Vec3 }[] = [];
+const kept: { bodyIdA: number; normal: Vec3 }[] = [];
 updateWorld(
     world,
     {
         onContactAdded(contact) {
-            kept.push({ bodyA: contact.bodyA, normal: [...contact.normal] });
+            kept.push({ bodyIdA: contact.bodyIdA, normal: [...contact.normal] });
         },
     },
     1 / 60,

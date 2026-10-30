@@ -2,7 +2,6 @@
 #include "app/examples.h"
 #include "app/model.h"
 #include "app/random.h"
-#include "app/vec.h"
 #include "imgui.h"
 #include "sokol_app.h"
 #include "tumble/physics/constraints/cone_constraint.h"
@@ -29,7 +28,6 @@ static constexpr float PI = 3.14159265f;
 static constexpr Float3 NO_GRAVITY = {0.0f, 0.0f, 0.0f};
 static constexpr Float3 EARTH_GRAVITY = {0.0f, -9.81f, 0.0f};
 static constexpr Float3 TEN_GRAVITY = {0.0f, -10.0f, 0.0f};
-static constexpr Float4 IDENTITY = {0.0f, 0.0f, 0.0f, 1.0f};
 
 struct Scene {
     const char *name;
@@ -52,22 +50,22 @@ static struct {
 /** the scene shown, kept over the app's restart as crashcat keeps it in the url */
 static int current_scene = 0;
 
-static Float4 rotation_x(float angle) { return vec::quat_axis_angle({1.0f, 0.0f, 0.0f}, angle); }
-static Float4 rotation_y(float angle) { return vec::quat_axis_angle({0.0f, 1.0f, 0.0f}, angle); }
-static Float4 rotation_z(float angle) { return vec::quat_axis_angle({0.0f, 0.0f, 1.0f}, angle); }
+static Quatf rotation_x(float angle) { return quatf::set_axis_angle(vec3f::axis_x(), angle); }
+static Quatf rotation_y(float angle) { return quatf::set_axis_angle(vec3f::axis_y(), angle); }
+static Quatf rotation_z(float angle) { return quatf::set_axis_angle(vec3f::axis_z(), angle); }
 
 /** moving bodies on one layer, and not moving ones on another when `not_moving_layer` */
-static void make_world(App &app, Float3 gravity, bool not_moving_layer, bool moving_vs_moving = true) {
+static void make_world(App &app, const Float3 &gravity, bool not_moving_layer, bool moving_vs_moving = true) {
     WorldSettings settings = world_settings::create();
     state.moving = world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings));
     state.not_moving = not_moving_layer ? world_settings::add_object_layer(settings, world_settings::add_broadphase_layer(settings)) : state.moving;
     if (moving_vs_moving) world_settings::enable_collision(settings, state.moving, state.moving);
     if (not_moving_layer) world_settings::enable_collision(settings, state.moving, state.not_moving);
-    settings.gravity = gravity;
+    settings.gravity = vec3f::load(gravity);
     app.world = world::create(settings);
 }
 
-static RigidBodySettings dynamic_body(Shape *shape, Float3 position, Float4 quaternion = IDENTITY) {
+static RigidBodySettings dynamic_body(Shape *shape, Vec3f position, Quatf quaternion = quatf::identity()) {
     RigidBodySettings settings;
     settings.shape = shape;
     settings.object_layer = state.moving;
@@ -77,14 +75,14 @@ static RigidBodySettings dynamic_body(Shape *shape, Float3 position, Float4 quat
     return settings;
 }
 
-static RigidBodySettings undamped_body(Shape *shape, Float3 position, Float4 quaternion = IDENTITY) {
+static RigidBodySettings undamped_body(Shape *shape, Vec3f position, Quatf quaternion = quatf::identity()) {
     RigidBodySettings settings = dynamic_body(shape, position, quaternion);
     settings.linear_damping = 0.0f;
     settings.angular_damping = 0.0f;
     return settings;
 }
 
-static RigidBodySettings static_body(Shape *shape, Float3 position, Float4 quaternion = IDENTITY) {
+static RigidBodySettings static_body(Shape *shape, Vec3f position, Quatf quaternion = quatf::identity()) {
     RigidBodySettings settings;
     settings.shape = shape;
     settings.object_layer = state.not_moving;
@@ -96,7 +94,7 @@ static RigidBodySettings static_body(Shape *shape, Float3 position, Float4 quate
 
 static RigidBody *add(App &app, const RigidBodySettings &settings) { return rigid_body::create(*app.world, settings); }
 
-static Shape *box_shape(App &app, Float3 half_extents, float convex_radius = support::DEFAULT_CONVEX_RADIUS) {
+static Shape *box_shape(App &app, Vec3f half_extents, float convex_radius = support::DEFAULT_CONVEX_RADIUS) {
     return app::keep(app, box::create({.half_extents = half_extents, .convex_radius = convex_radius}));
 }
 static Shape *sphere_shape(App &app, float radius) { return app::keep(app, sphere::create({.radius = radius})); }
@@ -116,32 +114,32 @@ static Shape *mesh_shape(App &app, const float *positions, uint32_t num_position
 }
 
 /** the ground most scenes stand on: a static box, its top at y = 0 */
-static RigidBodySettings ground_body(App &app, Float3 half_extents, float convex_radius = support::DEFAULT_CONVEX_RADIUS) {
-    return static_body(box_shape(app, half_extents, convex_radius), {0.0f, -0.5f, 0.0f});
+static RigidBodySettings ground_body(App &app, Vec3f half_extents, float convex_radius = support::DEFAULT_CONVEX_RADIUS) {
+    return static_body(box_shape(app, half_extents, convex_radius), vec3f::make(0.0f, -0.5f, 0.0f));
 }
 
 /* contact scenes */
 
 /** two bodies without gravity or damping, flying at each other along x from 5 m either side */
-static void head_on(App &app, Shape *shape_a, Float4 quaternion_a, Shape *shape_b, Float4 quaternion_b, float speed) {
+static void head_on(App &app, Shape *shape_a, Quatf quaternion_a, Shape *shape_b, Quatf quaternion_b, float speed) {
     make_world(app, NO_GRAVITY, false);
-    RigidBody *a = add(app, undamped_body(shape_a, {-5.0f, 0.0f, 0.0f}, quaternion_a));
+    RigidBody *a = add(app, undamped_body(shape_a, vec3f::make(-5.0f, 0.0f, 0.0f), quaternion_a));
     rigid_body::set_linear_velocity(*app.world, a, vec3f::make(speed, 0.0f, 0.0f));
-    RigidBody *b = add(app, undamped_body(shape_b, {5.0f, 0.0f, 0.0f}, quaternion_b));
+    RigidBody *b = add(app, undamped_body(shape_b, vec3f::make(5.0f, 0.0f, 0.0f), quaternion_b));
     rigid_body::set_linear_velocity(*app.world, b, vec3f::make(-speed, 0.0f, 0.0f));
 }
 
 static void sphere_x_sphere(App &app) {
     Shape *ball = sphere_shape(app, 1.0f);
-    head_on(app, ball, IDENTITY, ball, IDENTITY, 5.0f);
+    head_on(app, ball, quatf::identity(), ball, quatf::identity(), 5.0f);
 }
 
 static void plane_x_dynamic_bodies(App &app) {
     make_world(app, EARTH_GRAVITY, true);
-    const Float3 normal = vec::normalize({0.1f, 1.0f, 0.0f});
-    add(app, static_body(app::keep(app, plane::create({.plane = {normal, 1.0f}, .half_extent = 100.0f})), {0.0f, 0.0f, 0.0f}));
-    add(app, dynamic_body(sphere_shape(app, 0.5f), {0.0f, 1.0f, 0.0f}));
-    add(app, dynamic_body(app::keep(app, box::create({.half_extents = {0.5f, 0.5f, 0.5f}})), {2.0f, 1.0f, 0.0f}));
+    const Vec3f normal = vec3f::normalize(vec3f::make(0.1f, 1.0f, 0.0f));
+    add(app, static_body(app::keep(app, plane::create({.plane = plane3f::make(normal, 1.0f), .half_extent = 100.0f})), vec3f::zero()));
+    add(app, dynamic_body(sphere_shape(app, 0.5f), vec3f::make(0.0f, 1.0f, 0.0f)));
+    add(app, dynamic_body(app::keep(app, box::create({.half_extents = vec3f::splat(0.5f)})), vec3f::make(2.0f, 1.0f, 0.0f)));
 }
 
 static void box_x_triangle_mesh_floor(App &app) {
@@ -151,92 +149,98 @@ static void box_x_triangle_mesh_floor(App &app) {
     const float size = 10.0f;
     const float positions[] = {-size, 0.0f, -size, size, 0.0f, -size, size, 0.0f, size, -size, 0.0f, size};
     const uint32_t indices[] = {0, 2, 1, 0, 3, 2};
-    RigidBodySettings floor = static_body(mesh_shape(app, positions, 4, indices, 6), {0.0f, 0.0f, 0.0f});
+    RigidBodySettings floor = static_body(mesh_shape(app, positions, 4, indices, 6), vec3f::zero());
     floor.friction = 0.5f;
     add(app, floor);
-    RigidBodySettings cube = dynamic_body(box_shape(app, {1.0f, 1.0f, 1.0f}), {0.0f, 5.0f, 0.0f});
+    RigidBodySettings cube = dynamic_body(box_shape(app, vec3f::splat(1.0f)), vec3f::make(0.0f, 5.0f, 0.0f));
     cube.friction = 0.5f;
     cube.motion_quality = MotionQuality::LINEAR_CAST;
     add(app, cube);
 }
 
-static void sphere_x_box_side(App &app) { head_on(app, box_shape(app, {1.0f, 1.0f, 1.0f}), IDENTITY, sphere_shape(app, 1.0f), IDENTITY, 5.0f); }
+static void sphere_x_box_side(App &app) {
+    head_on(app, box_shape(app, vec3f::splat(1.0f)), quatf::identity(), sphere_shape(app, 1.0f), quatf::identity(), 5.0f);
+}
 
 static void sphere_x_box_edge(App &app) {
-    head_on(app, box_shape(app, {1.0f, 1.0f, 1.0f}), rotation_y(0.25f * PI), sphere_shape(app, 1.0f), IDENTITY, 5.0f);
+    head_on(app, box_shape(app, vec3f::splat(1.0f)), rotation_y(0.25f * PI), sphere_shape(app, 1.0f), quatf::identity(), 5.0f);
 }
 
 static void sphere_x_box_corner(App &app) {
-    const Float4 corner = vec::quat_multiply(rotation_y(0.25f * PI), rotation_z(0.25f * PI));
-    head_on(app, box_shape(app, {1.0f, 1.0f, 1.0f}), corner, sphere_shape(app, 1.0f), IDENTITY, 5.0f);
+    const Quatf corner = quatf::multiply(rotation_y(0.25f * PI), rotation_z(0.25f * PI));
+    head_on(app, box_shape(app, vec3f::splat(1.0f)), corner, sphere_shape(app, 1.0f), quatf::identity(), 5.0f);
 }
 
 static void box_x_box_face(App &app) {
-    Shape *cube = box_shape(app, {1.0f, 1.0f, 1.0f});
-    head_on(app, cube, IDENTITY, cube, IDENTITY, 5.0f);
+    Shape *cube = box_shape(app, vec3f::splat(1.0f));
+    head_on(app, cube, quatf::identity(), cube, quatf::identity(), 5.0f);
 }
 
 static void box_x_box_edge(App &app) {
-    Shape *cube = box_shape(app, {1.0f, 1.0f, 1.0f});
-    head_on(app, cube, rotation_y(0.25f * PI), cube, IDENTITY, 5.0f);
+    Shape *cube = box_shape(app, vec3f::splat(1.0f));
+    head_on(app, cube, rotation_y(0.25f * PI), cube, quatf::identity(), 5.0f);
 }
 
 static void box_x_box_corner(App &app) {
-    Shape *cube = box_shape(app, {1.0f, 1.0f, 1.0f});
-    const Float4 corner_a = vec::quat_multiply(rotation_y(0.25f * PI), rotation_z(0.25f * PI));
-    const Float4 corner_b = vec::quat_multiply(rotation_y(-0.25f * PI), rotation_z(-0.25f * PI));
+    Shape *cube = box_shape(app, vec3f::splat(1.0f));
+    const Quatf corner_a = quatf::multiply(rotation_y(0.25f * PI), rotation_z(0.25f * PI));
+    const Quatf corner_b = quatf::multiply(rotation_y(-0.25f * PI), rotation_z(-0.25f * PI));
     head_on(app, cube, corner_a, cube, corner_b, 5.0f);
 }
 
-static void capsule_x_sphere(App &app) { head_on(app, capsule_shape(app, 1.0f, 1.0f), IDENTITY, sphere_shape(app, 1.0f), IDENTITY, 5.0f); }
+static void capsule_x_sphere(App &app) {
+    head_on(app, capsule_shape(app, 1.0f, 1.0f), quatf::identity(), sphere_shape(app, 1.0f), quatf::identity(), 5.0f);
+}
 
-static void capsule_x_box(App &app) { head_on(app, capsule_shape(app, 1.0f, 1.0f), IDENTITY, box_shape(app, {1.0f, 1.0f, 1.0f}), IDENTITY, 5.0f); }
+static void capsule_x_box(App &app) {
+    head_on(app, capsule_shape(app, 1.0f, 1.0f), quatf::identity(), box_shape(app, vec3f::splat(1.0f)), quatf::identity(), 5.0f);
+}
 
 /** an upright capsule coming down at 2 m/s onto a static body at the origin, without gravity */
 static void capsule_down_onto(App &app, Shape *target) {
     make_world(app, NO_GRAVITY, false);
-    add(app, static_body(target, {0.0f, 0.0f, 0.0f}));
-    RigidBody *pill = add(app, undamped_body(capsule_shape(app, 1.0f, 1.0f), {0.0f, 4.0f, 0.0f}));
+    add(app, static_body(target, vec3f::zero()));
+    RigidBody *pill = add(app, undamped_body(capsule_shape(app, 1.0f, 1.0f), vec3f::make(0.0f, 4.0f, 0.0f)));
     rigid_body::set_linear_velocity(*app.world, pill, vec3f::make(0.0f, -2.0f, 0.0f));
 }
 
-static void capsule_top_x_box(App &app) { capsule_down_onto(app, box_shape(app, {1.0f, 1.0f, 1.0f})); }
+static void capsule_top_x_box(App &app) { capsule_down_onto(app, box_shape(app, vec3f::splat(1.0f))); }
 
 static void capsule_top_x_sphere(App &app) { capsule_down_onto(app, sphere_shape(app, 1.0f)); }
 
 static void capsule_edge_x_sphere(App &app) {
     make_world(app, NO_GRAVITY, false);
-    add(app, static_body(sphere_shape(app, 1.0f), {0.0f, 0.0f, 0.0f}));
-    RigidBody *pill = add(app, undamped_body(capsule_shape(app, 1.0f, 1.0f), {5.0f, 0.0f, 0.0f}, rotation_z(0.5f * PI)));
+    add(app, static_body(sphere_shape(app, 1.0f), vec3f::zero()));
+    RigidBody *pill = add(app, undamped_body(capsule_shape(app, 1.0f, 1.0f), vec3f::make(5.0f, 0.0f, 0.0f), rotation_z(0.5f * PI)));
     rigid_body::set_linear_velocity(*app.world, pill, vec3f::make(-5.0f, 0.0f, 0.0f));
 }
 
 static void capsule_top_x_box_edge(App &app) {
     make_world(app, NO_GRAVITY, false);
-    add(app, static_body(box_shape(app, {1.0f, 1.0f, 1.0f}), {3.0f, 1.0f, 0.0f}, rotation_y(0.25f * PI)));
-    RigidBody *pill = add(app, undamped_body(capsule_shape(app, 1.0f, 1.0f), {-3.0f, 2.0f, 0.0f}));
+    add(app, static_body(box_shape(app, vec3f::splat(1.0f)), vec3f::make(3.0f, 1.0f, 0.0f), rotation_y(0.25f * PI)));
+    RigidBody *pill = add(app, undamped_body(capsule_shape(app, 1.0f, 1.0f), vec3f::make(-3.0f, 2.0f, 0.0f)));
     rigid_body::set_linear_velocity(*app.world, pill, vec3f::make(4.0f, 0.0f, 0.0f));
 }
 
 /** a 10 by 10 m static box floor, its top at y = 0, under 10 m/s2 of gravity */
 static void box_floor_world(App &app) {
     make_world(app, TEN_GRAVITY, true);
-    add(app, ground_body(app, {5.0f, 0.5f, 5.0f}));
+    add(app, ground_body(app, vec3f::make(5.0f, 0.5f, 5.0f)));
 }
 
 static void tilted_capsule_x_static_box_floor(App &app) {
     box_floor_world(app);
-    add(app, undamped_body(capsule_shape(app, 1.0f, 1.0f), {0.0f, 3.0f, 0.0f}, rotation_z(0.25f * PI)));
+    add(app, undamped_body(capsule_shape(app, 1.0f, 1.0f), vec3f::make(0.0f, 3.0f, 0.0f), rotation_z(0.25f * PI)));
 }
 
 static void tilted_box_x_static_box_floor(App &app) {
     box_floor_world(app);
-    add(app, undamped_body(box_shape(app, {1.0f, 1.0f, 1.0f}), {0.0f, 3.0f, 0.0f}, rotation_z(PI / 3.0f)));
+    add(app, undamped_body(box_shape(app, vec3f::splat(1.0f)), vec3f::make(0.0f, 3.0f, 0.0f), rotation_z(PI / 3.0f)));
 }
 
 static void box_with_convex_radius_x_static_box_floor(App &app) {
     box_floor_world(app);
-    RigidBodySettings rounded = dynamic_body(box_shape(app, {1.0f, 1.0f, 1.0f}, 0.1f), {0.0f, 3.0f, 0.0f});
+    RigidBodySettings rounded = dynamic_body(box_shape(app, vec3f::splat(1.0f), 0.1f), vec3f::make(0.0f, 3.0f, 0.0f));
     rounded.linear_damping = 0.05f;
     rounded.angular_damping = 0.05f;
     add(app, rounded);
@@ -244,46 +248,48 @@ static void box_with_convex_radius_x_static_box_floor(App &app) {
 
 static void box_stack(App &app) {
     box_floor_world(app);
-    Shape *cube = box_shape(app, {1.0f, 1.0f, 1.0f});
+    Shape *cube = box_shape(app, vec3f::splat(1.0f));
     const float box_height = 2.0f;
     const float start_height = box_height / 2.0f + 0.5f;
-    for (int i = 0; i < 5; i++) add(app, undamped_body(cube, {0.0f, start_height + (float)i * box_height, 0.0f}));
+    for (int i = 0; i < 5; i++) add(app, undamped_body(cube, vec3f::make(0.0f, start_height + (float)i * box_height, 0.0f)));
 }
 
 static void tilted_box_falls_onto_dynamic_box(App &app) {
     box_floor_world(app);
-    Shape *cube = box_shape(app, {1.0f, 1.0f, 1.0f});
-    add(app, undamped_body(cube, {0.0f, 1.0f, 0.0f}));
-    add(app, undamped_body(cube, {0.0f, 5.0f, 0.0f}, rotation_z(PI / 3.0f)));
+    Shape *cube = box_shape(app, vec3f::splat(1.0f));
+    add(app, undamped_body(cube, vec3f::make(0.0f, 1.0f, 0.0f)));
+    add(app, undamped_body(cube, vec3f::make(0.0f, 5.0f, 0.0f), rotation_z(PI / 3.0f)));
 }
 
 static void tilted_box_falls_onto_static_box(App &app) {
     make_world(app, TEN_GRAVITY, true);
-    Shape *cube = box_shape(app, {1.0f, 1.0f, 1.0f});
+    Shape *cube = box_shape(app, vec3f::splat(1.0f));
     // static, though on the moving layer, as crashcat has it
-    RigidBodySettings pedestal = static_body(cube, {0.0f, 1.0f, 0.0f});
+    RigidBodySettings pedestal = static_body(cube, vec3f::make(0.0f, 1.0f, 0.0f));
     pedestal.object_layer = state.moving;
     add(app, pedestal);
-    add(app, undamped_body(cube, {0.0f, 5.0f, 0.0f}, rotation_z(PI / 3.0f)));
+    add(app, undamped_body(cube, vec3f::make(0.0f, 5.0f, 0.0f), rotation_z(PI / 3.0f)));
 }
 
 /* cylinder scenes */
 
-static void cylinder_x_sphere(App &app) { head_on(app, cylinder_shape(app, 1.5f, 0.8f), IDENTITY, sphere_shape(app, 1.0f), IDENTITY, 3.0f); }
+static void cylinder_x_sphere(App &app) {
+    head_on(app, cylinder_shape(app, 1.5f, 0.8f), quatf::identity(), sphere_shape(app, 1.0f), quatf::identity(), 3.0f);
+}
 
 static void cylinder_x_box_edge(App &app) {
     make_world(app, NO_GRAVITY, false);
-    RigidBody *can = add(app, undamped_body(cylinder_shape(app, 1.0f, 0.5f), {0.0f, 3.0f, 0.0f}, rotation_z(0.5f * PI)));
+    RigidBody *can = add(app, undamped_body(cylinder_shape(app, 1.0f, 0.5f), vec3f::make(0.0f, 3.0f, 0.0f), rotation_z(0.5f * PI)));
     rigid_body::set_linear_velocity(*app.world, can, vec3f::make(0.0f, -2.0f, 0.0f));
-    add(app, static_body(box_shape(app, {2.0f, 0.2f, 0.2f}), {0.0f, 0.0f, 0.0f}));
+    add(app, static_body(box_shape(app, vec3f::make(2.0f, 0.2f, 0.2f)), vec3f::zero()));
 }
 
 static void rolling_cylinder_x_static_floor(App &app) {
     make_world(app, EARTH_GRAVITY, true);
-    RigidBodySettings floor = ground_body(app, {10.0f, 0.5f, 5.0f});
+    RigidBodySettings floor = ground_body(app, vec3f::make(10.0f, 0.5f, 5.0f));
     floor.friction = 0.8f;
     add(app, floor);
-    RigidBodySettings roller = dynamic_body(cylinder_shape(app, 1.0f, 0.5f), {-5.0f, 2.0f, 0.0f}, rotation_z(0.5f * PI));
+    RigidBodySettings roller = dynamic_body(cylinder_shape(app, 1.0f, 0.5f), vec3f::make(-5.0f, 2.0f, 0.0f), rotation_z(0.5f * PI));
     roller.friction = 0.8f;
     RigidBody *can = add(app, roller);
     rigid_body::set_angular_velocity(*app.world, can, vec3f::make(0.0f, 0.0f, 5.0f));
@@ -292,10 +298,10 @@ static void rolling_cylinder_x_static_floor(App &app) {
 
 static void cylinder_stack(App &app) {
     make_world(app, EARTH_GRAVITY, true);
-    add(app, ground_body(app, {10.0f, 0.5f, 5.0f}));
+    add(app, ground_body(app, vec3f::make(10.0f, 0.5f, 5.0f)));
     Shape *can = cylinder_shape(app, 0.5f, 0.4f);
     for (int i = 0; i < 6; i++) {
-        RigidBodySettings settings = dynamic_body(can, {0.0f, (float)i + 0.5f, 0.0f});
+        RigidBodySettings settings = dynamic_body(can, vec3f::make(0.0f, (float)i + 0.5f, 0.0f));
         settings.friction = 0.5f;
         add(app, settings);
     }
@@ -303,74 +309,75 @@ static void cylinder_stack(App &app) {
 
 static void tilted_cylinder_x_static_floor(App &app) {
     make_world(app, EARTH_GRAVITY, true);
-    add(app, ground_body(app, {10.0f, 0.5f, 5.0f}));
-    add(app, dynamic_body(cylinder_shape(app, 1.5f, 0.5f), {0.0f, 3.0f, 0.0f}, rotation_z(PI / 6.0f)));
+    add(app, ground_body(app, vec3f::make(10.0f, 0.5f, 5.0f)));
+    add(app, dynamic_body(cylinder_shape(app, 1.5f, 0.5f), vec3f::make(0.0f, 3.0f, 0.0f), rotation_z(PI / 6.0f)));
 }
 
 static void cylinder_x_cylinder_t_bone(App &app) {
     make_world(app, NO_GRAVITY, false);
     Shape *can = cylinder_shape(app, 1.5f, 0.4f);
-    RigidBody *across = add(app, undamped_body(can, {0.0f, 4.0f, 0.0f}, rotation_z(0.5f * PI)));
+    RigidBody *across = add(app, undamped_body(can, vec3f::make(0.0f, 4.0f, 0.0f), rotation_z(0.5f * PI)));
     rigid_body::set_linear_velocity(*app.world, across, vec3f::make(0.0f, -3.0f, 0.0f));
-    add(app, undamped_body(can, {0.0f, 0.0f, 0.0f}));
+    add(app, undamped_body(can, vec3f::zero()));
 }
 
 /* stacking scenes */
 
 static void jenga(App &app) {
     make_world(app, {0.0f, -5.0f, 0.0f}, true);
-    add(app, ground_body(app, {50.0f, 0.5f, 50.0f}));
+    add(app, ground_body(app, vec3f::make(50.0f, 0.5f, 50.0f)));
     const float size = 0.5f;
     const float gap = 0.02f;
-    Shape *along_z = box_shape(app, {size, size, size * 3.0f});
-    Shape *along_x = box_shape(app, {size * 3.0f, size, size});
+    Shape *along_z = box_shape(app, vec3f::make(size, size, size * 3.0f));
+    Shape *along_x = box_shape(app, vec3f::make(size * 3.0f, size, size));
     for (int i = 0; i < 10; i++) {
         const bool even = i % 2 == 0;
         const float dx = even ? 1.0f : 0.0f;
         const float dz = even ? 0.0f : 1.0f;
         for (int j = 0; j < 3; j++) {
             const float offset = 2.0f * (size + gap) * (float)(j - 1);
-            add(app, dynamic_body(even ? along_z : along_x, {offset * dx, 2.0f * (size + gap) * (float)(i + 1), offset * dz}));
+            add(app, dynamic_body(even ? along_z : along_x, vec3f::make(offset * dx, 2.0f * (size + gap) * (float)(i + 1), offset * dz)));
         }
     }
 }
 
 static void pyramid_stress_test(App &app) {
     make_world(app, EARTH_GRAVITY, true);
-    RigidBodySettings floor = ground_body(app, {20.0f, 0.5f, 20.0f});
+    RigidBodySettings floor = ground_body(app, vec3f::make(20.0f, 0.5f, 20.0f));
     floor.restitution = 0.3f;
     add(app, floor);
     const int tower_height = 6;
     const float box_size = 1.0f;
-    Shape *cube = box_shape(app, {box_size * 0.5f, box_size * 0.5f, box_size * 0.5f}, 0.2f);
+    Shape *cube = box_shape(app, vec3f::splat(box_size * 0.5f), 0.2f);
     for (int y = 0; y < tower_height; y++) {
         const int base_offset = tower_height - 1 - y;
         for (int x = -base_offset; x <= base_offset; x++) {
             for (int z = -base_offset; z <= base_offset; z++) {
-                RigidBodySettings settings = dynamic_body(cube, {(float)x * box_size, (float)y * box_size + box_size * 0.5f, (float)z * box_size});
+                RigidBodySettings settings =
+                    dynamic_body(cube, vec3f::make((float)x * box_size, (float)y * box_size + box_size * 0.5f, (float)z * box_size));
                 settings.restitution = 0.0f;
                 settings.friction = 0.5f;
                 add(app, settings);
             }
         }
     }
-    RigidBodySettings falling = dynamic_body(box_shape(app, {1.0f, 1.0f, 1.0f}), {0.0f, 20.0f, 0.0f});
+    RigidBodySettings falling = dynamic_body(box_shape(app, vec3f::splat(1.0f)), vec3f::make(0.0f, 20.0f, 0.0f));
     falling.restitution = 0.3f;
     add(app, falling);
 }
 
 static void box_stack_pyramid(App &app) {
     make_world(app, EARTH_GRAVITY, true);
-    RigidBodySettings floor = ground_body(app, {20.0f, 0.5f, 20.0f});
+    RigidBodySettings floor = ground_body(app, vec3f::make(20.0f, 0.5f, 20.0f));
     floor.friction = 1.0f;
     add(app, floor);
     const int size = 10;
-    Shape *cube = box_shape(app, {1.0f, 1.0f, 1.0f});
+    Shape *cube = box_shape(app, vec3f::splat(1.0f));
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < size - i; j++) {
             for (int k = 0; k < size - i; k++) {
-                const Float3 position = {2.0f * (float)j * 1.3f - (float)size + (float)i * 1.2f, (float)i * 2.2f + 1.0f,
-                                         2.0f * (float)k * 1.3f - (float)size + (float)i * 1.2f};
+                const Vec3f position = vec3f::make(2.0f * (float)j * 1.3f - (float)size + (float)i * 1.2f, (float)i * 2.2f + 1.0f,
+                                                   2.0f * (float)k * 1.3f - (float)size + (float)i * 1.2f);
                 RigidBodySettings settings = dynamic_body(cube, position);
                 settings.friction = 1.0f;
                 add(app, settings);
@@ -381,7 +388,7 @@ static void box_stack_pyramid(App &app) {
 
 static void spheres_x_suzanne(App &app) {
     make_world(app, EARTH_GRAVITY, true);
-    RigidBodySettings floor = ground_body(app, {20.0f, 0.5f, 20.0f});
+    RigidBodySettings floor = ground_body(app, vec3f::make(20.0f, 0.5f, 20.0f));
     floor.restitution = 0.3f;
     floor.friction = 0.5f;
     add(app, floor);
@@ -389,7 +396,8 @@ static void spheres_x_suzanne(App &app) {
     Model suzanne = model::load("low-poly-suzi.glb");
     for (uint32_t i = 0; i < suzanne.positions.length; i++) suzanne.positions[i] *= 3.0f;
     RigidBodySettings monkey = static_body(
-        mesh_shape(app, suzanne.positions.data, suzanne.positions.length / 3, suzanne.indices.data, suzanne.indices.length), {0.0f, 3.0f, 0.0f});
+        mesh_shape(app, suzanne.positions.data, suzanne.positions.length / 3, suzanne.indices.data, suzanne.indices.length),
+        vec3f::make(0.0f, 3.0f, 0.0f));
     model::release(suzanne);
     monkey.restitution = 0.3f;
     monkey.friction = 0.5f;
@@ -400,7 +408,7 @@ static void spheres_x_suzanne(App &app) {
         const float x = 0.4f + seeded::next(state.random) * 0.3f;
         const float y = 10.0f + seeded::next(state.random);
         const float z = 0.4f + seeded::next(state.random) * 0.3f;
-        RigidBodySettings settings = dynamic_body(ball, {x * 10.0f - 5.0f, y, z * 10.0f - 5.0f});
+        RigidBodySettings settings = dynamic_body(ball, vec3f::make(x * 10.0f - 5.0f, y, z * 10.0f - 5.0f));
         settings.restitution = 0.3f;
         settings.friction = 0.5f;
         add(app, settings);
@@ -409,12 +417,12 @@ static void spheres_x_suzanne(App &app) {
 
 static void ccd_test(App &app) {
     make_world(app, NO_GRAVITY, true);
-    add(app, static_body(box_shape(app, {0.5f, 5.0f, 5.0f}), {10.0f, 0.0f, 0.0f}));
+    add(app, static_body(box_shape(app, vec3f::make(0.5f, 5.0f, 5.0f)), vec3f::make(10.0f, 0.0f, 0.0f)));
     Shape *ball = sphere_shape(app, 0.5f);
     // the same speed: discrete tunnels through the wall, linear cast stops at it
-    RigidBody *discrete = add(app, undamped_body(ball, {-10.0f, 2.0f, 0.0f}));
+    RigidBody *discrete = add(app, undamped_body(ball, vec3f::make(-10.0f, 2.0f, 0.0f)));
     rigid_body::set_linear_velocity(*app.world, discrete, vec3f::make(300.0f, 0.0f, 0.0f));
-    RigidBodySettings cast = undamped_body(ball, {-10.0f, -2.0f, 0.0f});
+    RigidBodySettings cast = undamped_body(ball, vec3f::make(-10.0f, -2.0f, 0.0f));
     cast.motion_quality = MotionQuality::LINEAR_CAST;
     RigidBody *swept = add(app, cast);
     rigid_body::set_linear_velocity(*app.world, swept, vec3f::make(300.0f, 0.0f, 0.0f));
@@ -424,7 +432,7 @@ static void ccd_test(App &app) {
 
 /** a 30 by 30 m static box ground, its top at y = 0 */
 static void chain_ground(App &app) {
-    RigidBodySettings ground = ground_body(app, {15.0f, 0.5f, 15.0f});
+    RigidBodySettings ground = ground_body(app, vec3f::make(15.0f, 0.5f, 15.0f));
     ground.restitution = 0.3f;
     ground.friction = 0.5f;
     add(app, ground);
@@ -434,15 +442,15 @@ static void point_constraint_chain(App &app) {
     make_world(app, EARTH_GRAVITY, true);
     chain_ground(app);
     const float link_spacing = 1.5f;
-    RigidBody *previous = add(app, static_body(sphere_shape(app, 0.2f), {0.0f, 12.0f, 0.0f}));
-    Shape *link_shape = box_shape(app, {0.3f, 0.3f, 0.3f});
+    RigidBody *previous = add(app, static_body(sphere_shape(app, 0.2f), vec3f::make(0.0f, 12.0f, 0.0f)));
+    Shape *link_shape = box_shape(app, vec3f::splat(0.3f));
     for (int i = 0; i < 5; i++) {
-        RigidBodySettings settings = dynamic_body(link_shape, {0.0f, 12.0f - (float)(i + 1) * link_spacing, 0.0f});
+        RigidBodySettings settings = dynamic_body(link_shape, vec3f::make(0.0f, 12.0f - (float)(i + 1) * link_spacing, 0.0f));
         settings.restitution = 0.1f;
         settings.friction = 0.5f;
         RigidBody *link = add(app, settings);
-        const float connection_y = 12.0f - ((float)i + 0.5f) * link_spacing;
-        point_constraint::create(*app.world, previous, link, {.point_a = {0.0f, connection_y, 0.0f}, .point_b = {0.0f, connection_y, 0.0f}});
+        const Vec3f connection = vec3f::make(0.0f, 12.0f - ((float)i + 0.5f) * link_spacing, 0.0f);
+        point_constraint::create(*app.world, previous, link, {.point_a = connection, .point_b = connection});
         // a push to start it swinging
         rigid_body::set_linear_velocity(*app.world, link, vec3f::make(1.0f, 0.0f, 0.0f));
         previous = link;
@@ -453,10 +461,10 @@ static void point_constraint_chain(App &app) {
 static void distance_constraint_chain(App &app) {
     make_world(app, EARTH_GRAVITY, true);
     chain_ground(app);
-    RigidBody *previous = add(app, static_body(sphere_shape(app, 0.15f), {-4.0f, 10.0f, 0.0f}));
+    RigidBody *previous = add(app, static_body(sphere_shape(app, 0.15f), vec3f::make(-4.0f, 10.0f, 0.0f)));
     Shape *link_shape = sphere_shape(app, 0.25f);
     for (int i = 0; i < 8; i++) {
-        RigidBodySettings settings = dynamic_body(link_shape, {-4.0f + (float)(i + 1), 10.0f, 0.0f});
+        RigidBodySettings settings = dynamic_body(link_shape, vec3f::make(-4.0f + (float)(i + 1), 10.0f, 0.0f));
         settings.restitution = 0.1f;
         settings.friction = 0.5f;
         RigidBody *link = add(app, settings);
@@ -474,14 +482,14 @@ static void distance_constraint_rope_bridge(App &app) {
     const float link_spacing = 0.8f;
     const float bridge_y = 8.0f;
     const float bridge_start_x = -5.0f;
-    Shape *anchor_shape = box_shape(app, {0.3f, 0.3f, 0.5f});
-    RigidBody *left_anchor = add(app, static_body(anchor_shape, {bridge_start_x, bridge_y, 0.0f}));
+    Shape *anchor_shape = box_shape(app, vec3f::make(0.3f, 0.3f, 0.5f));
+    RigidBody *left_anchor = add(app, static_body(anchor_shape, vec3f::make(bridge_start_x, bridge_y, 0.0f)));
     RigidBody *right_anchor =
-        add(app, static_body(anchor_shape, {bridge_start_x + (float)(bridge_length + 1) * link_spacing, bridge_y, 0.0f}));
-    Shape *plank_shape = box_shape(app, {0.3f, 0.1f, 0.4f}, 0.02f);
+        add(app, static_body(anchor_shape, vec3f::make(bridge_start_x + (float)(bridge_length + 1) * link_spacing, bridge_y, 0.0f)));
+    Shape *plank_shape = box_shape(app, vec3f::make(0.3f, 0.1f, 0.4f), 0.02f);
     RigidBody *previous = left_anchor;
     for (int i = 0; i < bridge_length; i++) {
-        RigidBodySettings settings = dynamic_body(plank_shape, {bridge_start_x + (float)(i + 1) * link_spacing, bridge_y, 0.0f});
+        RigidBodySettings settings = dynamic_body(plank_shape, vec3f::make(bridge_start_x + (float)(i + 1) * link_spacing, bridge_y, 0.0f));
         settings.restitution = 0.1f;
         settings.friction = 0.8f;
         RigidBody *plank = add(app, settings);
@@ -490,7 +498,7 @@ static void distance_constraint_rope_bridge(App &app) {
     }
     distance_constraint::create(*app.world, previous, right_anchor,
                                 {.point_a = previous->center_of_mass_position, .point_b = right_anchor->center_of_mass_position});
-    RigidBodySettings ball = dynamic_body(sphere_shape(app, 0.5f), {0.0f, 12.0f, 0.0f});
+    RigidBodySettings ball = dynamic_body(sphere_shape(app, 0.5f), vec3f::make(0.0f, 12.0f, 0.0f));
     ball.restitution = 0.3f;
     ball.friction = 0.5f;
     add(app, ball);
@@ -500,16 +508,16 @@ static void distance_constraint_rope_bridge(App &app) {
 static void distance_constraint_spring(App &app) {
     make_world(app, EARTH_GRAVITY, true);
     const float bar_y = 25.0f;
-    RigidBody *bar = add(app, static_body(box_shape(app, {50.0f, 0.5f, 0.5f}), {15.0f, bar_y, 0.0f}));
-    Shape *weight = box_shape(app, {0.5f, 0.5f, 0.5f});
+    RigidBody *bar = add(app, static_body(box_shape(app, vec3f::make(50.0f, 0.5f, 0.5f)), vec3f::make(15.0f, bar_y, 0.0f)));
+    Shape *weight = box_shape(app, vec3f::splat(0.5f));
     // a weight hung by a spring, then lifted 4 m below the bar to set it bouncing
     const auto hang = [&](float x, float length, float frequency, float damping) {
-        const float y = bar_y - length;
-        RigidBody *body = add(app, undamped_body(weight, {x, y, 0.0f}));
+        const Vec3f hung_at = vec3f::make(x, bar_y - length, 0.0f);
+        RigidBody *body = add(app, undamped_body(weight, hung_at));
         distance_constraint::create(
             *app.world, bar, body,
-            {.point_a = {x, bar_y, 0.0f},
-             .point_b = {x, y, 0.0f},
+            {.point_a = vec3f::make(x, bar_y, 0.0f),
+             .point_b = hung_at,
              .spring_settings = {.mode = SpringMode::FREQUENCY_AND_DAMPING, .frequency_or_stiffness = frequency, .damping = damping}});
         rigid_body::set_position(*app.world, body, vec3f::make(x, bar_y - 4.0f, 0.0f), false);
         app::snap(app, *body);
@@ -525,26 +533,26 @@ static void distance_constraint_spring(App &app) {
 
 static void hinge_constraint_scene(App &app) {
     make_world(app, EARTH_GRAVITY, true, false);
-    Shape *cube = box_shape(app, {1.0f, 1.0f, 1.0f});
-    RigidBody *anchor = add(app, static_body(cube, {0.0f, 10.0f, 0.0f}));
-    RigidBody *pendulum = add(app, dynamic_body(cube, {3.0f, 10.0f, 0.0f}));
+    Shape *cube = box_shape(app, vec3f::splat(1.0f));
+    RigidBody *anchor = add(app, static_body(cube, vec3f::make(0.0f, 10.0f, 0.0f)));
+    RigidBody *pendulum = add(app, dynamic_body(cube, vec3f::make(3.0f, 10.0f, 0.0f)));
     // about z, swinging in the xy plane
     hinge_constraint::create(*app.world, anchor, pendulum,
-                             {.point_a = {1.0f, 10.0f, 0.0f},
-                              .point_b = {2.0f, 10.0f, 0.0f},
-                              .hinge_axis_a = {0.0f, 0.0f, 1.0f},
-                              .hinge_axis_b = {0.0f, 0.0f, 1.0f},
-                              .normal_axis_a = {1.0f, 0.0f, 0.0f},
-                              .normal_axis_b = {1.0f, 0.0f, 0.0f}});
+                             {.point_a = vec3f::make(1.0f, 10.0f, 0.0f),
+                              .point_b = vec3f::make(2.0f, 10.0f, 0.0f),
+                              .hinge_axis_a = vec3f::axis_z(),
+                              .hinge_axis_b = vec3f::axis_z(),
+                              .normal_axis_a = vec3f::axis_x(),
+                              .normal_axis_b = vec3f::axis_x()});
     state.skip_constrained_pairs = true;
 }
 
 static void fixed_constraint_scene(App &app) {
     make_world(app, EARTH_GRAVITY, true);
-    add(app, ground_body(app, {50.0f, 0.5f, 50.0f}));
-    Shape *cube = box_shape(app, {1.0f, 1.0f, 1.0f});
-    RigidBody *a = add(app, dynamic_body(cube, {-1.5f, 10.0f, 0.0f}));
-    RigidBody *b = add(app, dynamic_body(cube, {1.5f, 11.0f, 0.0f}));
+    add(app, ground_body(app, vec3f::make(50.0f, 0.5f, 50.0f)));
+    Shape *cube = box_shape(app, vec3f::splat(1.0f));
+    RigidBody *a = add(app, dynamic_body(cube, vec3f::make(-1.5f, 10.0f, 0.0f)));
+    RigidBody *b = add(app, dynamic_body(cube, vec3f::make(1.5f, 11.0f, 0.0f)));
     // welded: they fall and tumble as one
     fixed_constraint::create(*app.world, a, b, {.auto_detect_point = true});
     state.skip_constrained_pairs = true;
@@ -553,27 +561,26 @@ static void fixed_constraint_scene(App &app) {
 static void swing_twist_constraint_chain(App &app) {
     // moving bodies do not collide, so neighbouring capsules do not
     make_world(app, EARTH_GRAVITY, true, false);
-    add(app, ground_body(app, {50.0f, 0.5f, 50.0f}));
+    add(app, ground_body(app, vec3f::make(50.0f, 0.5f, 50.0f)));
     const float half_capsule_height = 1.5f;
     Shape *segment = capsule_shape(app, half_capsule_height, 0.5f);
-    Float3 position = {0.0f, 25.0f, 0.0f};
     RigidBody *previous = nullptr;
     for (int i = 0; i < 10; i++) {
-        position.x += 2.0f * half_capsule_height;
+        const Vec3f position = vec3f::make((float)(i + 1) * 2.0f * half_capsule_height, 25.0f, 0.0f);
         // along x, each twisted an eighth turn more than the last
-        const Float4 rotation = vec::quat_multiply(rotation_x(0.25f * PI * (float)i), rotation_z(0.5f * PI));
+        const Quatf rotation = quatf::multiply(rotation_x(0.25f * PI * (float)i), rotation_z(0.5f * PI));
         RigidBodySettings settings = i == 0 ? static_body(segment, position, rotation) : dynamic_body(segment, position, rotation);
         settings.allow_sleeping = i == 0;
         RigidBody *body = add(app, settings);
         if (previous != nullptr) {
-            const Float3 joint = {position.x - half_capsule_height, position.y, position.z};
+            const Vec3f joint = vec3f::subtract(position, vec3f::make(half_capsule_height, 0.0f, 0.0f));
             swing_twist_constraint::create(*app.world, previous, body,
                                            {.point_a = joint,
                                             .point_b = joint,
-                                            .twist_axis_a = {1.0f, 0.0f, 0.0f},
-                                            .plane_axis_a = {0.0f, 1.0f, 0.0f},
-                                            .twist_axis_b = {1.0f, 0.0f, 0.0f},
-                                            .plane_axis_b = {0.0f, 1.0f, 0.0f},
+                                            .twist_axis_a = vec3f::axis_x(),
+                                            .plane_axis_a = vec3f::axis_y(),
+                                            .twist_axis_b = vec3f::axis_x(),
+                                            .plane_axis_b = vec3f::axis_y(),
                                             .normal_half_cone_angle = PI / 4.0f,
                                             .plane_half_cone_angle = PI / 6.0f,
                                             .twist_min_angle = -PI / 4.0f,
@@ -587,17 +594,17 @@ static void swing_twist_constraint_chain(App &app) {
 
 static void swing_twist_ragdoll_shoulder(App &app) {
     make_world(app, EARTH_GRAVITY, true, false);
-    add(app, ground_body(app, {50.0f, 0.5f, 50.0f}));
-    RigidBody *torso = add(app, static_body(box_shape(app, {2.0f, 1.5f, 1.0f}), {0.0f, 10.0f, 0.0f}));
-    RigidBody *upper_arm = add(app, dynamic_body(capsule_shape(app, 1.5f, 0.3f), {4.0f, 10.0f, 0.0f}, rotation_z(0.5f * PI)));
+    add(app, ground_body(app, vec3f::make(50.0f, 0.5f, 50.0f)));
+    RigidBody *torso = add(app, static_body(box_shape(app, vec3f::make(2.0f, 1.5f, 1.0f)), vec3f::make(0.0f, 10.0f, 0.0f)));
+    RigidBody *upper_arm = add(app, dynamic_body(capsule_shape(app, 1.5f, 0.3f), vec3f::make(4.0f, 10.0f, 0.0f), rotation_z(0.5f * PI)));
     // twisting about the arm, x; swinging 90 degrees up and down and 60 forward and back
     swing_twist_constraint::create(*app.world, torso, upper_arm,
-                                   {.point_a = {2.0f, 10.0f, 0.0f},
-                                    .point_b = {2.5f, 10.0f, 0.0f},
-                                    .twist_axis_a = {1.0f, 0.0f, 0.0f},
-                                    .plane_axis_a = {0.0f, 0.0f, 1.0f},
-                                    .twist_axis_b = {1.0f, 0.0f, 0.0f},
-                                    .plane_axis_b = {0.0f, 0.0f, 1.0f},
+                                   {.point_a = vec3f::make(2.0f, 10.0f, 0.0f),
+                                    .point_b = vec3f::make(2.5f, 10.0f, 0.0f),
+                                    .twist_axis_a = vec3f::axis_x(),
+                                    .plane_axis_a = vec3f::axis_z(),
+                                    .twist_axis_b = vec3f::axis_x(),
+                                    .plane_axis_b = vec3f::axis_z(),
                                     .normal_half_cone_angle = PI / 2.0f,
                                     .plane_half_cone_angle = PI / 3.0f,
                                     .twist_min_angle = -PI / 3.0f,
@@ -608,17 +615,17 @@ static void swing_twist_ragdoll_shoulder(App &app) {
 
 static void slider_constraint_scene(App &app) {
     make_world(app, EARTH_GRAVITY, true);
-    add(app, ground_body(app, {50.0f, 0.5f, 50.0f}));
-    RigidBody *rail = add(app, static_body(box_shape(app, {5.0f, 0.2f, 0.2f}), {0.0f, 5.0f, 0.0f}));
-    RigidBody *slider = add(app, dynamic_body(box_shape(app, {0.5f, 0.5f, 0.5f}), {-3.0f, 5.0f, 0.0f}));
+    add(app, ground_body(app, vec3f::make(50.0f, 0.5f, 50.0f)));
+    RigidBody *rail = add(app, static_body(box_shape(app, vec3f::make(5.0f, 0.2f, 0.2f)), vec3f::make(0.0f, 5.0f, 0.0f)));
+    RigidBody *slider = add(app, dynamic_body(box_shape(app, vec3f::splat(0.5f)), vec3f::make(-3.0f, 5.0f, 0.0f)));
     rigid_body::set_linear_velocity(*app.world, slider, vec3f::make(10.0f, 0.0f, 0.0f));
     slider_constraint::create(*app.world, rail, slider,
-                              {.point_a = {0.0f, 5.0f, 0.0f},
-                               .point_b = {-3.0f, 5.0f, 0.0f},
-                               .slider_axis_a = {1.0f, 0.0f, 0.0f},
-                               .slider_axis_b = {1.0f, 0.0f, 0.0f},
-                               .normal_axis_a = {0.0f, 1.0f, 0.0f},
-                               .normal_axis_b = {0.0f, 1.0f, 0.0f},
+                              {.point_a = vec3f::make(0.0f, 5.0f, 0.0f),
+                               .point_b = vec3f::make(-3.0f, 5.0f, 0.0f),
+                               .slider_axis_a = vec3f::axis_x(),
+                               .slider_axis_b = vec3f::axis_x(),
+                               .normal_axis_a = vec3f::axis_y(),
+                               .normal_axis_b = vec3f::axis_y(),
                                .limits_min = -4.0f,
                                .limits_max = 4.0f});
     state.skip_constrained_pairs = true;
@@ -626,23 +633,24 @@ static void slider_constraint_scene(App &app) {
 
 static void cone_constraint_scene(App &app) {
     make_world(app, EARTH_GRAVITY, true);
-    add(app, ground_body(app, {50.0f, 0.5f, 50.0f}));
-    RigidBody *anchor = add(app, static_body(sphere_shape(app, 0.2f), {0.0f, 5.0f, 0.0f}));
-    RigidBody *arm = add(app, dynamic_body(capsule_shape(app, 1.0f, 0.5f), {0.0f, 3.0f, 0.0f}));
+    add(app, ground_body(app, vec3f::make(50.0f, 0.5f, 50.0f)));
+    RigidBody *anchor = add(app, static_body(sphere_shape(app, 0.2f), vec3f::make(0.0f, 5.0f, 0.0f)));
+    RigidBody *arm = add(app, dynamic_body(capsule_shape(app, 1.0f, 0.5f), vec3f::make(0.0f, 3.0f, 0.0f)));
     rigid_body::set_linear_velocity(*app.world, arm, vec3f::make(10.0f, 0.0f, 0.0f));
     // swinging within 45 degrees of straight down
+    const Vec3f down = vec3f::make(0.0f, -1.0f, 0.0f);
     cone_constraint::create(*app.world, anchor, arm,
-                            {.point_a = {0.0f, 5.0f, 0.0f},
-                             .twist_axis_a = {0.0f, -1.0f, 0.0f},
-                             .point_b = {0.0f, 4.5f, 0.0f},
-                             .twist_axis_b = {0.0f, -1.0f, 0.0f},
+                            {.point_a = vec3f::make(0.0f, 5.0f, 0.0f),
+                             .twist_axis_a = down,
+                             .point_b = vec3f::make(0.0f, 4.5f, 0.0f),
+                             .twist_axis_b = down,
                              .half_cone_angle = PI / 4.0f});
     rigid_body::set_angular_velocity(*app.world, arm, vec3f::make(2.0f, 0.0f, 1.0f));
     state.skip_constrained_pairs = true;
 }
 
 /** limits per axis, translation x y z then rotation x y z */
-static SixDOFConstraintSettings six_dof(Float3 point_a, Float3 point_b, const float (&limit_min)[6], const float (&limit_max)[6]) {
+static SixDOFConstraintSettings six_dof(Vec3f point_a, Vec3f point_b, const float (&limit_min)[6], const float (&limit_max)[6]) {
     SixDOFConstraintSettings settings;
     settings.point_a = point_a;
     settings.point_b = point_b;
@@ -655,44 +663,48 @@ static SixDOFConstraintSettings six_dof(Float3 point_a, Float3 point_b, const fl
 
 static void six_dof_constraint_scene(App &app) {
     make_world(app, EARTH_GRAVITY, true);
-    add(app, ground_body(app, {50.0f, 0.5f, 50.0f}));
+    add(app, ground_body(app, vec3f::make(50.0f, 0.5f, 50.0f)));
     const float spacing = 4.0f;
 
     // every axis fixed: a weld
-    RigidBody *anchor_1 = add(app, static_body(sphere_shape(app, 0.3f), {-2.0f * spacing, 5.0f, 0.0f}));
-    RigidBody *body_1 = add(app, dynamic_body(box_shape(app, {0.5f, 0.5f, 0.5f}), {-2.0f * spacing, 4.0f, 0.0f}));
-    six_dof_constraint::create(*app.world, anchor_1, body_1, six_dof({-2.0f * spacing, 4.5f, 0.0f}, {-2.0f * spacing, 4.5f, 0.0f}, {0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0}));
+    RigidBody *anchor_1 = add(app, static_body(sphere_shape(app, 0.3f), vec3f::make(-2.0f * spacing, 5.0f, 0.0f)));
+    RigidBody *body_1 = add(app, dynamic_body(box_shape(app, vec3f::splat(0.5f)), vec3f::make(-2.0f * spacing, 4.0f, 0.0f)));
+    const Vec3f weld = vec3f::make(-2.0f * spacing, 4.5f, 0.0f);
+    six_dof_constraint::create(*app.world, anchor_1, body_1, six_dof(weld, weld, {0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0}));
 
     // a slider: x within 2.5 m either way, the rest fixed
-    RigidBody *anchor_2 = add(app, static_body(box_shape(app, {3.0f, 0.1f, 0.1f}), {-1.0f * spacing, 5.0f, 0.0f}));
-    RigidBody *body_2 = add(app, dynamic_body(box_shape(app, {0.4f, 0.4f, 0.4f}), {-1.0f * spacing - 1.0f, 5.0f, 0.0f}));
+    RigidBody *anchor_2 = add(app, static_body(box_shape(app, vec3f::make(3.0f, 0.1f, 0.1f)), vec3f::make(-1.0f * spacing, 5.0f, 0.0f)));
+    RigidBody *body_2 = add(app, dynamic_body(box_shape(app, vec3f::splat(0.4f)), vec3f::make(-1.0f * spacing - 1.0f, 5.0f, 0.0f)));
     rigid_body::set_linear_velocity(*app.world, body_2, vec3f::make(5.0f, 0.0f, 0.0f));
     six_dof_constraint::create(*app.world, anchor_2, body_2,
-                               six_dof({-1.0f * spacing, 5.0f, 0.0f}, {-1.0f * spacing - 1.0f, 5.0f, 0.0f}, {-2.5f, 0, 0, 0, 0, 0}, {2.5f, 0, 0, 0, 0, 0}));
+                               six_dof(vec3f::make(-1.0f * spacing, 5.0f, 0.0f), vec3f::make(-1.0f * spacing - 1.0f, 5.0f, 0.0f),
+                                       {-2.5f, 0, 0, 0, 0, 0}, {2.5f, 0, 0, 0, 0, 0}));
 
     // a hinge: free about z, the rest fixed
-    RigidBody *anchor_3 = add(app, static_body(sphere_shape(app, 0.2f), {0.0f, 5.0f, 0.0f}));
-    RigidBody *body_3 = add(app, dynamic_body(capsule_shape(app, 1.0f, 0.2f), {0.0f, 3.5f, 0.0f}, rotation_z(0.5f * PI)));
-    SixDOFConstraintSettings hinge = six_dof({0.0f, 5.0f, 0.0f}, {-1.2f, 3.5f, 0.0f}, {0, 0, 0, 0, 0, -PI}, {0, 0, 0, 0, 0, PI});
-    hinge.axis_x_b = {0.0f, 1.0f, 0.0f};
-    hinge.axis_y_b = {-1.0f, 0.0f, 0.0f};
+    RigidBody *anchor_3 = add(app, static_body(sphere_shape(app, 0.2f), vec3f::make(0.0f, 5.0f, 0.0f)));
+    RigidBody *body_3 = add(app, dynamic_body(capsule_shape(app, 1.0f, 0.2f), vec3f::make(0.0f, 3.5f, 0.0f), rotation_z(0.5f * PI)));
+    SixDOFConstraintSettings hinge =
+        six_dof(vec3f::make(0.0f, 5.0f, 0.0f), vec3f::make(-1.2f, 3.5f, 0.0f), {0, 0, 0, 0, 0, -PI}, {0, 0, 0, 0, 0, PI});
+    hinge.axis_x_b = vec3f::axis_y();
+    hinge.axis_y_b = vec3f::make(-1.0f, 0.0f, 0.0f);
     six_dof_constraint::create(*app.world, anchor_3, body_3, hinge);
 
     // a ball and socket: every rotation free
-    RigidBody *anchor_4 = add(app, static_body(sphere_shape(app, 0.3f), {1.0f * spacing, 5.0f, 0.0f}));
-    RigidBody *body_4 = add(app, dynamic_body(capsule_shape(app, 1.0f, 0.3f), {1.0f * spacing, 3.0f, 0.0f}));
+    RigidBody *anchor_4 = add(app, static_body(sphere_shape(app, 0.3f), vec3f::make(1.0f * spacing, 5.0f, 0.0f)));
+    RigidBody *body_4 = add(app, dynamic_body(capsule_shape(app, 1.0f, 0.3f), vec3f::make(1.0f * spacing, 3.0f, 0.0f)));
     rigid_body::set_angular_velocity(*app.world, body_4, vec3f::make(3.0f, 0.0f, 2.0f));
     six_dof_constraint::create(*app.world, anchor_4, body_4,
-                               six_dof({1.0f * spacing, 5.0f, 0.0f}, {1.0f * spacing, 4.3f, 0.0f}, {0, 0, 0, -PI, -PI, -PI}, {0, 0, 0, PI, PI, PI}));
+                               six_dof(vec3f::make(1.0f * spacing, 5.0f, 0.0f), vec3f::make(1.0f * spacing, 4.3f, 0.0f), {0, 0, 0, -PI, -PI, -PI},
+                                       {0, 0, 0, PI, PI, PI}));
 
     // a joystick: tilting 45 degrees about x and z, no twist
     const float max_swing = PI / 4.0f;
-    RigidBody *anchor_5 = add(app, static_body(sphere_shape(app, 0.3f), {2.0f * spacing, 5.0f, 0.0f}));
-    RigidBody *body_5 = add(app, dynamic_body(capsule_shape(app, 1.0f, 0.2f), {2.0f * spacing, 3.5f, 0.0f}));
+    RigidBody *anchor_5 = add(app, static_body(sphere_shape(app, 0.3f), vec3f::make(2.0f * spacing, 5.0f, 0.0f)));
+    RigidBody *body_5 = add(app, dynamic_body(capsule_shape(app, 1.0f, 0.2f), vec3f::make(2.0f * spacing, 3.5f, 0.0f)));
     rigid_body::set_linear_velocity(*app.world, body_5, vec3f::make(5.0f, 0.0f, 0.0f));
     six_dof_constraint::create(*app.world, anchor_5, body_5,
-                               six_dof({2.0f * spacing, 5.0f, 0.0f}, {2.0f * spacing, 4.5f, 0.0f}, {0, 0, 0, -max_swing, 0, -max_swing},
-                                       {0, 0, 0, max_swing, 0, max_swing}));
+                               six_dof(vec3f::make(2.0f * spacing, 5.0f, 0.0f), vec3f::make(2.0f * spacing, 4.5f, 0.0f),
+                                       {0, 0, 0, -max_swing, 0, -max_swing}, {0, 0, 0, max_swing, 0, max_swing}));
     state.skip_constrained_pairs = true;
 }
 
@@ -700,28 +712,30 @@ static void six_dof_constraint_scene(App &app) {
 
 static void offset_center_of_mass_scene(App &app) {
     make_world(app, EARTH_GRAVITY, true);
-    RigidBodySettings floor = ground_body(app, {50.0f, 0.5f, 50.0f});
+    RigidBodySettings floor = ground_body(app, vec3f::make(50.0f, 0.5f, 50.0f));
     floor.friction = 1.0f;
     add(app, floor);
     Shape *ball = sphere_shape(app, 1.0f);
-    const auto offset = [&](float x) { return app::keep(app, offset_center_of_mass::create({.shape = ball, .offset = {x, 0.0f, 0.0f}})); };
+    const auto offset = [&](float x) {
+        return app::keep(app, offset_center_of_mass::create({.shape = ball, .offset = vec3f::make(x, 0.0f, 0.0f)}));
+    };
 
     // centres of mass to the left, in the middle and to the right: the outer two roll that way
     const float xs[] = {-5.0f, 0.0f, 5.0f};
     Shape *rolling[] = {offset(-1.0f), ball, offset(1.0f)};
     for (int i = 0; i < 3; i++) {
-        RigidBodySettings settings = dynamic_body(rolling[i], {xs[i], 5.0f, 0.0f});
+        RigidBodySettings settings = dynamic_body(rolling[i], vec3f::make(xs[i], 5.0f, 0.0f));
         settings.friction = 1.0f;
         add(app, settings);
     }
 
     // floating, spun about the centre of mass 3 m to the side: once by an impulse, once by a torque over one step
     Shape *spun = offset(-3.0f);
-    RigidBodySettings floating = undamped_body(spun, {-5.0f, 5.0f, 10.0f});
+    RigidBodySettings floating = undamped_body(spun, vec3f::make(-5.0f, 5.0f, 10.0f));
     floating.gravity_factor = 0.0f;
     RigidBody *by_impulse = add(app, floating);
     rigid_body::add_angular_impulse(*app.world, by_impulse, vec3f::make(0.0f, 1.0e6f, 0.0f));
-    floating.position = {5.0f, 5.0f, 10.0f};
+    floating.position = vec3f::make(5.0f, 5.0f, 10.0f);
     RigidBody *by_torque = add(app, floating);
     rigid_body::add_torque(*app.world, by_torque, vec3f::make(0.0f, 1.0e6f * 60.0f, 0.0f), true);
 }
@@ -752,29 +766,27 @@ static Shape *grid_mesh(App &app, float cell, int x_begin, int x_end, int z_begi
 }
 
 /** a box, a sphere and eight small boxes at a big box's corners sliding along x, without and then with enhanced removal */
-static void slide_across(App &app, Float3 start, bool with_corners) {
-    Shape *big_box = box_shape(app, {2.0f, 2.0f, 2.0f});
+static void slide_across(App &app, Vec3f start, bool with_corners) {
+    Shape *big_box = box_shape(app, vec3f::splat(2.0f));
     Shape *big_ball = sphere_shape(app, 2.0f);
-    Shape *small_box = box_shape(app, {0.1f, 0.1f, 0.1f});
+    Shape *small_box = box_shape(app, vec3f::splat(0.1f));
     for (int enhanced = 0; enhanced < 2; enhanced++) {
-        Float3 position = {start.x, start.y, start.z - 12.0f};
-        const auto slide = [&](Shape *shape, Float3 at) {
+        const auto slide = [&](Shape *shape, Vec3f at) {
             RigidBodySettings settings = dynamic_body(shape, at);
             settings.enhanced_internal_edge_removal = enhanced == 1;
             RigidBody *body = add(app, settings);
             rigid_body::set_linear_velocity(*app.world, body, vec3f::make(20.0f, 0.0f, 0.0f));
         };
-        slide(big_box, position);
-        position.z += 5.0f;
-        slide(big_ball, position);
-        position.z += 5.0f;
+        const Vec3f row = vec3f::add(start, vec3f::make(0.0f, 0.0f, 5.0f * (float)enhanced - 12.0f));
+        slide(big_box, row);
+        slide(big_ball, vec3f::add(row, vec3f::make(0.0f, 0.0f, 5.0f)));
         if (with_corners) {
+            const Vec3f centre = vec3f::add(row, vec3f::make(0.0f, 0.0f, 10.0f));
             for (int corner = 0; corner < 8; corner++) {
-                slide(small_box, {position.x + ((corner & 1) ? 1.9f : -1.9f), position.y + ((corner & 2) ? 1.9f : -1.9f),
-                                  position.z + ((corner & 4) ? 1.9f : -1.9f)});
+                const Vec3f to_corner = vec3f::make((corner & 1) ? 1.9f : -1.9f, (corner & 2) ? 1.9f : -1.9f, (corner & 4) ? 1.9f : -1.9f);
+                slide(small_box, vec3f::add(centre, to_corner));
             }
         }
-        start.z += 5.0f;
     }
 }
 
@@ -782,15 +794,15 @@ static void enhanced_internal_edge_removal(App &app) {
     make_world(app, EARTH_GRAVITY, true);
 
     // a 20 by 20 grid of static boxes, slid across
-    Shape *tile = box_shape(app, {1.0f, 1.0f, 1.0f});
+    Shape *tile = box_shape(app, vec3f::splat(1.0f));
     for (int x = -10; x < 10; x++) {
-        for (int z = -10; z < 10; z++) add(app, static_body(tile, {2.0f * (float)x, -1.0f, 2.0f * (float)z - 40.0f}));
+        for (int z = -10; z < 10; z++) add(app, static_body(tile, vec3f::make(2.0f * (float)x, -1.0f, 2.0f * (float)z - 40.0f)));
     }
-    slide_across(app, {-18.0f, 1.9f, -40.0f}, true);
+    slide_across(app, vec3f::make(-18.0f, 1.9f, -40.0f), true);
 
     // a 20 by 20 grid of triangle pairs, slid across
-    add(app, static_body(grid_mesh(app, 2.0f, -10, 10, -10, 10), {0.0f, 0.0f, 0.0f}));
-    slide_across(app, {-18.0f, 1.9f, 0.0f}, false);
+    add(app, static_body(grid_mesh(app, 2.0f, -10, 10, -10, 10), vec3f::zero()));
+    slide_across(app, vec3f::make(-18.0f, 1.9f, 0.0f), false);
 
     // an l: a floor and a step up at its edge, which must stay an edge
     {
@@ -802,11 +814,11 @@ static void enhanced_internal_edge_removal(App &app) {
             half_length,  height, half_width, half_length, height, -half_width, half_length,  0.0f, half_width,  half_length, 0.0f, -half_width,
         };
         const uint32_t indices[] = {0, 1, 2, 0, 3, 1, 4, 5, 6, 6, 5, 7};
-        add(app, static_body(mesh_shape(app, positions, 8, indices, 12), {0.0f, 0.0f, 30.0f}));
+        add(app, static_body(mesh_shape(app, positions, 8, indices, 12), vec3f::make(0.0f, 0.0f, 30.0f)));
         Shape *ball = sphere_shape(app, 1.0f);
         float z = 28.0f;
         for (int enhanced = 0; enhanced < 2; enhanced++) {
-            RigidBodySettings settings = dynamic_body(ball, {0.0f, 1.0f, z});
+            RigidBodySettings settings = dynamic_body(ball, vec3f::make(0.0f, 1.0f, z));
             settings.enhanced_internal_edge_removal = enhanced == 1;
             RigidBody *body = add(app, settings);
             rigid_body::set_linear_velocity(*app.world, body, vec3f::make(20.0f, 0.0f, 0.0f));
@@ -820,9 +832,9 @@ static void enhanced_internal_edge_removal(App &app) {
         const uint32_t indices[] = {0, 1, 2, 0, 2, 3};
         Shape *square = mesh_shape(app, positions, 4, indices, 6);
         Shape *ball = sphere_shape(app, 0.5f);
-        const Float4 tilts[] = {IDENTITY, rotation_x(0.25f * PI)};
-        const Float3 squares[] = {{-10.0f, 0.0f, 50.0f}, {10.0f, 0.0f, 50.0f}};
-        const Float3 balls[] = {{-10.0f, 1.0f, 41.0f}, {10.0f, 8.0f, 44.0f}};
+        const Quatf tilts[] = {quatf::identity(), rotation_x(0.25f * PI)};
+        const Vec3f squares[] = {vec3f::make(-10.0f, 0.0f, 50.0f), vec3f::make(10.0f, 0.0f, 50.0f)};
+        const Vec3f balls[] = {vec3f::make(-10.0f, 1.0f, 41.0f), vec3f::make(10.0f, 8.0f, 44.0f)};
         for (int i = 0; i < 2; i++) {
             RigidBodySettings ground = static_body(square, squares[i], tilts[i]);
             ground.friction = 1.0f;
@@ -836,19 +848,19 @@ static void enhanced_internal_edge_removal(App &app) {
 
     // a long thin box and a plate at its end, two bodies as crashcat has them, dropped onto a static box
     {
-        add(app, static_body(box_shape(app, {2.5f, 2.5f, 2.5f}), {0.0f, 0.0f, 70.0f}));
-        RigidBodySettings bar = dynamic_body(box_shape(app, {2.5f, 0.1f, 0.1f}), {2.0f - 2.5f, 5.0f, 70.0f});
+        add(app, static_body(box_shape(app, vec3f::splat(2.5f)), vec3f::make(0.0f, 0.0f, 70.0f)));
+        RigidBodySettings bar = dynamic_body(box_shape(app, vec3f::make(2.5f, 0.1f, 0.1f)), vec3f::make(2.0f - 2.5f, 5.0f, 70.0f));
         bar.enhanced_internal_edge_removal = true;
         add(app, bar);
-        RigidBodySettings plate = dynamic_body(box_shape(app, {0.1f, 1.0f, 1.0f}), {2.0f + 0.1f, 5.0f, 70.0f});
+        RigidBodySettings plate = dynamic_body(box_shape(app, vec3f::make(0.1f, 1.0f, 1.0f)), vec3f::make(2.0f + 0.1f, 5.0f, 70.0f));
         plate.enhanced_internal_edge_removal = true;
         add(app, plate);
     }
 
     // a 200 by 10 grid of small triangle pairs, a box sliding fast across it
     {
-        add(app, static_body(grid_mesh(app, 0.25f, -100, 100, -5, 5), {0.0f, 0.0f, 80.0f}));
-        RigidBodySettings fast = dynamic_body(box_shape(app, {1.0f, 1.0f, 1.0f}), {-24.0f, 0.9f, 80.0f});
+        add(app, static_body(grid_mesh(app, 0.25f, -100, 100, -5, 5), vec3f::make(0.0f, 0.0f, 80.0f)));
+        RigidBodySettings fast = dynamic_body(box_shape(app, vec3f::splat(1.0f)), vec3f::make(-24.0f, 0.9f, 80.0f));
         fast.enhanced_internal_edge_removal = true;
         RigidBody *body = add(app, fast);
         rigid_body::set_linear_velocity(*app.world, body, vec3f::make(20.0f, 0.0f, 0.0f));

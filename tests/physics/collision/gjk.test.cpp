@@ -257,7 +257,7 @@ void test_gjk_cast_shape(TestCtx &ctx) {
 void test_gjk_convex_radius_contract(TestCtx &ctx) {
     dispatch::init();
 
-    Ref<Shape> box_shape = box::create({.half_extents = {1.0f, 2.0f, 1.5f}, .convex_radius = 0.1f});
+    Ref<Shape> box_shape = box::create({.half_extents = vec3f::make(1.0f, 2.0f, 1.5f), .convex_radius = 0.1f});
     Ref<Shape> sphere_shape = sphere::create({.radius = 0.5f});
     const Float3 unit_scale = {1.0f, 1.0f, 1.0f};
 

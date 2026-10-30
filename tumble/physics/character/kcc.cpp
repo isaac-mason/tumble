@@ -3,8 +3,8 @@
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
+#include "tumble/math/transform.h"
 #include "tumble/math/vec3f.h"
-#include "tumble/math/vec4f.h"
 #include "tumble/physics/body/motion_properties.h"
 #include "tumble/physics/body/rigid_body.h"
 #include "tumble/physics/body/sleep.h"
@@ -119,7 +119,7 @@ static KCC::TrackedContact *find_tracked_contact(KCC &character, BodyId id, SubS
 KCC *create(const KCCSettings &settings, Vec3f position, Quatf quaternion) {
     KCC *character = util::create<KCC>();
 
-    character->up = vec3f::normalize(vec3f::load(settings.up));
+    character->up = vec3f::normalize(settings.up);
     const Vec3f up = character->up;
 
     character->position = position;
@@ -127,7 +127,7 @@ KCC *create(const KCCSettings &settings, Vec3f position, Quatf quaternion) {
     character->linear_velocity = vec3f::make(0.0f, 0.0f, 0.0f);
 
     character->shape = settings.shape;
-    character->shape_offset = vec3f::load(settings.shape_offset);
+    character->shape_offset = settings.shape_offset;
 
     character->mass = settings.mass;
     character->max_strength = settings.max_strength;
@@ -146,11 +146,10 @@ KCC *create(const KCCSettings &settings, Vec3f position, Quatf quaternion) {
     character->enhanced_internal_edge_removal = settings.enhanced_internal_edge_removal;
 
     if (settings.has_supporting_volume_plane) {
-        const Float3 &normal = settings.supporting_volume_plane.normal;
-        character->supporting_volume_plane = vec4f::make(normal.x, normal.y, normal.z, settings.supporting_volume_plane.constant);
+        character->supporting_volume_plane = settings.supporting_volume_plane;
     } else {
         // default: infinite plane below character, which accepts any contact as potentially supporting
-        character->supporting_volume_plane = vec4f::make(vec3f::x(up), vec3f::y(up), vec3f::z(up), -1.0e10f);
+        character->supporting_volume_plane = plane3f::make(up, -1.0e10f);
     }
 
     character->ground.state = KCC::GroundState::IN_AIR;
@@ -180,11 +179,8 @@ static Vec3f get_shape_position(const KCC &character, Vec3f position) {
 static Vec3f get_inner_body_position(const KCC &character) { return get_shape_position(character, character.position); }
 
 /** the character's shape pose at a character position, unscaled */
-static Transformf shape_transform_at(const KCC &character, Vec3f position) {
-    Transformf transform = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}};
-    vec3f::store(transform.position, get_shape_position(character, position));
-    quatf::store(transform.quaternion, character.quaternion);
-    return transform;
+static Transform shape_transform_at(const KCC &character, Vec3f position) {
+    return transform::make(get_shape_position(character, position), character.quaternion);
 }
 
 void add(World &world, KCC &character) {
@@ -198,8 +194,8 @@ void add(World &world, KCC &character) {
     settings.motion_type = MotionType::KINEMATIC;
     settings.user_data = character.user_data;
     settings.observes_contacts = character.observes_contacts;
-    vec3f::store(settings.position, get_inner_body_position(character));
-    quatf::store(settings.quaternion, character.quaternion);
+    settings.position = get_inner_body_position(character);
+    settings.quaternion = character.quaternion;
     // disable sleeping so sensor contacts keep coming
     settings.allow_sleeping = false;
 
@@ -266,8 +262,8 @@ static Vec3f calculate_character_ground_velocity(const KCC &character, Vec3f bod
 static void get_adjusted_body_velocity(const KCC &character, const RigidBody &body, const KCC::Listener *listener, Vec3f &out_linear_velocity,
                                        Vec3f &out_angular_velocity) {
     if (body.motion_type == MotionType::DYNAMIC || body.motion_type == MotionType::KINEMATIC) {
-        out_linear_velocity = vec3f::load(body.motion_properties.linear_velocity);
-        out_angular_velocity = vec3f::load(body.motion_properties.angular_velocity);
+        out_linear_velocity = body.motion_properties.linear_velocity;
+        out_angular_velocity = body.motion_properties.angular_velocity;
     } else {
         out_linear_velocity = vec3f::make(0.0f, 0.0f, 0.0f);
         out_angular_velocity = vec3f::make(0.0f, 0.0f, 0.0f);
@@ -308,7 +304,7 @@ static void fill_contact_properties(KCC::Contact &contact, const KCC &character,
     // point velocity: v_point = v_linear + w x (position - centre of mass)
     Vec3f linear_velocity, angular_velocity;
     get_adjusted_body_velocity(character, body, listener, linear_velocity, angular_velocity);
-    Vec3f r = vec3f::subtract(contact.position, vec3f::load(body.center_of_mass_position));
+    Vec3f r = vec3f::subtract(contact.position, body.center_of_mass_position);
     const Vec3f angular_component = vec3f::cross(angular_velocity, r);
     contact.linear_velocity = vec3f::add(linear_velocity, angular_component);
 }
@@ -453,7 +449,7 @@ static void get_contacts_with_shape(KCC &character, const Shape *shape, World &w
                                     collections::Array<KCC::Contact> &contacts) {
     contacts.length = 0;
 
-    const Transformf transform = shape_transform_at(character, position);
+    const Transform transform = shape_transform_at(character, position);
 
     CollideShapeSettings settings = collide_shape::default_settings();
     settings.collide_with_backfaces = character.back_face_mode == KCC::BackFaceMode::COLLIDE;
@@ -557,23 +553,23 @@ constexpr float PADDING_CORRECTION_TOLERANCE = 1e-4f;
  * corrects the fraction for the character padding by casting the character's convex leaves (through transformed,
  * scaled and compound shapes) against the inflated polygon. true if a cast hit, with the fraction lowered to it
  */
-static bool correct_fraction_for_character_padding(Support &character_support, const Shape *shape, const Transformf &transform,
+static bool correct_fraction_for_character_padding(Support &character_support, const Shape *shape, const Transform &transform,
                                                    Vec3f displacement, Support &polygon, float &io_fraction) {
     switch (shape->type) {
         case ShapeType::TRANSFORMED: {
             const TransformedShape &transformed = shapes::as<TransformedShape>(shape);
-            Transformf inner;
-            Vec3f translation = vec3f::multiply(vec3f::load(transformed.position), vec3f::load(transform.scale));
-            translation = vec3f::transform_quat(translation, quatf::load(transform.quaternion));
-            vec3f::store(inner.position, vec3f::add(vec3f::load(transform.position), translation));
-            quatf::store(inner.quaternion, quatf::multiply(quatf::load(transform.quaternion), quatf::load(transformed.quaternion)));
-            vec3f::store(inner.scale, shapes::transform_scale(quatf::load(transformed.quaternion), vec3f::load(transform.scale)));
+            Transform inner;
+            Vec3f translation = vec3f::multiply(transformed.position, transform.scale);
+            translation = vec3f::transform_quat(translation, transform.quaternion);
+            inner.position = vec3f::add(transform.position, translation);
+            inner.quaternion = quatf::multiply(transform.quaternion, transformed.quaternion);
+            inner.scale = shapes::transform_scale(transformed.quaternion, transform.scale);
             return correct_fraction_for_character_padding(character_support, transformed.shape, inner, displacement, polygon, io_fraction);
         }
         case ShapeType::SCALED: {
             const ScaledShape &scaled = shapes::as<ScaledShape>(shape);
-            Transformf inner = transform;
-            vec3f::store(inner.scale, vec3f::multiply(vec3f::load(transform.scale), vec3f::load(scaled.scale)));
+            Transform inner = transform;
+            inner.scale = vec3f::multiply(transform.scale, scaled.scale);
             return correct_fraction_for_character_padding(character_support, scaled.shape, inner, displacement, polygon, io_fraction);
         }
         case ShapeType::COMPOUND:
@@ -581,7 +577,7 @@ static bool correct_fraction_for_character_padding(Support &character_support, c
             const collections::Array<CompoundShape::Child> &children = compound::children_of(shape);
             bool corrected = false;
             for (uint32_t i = 0; i < children.length; i++) {
-                Transformf child;
+                Transform child;
                 compound::child_transform(child, transform, children[i]);
                 corrected |= correct_fraction_for_character_padding(character_support, children[i].shape, child, displacement, polygon,
                                                                     io_fraction);
@@ -596,9 +592,9 @@ static bool correct_fraction_for_character_padding(Support &character_support, c
 
     // at the convex level, cast the shape (its convex radius included) against the polygon (its padding added by its
     // support), so neither has a radius left for the cast to keep apart
-    shapes::set_shape_support(character_support, shape, SupportFunctionMode::INCLUDE_CONVEX_RADIUS, vec3f::load(transform.scale));
+    shapes::set_shape_support(character_support, shape, SupportFunctionMode::INCLUDE_CONVEX_RADIUS, transform.scale);
 
-    const Mat4f matrix = mat4f::from_rotation_translation(quatf::load(transform.quaternion), vec3f::load(transform.position));
+    const Mat4f matrix = mat4f::from_rotation_translation(transform.quaternion, transform.position);
 
     GjkCastShapeResult result = gjk::create_gjk_cast_shape_result();
     gjk::cast_shape(result, matrix, character_support, polygon, displacement, PADDING_CORRECTION_TOLERANCE, 0.0f, 0.0f, io_fraction);
@@ -623,7 +619,7 @@ static bool validate_movement(KCC::Contact &out, KCC &character, World &world, V
 
     reset_contact(out);
 
-    const Transformf transform = shape_transform_at(character, position);
+    const Transform transform = shape_transform_at(character, position);
 
     // how much extra fraction we need to add to the cast to account for the character padding
     const float character_padding_fraction = character.character_padding / scalar::sqrt(displacement_len_sq);
@@ -655,10 +651,10 @@ static bool validate_movement(KCC::Contact &out, KCC &character, World &world, V
     if (hit_body != nullptr) {
         // the supporting face against the contact normal, the direction in the body's local space
         Vec3f direction = vec3f::negate(out.contact_normal);
-        Quatf inverse_rotation = quatf::conjugate(quatf::load(hit_body->quaternion));
+        Quatf inverse_rotation = quatf::conjugate(hit_body->quaternion);
         direction = vec3f::transform_quat(direction, inverse_rotation);
 
-        const Mat4f hit_body_transform = mat4f::from_rotation_translation(quatf::load(hit_body->quaternion), vec3f::load(hit_body->position));
+        const Mat4f hit_body_transform = mat4f::from_rotation_translation(hit_body->quaternion, hit_body->position);
 
         SupportingFace hit_face;
         const Vec3f unit_scale = vec3f::make(1.0f, 1.0f, 1.0f);
@@ -695,7 +691,7 @@ static bool get_first_contact_for_sweep(KCC::Contact &out, KCC &character, World
                                         const collections::Array<KCC::IgnoredContact> *ignored_contacts) {
     reset_contact(out);
 
-    const Transformf transform = shape_transform_at(character, position);
+    const Transform transform = shape_transform_at(character, position);
 
     CastShapeSettings settings = cast_shape::default_settings();
     settings.extra_convex_radius = character.character_padding;
@@ -857,9 +853,9 @@ static void apply_impulse_to_body(World &world, const KCC &character, const KCC:
     if (delta_velocity < 0.0f) return;
 
     // 1/m_eff = 1/m + (r x n) . I^-1 (r x n)
-    Vec3f r = vec3f::subtract(contact.position, vec3f::load(body->center_of_mass_position));
+    Vec3f r = vec3f::subtract(contact.position, body->center_of_mass_position);
     const Vec3f jacobian = vec3f::cross(r, contact.contact_normal);
-    const Vec3f inv_inertia_jacobian = motion_properties::multiply_world_space_inverse_inertia_by_vector(mp, quatf::load(body->quaternion), jacobian);
+    const Vec3f inv_inertia_jacobian = motion_properties::multiply_world_space_inverse_inertia_by_vector(mp, body->quaternion, jacobian);
     const float inv_effective_mass = inv_mass + vec3f::dot(jacobian, inv_inertia_jacobian);
 
     // clamp impulse by max strength (p = f dt)
@@ -1073,10 +1069,6 @@ static float solve_constraints(KCC &character, World &world, Vec3f &velocity, fl
 }
 
 /** signed distance from a character space point to the supporting volume plane; positive is a side hit, not supporting */
-static float supporting_volume_signed_distance(Vec3f point, Vec4f plane) {
-    return vec3f::x(point) * vec4f::x(plane) + vec3f::y(point) * vec4f::y(plane) + vec3f::z(point) * vec4f::z(plane) + vec4f::w(plane);
-}
-
 /**
  * the ground state from the contacts: colliding contacts flagged, then supporting or sliding by the supporting volume
  * and the slope, the averaged ground normal and velocity, and for steep slopes only whether they hold the character
@@ -1135,7 +1127,7 @@ static void update_supporting_contact(KCC &character, World &world, bool skip_co
         // a contact in front of the supporting plane cannot support us (the shape offset is not subtracted)
         Vec3f local_position = vec3f::subtract(contact.position, character.position);
         local_position = vec3f::transform_quat(local_position, inverse_rotation);
-        if (supporting_volume_signed_distance(local_position, character.supporting_volume_plane) > 0.0f) continue;
+        if (plane3f::distance_to_point(character.supporting_volume_plane, local_position) > 0.0f) continue;
 
         // the contact with the normal pointing most upward
         if (cos_angle > max_cos_angle) {
@@ -1161,7 +1153,7 @@ static void update_supporting_contact(KCC &character, World &world, bool skip_co
                 if (body != nullptr) {
                     Vec3f linear_velocity, angular_velocity;
                     get_adjusted_body_velocity(character, *body, listener, linear_velocity, angular_velocity);
-                    avg_velocity = vec3f::add(avg_velocity, calculate_character_ground_velocity(character, vec3f::load(body->center_of_mass_position),
+                    avg_velocity = vec3f::add(avg_velocity, calculate_character_ground_velocity(character, body->center_of_mass_position,
                                                                                                 linear_velocity, angular_velocity, last_delta_time));
                 } else {
                     avg_velocity = vec3f::add(avg_velocity, contact.linear_velocity);
@@ -1401,7 +1393,7 @@ void update_ground_velocity(World &world, KCC &character, const KCC::Listener *l
 
     Vec3f linear_velocity, angular_velocity;
     get_adjusted_body_velocity(character, *ground_body, listener, linear_velocity, angular_velocity);
-    character.ground.velocity = calculate_character_ground_velocity(character, vec3f::load(ground_body->center_of_mass_position), linear_velocity,
+    character.ground.velocity = calculate_character_ground_velocity(character, ground_body->center_of_mass_position, linear_velocity,
                                                                     angular_velocity, character.last_delta_time);
 }
 
@@ -1665,13 +1657,13 @@ void update(World &world, KCC &character, float delta_time, Vec3f gravity, const
     if (is_supported(character)) ground_to_air = false;
 
     // stick to floor going from ground to air, unless moving up
-    if (ground_to_air && vec3f::squared_length(vec3f::load(settings.stick_to_floor_step_down)) > 1e-12f) {
+    if (ground_to_air && vec3f::squared_length(settings.stick_to_floor_step_down) > 1e-12f) {
         const Vec3f step = vec3f::subtract(character.position, old_position);
         const float velocity_up = vec3f::dot(step, character.up) / delta_time;
-        if (velocity_up <= 1e-6f) stick_to_floor(world, character, vec3f::load(settings.stick_to_floor_step_down), filter, listener);
+        if (velocity_up <= 1e-6f) stick_to_floor(world, character, settings.stick_to_floor_step_down, filter, listener);
     }
 
-    if (vec3f::squared_length(vec3f::load(settings.walk_stairs_step_up)) > 1e-12f) {
+    if (vec3f::squared_length(settings.walk_stairs_step_up) > 1e-12f) {
         // how much we wanted to move horizontally
         Vec3f desired_horizontal_step = vec3f::scale(desired_velocity, delta_time);
         desired_horizontal_step = vec3f::scale_and_add(desired_horizontal_step, character.up, -vec3f::dot(desired_horizontal_step, character.up));
@@ -1717,8 +1709,8 @@ void update(World &world, KCC &character, float delta_time, Vec3f gravity, const
                 const Vec3f step_forward = vec3f::scale(walk_stairs_direction, scalar::max(settings.walk_stairs_min_step_forward, desired_horizontal_step_len - achieved_horizontal_step_len));
                 const Vec3f step_forward_test = vec3f::scale(walk_stairs_direction, settings.walk_stairs_step_forward_test);
 
-                walk_stairs(world, character, delta_time, vec3f::load(settings.walk_stairs_step_up), step_forward, step_forward_test,
-                            vec3f::load(settings.walk_stairs_step_down_extra), filter, listener);
+                walk_stairs(world, character, delta_time, settings.walk_stairs_step_up, step_forward, step_forward_test,
+                            settings.walk_stairs_step_down_extra, filter, listener);
             }
         }
     }

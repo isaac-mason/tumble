@@ -10,7 +10,7 @@ struct MassProperties {
     /** kg */
     float mass;
     /** the inertia tensor, kg m^2, as the upper 3x3 of a column-major matrix */
-    Float4x4 inertia;
+    Mat4f inertia;
 };
 
 namespace mass_properties {
@@ -18,13 +18,13 @@ namespace mass_properties {
 inline MassProperties create() {
     MassProperties out;
     out.mass = 0.0f;
-    mat4f::store(out.inertia, mat4f::identity());
+    out.inertia = mat4f::identity();
     return out;
 }
 
 inline MassProperties &reset(MassProperties &out) {
     out.mass = 0.0f;
-    mat4f::store(out.inertia, mat4f::identity());
+    out.inertia = mat4f::identity();
     return out;
 }
 

@@ -44,7 +44,7 @@ static struct {
     Shape *crouching[2];
     int shape_type;
     bool crouched;
-    Float3 desired_velocity;
+    Vec3f desired_velocity;
     RigidBody *lava;
     RigidBody *conveyor;
     /** the input asks to move: the character may slide on walkable slopes */
@@ -66,10 +66,13 @@ static struct {
     bool show_supporting_plane;
 } state;
 
-static Float3 f3(Vec3f v) { return {vec3f::x(v), vec3f::y(v), vec3f::z(v)}; }
-static Vec3f v3(Float3 f) { return vec3f::make(f.x, f.y, f.z); }
+static Float3 stored(Vec3f v) {
+    Float3 out;
+    vec3f::store(out, v);
+    return out;
+}
 
-static RigidBody *add_static(App &app, Shape *shape, Float3 position, Float4 quaternion = {0, 0, 0, 1}) {
+static RigidBody *add_static(App &app, Shape *shape, Vec3f position, Quatf quaternion = quatf::identity()) {
     RigidBodySettings settings;
     settings.shape = shape;
     settings.object_layer = state.layers.not_moving;
@@ -79,7 +82,7 @@ static RigidBody *add_static(App &app, Shape *shape, Float3 position, Float4 qua
     return rigid_body::create(*app.world, settings);
 }
 
-static RigidBody *add_moving(App &app, Shape *shape, Float3 position, MotionType motion) {
+static RigidBody *add_moving(App &app, Shape *shape, Vec3f position, MotionType motion) {
     RigidBodySettings settings;
     settings.shape = shape;
     settings.object_layer = state.layers.moving;
@@ -88,18 +91,18 @@ static RigidBody *add_moving(App &app, Shape *shape, Float3 position, MotionType
     return rigid_body::create(*app.world, settings);
 }
 
-static Shape *box_of(App &app, Float3 half_extents) { return app::keep(app, box::create({.half_extents = half_extents})); }
+static Shape *box_of(App &app, Vec3f half_extents) { return app::keep(app, box::create({.half_extents = half_extents})); }
 
 /** the character's shapes stand on its feet: the character's position is the bottom of the shape */
 static void make_character_shapes(App &app) {
-    const Float3 standing_offset = {0.0f, 0.5f * HEIGHT_STANDING + RADIUS_STANDING, 0.0f};
-    const Float3 crouching_offset = {0.0f, 0.5f * HEIGHT_CROUCHING + RADIUS_CROUCHING, 0.0f};
+    const Vec3f standing_offset = vec3f::make(0.0f, 0.5f * HEIGHT_STANDING + RADIUS_STANDING, 0.0f);
+    const Vec3f crouching_offset = vec3f::make(0.0f, 0.5f * HEIGHT_CROUCHING + RADIUS_CROUCHING, 0.0f);
     Shape *standing_capsule = app::keep(app, capsule::create({.half_height_of_cylinder = HEIGHT_STANDING / 2, .radius = RADIUS_STANDING}));
     Shape *crouching_capsule = app::keep(app, capsule::create({.half_height_of_cylinder = HEIGHT_CROUCHING / 2, .radius = RADIUS_CROUCHING}));
-    Shape *standing_box = box_of(app, {RADIUS_STANDING, HEIGHT_STANDING / 2 + RADIUS_STANDING, RADIUS_STANDING});
-    Shape *crouching_box = box_of(app, {RADIUS_CROUCHING, HEIGHT_CROUCHING / 2 + RADIUS_CROUCHING, RADIUS_CROUCHING});
-    const auto raised = [&](Shape *shape, Float3 offset) {
-        return app::keep(app, transformed::create({.shape = shape, .position = offset, .quaternion = {0, 0, 0, 1}}));
+    Shape *standing_box = box_of(app, vec3f::make(RADIUS_STANDING, HEIGHT_STANDING / 2 + RADIUS_STANDING, RADIUS_STANDING));
+    Shape *crouching_box = box_of(app, vec3f::make(RADIUS_CROUCHING, HEIGHT_CROUCHING / 2 + RADIUS_CROUCHING, RADIUS_CROUCHING));
+    const auto raised = [&](Shape *shape, Vec3f offset) {
+        return app::keep(app, transformed::create({.shape = shape, .position = offset, .quaternion = quatf::identity()}));
     };
     state.standing[SHAPE_CAPSULE] = raised(standing_capsule, standing_offset);
     state.crouching[SHAPE_CAPSULE] = raised(crouching_capsule, crouching_offset);
@@ -120,13 +123,13 @@ static void make_character(App &app) {
     settings.predictive_contact_distance = 0.1f;
     // through the bottom hemisphere's centre: only contacts below it support the character
     settings.has_supporting_volume_plane = true;
-    settings.supporting_volume_plane = {{0.0f, 1.0f, 0.0f}, -RADIUS_STANDING};
-    state.character = kcc::create(settings, v3(SPAWN), quatf::identity());
+    settings.supporting_volume_plane = plane3f::make(vec3f::axis_y(), -RADIUS_STANDING);
+    state.character = kcc::create(settings, vec3f::load(SPAWN), quatf::identity());
     state.crouched = false;
-    state.desired_velocity = {0, 0, 0};
+    state.desired_velocity = vec3f::zero();
     kcc::add(*app.world, *state.character);
     app::set_color(app, rigid_body::get(*app.world, state.character->inner_rigid_body_id), {0.95f, 0.75f, 0.3f, 1.0f});
-    state.followed = rigid_body::get(*app.world, state.character->inner_rigid_body_id)->position;
+    state.followed = stored(rigid_body::get(*app.world, state.character->inner_rigid_body_id)->position);
 }
 
 static void release_character(App &app) {
@@ -167,29 +170,30 @@ static Shape *make_terrain(App &app) {
 
 static void make_level(App &app) {
     // lava far below: falling in sends the character back to the start
-    state.lava = add_static(app, box_of(app, {1000, 2, 1000}), {0, -50, 0});
+    state.lava = add_static(app, box_of(app, vec3f::make(1000, 2, 1000)), vec3f::make(0, -50, 0));
     app::set_color(app, state.lava, {0.9f, 0.3f, 0.1f, 1.0f});
-    state.conveyor = add_static(app, box_of(app, {10, 0.25f, 2}), {0, 0, -10});
+    state.conveyor = add_static(app, box_of(app, vec3f::make(10, 0.25f, 2)), vec3f::make(0, 0, -10));
     app::set_color(app, state.conveyor, {0.3f, 0.3f, 0.75f, 1.0f});
 
-    add_static(app, box_of(app, {50, 0.5f, 50}), {0, -0.5f, 0});
-    Shape *wall = box_of(app, {0.5f, 2, 45});
-    add_static(app, wall, {-45, 1, 0});
-    add_static(app, wall, {45, 1, 0});
+    add_static(app, box_of(app, vec3f::make(50, 0.5f, 50)), vec3f::make(0, -0.5f, 0));
+    Shape *wall = box_of(app, vec3f::make(0.5f, 2, 45));
+    add_static(app, wall, vec3f::make(-45, 1, 0));
+    add_static(app, wall, vec3f::make(45, 1, 0));
 
     // five flights of stairs, their steps 0.3 to 0.7 m
     for (int j = 0; j < 5; j++) {
         const float step_height = 0.3f + 0.1f * (float)j;
-        Shape *step = box_of(app, {2, step_height / 2, 2});
+        Shape *step = box_of(app, vec3f::make(2, step_height / 2, 2));
         for (int i = 1; i < 10; i++) {
-            add_static(app, step, {15.0f + 5.0f * (float)j, (float)i * step_height - 0.5f + step_height / 2, -20.0f - (float)i * 3});
+            add_static(app, step, vec3f::make(15.0f + 5.0f * (float)j, (float)i * step_height - 0.5f + step_height / 2, -20.0f - (float)i * 3));
         }
     }
 
     // slopes from 70 down to 25 degrees
-    Shape *slope = box_of(app, {2.5f, 0.6f, 8});
+    Shape *slope = box_of(app, vec3f::make(2.5f, 0.6f, 8));
     for (int i = 0; i < 10; i++) {
-        add_static(app, slope, {-40.0f + 5.0f * (float)i, 2, -25}, vec::quat_axis_angle({1, 0, 0}, (70.0f - (float)i * 5.0f) * PI / 180.0f));
+        add_static(app, slope, vec3f::make(-40.0f + 5.0f * (float)i, 2, -25),
+                   quatf::set_axis_angle(vec3f::axis_x(), (70.0f - (float)i * 5.0f) * PI / 180.0f));
     }
 
     // something to push
@@ -198,18 +202,18 @@ static void make_level(App &app) {
     pushable.motion_type = MotionType::DYNAMIC;
     pushable.friction = 0.1f;
     pushable.mass = 1.0f;
-    pushable.shape = box_of(app, {0.75f, 0.75f, 0.75f});
-    pushable.position = {-10, 5, 10};
+    pushable.shape = box_of(app, vec3f::splat(0.75f));
+    pushable.position = vec3f::make(-10, 5, 10);
     rigid_body::create(*app.world, pushable);
     pushable.shape = app::keep(app, sphere::create({.radius = 0.75f}));
-    pushable.position = {-8, 2, 10};
+    pushable.position = vec3f::make(-8, 2, 10);
     rigid_body::create(*app.world, pushable);
 
-    state.spinning = add_moving(app, box_of(app, {4, 0.2f, 4}), {0, 2, 15}, MotionType::KINEMATIC);
-    state.sliding = add_moving(app, box_of(app, {3, 0.2f, 3}), {20, 2, -5}, MotionType::KINEMATIC);
-    state.diagonal = add_moving(app, box_of(app, {3, 0.2f, 3}), {20, 3, 5}, MotionType::KINEMATIC);
+    state.spinning = add_moving(app, box_of(app, vec3f::make(4, 0.2f, 4)), vec3f::make(0, 2, 15), MotionType::KINEMATIC);
+    state.sliding = add_moving(app, box_of(app, vec3f::make(3, 0.2f, 3)), vec3f::make(20, 2, -5), MotionType::KINEMATIC);
+    state.diagonal = add_moving(app, box_of(app, vec3f::make(3, 0.2f, 3)), vec3f::make(20, 3, 5), MotionType::KINEMATIC);
 
-    add_static(app, make_terrain(app), {-30, 2, 30});
+    add_static(app, make_terrain(app), vec3f::make(-30, 2, 30));
 
     // a bumpy floor: spheres sunk into the ground, their tops showing
     const float bumps[][3] = {
@@ -217,34 +221,38 @@ static void make_level(App &app) {
         {29, 34, 0.6f},   {21, 32, 0.5f},  {33, 32, 0.48f}, {27, 35, 0.52f}, {27, 25, 0.55f}, {24, 31, 0.35f}, {30, 29, 0.3f},  {26, 33, 0.38f},
         {28, 27, 0.32f},  {22, 28, 0.28f}, {32, 34, 0.34f}, {20, 30, 0.4f},  {34, 30, 0.36f}, {23, 36, 0.33f}, {31, 26, 0.31f},
     };
-    for (const float *bump : bumps) add_static(app, app::keep(app, sphere::create({.radius = bump[2]})), {bump[0], bump[2] * -0.5f, bump[1]});
+    for (const float *bump : bumps) {
+        add_static(app, app::keep(app, sphere::create({.radius = bump[2]})), vec3f::make(bump[0], bump[2] * -0.5f, bump[1]));
+    }
 
     // boxes doubling in size, for stepping up onto
     float x = 5;
     for (int i = 0; i < 5; i++) {
         const float half = 0.25f * (float)(1 << i);
-        add_static(app, box_of(app, {half, half, half}), {x, half, 30});
+        add_static(app, box_of(app, vec3f::splat(half)), vec3f::make(x, half, 30));
         x += half * 3;
     }
 
     // a platform hung from four springs
-    const Float3 center = {-10, 5, 35}, half = {3, 0.3f, 3};
+    const float center_x = -10, center_y = 5, center_z = 35;
+    const float half_x = 3, half_y = 0.3f, half_z = 3;
     RigidBodySettings hung;
-    hung.shape = box_of(app, half);
+    hung.shape = box_of(app, vec3f::make(half_x, half_y, half_z));
     hung.object_layer = state.layers.moving;
     hung.motion_type = MotionType::DYNAMIC;
-    hung.position = center;
+    hung.position = vec3f::make(center_x, center_y, center_z);
     hung.linear_damping = 0.5f;
     hung.angular_damping = 0.5f;
     RigidBody *platform = rigid_body::create(*app.world, hung);
     Shape *nothing = app::keep(app, empty::create());
     const float corners[4][2] = {{-1, -1}, {1, -1}, {-1, 1}, {1, 1}};
     for (const float *corner : corners) {
-        const Float3 anchor_at = {center.x + corner[0] * half.x, 12, center.z + corner[1] * half.z};
+        const float anchor_x = center_x + corner[0] * half_x, anchor_z = center_z + corner[1] * half_z;
+        const Vec3f anchor_at = vec3f::make(anchor_x, 12, anchor_z);
         RigidBody *anchor = add_static(app, nothing, anchor_at);
         DistanceConstraintSettings spring;
         spring.point_a = anchor_at;
-        spring.point_b = {anchor_at.x, center.y + half.y, anchor_at.z};
+        spring.point_b = vec3f::make(anchor_x, center_y + half_y, anchor_z);
         spring.spring_settings = {SpringMode::FREQUENCY_AND_DAMPING, 0.8f, 0.1f};
         spring.min_distance = 2;
         spring.max_distance = 8;
@@ -294,19 +302,19 @@ static void set_crouched(App &app, bool crouched) {
     // only where it fits
     if (!kcc::set_shape(*app.world, *state.character, shape, state.filter, &state.listener, 0.1f)) return;
     state.crouched = crouched;
-    state.character->supporting_volume_plane = vec4f::make(0.0f, 1.0f, 0.0f, -(crouched ? RADIUS_CROUCHING : RADIUS_STANDING));
+    state.character->supporting_volume_plane = plane3f::make(vec3f::axis_y(), -(crouched ? RADIUS_CROUCHING : RADIUS_STANDING));
 }
 
 static void move_platforms(App &app, float delta_time) {
     const float time = (float)state.steps * delta_time;
     RigidBody *spinning = state.spinning;
-    const Float4 turned = vec::quat_multiply(spinning->quaternion, vec::quat_axis_angle({0, 1, 0}, delta_time));
-    rigid_body::move_kinematic(*app.world, spinning, v3(spinning->position), quatf::load(turned), delta_time);
+    const Quatf turned = quatf::multiply(spinning->quaternion, quatf::set_axis_angle(vec3f::axis_y(), delta_time));
+    rigid_body::move_kinematic(*app.world, spinning, spinning->position, turned, delta_time);
     const float slide = sinf(time * 0.15f * 2 * PI) * 8;
-    rigid_body::move_kinematic(*app.world, state.sliding, vec3f::make(20 + slide, 2, -5), quatf::load(state.sliding->quaternion), delta_time);
+    rigid_body::move_kinematic(*app.world, state.sliding, vec3f::make(20 + slide, 2, -5), state.sliding->quaternion, delta_time);
     const float phase = time * 0.12f * 2 * PI;
-    rigid_body::move_kinematic(*app.world, state.diagonal, vec3f::make(20 + sinf(phase) * 6, 3 + sinf(phase * 2) * 2, 5),
-                               quatf::load(state.diagonal->quaternion), delta_time);
+    rigid_body::move_kinematic(*app.world, state.diagonal, vec3f::make(20 + sinf(phase) * 6, 3 + sinf(phase * 2) * 2, 5), state.diagonal->quaternion,
+                               delta_time);
 }
 
 /** the velocity from the input, gravity and the ground, as crashcat's and Jolt's character samples make it */
@@ -314,11 +322,11 @@ static void steer(App &app, float delta_time) {
     KCC &character = *state.character;
     const float forward = app.keys[SAPP_KEYCODE_W] ? 1.0f : (app.keys[SAPP_KEYCODE_S] ? -1.0f : 0.0f);
     const float right = app.keys[SAPP_KEYCODE_D] ? 1.0f : (app.keys[SAPP_KEYCODE_A] ? -1.0f : 0.0f);
-    const Float3 camera_forward = vec::normalize({app.camera.forward.x, 0, app.camera.forward.z});
-    const Float3 camera_side = vec::normalize({app.camera.side.x, 0, app.camera.side.z});
-    Float3 direction = vec::add(vec::scale(camera_forward, forward), vec::scale(camera_side, right));
-    const float length = vec::length(direction);
-    if (length > 1e-6f) direction = vec::scale(direction, 1.0f / length);
+    const Vec3f camera_forward = vec3f::normalize(vec3f::make(app.camera.forward.x, 0, app.camera.forward.z));
+    const Vec3f camera_side = vec3f::normalize(vec3f::make(app.camera.side.x, 0, app.camera.side.z));
+    Vec3f direction = vec3f::add(vec3f::scale(camera_forward, forward), vec3f::scale(camera_side, right));
+    const float length = vec3f::length(direction);
+    if (length > 1e-6f) direction = vec3f::scale(direction, 1.0f / length);
 
     const bool controls_horizontal = CONTROL_MOVEMENT_DURING_JUMP || kcc::is_supported(character);
     // no sliding down walkable slopes while standing still; in the air, slide
@@ -326,54 +334,53 @@ static void steer(App &app, float delta_time) {
     if (controls_horizontal) {
         state.allow_sliding = length > 1e-6f;
         if (ENABLE_INERTIA) {
-            state.desired_velocity = vec::add(vec::scale(state.desired_velocity, 0.75f), vec::scale(direction, 0.25f * SPEED));
+            state.desired_velocity = vec3f::scale_and_add(vec3f::scale(state.desired_velocity, 0.75f), direction, 0.25f * SPEED);
         } else {
-            state.desired_velocity = vec::scale(direction, SPEED);
+            state.desired_velocity = vec3f::scale(direction, SPEED);
         }
     }
 
     kcc::update_ground_velocity(*app.world, character, &state.listener);
-    const Float3 up = f3(character.up);
-    const Float3 velocity = f3(character.linear_velocity);
-    const Float3 vertical = vec::scale(up, vec::dot(velocity, up));
-    const Float3 ground_velocity = f3(character.ground.velocity);
-    const bool towards_ground = vec::dot(vec::subtract(vertical, ground_velocity), up) < 0.1f;
+    const Vec3f up = character.up;
+    const Vec3f velocity = character.linear_velocity;
+    const Vec3f vertical = vec3f::scale(up, vec3f::dot(velocity, up));
+    const Vec3f ground_velocity = character.ground.velocity;
+    const bool towards_ground = vec3f::dot(vec3f::subtract(vertical, ground_velocity), up) < 0.1f;
 
-    Float3 next = vertical;
+    Vec3f next = vertical;
     if (character.ground.state == KCC::GroundState::ON_GROUND) {
         const bool stick = ENABLE_INERTIA ? towards_ground : !kcc::is_slope_too_steep(character, character.ground.normal);
         if (stick) {
             next = ground_velocity;
-            if (app.keys[SAPP_KEYCODE_SPACE] && towards_ground) next = vec::scale_and_add(next, up, JUMP_SPEED);
+            if (app.keys[SAPP_KEYCODE_SPACE] && towards_ground) next = vec3f::scale_and_add(next, up, JUMP_SPEED);
         }
     }
-    next = vec::scale_and_add(next, GRAVITY, delta_time);
-    next = controls_horizontal ? vec::add(next, state.desired_velocity) : vec::add(next, vec::subtract(velocity, vertical));
-    character.linear_velocity = v3(next);
+    next = vec3f::scale_and_add(next, vec3f::load(GRAVITY), delta_time);
+    character.linear_velocity =
+        controls_horizontal ? vec3f::add(next, state.desired_velocity) : vec3f::add(next, vec3f::subtract(velocity, vertical));
 }
 
 static void step(App &app, float delta_time) {
     KCC &character = *state.character;
     const bool respawned = state.in_lava;
     if (respawned) {
-        kcc::set_position(*app.world, character, v3(SPAWN));
+        kcc::set_position(*app.world, character, vec3f::load(SPAWN));
         character.linear_velocity = vec3f::zero();
         state.in_lava = false;
     }
-    const Float3 up = f3(character.up);
-    state.update_settings.stick_to_floor_step_down = state.stick_to_floor ? vec::scale(up, -0.5f) : Float3{0, 0, 0};
-    state.update_settings.walk_stairs_step_up = state.walk_stairs ? vec::scale(up, 0.4f) : Float3{0, 0, 0};
+    state.update_settings.stick_to_floor_step_down = state.stick_to_floor ? vec3f::scale(character.up, -0.5f) : vec3f::zero();
+    state.update_settings.walk_stairs_step_up = state.walk_stairs ? vec3f::scale(character.up, 0.4f) : vec3f::zero();
 
     set_crouched(app, app.keys[SAPP_KEYCODE_LEFT_SHIFT] || app.keys[SAPP_KEYCODE_RIGHT_SHIFT]);
     steer(app, delta_time);
     move_platforms(app, delta_time);
 
-    kcc::update(*app.world, character, delta_time, v3(GRAVITY), state.update_settings, &state.listener, state.filter);
+    kcc::update(*app.world, character, delta_time, vec3f::load(GRAVITY), state.update_settings, &state.listener, state.filter);
     if (respawned) {
         // drawn at the spawn, not swept back across the level, the camera with it
         const RigidBody &body = *rigid_body::get(*app.world, character.inner_rigid_body_id);
         app::snap(app, body);
-        state.followed = body.position;
+        state.followed = stored(body.position);
         app.camera.target = SPAWN;
     }
 
@@ -388,30 +395,32 @@ static void update(App &app, float) {
     state.followed = drawn;
 
     DrawList &frame = app::frame(app);
-    const Float3 position = f3(character.position);
+    const Vec3f position = character.position;
     if (state.show_contacts) {
         for (uint32_t i = 0; i < character.contacts.length; i++) {
             const KCC::Contact &contact = character.contacts[i];
-            const Float3 at = f3(contact.position);
+            const Float3 at = stored(contact.position);
             renderer::point(frame, at, 0.1f, {1, 1, 0, 1});
-            renderer::arrow(frame, at, vec::add(at, f3(contact.contact_normal)), {0, 1, 1, 1});
+            renderer::arrow(frame, at, stored(vec3f::add(contact.position, contact.contact_normal)), {0, 1, 1, 1});
             if (fabsf(vec3f::dot(contact.contact_normal, contact.surface_normal) - 1.0f) > 0.01f) {
-                renderer::arrow(frame, at, vec::add(at, f3(contact.surface_normal)), {1, 0, 0, 1});
+                renderer::arrow(frame, at, stored(vec3f::add(contact.position, contact.surface_normal)), {1, 0, 0, 1});
             }
         }
     }
+    const Float3 from = stored(position);
     if (character.ground.state != KCC::GroundState::IN_AIR) {
-        if (state.show_ground_normal) renderer::arrow(frame, position, vec::scale_and_add(position, f3(character.ground.normal), 2), {0, 1, 0, 1});
-        if (state.show_ground_velocity) renderer::arrow(frame, position, vec::add(position, f3(character.ground.velocity)), {0, 0, 1, 1});
-        if (state.show_ground_position) renderer::point(frame, f3(character.ground.position), 0.15f, {1, 0.53f, 0, 1});
+        if (state.show_ground_normal) {
+            renderer::arrow(frame, from, stored(vec3f::scale_and_add(position, character.ground.normal, 2)), {0, 1, 0, 1});
+        }
+        if (state.show_ground_velocity) renderer::arrow(frame, from, stored(vec3f::add(position, character.ground.velocity)), {0, 0, 1, 1});
+        if (state.show_ground_position) renderer::point(frame, stored(character.ground.position), 0.15f, {1, 0.53f, 0, 1});
     }
-    if (state.show_velocity) renderer::arrow(frame, position, vec::add(position, f3(character.linear_velocity)), {1, 0, 1, 1});
+    if (state.show_velocity) renderer::arrow(frame, from, stored(vec3f::add(position, character.linear_velocity)), {1, 0, 1, 1});
     if (state.show_supporting_plane) {
-        const Vec4f plane = character.supporting_volume_plane;
-        const Float3 normal = vec::rotate({quatf::x(character.quaternion), quatf::y(character.quaternion), quatf::z(character.quaternion),
-                                           quatf::w(character.quaternion)},
-                                          {vec4f::x(plane), vec4f::y(plane), vec4f::z(plane)});
-        const Float3 center = vec::scale_and_add(position, normal, -vec4f::w(plane));
+        const Plane &plane = character.supporting_volume_plane;
+        const Vec3f plane_normal = vec3f::transform_quat(plane3f::normal(plane), character.quaternion);
+        const Float3 normal = stored(plane_normal);
+        const Float3 center = stored(vec3f::scale_and_add(position, plane_normal, -plane3f::constant(plane)));
         const Float4 turn = vec::quat_from_to({0, 1, 0}, normal);
         const Float3 u = vec::rotate(turn, {2, 0, 0}), w = vec::rotate(turn, {0, 0, 2});
         const Float3 a = vec::subtract(vec::subtract(center, u), w), b = vec::add(vec::subtract(center, u), w);

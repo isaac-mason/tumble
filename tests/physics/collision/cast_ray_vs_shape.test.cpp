@@ -14,7 +14,7 @@ static const SubShapeIdBuilder NO_SUB_SHAPE = {sub_shape::EMPTY_SUB_SHAPE_ID, 0}
 
 /** a ray against a shape through its def, as the narrowphase dispatches it */
 static void ray(CastRayCollector &collector, const CastRaySettings &settings, const Float3 &origin, const Float3 &direction, float length,
-                const Shape *shape, const Transformf &transform) {
+                const Shape *shape, const Transform &transform) {
     shapes::def_of(shape).cast_ray(collector, settings, {vec3f::load(origin), unit(vec3f::load(direction)), length}, shape, NO_SUB_SHAPE, transform);
 }
 
@@ -73,7 +73,7 @@ void test_cast_ray_vs_shape_sphere(TestCtx &ctx) {
 
 void test_cast_ray_vs_shape_box(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> shape = box::create({.half_extents = {1, 1, 1}, .material_id = 4});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(1.0f), .material_id = 4});
     const CastRaySettings settings = cast_ray::default_settings();
     CastRayCollector collector = cast_ray::create_collector(CollectorKind::ALL);
 
@@ -122,7 +122,7 @@ void test_cast_ray_vs_shape_treat_convex_as_solid(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> shapes_under_test[3] = {
         sphere::create({.radius = 1.0f}),
-        box::create({.half_extents = {1, 1, 1}}),
+        box::create({.half_extents = vec3f::splat(1.0f)}),
         capsule::create({.half_height_of_cylinder = 1.0f, .radius = 1.0f}),
     };
     const CastRaySettings solid = settings_with(false, false, true);
@@ -162,7 +162,7 @@ void test_cast_ray_vs_shape_treat_convex_as_solid(TestCtx &ctx) {
 
 void test_cast_ray_vs_shape_back_face_modes(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> box_shape = box::create({.half_extents = {1, 2, 3}});
+    Ref<Shape> box_shape = box::create({.half_extents = vec3f::make(1, 2, 3)});
     Ref<Shape> sphere_shape = sphere::create({.radius = 1.0f});
     CastRayCollector collector = cast_ray::create_collector(CollectorKind::ALL);
 
@@ -208,7 +208,7 @@ void test_cast_ray_vs_shape_back_face_modes(TestCtx &ctx) {
 
 void test_cast_ray_vs_shape_initial_early_out_fraction(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> shape = box::create({.half_extents = {1, 1, 1}});
+    Ref<Shape> shape = box::create({.half_extents = vec3f::splat(1.0f)});
     CastRayCollector collector = cast_ray::create_collector(CollectorKind::ALL);
 
     // a unit-length ray along +x against a box whose near face sits at x = face_x, so the hit fraction is face_x
@@ -230,7 +230,7 @@ void test_cast_ray_vs_shape_initial_early_out_fraction(TestCtx &ctx) {
 
 void test_cast_ray_vs_shape_collectors(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> near_box = box::create({.half_extents = {1, 1, 1}, .material_id = 1});
+    Ref<Shape> near_box = box::create({.half_extents = vec3f::splat(1.0f), .material_id = 1});
     Ref<Shape> far_sphere = sphere::create({.radius = 1.0f, .material_id = 2});
     const CastRaySettings settings = cast_ray::default_settings();
 

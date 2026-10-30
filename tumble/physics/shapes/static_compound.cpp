@@ -47,20 +47,20 @@ void update(Shape *shape) {
 /* cast ray */
 
 void cast_ray(CastRayCollector &collector, const CastRaySettings &settings, const Rayf &ray, const Shape *shape,
-              const SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
+              const SubShapeIdBuilder &sub_shape_id, const Transform &transform) {
     const StaticCompoundShape::Data &data = *shapes::as<StaticCompoundShape>(shape).data;
     const BvhNode *nodes = data.bvh.data;
     if (data.bvh.length == 0) return;
 
     // ray from world space into the compound's local space
-    Quatf inv_quat = quatf::conjugate(quatf::load(transform.quaternion));
-    Vec3f local_ray_origin = vec3f::subtract(ray.origin, vec3f::load(transform.position));
+    Quatf inv_quat = quatf::conjugate(transform.quaternion);
+    Vec3f local_ray_origin = vec3f::subtract(ray.origin, transform.position);
     local_ray_origin = vec3f::transform_quat(local_ray_origin, inv_quat);
     const Vec3f local_ray_direction = vec3f::transform_quat(ray.direction, inv_quat);
 
     // walk the bvh in the compound's unscaled local space; the entry fractions are unchanged by it
-    const Vec3f local_origin = vec3f::divide(local_ray_origin, vec3f::load(transform.scale));
-    const Vec3f local_direction = vec3f::divide(local_ray_direction, vec3f::load(transform.scale));
+    const Vec3f local_origin = vec3f::divide(local_ray_origin, transform.scale);
+    const Vec3f local_direction = vec3f::divide(local_ray_direction, transform.scale);
 
     // reciprocals of the local displacement, once per query, for the fraction-space slab tests
     const Vec3f inv_displacement = vec3f::make(cast_utils::safe_reciprocal(vec3f::x(local_direction) * ray.length),
@@ -100,7 +100,7 @@ void cast_ray(CastRayCollector &collector, const CastRaySettings &settings, cons
                 sub_shape::push_index(child_sub_shape_id, sub_shape_id, child_index, data.children.length);
 
                 // the children are placed in world space, so they get the world ray
-                Transformf child_world;
+                Transform child_world;
                 compound::child_transform(child_world, transform, child);
 
                 shapes::def_of(child.shape).cast_ray(collector, settings, ray, child.shape, child_sub_shape_id, child_world);
@@ -137,17 +137,17 @@ void cast_ray(CastRayCollector &collector, const CastRaySettings &settings, cons
 /* collide point */
 
 void collide_point(CollidePointCollector &collector, const CollidePointSettings &settings, Vec3f point,
-                   const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                   const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     const StaticCompoundShape::Data &data = *shapes::as<StaticCompoundShape>(shape_b).data;
     const BvhNode *nodes = data.bvh.data;
     if (data.bvh.length == 0) return;
 
     // point into the compound's local space for the bvh walk: inverse(quaternion) * (point - position)
-    const Quatf inv_quat_b = quatf::conjugate(quatf::load(transform_b.quaternion));
-    Vec3f local_point = vec3f::subtract(point, vec3f::load(transform_b.position));
+    const Quatf inv_quat_b = quatf::conjugate(transform_b.quaternion);
+    Vec3f local_point = vec3f::subtract(point, transform_b.position);
     local_point = vec3f::transform_quat(local_point, inv_quat_b);
     // the bvh is in the compound's unscaled local space
-    local_point = vec3f::divide(local_point, vec3f::load(transform_b.scale));
+    local_point = vec3f::divide(local_point, transform_b.scale);
     const AABox point_box = {local_point, local_point};
 
     int32_t stack_nodes[STACK_SIZE];
@@ -174,7 +174,7 @@ void collide_point(CollidePointCollector &collector, const CollidePointSettings 
                 SubShapeIdBuilder child_sub_shape_id;
                 sub_shape::push_index(child_sub_shape_id, sub_shape_id_b, child_index, data.children.length);
 
-                Transformf child_world;
+                Transform child_world;
                 compound::child_transform(child_world, transform_b, child);
 
                 shapes::def_of(child.shape).collide_point(collector, settings, point, child.shape, child_sub_shape_id, child_world);
@@ -206,11 +206,11 @@ static AABox divide_box_by_scale(const AABox &box, Vec3f scale) {
 }
 
 /** `other`'s pose in the compound's local space (unscaled by the compound's scale) */
-static void relative_pose(Vec3f &out_position, Quatf &out_quaternion, const Transformf &compound, const Transformf &other) {
-    Quatf inv_quat = quatf::conjugate(quatf::load(compound.quaternion));
-    out_position = vec3f::subtract(vec3f::load(other.position), vec3f::load(compound.position));
+static void relative_pose(Vec3f &out_position, Quatf &out_quaternion, const Transform &compound, const Transform &other) {
+    Quatf inv_quat = quatf::conjugate(compound.quaternion);
+    out_position = vec3f::subtract(other.position, compound.position);
     out_position = vec3f::transform_quat(out_position, inv_quat);
-    out_quaternion = quatf::multiply(inv_quat, quatf::load(other.quaternion));
+    out_quaternion = quatf::multiply(inv_quat, other.quaternion);
 }
 
 /** walks the static compound's bvh, calling `visit` for each child whose leaf overlaps `query_bounds` until `stop` says so */
@@ -256,8 +256,8 @@ static bool cast_should_early_out(const CastShapeCollector &collector) {
 
 void collide_static_compound_vs_shape(CollideShapeCollector &collector, const CollideShapeSettings &settings,
                                       const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a,
-                                      const Transformf &transform_a, const Shape *shape_b,
-                                      const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                                      const Transform &transform_a, const Shape *shape_b,
+                                      const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     const StaticCompoundShape::Data &data = *shapes::as<StaticCompoundShape>(shape_a).data;
     if (data.bvh.length == 0) return;
 
@@ -265,12 +265,12 @@ void collide_static_compound_vs_shape(CollideShapeCollector &collector, const Co
     Vec3f local_position_b;
     Quatf local_quaternion_b;
     relative_pose(local_position_b, local_quaternion_b, transform_a, transform_b);
-    Mat4f aabb_transform = mat4f::from_rotation_translation_scale(local_quaternion_b, local_position_b, vec3f::load(transform_b.scale));
-    AABox query_bounds = aabox::transform_mat4(aabox::load(shape_b->aabb), aabb_transform);
+    Mat4f aabb_transform = mat4f::from_rotation_translation_scale(local_quaternion_b, local_position_b, transform_b.scale);
+    AABox query_bounds = aabox::transform_mat4(shape_b->aabb, aabb_transform);
 
     // expand by max separation distance
     query_bounds = aabox::expand_by_margin(query_bounds, settings.max_separation_distance);
-    query_bounds = divide_box_by_scale(query_bounds, vec3f::load(transform_a.scale));
+    query_bounds = divide_box_by_scale(query_bounds, transform_a.scale);
 
     walk_overlapping(data, query_bounds, collector, collide_should_early_out, [&](uint32_t child_index) {
         const CompoundShape::Child &child = data.children[child_index];
@@ -278,7 +278,7 @@ void collide_static_compound_vs_shape(CollideShapeCollector &collector, const Co
         SubShapeIdBuilder child_sub_shape_id;
         sub_shape::push_index(child_sub_shape_id, sub_shape_id_a, child_index, data.children.length);
 
-        Transformf child_world;
+        Transform child_world;
         compound::child_transform(child_world, transform_a, child);
 
         const CollideShapeVsShapeFn fn = shapes::collide_fn(child.shape->type, shape_b->type);
@@ -288,8 +288,8 @@ void collide_static_compound_vs_shape(CollideShapeCollector &collector, const Co
 
 void collide_shape_vs_static_compound(CollideShapeCollector &collector, const CollideShapeSettings &settings,
                                       const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a,
-                                      const Transformf &transform_a, const Shape *shape_b,
-                                      const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                                      const Transform &transform_a, const Shape *shape_b,
+                                      const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     const StaticCompoundShape::Data &data = *shapes::as<StaticCompoundShape>(shape_b).data;
     if (data.bvh.length == 0) return;
 
@@ -297,12 +297,12 @@ void collide_shape_vs_static_compound(CollideShapeCollector &collector, const Co
     Vec3f local_position_a;
     Quatf local_quaternion_a;
     relative_pose(local_position_a, local_quaternion_a, transform_b, transform_a);
-    Mat4f aabb_transform = mat4f::from_rotation_translation_scale(local_quaternion_a, local_position_a, vec3f::load(transform_a.scale));
-    AABox query_bounds = aabox::transform_mat4(aabox::load(shape_a->aabb), aabb_transform);
+    Mat4f aabb_transform = mat4f::from_rotation_translation_scale(local_quaternion_a, local_position_a, transform_a.scale);
+    AABox query_bounds = aabox::transform_mat4(shape_a->aabb, aabb_transform);
 
     // expand by max separation distance
     query_bounds = aabox::expand_by_margin(query_bounds, settings.max_separation_distance);
-    query_bounds = divide_box_by_scale(query_bounds, vec3f::load(transform_b.scale));
+    query_bounds = divide_box_by_scale(query_bounds, transform_b.scale);
 
     walk_overlapping(data, query_bounds, collector, collide_should_early_out, [&](uint32_t child_index) {
         const CompoundShape::Child &child = data.children[child_index];
@@ -310,7 +310,7 @@ void collide_shape_vs_static_compound(CollideShapeCollector &collector, const Co
         SubShapeIdBuilder child_sub_shape_id;
         sub_shape::push_index(child_sub_shape_id, sub_shape_id_b, child_index, data.children.length);
 
-        Transformf child_world;
+        Transform child_world;
         compound::child_transform(child_world, transform_b, child);
 
         const CollideShapeVsShapeFn fn = shapes::collide_fn(shape_a->type, child.shape->type);
@@ -321,9 +321,9 @@ void collide_shape_vs_static_compound(CollideShapeCollector &collector, const Co
 /* cast shape */
 
 void cast_static_compound_vs_shape(CastShapeCollector &collector, const CastShapeSettings &settings,
-                                   const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
+                                   const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                                    Vec3f displacement_a, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                                   const Transformf &transform_b) {
+                                   const Transform &transform_b) {
     const StaticCompoundShape::Data &data = *shapes::as<StaticCompoundShape>(shape_a).data;
     if (data.bvh.length == 0) return;
 
@@ -333,16 +333,16 @@ void cast_static_compound_vs_shape(CastShapeCollector &collector, const CastShap
     Quatf local_quaternion_b;
     relative_pose(local_position_b, local_quaternion_b, transform_a, transform_b);
 
-    const Quatf inv_quat_a = quatf::conjugate(quatf::load(transform_a.quaternion));
+    const Quatf inv_quat_a = quatf::conjugate(transform_a.quaternion);
     Vec3f local_displacement = vec3f::negate(displacement_a);
     local_displacement = vec3f::transform_quat(local_displacement, inv_quat_a);
 
     // start bounds (scaled by b's scale), end bounds translated by the displacement, and their union
-    Mat4f aabb_transform = mat4f::from_rotation_translation_scale(local_quaternion_b, local_position_b, vec3f::load(transform_b.scale));
-    AABox query_bounds = aabox::transform_mat4(aabox::load(shape_b->aabb), aabb_transform);
+    Mat4f aabb_transform = mat4f::from_rotation_translation_scale(local_quaternion_b, local_position_b, transform_b.scale);
+    AABox query_bounds = aabox::transform_mat4(shape_b->aabb, aabb_transform);
     const AABox end_bounds = {vec3f::add(query_bounds.min, local_displacement), vec3f::add(query_bounds.max, local_displacement)};
     query_bounds = aabox::union_(query_bounds, end_bounds);
-    query_bounds = divide_box_by_scale(query_bounds, vec3f::load(transform_a.scale));
+    query_bounds = divide_box_by_scale(query_bounds, transform_a.scale);
 
     walk_overlapping(data, query_bounds, collector, cast_should_early_out, [&](uint32_t child_index) {
         const CompoundShape::Child &child = data.children[child_index];
@@ -350,7 +350,7 @@ void cast_static_compound_vs_shape(CastShapeCollector &collector, const CastShap
         SubShapeIdBuilder child_sub_shape_id;
         sub_shape::push_index(child_sub_shape_id, sub_shape_id_a, child_index, data.children.length);
 
-        Transformf child_world;
+        Transform child_world;
         compound::child_transform(child_world, transform_a, child);
 
         const CastShapeVsShapeFn fn = shapes::cast_fn(child.shape->type, shape_b->type);
@@ -365,13 +365,13 @@ void cast_static_compound_vs_shape(CastShapeCollector &collector, const CastShap
 /** the child's aabb in the compound's local space, through its rotation and position */
 static AABox calculate_child_aabb(const CompoundShape::Child &child) {
     const Mat4f matrix = mat4f::from_rotation_translation(quatf::load(child.quaternion), vec3f::load(child.position));
-    return aabox::transform_mat4(aabox::load(child.shape->aabb), matrix);
+    return aabox::transform_mat4(child.shape->aabb, matrix);
 }
 
 void cast_shape_vs_static_compound(CastShapeCollector &collector, const CastShapeSettings &settings,
-                                   const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
+                                   const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                                    Vec3f displacement_a, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                                   const Transformf &transform_b) {
+                                   const Transform &transform_b) {
     const StaticCompoundShape::Data &data = *shapes::as<StaticCompoundShape>(shape_b).data;
     const BvhNode *nodes = data.bvh.data;
 
@@ -383,16 +383,16 @@ void cast_shape_vs_static_compound(CastShapeCollector &collector, const CastShap
     Quatf quaternion_a_in_b;
     relative_pose(position_a_in_b, quaternion_a_in_b, transform_b, transform_a);
 
-    const Quatf inverse_quaternion_b = quatf::conjugate(quatf::load(transform_b.quaternion));
+    const Quatf inverse_quaternion_b = quatf::conjugate(transform_b.quaternion);
     Vec3f displacement_in_b = vec3f::transform_quat(displacement_a, inverse_quaternion_b);
     // the bvh is in the compound's unscaled local space
-    if (transform_b.scale.x != 1.0f || transform_b.scale.y != 1.0f || transform_b.scale.z != 1.0f) {
-        displacement_in_b = vec3f::divide(displacement_in_b, vec3f::load(transform_b.scale));
+    if (vec3f::x(transform_b.scale) != 1.0f || vec3f::y(transform_b.scale) != 1.0f || vec3f::z(transform_b.scale) != 1.0f) {
+        displacement_in_b = vec3f::divide(displacement_in_b, transform_b.scale);
     }
 
     // base aabb of shape a at t = 0 in the compound's local space
-    const Mat4f aabb_matrix = mat4f::from_rotation_translation_scale(quaternion_a_in_b, position_a_in_b, vec3f::load(transform_a.scale));
-    const AABox swept_aabb = divide_box_by_scale(aabox::transform_mat4(aabox::load(shape_a->aabb), aabb_matrix), vec3f::load(transform_b.scale));
+    const Mat4f aabb_matrix = mat4f::from_rotation_translation_scale(quaternion_a_in_b, position_a_in_b, transform_a.scale);
+    const AABox swept_aabb = divide_box_by_scale(aabox::transform_mat4(shape_a->aabb, aabb_matrix), transform_b.scale);
 
     // a ray from the base aabb's centre along the normalised displacement
     Rayf ray;
@@ -403,7 +403,7 @@ void cast_shape_vs_static_compound(CastShapeCollector &collector, const CastShap
 
     // half extents of the base aabb and the extra convex radius, which every bound the ray is tested against grows by
     const Vec3f half_extents =
-        vec3f::add(aabox::extents(swept_aabb), vec3f::divide(vec3f::splat(settings.extra_convex_radius), vec3f::abs(vec3f::load(transform_b.scale))));
+        vec3f::add(aabox::extents(swept_aabb), vec3f::divide(vec3f::splat(settings.extra_convex_radius), vec3f::abs(transform_b.scale)));
 
     int32_t stack_nodes[STACK_SIZE];
     float stack_dist[STACK_SIZE];
@@ -437,7 +437,7 @@ void cast_shape_vs_static_compound(CastShapeCollector &collector, const CastShap
                 SubShapeIdBuilder child_sub_shape_id;
                 sub_shape::push_index(child_sub_shape_id, sub_shape_id_b, child_index, data.children.length);
 
-                Transformf child_world;
+                Transform child_world;
                 compound::child_transform(child_world, transform_b, child);
 
                 const CastShapeVsShapeFn fn = shapes::cast_fn(shape_a->type, child.shape->type);

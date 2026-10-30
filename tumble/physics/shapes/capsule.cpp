@@ -37,10 +37,10 @@ float compute_capsule_volume(float half_height_of_cylinder, float radius) {
     return cylinder_volume + sphere_volume;
 }
 
-void compute_capsule_local_bounds(Box3f &out, float half_height_of_cylinder, float radius) {
+AABox compute_capsule_local_bounds(float half_height_of_cylinder, float radius) {
     // -half_height-radius to +half_height+radius along y, +-radius in x and z
     const float total_half_height = half_height_of_cylinder + radius;
-    out = {{-radius, -total_half_height, -radius}, {radius, total_half_height, radius}};
+    return aabox::make(vec3f::make(-radius, -total_half_height, -radius), vec3f::make(radius, total_half_height, radius));
 }
 
 Vec3f compute_capsule_center_of_mass() {
@@ -50,8 +50,8 @@ Vec3f compute_capsule_center_of_mass() {
 
 void update(Shape *shape) {
     const CapsuleShape &capsule = shapes::as<CapsuleShape>(shape);
-    compute_capsule_local_bounds(shape->aabb, capsule.half_height_of_cylinder, capsule.radius);
-    vec3f::store(shape->center_of_mass, compute_capsule_center_of_mass());
+    shape->aabb = compute_capsule_local_bounds(capsule.half_height_of_cylinder, capsule.radius);
+    shape->center_of_mass = compute_capsule_center_of_mass();
     shape->volume = compute_capsule_volume(capsule.half_height_of_cylinder, capsule.radius);
 }
 
@@ -99,7 +99,7 @@ void compute_mass_properties(MassProperties &out, const Shape *shape) {
     const float i_yy = inertia_y + hemispheres_own;
     const float i_xx_zz = inertia_xz + hemispheres_own + hemisphere_mass * (0.5f * height_sq + 0.75f * height * r);
 
-    out.inertia = {{i_xx_zz, 0, 0, 0, 0, i_yy, 0, 0, 0, 0, i_xx_zz, 0, 0, 0, 0, 1.0f}};
+    out.inertia = mat4f::from_scaling(vec3f::make(i_xx_zz, i_yy, i_xx_zz));
 }
 
 void get_surface_normal(SurfaceNormalResult &io, const Shape *shape, SubShapeId sub_shape_id) {

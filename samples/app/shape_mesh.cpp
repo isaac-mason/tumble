@@ -23,6 +23,17 @@ namespace shape_mesh {
 
 static constexpr float PI = 3.14159265f;
 static constexpr int SEGMENTS = 24;
+
+/** a shape's register vector or rotation, as the mesh builder's float math takes it */
+static Float3 stored(Vec3f v) {
+    Float3 out;
+    return vec3f::store(out, v);
+}
+
+static Float4 stored(Quatf q) {
+    Float4 out;
+    return quatf::store(out, q);
+}
 static constexpr int RINGS = 12;
 
 /** where a leaf sits in the outermost shape's space: scaled, then rotated, then moved, as the library places children */
@@ -122,13 +133,10 @@ static void cylinder(Builder &builder, float radius, float half_height) {
 }
 
 static void convex_hull(Builder &builder, const ConvexHullShape::Data &hull) {
-    const auto point = [&](uint32_t index) {
-        const float *p = hull.point_positions.data + hull.vertex_indices[index] * 3;
-        return Float3{p[0], p[1], p[2]};
-    };
+    const auto point = [&](uint32_t index) { return stored(hull.points[hull.vertex_indices[index]]); };
     for (uint32_t f = 0; f < hull.faces.length; f++) {
         const ConvexHullShape::Face &face = hull.faces[f];
-        const Float3 normal = hull.planes[f].normal;
+        const Float3 normal = stored(plane3f::normal(hull.planes[f]));
         for (uint32_t k = 1; k + 1 < face.num_vertices; k++) {
             triangle(builder, point(face.first_vertex), point(face.first_vertex + k), point(face.first_vertex + k + 1), normal);
         }
@@ -144,8 +152,8 @@ static void triangle_mesh(Builder &builder, const TriangleMeshShape::Data &mesh)
 }
 
 static void plane(Builder &builder, const PlaneShape &shape) {
-    const Float3 normal = shape.plane.normal;
-    const Float3 center = scale(normal, -shape.plane.constant);
+    const Float3 normal = stored(plane3f::normal(shape.plane));
+    const Float3 center = scale(normal, -plane3f::constant(shape.plane));
     const Float4 turn = quat_from_to({0, 1, 0}, normal);
     const float e = shape.half_extent;
     const Float3 u = rotate(turn, {e, 0, 0}), v = rotate(turn, {0, 0, e});
@@ -171,7 +179,7 @@ static void shape(Builder &builder, const Shape *shape) {
             rounded(builder, shapes::as<SphereShape>(shape).radius, 0.0f);
             break;
         case ShapeType::BOX:
-            box(builder, shapes::as<BoxShape>(shape).half_extents);
+            box(builder, stored(shapes::as<BoxShape>(shape).half_extents));
             break;
         case ShapeType::CAPSULE: {
             const CapsuleShape &capsule = shapes::as<CapsuleShape>(shape);
@@ -200,13 +208,13 @@ static void shape(Builder &builder, const Shape *shape) {
         }
         case ShapeType::TRANSFORMED: {
             const TransformedShape &transformed = shapes::as<TransformedShape>(shape);
-            child(builder, transformed.shape, transformed.position, transformed.quaternion);
+            child(builder, transformed.shape, stored(transformed.position), stored(transformed.quaternion));
             break;
         }
         case ShapeType::SCALED: {
             const ScaledShape &scaled = shapes::as<ScaledShape>(shape);
             const Float3 outer = builder.placement.scale;
-            builder.placement.scale = multiply(outer, scaled.scale);
+            builder.placement.scale = multiply(outer, stored(scaled.scale));
             shape_mesh::shape(builder, scaled.shape);
             builder.placement.scale = outer;
             break;

@@ -35,10 +35,16 @@ struct Hash {
         word((uint32_t)v4i::lane<2>(m));
         word((uint32_t)v4i::lane<3>(m));
     }
-    void float3(const Float3 &f) {
-        real(f.x);
-        real(f.y);
-        real(f.z);
+    void vec3(Vec3f v) {
+        real(vec3f::x(v));
+        real(vec3f::y(v));
+        real(vec3f::z(v));
+    }
+    void quat(Quatf q) {
+        real(quatf::x(q));
+        real(quatf::y(q));
+        real(quatf::z(q));
+        real(quatf::w(q));
     }
 };
 
@@ -102,15 +108,13 @@ void hash_primitives(Hash &hash) {
     hash.lanes(v4f::load3_xyzz(packed + 3));
 }
 
-void fibonacci_sphere(float *out, uint32_t n, float radius) {
+void fibonacci_sphere(Vec3f *out, uint32_t n, float radius) {
     const float phi = scalar::PI * (3.0f - scalar::sqrt(5.0f));
     for (uint32_t i = 0; i < n; i++) {
         const float y = 1.0f - ((float)i / (float)(n - 1)) * 2.0f;
         const float r = scalar::sqrt(scalar::max(0.0f, 1.0f - y * y));
         const float theta = phi * (float)i;
-        out[i * 3] = scalar::cos(theta) * r * radius;
-        out[i * 3 + 1] = y * radius;
-        out[i * 3 + 2] = scalar::sin(theta) * r * radius;
+        out[i] = vec3f::make(scalar::cos(theta) * r * radius, y * radius, scalar::sin(theta) * r * radius);
     }
 }
 
@@ -153,8 +157,8 @@ void hash_pile(Hash &hash) {
     add_body(scene, make_ground(), MotionType::STATIC, {0.0f, 0.0f, 0.0f});
 
     // a small hull walks every point; a large one climbs its adjacency
-    float small_points[24 * 3];
-    float large_points[60 * 3];
+    Vec3f small_points[24];
+    Vec3f large_points[60];
     fibonacci_sphere(small_points, 24, 0.5f);
     fibonacci_sphere(large_points, 60, 0.6f);
     const ConvexHullShapeSettings small_hull = {
@@ -166,14 +170,14 @@ void hash_pile(Hash &hash) {
         const Float3 position = {0.09f * (float)(i % 3) - 0.1f, 1.0f + 1.15f * (float)i, 0.05f * (float)(i % 4) - 0.08f};
         Shape *shape;
         switch (i % 5) {
-            case 0: shape = box::create({.half_extents = {0.5f, 0.4f, 0.3f}}); break;
+            case 0: shape = box::create({.half_extents = vec3f::make(0.5f, 0.4f, 0.3f)}); break;
             case 1: shape = sphere::create({.radius = 0.45f}); break;
             case 2: shape = capsule::create({.half_height_of_cylinder = 0.3f, .radius = 0.3f}); break;
             case 3: shape = convex_hull::create(small_hull); break;
             default: shape = convex_hull::create(large_hull); break;
         }
         RigidBodySettings settings = body_settings(shape, scene.moving, MotionType::DYNAMIC, position);
-        settings.quaternion = stored_axis_angle(vec3f::normalize(vec3f::make(0.3f, 1.0f, 0.2f * (float)i)), 0.37f * (float)i);
+        settings.quaternion = axis_angle(vec3f::normalize(vec3f::make(0.3f, 1.0f, 0.2f * (float)i)), 0.37f * (float)i);
         rigid_body::create(*scene.world, settings);
     }
 
@@ -183,13 +187,10 @@ void hash_pile(Hash &hash) {
         for (uint32_t i = 0; i < bodies.pool.length; i++) {
             const RigidBody *body = bodies.pool[i];
             if (body == nullptr) continue;
-            hash.float3(body->position);
-            hash.real(body->quaternion.x);
-            hash.real(body->quaternion.y);
-            hash.real(body->quaternion.z);
-            hash.real(body->quaternion.w);
-            hash.float3(body->motion_properties.linear_velocity);
-            hash.float3(body->motion_properties.angular_velocity);
+            hash.vec3(body->position);
+            hash.quat(body->quaternion);
+            hash.vec3(body->motion_properties.linear_velocity);
+            hash.vec3(body->motion_properties.angular_velocity);
         }
     }
 }

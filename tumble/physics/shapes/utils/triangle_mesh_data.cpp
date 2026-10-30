@@ -71,20 +71,19 @@ void get_triangle_vertices(Vec3f &out_a, Vec3f &out_b, Vec3f &out_c, const Trian
 void precompute_triangle_aabbs(TriangleMeshShape::Data &data) {
     const uint32_t count = data.triangle_count;
     float *aabbs = data.triangle_aabbs;
-    Box3f aabb;
     for (uint32_t tri_idx = 0; tri_idx < count; tri_idx++) {
-        calculate_triangle_aabb(aabb, data, tri_idx);
+        const AABox aabb = calculate_triangle_aabb(data, tri_idx);
         float *out = aabbs + tri_idx * 6;
-        out[0] = aabb.min.x;
-        out[1] = aabb.min.y;
-        out[2] = aabb.min.z;
-        out[3] = aabb.max.x;
-        out[4] = aabb.max.y;
-        out[5] = aabb.max.z;
+        out[0] = vec3f::x(aabb.min);
+        out[1] = vec3f::y(aabb.min);
+        out[2] = vec3f::z(aabb.min);
+        out[3] = vec3f::x(aabb.max);
+        out[4] = vec3f::y(aabb.max);
+        out[5] = vec3f::z(aabb.max);
     }
 }
 
-Box3f &calculate_triangle_aabb(Box3f &out, const TriangleMeshShape::Data &data, uint32_t tri_idx) {
+AABox calculate_triangle_aabb(const TriangleMeshShape::Data &data, uint32_t tri_idx) {
     const TriangleMeshShape::Triangle &triangle = data.triangles[tri_idx];
     const float *positions = data.positions;
 
@@ -111,9 +110,7 @@ Box3f &calculate_triangle_aabb(Box3f &out, const TriangleMeshShape::Data &data, 
     if (c[1] > max_y) max_y = c[1];
     if (c[2] > max_z) max_z = c[2];
 
-    out.min = {min_x, min_y, min_z};
-    out.max = {max_x, max_y, max_z};
-    return out;
+    return aabox::make(vec3f::make(min_x, min_y, min_z), vec3f::make(max_x, max_y, max_z));
 }
 
 Vec3f calculate_triangle_centroid(const TriangleMeshShape::Data &data, uint32_t tri_idx) {

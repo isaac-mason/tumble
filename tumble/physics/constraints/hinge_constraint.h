@@ -72,17 +72,17 @@ struct HingeConstraint {
 
 struct HingeConstraintSettings {
     /** pivot point on body a */
-    Float3 point_a = {0.0f, 0.0f, 0.0f};
+    Vec3f point_a = vec3f::zero();
     /** pivot point on body b */
-    Float3 point_b = {0.0f, 0.0f, 0.0f};
+    Vec3f point_b = vec3f::zero();
     /** hinge axis on body a (normalized on create) */
-    Float3 hinge_axis_a = {0.0f, 1.0f, 0.0f};
+    Vec3f hinge_axis_a = vec3f::axis_y();
     /** hinge axis on body b (normalized on create) */
-    Float3 hinge_axis_b = {0.0f, 1.0f, 0.0f};
+    Vec3f hinge_axis_b = vec3f::axis_y();
     /** normal axis perpendicular to the hinge on body a, the angle reference (normalized on create) */
-    Float3 normal_axis_a = {1.0f, 0.0f, 0.0f};
+    Vec3f normal_axis_a = vec3f::axis_x();
     /** normal axis perpendicular to the hinge on body b (normalized on create) */
-    Float3 normal_axis_b = {1.0f, 0.0f, 0.0f};
+    Vec3f normal_axis_b = vec3f::axis_x();
     ConstraintSpace space = ConstraintSpace::WORLD;
     /** minimum angle limit in radians, in [-pi, 0]; [-pi, pi] together means no limits */
     float limits_min = -scalar::PI;

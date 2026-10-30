@@ -33,17 +33,16 @@ static Shape *make_compound(const CompoundShapeSettings::Child *children, uint32
 void test_compound_aabb(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> b = box::create({.half_extents = {2, 2, 2}});
-    const CompoundShapeSettings::Child children[] = {{{0, 0, 0}, IDENTITY, s}, {{0, 0, 0}, IDENTITY, b}};
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(2.0f)});
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}, {vec3f::make(0, 0, 0), quatf::identity(), b}};
     Ref<Shape> c = make_compound(children, 2);
 
     // the union of the sphere's [-1, 1] and the box's [-2, 2]
-    CHECK(ctx, c->aabb.min.x == -2 && c->aabb.min.y == -2 && c->aabb.min.z == -2);
-    CHECK(ctx, c->aabb.max.x == 2 && c->aabb.max.y == 2 && c->aabb.max.z == 2);
+    CHECK(ctx, near3(c->aabb.min, -2, -2, -2, 0.0f) && near3(c->aabb.max, 2, 2, 2, 0.0f));
 
     // a child turned a quarter about z and moved: its extents swap x and y
-    Ref<Shape> tall = box::create({.half_extents = {1, 3, 0.5f}});
-    const CompoundShapeSettings::Child turned[] = {{{10, 0, 0}, stored_axis_angle(vec3f::make(0, 0, 1), scalar::PI * 0.5f), tall}};
+    Ref<Shape> tall = box::create({.half_extents = vec3f::make(1, 3, 0.5f)});
+    const CompoundShapeSettings::Child turned[] = {{vec3f::make(10, 0, 0), axis_angle(vec3f::make(0, 0, 1), scalar::PI * 0.5f), tall}};
     Ref<Shape> t = make_compound(turned, 1);
     CHECK(ctx, near3(t->aabb.min, 7, -1, -0.5f, 1e-5f));
     CHECK(ctx, near3(t->aabb.max, 13, 1, 0.5f, 1e-5f));
@@ -58,8 +57,8 @@ void test_compound_aabb(TestCtx &ctx) {
 void test_compound_create(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
-    const CompoundShapeSettings::Child children[] = {{{0, 0, 0}, IDENTITY, s}, {{0, 0, 0}, IDENTITY, b}};
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}, {vec3f::make(0, 0, 0), quatf::identity(), b}};
     Ref<Shape> c = make_compound(children, 2);
 
     CHECK(ctx, c->type == ShapeType::COMPOUND);
@@ -71,7 +70,7 @@ void test_compound_create(TestCtx &ctx) {
     CHECK_NEAR(ctx, c->volume, 4.0f / 3.0f * scalar::PI + 8.0f, 1e-4f);
 
     // the list is the compound's own: the settings' array may go away
-    CompoundShapeSettings::Child scratch[] = {{{0, 0, 0}, IDENTITY, s}};
+    CompoundShapeSettings::Child scratch[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}};
     Ref<Shape> copy = make_compound(scratch, 1);
     scratch[0].shape = b;
     CHECK(ctx, shapes::as<CompoundShape>(copy).data->children[0].shape == s);
@@ -88,21 +87,21 @@ void test_compound_create(TestCtx &ctx) {
 void test_compound_center_of_mass(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
-    const CompoundShapeSettings::Child centred[] = {{{0, 0, 0}, IDENTITY, s}, {{0, 0, 0}, IDENTITY, b}};
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
+    const CompoundShapeSettings::Child centred[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}, {vec3f::make(0, 0, 0), quatf::identity(), b}};
     Ref<Shape> c = make_compound(centred, 2);
-    CHECK(ctx, c->center_of_mass.x == 0 && c->center_of_mass.y == 0 && c->center_of_mass.z == 0);
+    CHECK(ctx, vec3f::exact_equals(c->center_of_mass, vec3f::zero()));
 
     // equal masses at 0 and 4: the centre of mass halfway
     Ref<Shape> s2 = sphere::create({.radius = 1.0f});
-    const CompoundShapeSettings::Child offset[] = {{{0, 0, 0}, IDENTITY, s}, {{4, 0, 0}, IDENTITY, s2}};
+    const CompoundShapeSettings::Child offset[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}, {vec3f::make(4, 0, 0), quatf::identity(), s2}};
     Ref<Shape> o = make_compound(offset, 2);
     CHECK(ctx, near3(o->center_of_mass, 2, 0, 0, 1e-5f));
 
     // weighted by mass: a 2 m box (8000 kg) at 0 and a 1 m box (1000 kg) at 3
-    Ref<Shape> big = box::create({.half_extents = {1, 1, 1}});
-    Ref<Shape> small = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
-    const CompoundShapeSettings::Child weighted[] = {{{0, 0, 0}, IDENTITY, big}, {{3, 0, 0}, IDENTITY, small}};
+    Ref<Shape> big = box::create({.half_extents = vec3f::splat(1.0f)});
+    Ref<Shape> small = box::create({.half_extents = vec3f::splat(0.5f)});
+    const CompoundShapeSettings::Child weighted[] = {{vec3f::make(0, 0, 0), quatf::identity(), big}, {vec3f::make(3, 0, 0), quatf::identity(), small}};
     Ref<Shape> w = make_compound(weighted, 2);
     CHECK(ctx, near3(w->center_of_mass, 3.0f / 9.0f, 0, 0, 1e-5f));
 
@@ -122,7 +121,7 @@ void test_compound_mass_properties_parallel_axis(TestCtx &ctx) {
     dispatch::init();
     // two unit spheres 4 apart: each is 2 from the centre of mass along x
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    const CompoundShapeSettings::Child children[] = {{{0, 0, 0}, IDENTITY, s}, {{4, 0, 0}, IDENTITY, s}};
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}, {vec3f::make(4, 0, 0), quatf::identity(), s}};
     Ref<Shape> c = make_compound(children, 2);
 
     MassProperties mp;
@@ -131,26 +130,26 @@ void test_compound_mass_properties_parallel_axis(TestCtx &ctx) {
     const float own = 0.4f * m;  // 2/5 m r^2
     CHECK_NEAR(ctx, mp.mass, 2.0f * m, 1e-1f);
     // about x the offsets are on the axis: only the spheres' own inertia
-    CHECK_NEAR(ctx, mp.inertia.m[0], 2.0f * own, 1.0f);
+    CHECK_NEAR(ctx, elements(mp.inertia).m[0], 2.0f * own, 1.0f);
     // about y and z each sphere adds m d^2 with d = 2
-    CHECK_NEAR(ctx, mp.inertia.m[5], 2.0f * (own + m * 4.0f), 2.0f);
-    CHECK_NEAR(ctx, mp.inertia.m[10], 2.0f * (own + m * 4.0f), 2.0f);
+    CHECK_NEAR(ctx, elements(mp.inertia).m[5], 2.0f * (own + m * 4.0f), 2.0f);
+    CHECK_NEAR(ctx, elements(mp.inertia).m[10], 2.0f * (own + m * 4.0f), 2.0f);
     // no products of inertia
-    CHECK_NEAR(ctx, mp.inertia.m[1], 0.0f, 1e-2f);
-    CHECK_NEAR(ctx, mp.inertia.m[2], 0.0f, 1e-2f);
-    CHECK_NEAR(ctx, mp.inertia.m[6], 0.0f, 1e-2f);
-    CHECK(ctx, mp.inertia.m[15] == 1.0f);
+    CHECK_NEAR(ctx, elements(mp.inertia).m[1], 0.0f, 1e-2f);
+    CHECK_NEAR(ctx, elements(mp.inertia).m[2], 0.0f, 1e-2f);
+    CHECK_NEAR(ctx, elements(mp.inertia).m[6], 0.0f, 1e-2f);
+    CHECK(ctx, elements(mp.inertia).m[15] == 1.0f);
 
     // off-axis: at (0, 0, 0) and (3, 4, 0) the offsets from the centre are (+-1.5, +-2, 0), giving
     // Ixx += m dy^2, Iyy += m dx^2, Izz += m (dx^2 + dy^2), Ixy -= m dx dy per sphere
-    const CompoundShapeSettings::Child diagonal[] = {{{0, 0, 0}, IDENTITY, s}, {{3, 4, 0}, IDENTITY, s}};
+    const CompoundShapeSettings::Child diagonal[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}, {vec3f::make(3, 4, 0), quatf::identity(), s}};
     Ref<Shape> d = make_compound(diagonal, 2);
     shapes::compute_mass_properties(mp, d);
-    CHECK_NEAR(ctx, mp.inertia.m[0], 2.0f * (own + m * 4.0f), 2.0f);
-    CHECK_NEAR(ctx, mp.inertia.m[5], 2.0f * (own + m * 2.25f), 2.0f);
-    CHECK_NEAR(ctx, mp.inertia.m[10], 2.0f * (own + m * 6.25f), 2.0f);
-    CHECK_NEAR(ctx, mp.inertia.m[1], -2.0f * m * 3.0f, 2.0f);
-    CHECK_NEAR(ctx, mp.inertia.m[4], -2.0f * m * 3.0f, 2.0f);
+    CHECK_NEAR(ctx, elements(mp.inertia).m[0], 2.0f * (own + m * 4.0f), 2.0f);
+    CHECK_NEAR(ctx, elements(mp.inertia).m[5], 2.0f * (own + m * 2.25f), 2.0f);
+    CHECK_NEAR(ctx, elements(mp.inertia).m[10], 2.0f * (own + m * 6.25f), 2.0f);
+    CHECK_NEAR(ctx, elements(mp.inertia).m[1], -2.0f * m * 3.0f, 2.0f);
+    CHECK_NEAR(ctx, elements(mp.inertia).m[4], -2.0f * m * 3.0f, 2.0f);
 
     c = nullptr;
     d = nullptr;
@@ -160,21 +159,21 @@ void test_compound_mass_properties_parallel_axis(TestCtx &ctx) {
 void test_compound_mass_properties_rotated_child(TestCtx &ctx) {
     dispatch::init();
     // a box turned a quarter about z: its x and y inertia swap, and a single child sits on the centre of mass
-    Ref<Shape> b = box::create({.half_extents = {1, 2, 3}, .convex_radius = 0.0f});
+    Ref<Shape> b = box::create({.half_extents = vec3f::make(1, 2, 3), .convex_radius = 0.0f});
     MassProperties own;
     shapes::compute_mass_properties(own, b);
 
-    const CompoundShapeSettings::Child children[] = {{{0, 0, 5}, stored_axis_angle(vec3f::make(0, 0, 1), scalar::PI * 0.5f), b}};
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(0, 0, 5), axis_angle(vec3f::make(0, 0, 1), scalar::PI * 0.5f), b}};
     Ref<Shape> c = make_compound(children, 1);
     CHECK(ctx, near3(c->center_of_mass, 0, 0, 5, 1e-5f));
 
     MassProperties mp;
     shapes::compute_mass_properties(mp, c);
     CHECK_NEAR(ctx, mp.mass, own.mass, 1e-2f);
-    CHECK_NEAR(ctx, mp.inertia.m[0], own.inertia.m[5], 1.0f);
-    CHECK_NEAR(ctx, mp.inertia.m[5], own.inertia.m[0], 1.0f);
-    CHECK_NEAR(ctx, mp.inertia.m[10], own.inertia.m[10], 1.0f);
-    CHECK_NEAR(ctx, mp.inertia.m[1], 0.0f, 1e-1f);
+    CHECK_NEAR(ctx, elements(mp.inertia).m[0], elements(own.inertia).m[5], 1.0f);
+    CHECK_NEAR(ctx, elements(mp.inertia).m[5], elements(own.inertia).m[0], 1.0f);
+    CHECK_NEAR(ctx, elements(mp.inertia).m[10], elements(own.inertia).m[10], 1.0f);
+    CHECK_NEAR(ctx, elements(mp.inertia).m[1], 0.0f, 1e-1f);
 
     c = nullptr;
     b = nullptr;
@@ -186,15 +185,15 @@ void test_compound_inner_radius(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s5 = sphere::create({.radius = 5.0f});
     Ref<Shape> s3 = sphere::create({.radius = 3.0f});
-    const CompoundShapeSettings::Child children[] = {{{0, 0, 0}, IDENTITY, s5}, {{0, 0, 0}, IDENTITY, s3}};
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(0, 0, 0), quatf::identity(), s5}, {vec3f::make(0, 0, 0), quatf::identity(), s3}};
     Ref<Shape> c = make_compound(children, 2);
     CHECK(ctx, shapes::get_shape_inner_radius(c) == 3.0f);
 
     // nested: the smallest sphere anywhere
     Ref<Shape> s10 = sphere::create({.radius = 10.0f});
-    const CompoundShapeSettings::Child inner_children[] = {{{0, 0, 0}, IDENTITY, s10}, {{0, 0, 0}, IDENTITY, s5}};
+    const CompoundShapeSettings::Child inner_children[] = {{vec3f::make(0, 0, 0), quatf::identity(), s10}, {vec3f::make(0, 0, 0), quatf::identity(), s5}};
     Ref<Shape> inner = make_compound(inner_children, 2);
-    const CompoundShapeSettings::Child outer_children[] = {{{0, 0, 0}, IDENTITY, inner}, {{0, 0, 0}, IDENTITY, s3}};
+    const CompoundShapeSettings::Child outer_children[] = {{vec3f::make(0, 0, 0), quatf::identity(), inner}, {vec3f::make(0, 0, 0), quatf::identity(), s3}};
     Ref<Shape> outer = make_compound(outer_children, 2);
     CHECK(ctx, shapes::get_shape_inner_radius(outer) == 3.0f);
 
@@ -208,9 +207,9 @@ void test_compound_inner_radius(TestCtx &ctx) {
 
 void test_compound_surface_normal(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> box1 = box::create({.half_extents = {1, 1, 1}});
-    Ref<Shape> box2 = box::create({.half_extents = {2, 2, 2}});
-    const CompoundShapeSettings::Child children[] = {{{0, 0, 0}, IDENTITY, box1}, {{0, 0, 0}, IDENTITY, box2}};
+    Ref<Shape> box1 = box::create({.half_extents = vec3f::splat(1.0f)});
+    Ref<Shape> box2 = box::create({.half_extents = vec3f::splat(2.0f)});
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(0, 0, 0), quatf::identity(), box1}, {vec3f::make(0, 0, 0), quatf::identity(), box2}};
     Ref<Shape> c = make_compound(children, 2);
 
     // child 1, the larger box, from outside its +x face
@@ -220,15 +219,15 @@ void test_compound_surface_normal(TestCtx &ctx) {
     CHECK(ctx, near3(normal, 1, 0, 0, 1e-5f));
 
     // a child moved by (5, 3, 0) and turned a quarter about z: its +x face is now the +y face, at y = 4
-    Ref<Shape> inner_box = box::create({.half_extents = {1, 2, 1}});
+    Ref<Shape> inner_box = box::create({.half_extents = vec3f::make(1, 2, 1)});
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    const CompoundShapeSettings::Child placed[] = {{{0, 0, 0}, IDENTITY, s}, {{5, 3, 0}, stored_axis_angle(vec3f::make(0, 0, 1), scalar::PI * 0.5f), inner_box}};
+    const CompoundShapeSettings::Child placed[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}, {vec3f::make(5, 3, 0), axis_angle(vec3f::make(0, 0, 1), scalar::PI * 0.5f), inner_box}};
     Ref<Shape> p = make_compound(placed, 2);
     normal = shapes::get_shape_surface_normal(p, vec3f::make(5, 4.1f, 0), id.value);
     CHECK(ctx, near3(normal, 0, 1, 0, 1e-5f));
 
     // one child takes no bits: the empty id names it
-    const CompoundShapeSettings::Child single[] = {{{0, 0, 0}, IDENTITY, box1}};
+    const CompoundShapeSettings::Child single[] = {{vec3f::make(0, 0, 0), quatf::identity(), box1}};
     Ref<Shape> one = make_compound(single, 1);
     normal = shapes::get_shape_surface_normal(one, vec3f::make(1, 1, 1), sub_shape::EMPTY_SUB_SHAPE_ID);
     CHECK_NEAR(ctx, vec3f::length(normal), 1.0f, 1e-5f);
@@ -248,16 +247,16 @@ void test_compound_supporting_face(TestCtx &ctx) {
     mat4f::store(identity, mat4f::identity());
     SupportingFace face;
 
-    Ref<Shape> box1 = box::create({.half_extents = {1, 1, 1}});
-    Ref<Shape> box2 = box::create({.half_extents = {1, 1, 1}});
-    const CompoundShapeSettings::Child boxes[] = {{{0, 0, 0}, IDENTITY, box1}, {{0, 0, 0}, IDENTITY, box2}};
+    Ref<Shape> box1 = box::create({.half_extents = vec3f::splat(1.0f)});
+    Ref<Shape> box2 = box::create({.half_extents = vec3f::splat(1.0f)});
+    const CompoundShapeSettings::Child boxes[] = {{vec3f::make(0, 0, 0), quatf::identity(), box1}, {vec3f::make(0, 0, 0), quatf::identity(), box2}};
     Ref<Shape> c = make_compound(boxes, 2);
     // id 0 is the first child
     shapes::get_shape_supporting_face(face, c, 0, vec3f::make(1, 0, 0), mat4f::load(identity), vec3f::make(1, 1, 1));
     CHECK(ctx, face.num_vertices == 4);
 
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    const CompoundShapeSettings::Child mixed[] = {{{0, 0, 0}, IDENTITY, s}, {{5, 0, 0}, IDENTITY, box1}};
+    const CompoundShapeSettings::Child mixed[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}, {vec3f::make(5, 0, 0), quatf::identity(), box1}};
     Ref<Shape> m = make_compound(mixed, 2);
     shapes::get_shape_supporting_face(face, m, 0, vec3f::make(1, 0, 0), mat4f::load(identity), vec3f::make(1, 1, 1));
     CHECK(ctx, face.num_vertices == 0);  // a sphere has no face
@@ -284,9 +283,9 @@ void test_compound_supporting_face(TestCtx &ctx) {
 void test_compound_leaf_shape(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
     Ref<Shape> cap = capsule::create({.half_height_of_cylinder = 1.0f, .radius = 0.5f});
-    const CompoundShapeSettings::Child children[] = {{{0, 0, 0}, IDENTITY, s}, {{3, 0, 0}, IDENTITY, b}, {{0, 3, 0}, IDENTITY, cap}};
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(0, 0, 0), quatf::identity(), s}, {vec3f::make(3, 0, 0), quatf::identity(), b}, {vec3f::make(0, 3, 0), quatf::identity(), cap}};
     Ref<Shape> c = make_compound(children, 3);
 
     // three children take two bits
@@ -342,17 +341,17 @@ void test_compound_dispatch_wiring(TestCtx &ctx) {
     CHECK(ctx, def.get_leaf_shape == compound::get_leaf_shape && def.cast_ray == compound::cast_ray_vs_compound);
 }
 
-static void collide(CollideShapeCollector &collector, const Shape *a, const Transformf &transform_a, const Shape *b,
-                    const Transformf &transform_b) {
+static void collide(CollideShapeCollector &collector, const Shape *a, const Transform &transform_a, const Shape *b,
+                    const Transform &transform_b) {
     shapes::collide_fn(a->type, b->type)(collector, collide_shape::default_settings(), a, NO_SUB_SHAPE, transform_a, b, NO_SUB_SHAPE,
                                          transform_b);
 }
 
 void test_compound_collide_two_boxes_vs_sphere(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> b0 = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .material_id = 3});
-    Ref<Shape> b1 = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .material_id = 4});
-    const CompoundShapeSettings::Child children[] = {{{-2, 0, 0}, IDENTITY, b0}, {{2, 0, 0}, IDENTITY, b1}};
+    Ref<Shape> b0 = box::create({.half_extents = vec3f::splat(0.5f), .material_id = 3});
+    Ref<Shape> b1 = box::create({.half_extents = vec3f::splat(0.5f), .material_id = 4});
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(-2, 0, 0), quatf::identity(), b0}, {vec3f::make(2, 0, 0), quatf::identity(), b1}};
     Ref<Shape> c = make_compound(children, 2);
     Ref<Shape> s = sphere::create({.radius = 0.5f, .material_id = 9});
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
@@ -419,8 +418,8 @@ void test_compound_collide_two_boxes_vs_sphere(TestCtx &ctx) {
 
 void test_compound_cast_ray_and_point(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
-    const CompoundShapeSettings::Child children[] = {{{-2, 0, 0}, IDENTITY, b}, {{2, 0, 0}, IDENTITY, b}};
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(0.5f)});
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(-2, 0, 0), quatf::identity(), b}, {vec3f::make(2, 0, 0), quatf::identity(), b}};
     Ref<Shape> c = make_compound(children, 2);
 
     // straight down onto the right box's top at y = 0.5
@@ -458,8 +457,8 @@ void test_compound_cast_ray_and_point(TestCtx &ctx) {
 
 void test_compound_cast_shape(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}, .convex_radius = 0.0f});
-    const CompoundShapeSettings::Child children[] = {{{-2, 0, 0}, IDENTITY, b}, {{2, 0, 0}, IDENTITY, b}};
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(0.5f), .convex_radius = 0.0f});
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(-2, 0, 0), quatf::identity(), b}, {vec3f::make(2, 0, 0), quatf::identity(), b}};
     Ref<Shape> c = make_compound(children, 2);
     Ref<Shape> s = sphere::create({.radius = 0.5f});
     const CastShapeSettings settings = cast_shape::default_settings();
@@ -492,12 +491,12 @@ void test_compound_cast_shape(TestCtx &ctx) {
 
 void test_compound_nested(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
-    Ref<Shape> other = box::create({.half_extents = {0.25f, 0.25f, 0.25f}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(0.5f)});
+    Ref<Shape> other = box::create({.half_extents = vec3f::splat(0.25f)});
     // inner: two boxes stacked 3 apart, the upper first; outer: the inner at (10, 0, 0), then a small box at the origin
-    const CompoundShapeSettings::Child inner_children[] = {{{0, 3, 0}, IDENTITY, b}, {{0, 0, 0}, IDENTITY, b}};
+    const CompoundShapeSettings::Child inner_children[] = {{vec3f::make(0, 3, 0), quatf::identity(), b}, {vec3f::make(0, 0, 0), quatf::identity(), b}};
     Ref<Shape> inner = make_compound(inner_children, 2);
-    const CompoundShapeSettings::Child outer_children[] = {{{10, 0, 0}, IDENTITY, inner}, {{0, 0, 0}, IDENTITY, other}};
+    const CompoundShapeSettings::Child outer_children[] = {{vec3f::make(10, 0, 0), quatf::identity(), inner}, {vec3f::make(0, 0, 0), quatf::identity(), other}};
     Ref<Shape> outer = make_compound(outer_children, 2);
 
     CHECK(ctx, near3(outer->aabb.min, -0.25f, -0.5f, -0.5f, 1e-5f));
@@ -505,14 +504,14 @@ void test_compound_nested(TestCtx &ctx) {
     CHECK_NEAR(ctx, outer->volume, 2.0f + 0.125f, 1e-5f);
 
     // the mass matches the same three boxes in one flat compound
-    const CompoundShapeSettings::Child flat_children[] = {{{0, 0, 0}, IDENTITY, other}, {{10, 0, 0}, IDENTITY, b}, {{10, 3, 0}, IDENTITY, b}};
+    const CompoundShapeSettings::Child flat_children[] = {{vec3f::make(0, 0, 0), quatf::identity(), other}, {vec3f::make(10, 0, 0), quatf::identity(), b}, {vec3f::make(10, 3, 0), quatf::identity(), b}};
     Ref<Shape> flat = make_compound(flat_children, 3);
     CHECK(ctx, near3(outer->center_of_mass, flat->center_of_mass, 1e-4f));
     MassProperties nested_mass, flat_mass;
     shapes::compute_mass_properties(nested_mass, outer);
     shapes::compute_mass_properties(flat_mass, flat);
     CHECK_NEAR(ctx, nested_mass.mass, flat_mass.mass, 1e-2f);
-    for (uint32_t i = 0; i < 11; i++) CHECK_NEAR(ctx, nested_mass.inertia.m[i], flat_mass.inertia.m[i], 0.5f);
+    for (uint32_t i = 0; i < 11; i++) CHECK_NEAR(ctx, elements(nested_mass.inertia).m[i], elements(flat_mass.inertia).m[i], 0.5f);
 
     // a sphere 0.1 into the upper inner box: the path is outer child 0, then inner child 0
     Ref<Shape> s = sphere::create({.radius = 0.5f});
@@ -603,8 +602,8 @@ static GetSubShapeTransformedShapeResult transformed_shape_of(const Shape *shape
 void test_compound_sub_shape_id_last_of_two(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> leaf = box::create({.half_extents = {1, 1, 1}});
-    const CompoundShapeSettings::Child children[] = {{{-2, 0, 0}, IDENTITY, s}, {{2, 0, 0}, IDENTITY, leaf}};
+    Ref<Shape> leaf = box::create({.half_extents = vec3f::splat(1.0f)});
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(-2, 0, 0), quatf::identity(), s}, {vec3f::make(2, 0, 0), quatf::identity(), leaf}};
     Ref<Shape> c = make_compound(children, 2);
 
     // the ray hit's id, the leaf and transformed shape lookups, and the normal all resolve the second child
@@ -632,10 +631,10 @@ void test_compound_sub_shape_id_last_of_two(TestCtx &ctx) {
 void test_compound_sub_shape_id_path_one_one(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> leaf = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
-    const CompoundShapeSettings::Child inner_children[] = {{{-2, 0, 0}, IDENTITY, s}, {{2, 0, 0}, IDENTITY, leaf}};
+    Ref<Shape> leaf = box::create({.half_extents = vec3f::splat(0.5f)});
+    const CompoundShapeSettings::Child inner_children[] = {{vec3f::make(-2, 0, 0), quatf::identity(), s}, {vec3f::make(2, 0, 0), quatf::identity(), leaf}};
     Ref<Shape> inner = make_compound(inner_children, 2);
-    const CompoundShapeSettings::Child outer_children[] = {{{-2, 0, 0}, IDENTITY, s}, {{2, 0, 0}, IDENTITY, inner}};
+    const CompoundShapeSettings::Child outer_children[] = {{vec3f::make(-2, 0, 0), quatf::identity(), s}, {vec3f::make(2, 0, 0), quatf::identity(), inner}};
     Ref<Shape> outer = make_compound(outer_children, 2);
 
     // inner child 1 sits at 2 + 2 along x
@@ -649,10 +648,10 @@ void test_compound_sub_shape_id_path_one_one(TestCtx &ctx) {
     CHECK(ctx, vec3f::x(transformed.position) == 4.0f);
 
     // a one child compound takes no bits and keeps the rest of the path
-    Ref<Shape> first = box::create({.half_extents = {1, 1, 1}});
-    const CompoundShapeSettings::Child pair_children[] = {{{-2, 0, 0}, IDENTITY, first}, {{2, 0, 0}, IDENTITY, s}};
+    Ref<Shape> first = box::create({.half_extents = vec3f::splat(1.0f)});
+    const CompoundShapeSettings::Child pair_children[] = {{vec3f::make(-2, 0, 0), quatf::identity(), first}, {vec3f::make(2, 0, 0), quatf::identity(), s}};
     Ref<Shape> pair = make_compound(pair_children, 2);
-    const CompoundShapeSettings::Child wrapper_children[] = {{{0, 0, 0}, IDENTITY, pair}};
+    const CompoundShapeSettings::Child wrapper_children[] = {{vec3f::make(0, 0, 0), quatf::identity(), pair}};
     Ref<Shape> wrapper = make_compound(wrapper_children, 1);
     const SubShapeId first_id = ray_down_sub_shape_id(ctx, wrapper, -2);
     CHECK(ctx, first_id == 0xfffffffeu);
@@ -671,10 +670,10 @@ void test_compound_sub_shape_id_path_one_one(TestCtx &ctx) {
 void test_compound_nested_rotated_surface_normal(TestCtx &ctx) {
     dispatch::init();
     // outer turns its child a quarter about z, inner turns its box a quarter about x
-    Ref<Shape> leaf = box::create({.half_extents = {1, 2, 3}});
-    const CompoundShapeSettings::Child inner_children[] = {{{0, 0, 0}, stored_axis_angle(vec3f::make(1, 0, 0), scalar::PI * 0.5f), leaf}};
+    Ref<Shape> leaf = box::create({.half_extents = vec3f::make(1, 2, 3)});
+    const CompoundShapeSettings::Child inner_children[] = {{vec3f::make(0, 0, 0), axis_angle(vec3f::make(1, 0, 0), scalar::PI * 0.5f), leaf}};
     Ref<Shape> inner = make_compound(inner_children, 1);
-    const CompoundShapeSettings::Child outer_children[] = {{{0, 0, 0}, stored_axis_angle(vec3f::make(0, 0, 1), scalar::PI * 0.5f), inner}};
+    const CompoundShapeSettings::Child outer_children[] = {{vec3f::make(0, 0, 0), axis_angle(vec3f::make(0, 0, 1), scalar::PI * 0.5f), inner}};
     Ref<Shape> outer = make_compound(outer_children, 1);
 
     // the box's +y face centre (0, 2, 0) goes to (0, 0, 2) under x, which z leaves alone
@@ -688,8 +687,8 @@ void test_compound_nested_rotated_surface_normal(TestCtx &ctx) {
 
 void test_compound_scaled_supporting_face(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
-    const CompoundShapeSettings::Child children[] = {{{-2, 0, 0}, IDENTITY, b}, {{2, 0, 0}, IDENTITY, b}};
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(-2, 0, 0), quatf::identity(), b}, {vec3f::make(2, 0, 0), quatf::identity(), b}};
     Ref<Shape> c = make_compound(children, 2);
     Float4x4 identity;
     mat4f::store(identity, mat4f::identity());
@@ -718,8 +717,8 @@ void test_compound_rotated_child_under_non_uniform_scale(TestCtx &ctx) {
     // a bar long along its own x, turned to lie along y, under a scale that stretches x by 2. the scale applies in the
     // compound's space, so the bar is 1 wide in x (0.25 * 2 each side) and 2 tall in y; passed to the child unrotated it
     // would stretch the bar's own long axis instead (0.25 in x, 2 each side in y)
-    Ref<Shape> bar = box::create({.half_extents = {1, 0.25f, 0.25f}, .convex_radius = 0.0f});
-    const CompoundShapeSettings::Child children[] = {{{0, 0, 0}, stored_axis_angle(vec3f::make(0, 0, 1), scalar::PI * 0.5f), bar}};
+    Ref<Shape> bar = box::create({.half_extents = vec3f::make(1, 0.25f, 0.25f), .convex_radius = 0.0f});
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(0, 0, 0), axis_angle(vec3f::make(0, 0, 1), scalar::PI * 0.5f), bar}};
     const Float3 scale = {2, 1, 1};
     Ref<Shape> shapes_under_test[2] = {make_compound(children, 1), static_compound::create({.children = children, .num_children = 1})};
     Float4x4 identity;
@@ -760,11 +759,11 @@ void test_compound_rotated_child_under_non_uniform_scale(TestCtx &ctx) {
 void test_compound_material(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> s = sphere::create({.radius = 1.0f, .material_id = 2});
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}, .material_id = 5});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f), .material_id = 5});
     Ref<Shape> inner_sphere = sphere::create({.radius = 0.5f, .material_id = 9});
-    const CompoundShapeSettings::Child inner_children[] = {{{0, 0, 0}, IDENTITY, b}, {{0, 2, 0}, IDENTITY, inner_sphere}};
+    const CompoundShapeSettings::Child inner_children[] = {{vec3f::make(0, 0, 0), quatf::identity(), b}, {vec3f::make(0, 2, 0), quatf::identity(), inner_sphere}};
     Ref<Shape> inner = make_compound(inner_children, 2);
-    const CompoundShapeSettings::Child children[] = {{{-4, 0, 0}, IDENTITY, s}, {{0, 0, 0}, IDENTITY, b}, {{4, 0, 0}, IDENTITY, inner}};
+    const CompoundShapeSettings::Child children[] = {{vec3f::make(-4, 0, 0), quatf::identity(), s}, {vec3f::make(0, 0, 0), quatf::identity(), b}, {vec3f::make(4, 0, 0), quatf::identity(), inner}};
     Ref<Shape> c = make_compound(children, 3);
 
     // the first level names the child, the rest goes to the child
@@ -797,10 +796,10 @@ void test_compound_material(TestCtx &ctx) {
 
 void test_compound_negated_identity_child_under_non_uniform_scale(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> b = box::create({.half_extents = {1, 2, 3}});
-    const Float4 negated_identity = {0, 0, 0, -1};
-    const CompoundShapeSettings::Child positive_children[] = {{{1, 0, 0}, IDENTITY, b}};
-    const CompoundShapeSettings::Child negative_children[] = {{{1, 0, 0}, negated_identity, b}};
+    Ref<Shape> b = box::create({.half_extents = vec3f::make(1, 2, 3)});
+    const Quatf negated_identity = quatf::make(0, 0, 0, -1);
+    const CompoundShapeSettings::Child positive_children[] = {{vec3f::make(1, 0, 0), quatf::identity(), b}};
+    const CompoundShapeSettings::Child negative_children[] = {{vec3f::make(1, 0, 0), negated_identity, b}};
     Ref<Shape> positive = make_compound(positive_children, 1);
     Ref<Shape> negative = make_compound(negative_children, 1);
     const Float3 scale = {2, 3, 4};

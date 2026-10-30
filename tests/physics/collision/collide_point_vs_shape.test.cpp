@@ -10,18 +10,15 @@
 
 static const SubShapeIdBuilder NO_SUB_SHAPE = {sub_shape::EMPTY_SUB_SHAPE_ID, 0};
 
-static Float4 about_y(float degrees) {
-    Float4 q;
-    return q = stored_axis_angle(vec3f::make(0, 1, 0), degrees * scalar::DEGREES_TO_RADIANS);
-}
+static Quatf about_y(float degrees) { return axis_angle(vec3f::axis_y(), degrees * scalar::DEGREES_TO_RADIANS); }
 
 /** a point against a shape through its def, as the narrowphase dispatches it */
-static void collide(CollidePointCollector &collector, const Float3 &point, const Shape *shape, const Transformf &transform) {
+static void collide(CollidePointCollector &collector, const Float3 &point, const Shape *shape, const Transform &transform) {
     shapes::def_of(shape).collide_point(collector, collide_point::default_settings(), vec3f::load(point), shape, NO_SUB_SHAPE, transform);
 }
 
 /** whether an any collector reports the point inside */
-static bool inside(const Float3 &point, const Shape *shape, const Transformf &transform) {
+static bool inside(const Float3 &point, const Shape *shape, const Transform &transform) {
     CollidePointCollector collector = collide_point::create_collector(CollectorKind::ANY);
     collide(collector, point, shape, transform);
     const bool hit = collector.has_hit;
@@ -61,8 +58,8 @@ void test_collide_point_vs_shape_sphere(TestCtx &ctx) {
 
 void test_collide_point_vs_shape_box(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> unit = box::create({.half_extents = {1, 1, 1}, .material_id = 7});
-    Ref<Shape> two = box::create({.half_extents = {2, 2, 2}});
+    Ref<Shape> unit = box::create({.half_extents = vec3f::splat(1.0f), .material_id = 7});
+    Ref<Shape> two = box::create({.half_extents = vec3f::splat(2.0f)});
 
     CollidePointCollector any = collide_point::create_collector(CollectorKind::ANY);
     any.body_id_b = 1;

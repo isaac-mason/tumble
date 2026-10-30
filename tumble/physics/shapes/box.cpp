@@ -17,7 +17,7 @@ namespace box {
 Shape *create(const BoxShapeSettings &settings) {
     BoxShape *shape = shapes::allocate<BoxShape>();
     // always at origin
-    vec3f::store(shape->center_of_mass, vec3f::zero());
+    shape->center_of_mass = vec3f::zero();
     shape->half_extents = settings.half_extents;
     shape->convex_radius = settings.convex_radius;
     shape->density = settings.density;
@@ -36,32 +36,31 @@ static float compute_box_volume(Vec3f half_extents) {
     return 8.0f * vec3f::x(half_extents) * vec3f::y(half_extents) * vec3f::z(half_extents);
 }
 
-static void compute_box_local_bounds(Box3f &out, Vec3f half_extents) {
-    aabox::store(out, aabox::make(vec3f::negate(half_extents), half_extents));
-}
+static AABox compute_box_local_bounds(Vec3f half_extents) { return aabox::make(vec3f::negate(half_extents), half_extents); }
 
 void update(Shape *shape) {
     BoxShape &box = shapes::as<BoxShape>(shape);
+    const Vec3f half_extents = box.half_extents;
+    const float x = vec3f::x(half_extents), y = vec3f::y(half_extents), z = vec3f::z(half_extents);
     // dimensions must be non-negative
-    TUMBLE_ASSERT(box.half_extents.x >= 0.0f && box.half_extents.y >= 0.0f && box.half_extents.z >= 0.0f);
+    TUMBLE_ASSERT(x >= 0.0f && y >= 0.0f && z >= 0.0f);
     TUMBLE_ASSERT(box.convex_radius >= 0.0f);
 
-    const Vec3f half_extents = vec3f::load(box.half_extents);
     // the convex radius fits the smallest half extent
-    box.convex_radius = scalar::min(box.convex_radius, scalar::min(box.half_extents.x, scalar::min(box.half_extents.y, box.half_extents.z)));
-    compute_box_local_bounds(shape->aabb, half_extents);
+    box.convex_radius = scalar::min(box.convex_radius, scalar::min(x, scalar::min(y, z)));
+    shape->aabb = compute_box_local_bounds(half_extents);
     shape->volume = compute_box_volume(half_extents);
 }
 
 void compute_mass_properties(MassProperties &out, const Shape *shape) {
-    const Vec3f full_extents = vec3f::scale(vec3f::load(shapes::as<BoxShape>(shape).half_extents), 2.0f);
+    const Vec3f full_extents = vec3f::scale(shapes::as<BoxShape>(shape).half_extents, 2.0f);
     mass_properties::set_mass_and_inertia_of_solid_box(out, full_extents, shapes::as<BoxShape>(shape).density);
 }
 
 void get_surface_normal(SurfaceNormalResult &io, const Shape *shape, SubShapeId sub_shape_id) {
     TUMBLE_ASSERT(sub_shape::is_empty(sub_shape_id));
     (void)sub_shape_id;
-    const Vec3f half_extents = vec3f::load(shapes::as<BoxShape>(shape).half_extents);
+    const Vec3f half_extents = shapes::as<BoxShape>(shape).half_extents;
 
     // get absolute distance from center to each face
     const Vec3f diff = vec3f::abs(vec3f::subtract(vec3f::abs(io.position), half_extents));
@@ -98,7 +97,7 @@ static void set_face(SupportingFace &face, float x0, float y0, float z0, float x
 void get_supporting_face(SupportingFaceResult &io, Vec3f direction, const Shape *shape, SubShapeId) {
     // the face of the scaled box: |scale| sizes it, so a mirrored scale changes nothing (the box
     // is symmetric) and the winding stays outward; the transform then carries rotation and translation only
-    const Vec3f half_extents = vec3f::multiply(vec3f::abs(io.scale), vec3f::load(shapes::as<BoxShape>(shape).half_extents));
+    const Vec3f half_extents = vec3f::multiply(vec3f::abs(io.scale), shapes::as<BoxShape>(shape).half_extents);
     const float hx = vec3f::x(half_extents);
     const float hy = vec3f::y(half_extents);
     const float hz = vec3f::z(half_extents);
@@ -139,13 +138,13 @@ void get_supporting_face(SupportingFaceResult &io, Vec3f direction, const Shape 
 }
 
 float get_inner_radius(const Shape *shape) {
-    const Vec3f half_extents = vec3f::load(shapes::as<BoxShape>(shape).half_extents);
+    const Vec3f half_extents = shapes::as<BoxShape>(shape).half_extents;
     return scalar::min(vec3f::x(half_extents), scalar::min(vec3f::y(half_extents), vec3f::z(half_extents)));
 }
 
 void set_support(Support &out, const Shape *shape, SupportFunctionMode mode, Vec3f scale) {
     const BoxShape &box = shapes::as<BoxShape>(shape);
-    const Vec3f scaled = vec3f::multiply(vec3f::abs(scale), vec3f::load(box.half_extents));
+    const Vec3f scaled = vec3f::multiply(vec3f::abs(scale), box.half_extents);
 
     out.get_support = support::box_support;
     out.has_transform = false;
@@ -181,17 +180,17 @@ ShapeDef def() {
 /* collide sphere vs box (analytical, a = sphere, b = box) */
 
 void collide_sphere_vs_box(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                           const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                           const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                           const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                           const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     const BoxShape &box = shapes::as<BoxShape>(shape_b);
-    const Vec3f scale_b = vec3f::load(transform_b.scale);
-    const Vec3f pos_a = vec3f::load(transform_a.position);
-    const Vec3f pos_b = vec3f::load(transform_b.position);
+    const Vec3f scale_b = transform_b.scale;
+    const Vec3f pos_a = transform_a.position;
+    const Vec3f pos_b = transform_b.position;
 
-    const float sphere_radius = shapes::as<SphereShape>(shape_a).radius * scalar::abs(transform_a.scale.x);
+    const float sphere_radius = shapes::as<SphereShape>(shape_a).radius * scalar::abs(vec3f::x(transform_a.scale));
 
     // scaled half extents and shrunk core (mirror set_support EXCLUDE_CONVEX_RADIUS)
-    const Vec3f scaled_half = vec3f::multiply(vec3f::abs(scale_b), vec3f::load(box.half_extents));
+    const Vec3f scaled_half = vec3f::multiply(vec3f::abs(scale_b), box.half_extents);
     const float scaled_half_x = vec3f::x(scaled_half);
     const float scaled_half_y = vec3f::y(scaled_half);
     const float scaled_half_z = vec3f::z(scaled_half);
@@ -203,7 +202,7 @@ void collide_sphere_vs_box(CollideShapeCollector &collector, const CollideShapeS
     const float combined_radius = sphere_radius + scaled_convex_radius;
 
     // box rotation as a basis; isometric, so the inverse is the transpose
-    const Quatf q = quatf::load(transform_b.quaternion);
+    const Quatf q = transform_b.quaternion;
     const float x2 = quatf::x(q) + quatf::x(q);
     const float y2 = quatf::y(q) + quatf::y(q);
     const float z2 = quatf::z(q) + quatf::z(q);
@@ -345,13 +344,13 @@ void collide_sphere_vs_box(CollideShapeCollector &collector, const CollideShapeS
 /* cast ray */
 
 void cast_ray_vs_box(CastRayCollector &collector, const CastRaySettings &settings, const Rayf &ray,
-                     const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
+                     const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform) {
     // transform the ray into the box's rotation-local frame (translation + rotation removed). scale is folded into the
     // half extents below rather than inverted out of the ray, matching the gjk path's convention, so the geometry is
     // identical.
-    const Quatf inv_quat = quatf::conjugate(quatf::load(transform.quaternion));
+    const Quatf inv_quat = quatf::conjugate(transform.quaternion);
 
-    Vec3f origin = vec3f::subtract(ray.origin, vec3f::load(transform.position));
+    Vec3f origin = vec3f::subtract(ray.origin, transform.position);
     origin = vec3f::transform_quat(origin, inv_quat);
     Vec3f direction = vec3f::transform_quat(ray.direction, inv_quat);
 
@@ -359,7 +358,7 @@ void cast_ray_vs_box(CastRayCollector &collector, const CastRaySettings &setting
     // convention in cast_ray_vs_convex)
     direction = vec3f::scale(direction, ray.length);
 
-    const Vec3f half_extents = vec3f::multiply(vec3f::abs(vec3f::load(transform.scale)), vec3f::load(shapes::as<BoxShape>(shape).half_extents));
+    const Vec3f half_extents = vec3f::multiply(vec3f::abs(transform.scale), shapes::as<BoxShape>(shape).half_extents);
 
     // slab test against the centered box [-h, h]; tmin/tmax bound the ray-fraction hit interval
     float tmin = -scalar::INF;
@@ -426,14 +425,14 @@ void cast_ray_vs_box(CastRayCollector &collector, const CastRaySettings &setting
 
 void collide_point_vs_box(CollidePointCollector &collector, const CollidePointSettings &,
                           Vec3f point, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
-                          const Transformf &transform_b) {
+                          const Transform &transform_b) {
     // transform point to box's local space: rotate by the inverse of the box rotation
-    const Quatf inv_quat_b = quatf::conjugate(quatf::load(transform_b.quaternion));
-    Vec3f local = vec3f::subtract(point, vec3f::load(transform_b.position));
+    const Quatf inv_quat_b = quatf::conjugate(transform_b.quaternion);
+    Vec3f local = vec3f::subtract(point, transform_b.position);
     local = vec3f::transform_quat(local, inv_quat_b);
 
     // apply accumulated scale to half extents
-    const Vec3f scaled_half = vec3f::multiply(vec3f::load(shapes::as<BoxShape>(shape_b).half_extents), vec3f::abs(vec3f::load(transform_b.scale)));
+    const Vec3f scaled_half = vec3f::multiply(shapes::as<BoxShape>(shape_b).half_extents, vec3f::abs(transform_b.scale));
     const float scaled_half_x = vec3f::x(scaled_half);
     const float scaled_half_y = vec3f::y(scaled_half);
     const float scaled_half_z = vec3f::z(scaled_half);

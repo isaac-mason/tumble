@@ -2,7 +2,7 @@ import { type BodyId, INVALID_BODY_ID, type MotionType } from './body.js';
 import type { Filter } from './filter.js';
 import * as Low from './generated/tumble.js';
 import { type KCCPolicy, policyOf } from './kcc-policy.js';
-import { copied, copyVec3, type Quat, type Vec3 } from './math.js';
+import { copyVec3, type Quat, type Vec3 } from './math.js';
 import { defaultsOf, type Given, over } from './settings.js';
 import type { Shape } from './shapes/shapes.js';
 import type { World } from './world.js';
@@ -155,10 +155,10 @@ export function createContact(): KCCContact {
 }
 
 /** a solve's result: the velocity it left, the displacement and the time simulated */
-export type KCCSolveResult = { velocity: Vec3; displacement: Vec3; timeSimulated: number };
+export type KCCSolveResult = Low.KCCSolve;
 
 export function createSolveResult(): KCCSolveResult {
-    return { velocity: [0, 0, 0], displacement: [0, 0, 0], timeSimulated: 0 };
+    return Low.KCCSolve.create();
 }
 
 const STRIDE = Low.KCC_CONTACT_STRIDE;
@@ -294,10 +294,6 @@ function pushContacts(character: KCC): void {
 const state = Low.KCCState.create();
 const event = Low.KCCContactEvent.create();
 const sweep = Low.KCCContact.create();
-const solved = Low.KCCSolve.create();
-const vec3: Vec3 = [0, 0, 0];
-const quat: Quat = [0, 0, 0, 1];
-const TWO_32 = 0x100000000;
 
 const settingsDefaults = defaultsOf(Low.Kcc.defaultSettings, Low.KCCSettings.create);
 
@@ -343,9 +339,7 @@ export function create(settings: KCCSettings, position: Vec3, quaternion: Quat):
     const plane = settings.supportingVolumePlane;
     native.hasSupportingVolumePlane = plane !== undefined;
     if (plane !== undefined) native.supportingVolumePlane = { normal: [plane[0], plane[1], plane[2]], constant: plane[3] };
-    const userData = settings.userData ?? 0;
-    native.userDataLow = userData >>> 0;
-    native.userDataHigh = Math.floor(userData / TWO_32);
+    native.userData = settings.userData ?? 0;
     native.innerRigidBodyShape = settings.innerRigidBody?.shape ?? null;
     native.innerRigidBodyObjectLayer = settings.innerRigidBody?.objectLayer ?? 0;
     Low.errorClear();
@@ -597,9 +591,7 @@ export function canWalkStairs(character: KCC, velocity: Vec3): boolean {
 
 /** its shape's pose: the position plus the turned shape offset */
 export function getCenterOfMassTransform(outPosition: Vec3, outQuaternion: Quat, character: KCC): void {
-    Low.Kcc.getCenterOfMassTransform(vec3, quat, character.handle);
-    copied(outPosition, vec3, true);
-    copied(outQuaternion, quat, true);
+    Low.Kcc.getCenterOfMassTransform(outPosition, outQuaternion, character.handle);
 }
 
 // the toolkit: a move's phases, for a loop of your own. each collision iteration collide, edit the contacts, solve,
@@ -642,10 +634,7 @@ export function solve(
     policy: KCCPolicy | undefined,
 ): KCCSolveResult {
     pushContacts(character);
-    moving(character, () => Low.Kcc.solve(solved, world, character.handle, velocity, deltaTime, timeRemaining, policyOf(policy)));
-    copyVec3(out.velocity, solved.velocity);
-    copyVec3(out.displacement, solved.displacement);
-    out.timeSimulated = solved.timeSimulated;
+    moving(character, () => Low.Kcc.solve(out, world, character.handle, velocity, deltaTime, timeRemaining, policyOf(policy)));
     return out;
 }
 
@@ -722,7 +711,5 @@ export function endContactTracking(character: KCC): void {
 
 /** the velocity without its horizontal part into steep slopes the character touches, unless on ground or in the air */
 export function cancelVelocityTowardsSteepSlopes(out: Vec3, character: KCC, velocity: Vec3): Vec3 {
-    Low.Kcc.cancelVelocityTowardsSteepSlopes(vec3, character.handle, velocity);
-    copyVec3(out, vec3);
-    return out;
+    return Low.Kcc.cancelVelocityTowardsSteepSlopes(out, character.handle, velocity);
 }

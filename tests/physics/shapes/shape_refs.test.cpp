@@ -16,7 +16,7 @@
 void test_shape_refs_bodies(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
     // the caller's Ref and each body's count
-    Ref<Shape> crate = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> crate = box::create({.half_extents = vec3f::splat(0.5f)});
     CHECK(ctx, crate->ref_count == 1);
     RigidBody *a = add_body(scene, crate, MotionType::DYNAMIC, {0.0f, 1.0f, 0.0f});
     RigidBody *b = add_body(scene, crate, MotionType::DYNAMIC, {3.0f, 1.0f, 0.0f});
@@ -50,7 +50,7 @@ void test_shape_refs_free_everything_with_the_world(TestCtx &ctx) {
     const size_t bytes = util::allocated_bytes();
     const size_t blocks = util::allocated_blocks();
     WorldScene scene = make_world_scene(ctx);
-    add_body(scene, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}), MotionType::DYNAMIC, {0.0f, 1.0f, 0.0f});
+    add_body(scene, box::create({.half_extents = vec3f::splat(0.5f)}), MotionType::DYNAMIC, {0.0f, 1.0f, 0.0f});
     RigidBody *removed = add_body(scene, sphere::create({.radius = 0.5f}), MotionType::DYNAMIC, {3.0f, 1.0f, 0.0f});
     rigid_body::remove(*scene.world, removed);
     release_world_scene(scene);
@@ -61,11 +61,11 @@ void test_shape_refs_shapes_over_shapes(TestCtx &ctx) {
     dispatch::init();
     const size_t bytes = util::allocated_bytes();
     {
-        Ref<Shape> crate = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
-        Ref<Shape> raised = transformed::create({.shape = crate, .position = {0.0f, 1.0f, 0.0f}});
-        Ref<Shape> big = scaled::create({.shape = crate, .scale = {2.0f, 2.0f, 2.0f}});
-        Ref<Shape> ballasted = offset_center_of_mass::create({.shape = crate, .offset = {0.0f, -0.2f, 0.0f}});
-        const CompoundShapeSettings::Child children[2] = {{{-1.0f, 0.0f, 0.0f}, {0, 0, 0, 1}, crate}, {{1.0f, 0.0f, 0.0f}, {0, 0, 0, 1}, raised}};
+        Ref<Shape> crate = box::create({.half_extents = vec3f::splat(0.5f)});
+        Ref<Shape> raised = transformed::create({.shape = crate, .position = vec3f::make(0.0f, 1.0f, 0.0f)});
+        Ref<Shape> big = scaled::create({.shape = crate, .scale = vec3f::splat(2.0f)});
+        Ref<Shape> ballasted = offset_center_of_mass::create({.shape = crate, .offset = vec3f::make(0.0f, -0.2f, 0.0f)});
+        const CompoundShapeSettings::Child children[2] = {{vec3f::make(-1.0f, 0.0f, 0.0f), quatf::identity(), crate}, {vec3f::make(1.0f, 0.0f, 0.0f), quatf::identity(), raised}};
         Ref<Shape> pair = compound::create({.children = children, .num_children = 2});
         Ref<Shape> fence = static_compound::create({.children = children, .num_children = 2});
 
@@ -86,9 +86,9 @@ void test_shape_refs_shapes_over_shapes(TestCtx &ctx) {
 
 void test_shape_refs_characters(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
-    Ref<Shape> standing = box::create({.half_extents = {0.3f, 0.9f, 0.3f}});
-    Ref<Shape> crouching = box::create({.half_extents = {0.3f, 0.6f, 0.3f}});
-    Ref<Shape> presence = box::create({.half_extents = {0.25f, 0.85f, 0.25f}});
+    Ref<Shape> standing = box::create({.half_extents = vec3f::make(0.3f, 0.9f, 0.3f)});
+    Ref<Shape> crouching = box::create({.half_extents = vec3f::make(0.3f, 0.6f, 0.3f)});
+    Ref<Shape> presence = box::create({.half_extents = vec3f::make(0.25f, 0.85f, 0.25f)});
     KCCSettings settings;
     settings.shape = standing;
     settings.inner_rigid_body_shape = presence;
@@ -136,32 +136,32 @@ namespace {
 /** where the point constraint's anchor on body b is, in world space */
 Vec3f anchor_b(World &world, ConstraintId id, const RigidBody &b) {
     const PointConstraint &joint = *point_constraint::get(world, id);
-    return vec3f::add(vec3f::load(b.center_of_mass_position), vec3f::transform_quat(joint.local_space_position2, quatf::load(b.quaternion)));
+    return vec3f::add(b.center_of_mass_position, vec3f::transform_quat(joint.local_space_position2, b.quaternion));
 }
 
 }  // namespace
 
 void test_shape_refs_set_shape_refreshes_a_shape_changed_in_place(TestCtx &ctx) {
     WorldScene scene = make_world_scene(ctx);
-    Ref<Shape> crate = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
-    const CompoundShapeSettings::Child children[2] = {{{0.0f, 0.0f, 0.0f}, {0, 0, 0, 1}, crate}, {{0.0f, 1.0f, 0.0f}, {0, 0, 0, 1}, crate}};
+    Ref<Shape> crate = box::create({.half_extents = vec3f::splat(0.5f)});
+    const CompoundShapeSettings::Child children[2] = {{vec3f::make(0.0f, 0.0f, 0.0f), quatf::identity(), crate}, {vec3f::make(0.0f, 1.0f, 0.0f), quatf::identity(), crate}};
     Ref<Shape> stack = compound::create({.children = children, .num_children = 2});
     RigidBody *anchor = add_body(scene, crate, MotionType::STATIC, {0.0f, 5.0f, 0.0f});
     RigidBody *body = add_body(scene, stack, MotionType::DYNAMIC, {0.0f, 3.0f, 0.0f});
     rigid_body::sleep(*scene.world, body);
     const ConstraintId id =
-        point_constraint::create(*scene.world, anchor, body, {.point_a = {0.0f, 4.5f, 0.0f}, .point_b = {0.0f, 4.5f, 0.0f}});
+        point_constraint::create(*scene.world, anchor, body, {.point_a = vec3f::make(0.0f, 4.5f, 0.0f), .point_b = vec3f::make(0.0f, 4.5f, 0.0f)});
     const Vec3f before = anchor_b(*scene.world, id, *body);
 
     // the stack's top box moves up a metre in place: its centre of mass rises half a metre
     CompoundShape::Child &top = shapes::as<CompoundShape>(stack).data->children[1];
     top.position = {0.0f, 2.0f, 0.0f};
     compound::update(stack);
-    CHECK_NEAR(ctx, stack->center_of_mass.y, 1.0f, 1e-5f);
+    CHECK_NEAR(ctx, vec3f::y(stack->center_of_mass), 1.0f, 1e-5f);
 
     // taking its own shape again, the body follows the change: the joint's anchor stays where it was on it, and it wakes
     rigid_body::set_shape(*scene.world, body, stack, true);
-    CHECK_NEAR(ctx, body->center_of_mass_position.y, 4.0f, 1e-5f);
+    CHECK_NEAR(ctx, vec3f::y(body->center_of_mass_position), 4.0f, 1e-5f);
     CHECK(ctx, vec3f::distance(anchor_b(*scene.world, id, *body), before) < 1e-5f);
     CHECK(ctx, rigid_body::is_active(*body) && stack->ref_count == 2);
 

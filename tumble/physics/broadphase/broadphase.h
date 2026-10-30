@@ -41,17 +41,17 @@ bool update_body(Broadphase &broadphase, const RigidBody *body);
 void reinsert_body(Broadphase &broadphase, RigidBody *body, const Layers &layers);
 
 /** the body's fat box: the box its leaf holds, which the persistent pairs key on */
-Box3f &read_fat_bounds(Box3f &out, const Broadphase &broadphase, const RigidBody &body);
+AABox read_fat_bounds(const Broadphase &broadphase, const RigidBody &body);
 
 /** every body of one layer's tree whose fat box overlaps the box: no tight re-test, no filtering (pair discovery) */
-void intersect_fat_leaves(Broadphase &broadphase, const Bodies &bodies, uint32_t broadphase_layer, const Box3f &aabb, BodyVisitor &visitor);
+void intersect_fat_leaves(Broadphase &broadphase, const Bodies &bodies, uint32_t broadphase_layer, const AABox &aabb, BodyVisitor &visitor);
 
 /** finds bodies with aabbs that intersect the given ray */
 void cast_ray(Broadphase &broadphase, const Bodies &bodies, const Rayf &ray, const Filter &query_filter,
               BodyVisitor &visitor);
 
 /** finds bodies with aabbs that intersect the given aabb */
-void intersect_aabb(Broadphase &broadphase, const Bodies &bodies, const Box3f &aabb, const Filter &query_filter,
+void intersect_aabb(Broadphase &broadphase, const Bodies &bodies, const AABox &aabb, const Filter &query_filter,
                     BodyVisitor &visitor);
 
 /** finds bodies with aabbs that contain the given point */
@@ -67,11 +67,11 @@ void intersect_oriented_box(Broadphase &broadphase, const Bodies &bodies, const 
                             BodyVisitor &visitor);
 
 /** finds bodies with aabbs that intersect the given swept aabb */
-void cast_aabb(Broadphase &broadphase, const Bodies &bodies, const Box3f &bounds, Vec3f displacement,
+void cast_aabb(Broadphase &broadphase, const Bodies &bodies, const AABox &bounds, Vec3f displacement,
                const Filter &query_filter, BodyVisitor &visitor);
 
 /** the bounds of all the trees in the broadphase */
-Box3f &bounds(Box3f &out, const Broadphase &broadphase);
+AABox bounds(const Broadphase &broadphase);
 
 }  // namespace broadphase
 

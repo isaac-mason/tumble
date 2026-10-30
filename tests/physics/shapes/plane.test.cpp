@@ -16,17 +16,17 @@ static const SubShapeIdBuilder NO_SUB_SHAPE = {sub_shape::EMPTY_SUB_SHAPE_ID, 0}
 static const Float4 IDENTITY = {0, 0, 0, 1};
 
 /** surface at y = -3, normal +y */
-static const Transformf LOWERED_POSE = {{0, -3, 0}, {0, 0, 0, 1}, {1, 1, 1}};
+static Transform lowered_pose() { return pose({0, -3, 0}); }
 /** turned a quarter about z the normal becomes -x: surface at x = 4, solid towards +x */
-static const Transformf ROTATED_POSE = {{4, 0, 0}, {0, 0, 0.70710678f, 0.70710678f}, {1, 1, 1}};
+static Transform rotated_pose() { return pose({4, 0, 0}, {0, 0, 0.70710678f, 0.70710678f}); }
 
 static Float3 face_vertex(const SupportingFace &face, uint32_t i) { return {vec3f::x(face.vertices[i]), vec3f::y(face.vertices[i]), vec3f::z(face.vertices[i])}; }
 
 /** a y-up plane through its origin, so the pose alone places it */
-static Shape *make_ground(int32_t material_id = -1) { return plane::create({.plane = {{0, 1, 0}, 0}, .material_id = material_id}); }
+static Shape *make_ground(int32_t material_id = -1) { return plane::create({.plane = plane3f::make(vec3f::axis_y(), 0), .material_id = material_id}); }
 
 /** the closest ray hit's fraction, or -1 for none */
-static float ray_fraction(const Shape *shape, const Transformf &transform, const Float3 &origin, const Float3 &direction, float length,
+static float ray_fraction(const Shape *shape, const Transform &transform, const Float3 &origin, const Float3 &direction, float length,
                           const CastRaySettings &settings = cast_ray::default_settings()) {
     CastRayCollector collector = cast_ray::create_collector(CollectorKind::CLOSEST);
     const Rayf ray = {vec3f::load(origin), unit(vec3f::load(direction)), length};
@@ -35,7 +35,7 @@ static float ray_fraction(const Shape *shape, const Transformf &transform, const
     return fraction;
 }
 
-static bool point_inside(const Shape *shape, const Transformf &transform, const Float3 &point) {
+static bool point_inside(const Shape *shape, const Transform &transform, const Float3 &point) {
     CollidePointCollector collector = collide_point::create_collector(CollectorKind::ALL);
     shapes::def_of(shape).collide_point(collector, collide_point::default_settings(), vec3f::load(point), shape, NO_SUB_SHAPE, transform);
     const bool inside = collector.hits.length > 0;
@@ -43,12 +43,12 @@ static bool point_inside(const Shape *shape, const Transformf &transform, const 
 }
 
 static void collide(CollideShapeCollector &collector, const CollideShapeSettings &settings, const Shape *a,
-                    const Transformf &transform_a, const Shape *b, const Transformf &transform_b) {
+                    const Transform &transform_a, const Shape *b, const Transform &transform_b) {
     shapes::collide_fn(a->type, b->type)(collector, settings, a, NO_SUB_SHAPE, transform_a, b, NO_SUB_SHAPE, transform_b);
 }
 
 static void cast(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *a,
-                 const Transformf &transform_a, const Float3 &displacement, const Shape *b, const Transformf &transform_b) {
+                 const Transform &transform_a, const Float3 &displacement, const Shape *b, const Transform &transform_b) {
     shapes::cast_fn(a->type, b->type)(collector, settings, a, NO_SUB_SHAPE, transform_a, vec3f::load(displacement), b, NO_SUB_SHAPE, transform_b);
 }
 
@@ -57,10 +57,10 @@ static void cast(CastShapeCollector &collector, const CastShapeSettings &setting
 void test_plane_create(TestCtx &ctx) {
     dispatch::init();
     // the normal is normalised and the constant with it, so the plane stays at y = 0.5; the defaults
-    Ref<Shape> p = plane::create({.plane = {{0, 2, 0}, -1}, .material_id = 3});
+    Ref<Shape> p = plane::create({.plane = plane3f::make(vec3f::make(0, 2, 0), -1), .material_id = 3});
     CHECK(ctx, p->type == ShapeType::PLANE);
-    CHECK(ctx, near3(shapes::as<PlaneShape>(p).plane.normal, 0, 1, 0, 0.0f));
-    CHECK(ctx, shapes::as<PlaneShape>(p).plane.constant == -0.5f);
+    CHECK(ctx, near3(plane3f::normal(shapes::as<PlaneShape>(p).plane), 0, 1, 0, 0.0f));
+    CHECK(ctx, plane3f::constant(shapes::as<PlaneShape>(p).plane) == -0.5f);
     CHECK(ctx, shapes::as<PlaneShape>(p).half_extent == plane::DEFAULT_PLANE_HALF_EXTENT);
     CHECK(ctx, p->material_id == 3);
     CHECK(ctx, p->volume == 0 && near3(p->center_of_mass, 0, 0, 0, 0.0f));
@@ -74,18 +74,20 @@ void test_plane_create(TestCtx &ctx) {
     // no mass and no inertia, no inner radius, the normal everywhere
     MassProperties mp = mass_properties::create();
     mp.mass = 5.0f;
-    for (uint32_t i = 0; i < 16; i++) mp.inertia.m[i] = float(i + 1);
+    Float4x4 filled;
+    for (uint32_t i = 0; i < 16; i++) filled.m[i] = float(i + 1);
+    mp.inertia = mat4f::load(filled);
     shapes::compute_mass_properties(mp, p);
     CHECK(ctx, mp.mass == 0.0f);
-    for (uint32_t i = 0; i < 16; i++) CHECK(ctx, mp.inertia.m[i] == 0.0f);
+    CHECK(ctx, same_bits(mp.inertia, mat4f::zero()));
     CHECK(ctx, shapes::get_shape_inner_radius(p) == 0.0f);
     const Vec3f normal = shapes::get_shape_surface_normal(p, vec3f::make(12, -40, 3), sub_shape::EMPTY_SUB_SHAPE_ID);
     CHECK(ctx, near3(normal, 0, 1, 0, 0.0f));
 
     // a tilted plane's bounds cover its quad
-    Ref<Shape> tilted = plane::create({.plane = {{1, 1, 0}, 0}, .half_extent = 10});
-    CHECK(ctx, tilted->aabb.max.x > 0 && tilted->aabb.min.x < 0);
-    CHECK_NEAR(ctx, tilted->aabb.max.z, 10.0f, 1e-5f);
+    Ref<Shape> tilted = plane::create({.plane = plane3f::make(vec3f::make(1, 1, 0), 0), .half_extent = 10});
+    CHECK(ctx, vec3f::x(tilted->aabb.max) > 0 && vec3f::x(tilted->aabb.min) < 0);
+    CHECK_NEAR(ctx, vec3f::z(tilted->aabb.max), 10.0f, 1e-5f);
 
     p = nullptr;
     tilted = nullptr;
@@ -93,7 +95,7 @@ void test_plane_create(TestCtx &ctx) {
 
 void test_plane_supporting_face(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> p = plane::create({.plane = {{0, 1, 0}, 0}, .half_extent = 10});
+    Ref<Shape> p = plane::create({.plane = plane3f::make(vec3f::axis_y(), 0), .half_extent = 10});
     Float4x4 identity;
     mat4f::store(identity, mat4f::identity());
 
@@ -128,7 +130,7 @@ void test_plane_supporting_face(TestCtx &ctx) {
 void test_plane_cast_ray(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> ground = make_ground();
-    const Transformf origin = pose({0, 0, 0});
+    const Transform origin = pose({0, 0, 0});
 
     // from above: 5 of 1000
     CHECK_NEAR(ctx, ray_fraction(ground, origin, {0, 5, 0}, {0, -1, 0}, 1000.0f), 5.0f / 1000.0f, 1e-7f);
@@ -140,14 +142,12 @@ void test_plane_cast_ray(TestCtx &ctx) {
 
     // a tilted plane: the distance along the ray is the signed distance over the cosine
     const Vec3f tilted_normal = unit(vec3f::make(0.1f, 1, 0));
-    Plane3f tilted_plane = {{}, 1};
-    vec3f::store(tilted_plane.normal, tilted_normal);
-    Ref<Shape> tilted = plane::create({.plane = tilted_plane});
+    Ref<Shape> tilted = plane::create({.plane = plane3f::make(tilted_normal, 1)});
     CHECK_NEAR(ctx, ray_fraction(tilted, origin, {0, 5, 0}, {0, -1, 0}, 1000.0f), (vec3f::y(tilted_normal) * 5 + 1) / vec3f::y(tilted_normal) / 1000.0f,
                1e-7f);
 
     // the constant: a plane at y = 3
-    Ref<Shape> raised = plane::create({.plane = {{0, 1, 0}, -3}});
+    Ref<Shape> raised = plane::create({.plane = plane3f::make(vec3f::axis_y(), -3)});
     CHECK_NEAR(ctx, ray_fraction(raised, origin, {0, 10, 0}, {0, -1, 0}, 1000.0f), 7.0f / 1000.0f, 1e-7f);
 
     // a non-uniform scale leaves a plane through the origin where it is; it moves an offset one
@@ -155,7 +155,7 @@ void test_plane_cast_ray(TestCtx &ctx) {
     CHECK_NEAR(ctx, ray_fraction(raised, pose({0, 0, 0}, IDENTITY, {2, 0.5f, 1}), {0, 10, 0}, {0, -1, 0}, 1000.0f), 8.5f / 1000.0f, 1e-6f);
 
     // at a pose: along +x onto the rotated plane at x = 4, 0.4 of 10
-    CHECK_NEAR(ctx, ray_fraction(ground, ROTATED_POSE, {0, 0, 0}, {1, 0, 0}, 10.0f), 0.4f, 1e-5f);
+    CHECK_NEAR(ctx, ray_fraction(ground, rotated_pose(), {0, 0, 0}, {1, 0, 0}, 10.0f), 0.4f, 1e-5f);
 
     // back faces: from below with the inside not solid, only the back face mode hits
     CastRaySettings hollow = cast_ray::default_settings();
@@ -207,8 +207,8 @@ void test_plane_collide_point(TestCtx &ctx) {
     CHECK(ctx, point_inside(ground, pose({0, 0, 0}), {5000, -0.1f, -5000}));
 
     // either side of the rotated plane at x = 4
-    CHECK(ctx, point_inside(ground, ROTATED_POSE, {4.5f, 0, 0}));
-    CHECK(ctx, !point_inside(ground, ROTATED_POSE, {3.5f, 0, 0}));
+    CHECK(ctx, point_inside(ground, rotated_pose(), {4.5f, 0, 0}));
+    CHECK(ctx, !point_inside(ground, rotated_pose(), {3.5f, 0, 0}));
 
     // the hit carries the plane's material
     Ref<Shape> stone = make_ground(6);
@@ -227,7 +227,7 @@ void test_plane_collide_sphere_and_box(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> ground = make_ground();
     Ref<Shape> s = sphere::create({.radius = 1.0f});
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
     const CollideShapeSettings settings = collide_shape::default_settings();
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
 
@@ -266,7 +266,7 @@ void test_plane_collide_sphere_and_box(TestCtx &ctx) {
 
     // 0.5 into the rotated plane at x = 4
     collide_shape::reset(collector);
-    collide(collector, settings, s, pose({3.5f, 0, 0}), ground, ROTATED_POSE);
+    collide(collector, settings, s, pose({3.5f, 0, 0}), ground, rotated_pose());
     CHECK(ctx, collector.hits.length == 1);
     if (collector.hits.length == 1) {
         const CollideShapeHit &hit = collector.hits[0];
@@ -278,11 +278,11 @@ void test_plane_collide_sphere_and_box(TestCtx &ctx) {
 
     // clear of it
     collide_shape::reset(collector);
-    collide(collector, settings, s, pose({2.5f, 0, 0}), ground, ROTATED_POSE);
+    collide(collector, settings, s, pose({2.5f, 0, 0}), ground, rotated_pose());
     CHECK(ctx, collector.hits.length == 0);
 
     // a turned box resting on its corner: a sharp unit box turned 45 degrees about z reaches sqrt 2 below its centre
-    Ref<Shape> sharp = box::create({.half_extents = {1, 1, 1}, .convex_radius = 0.0f});
+    Ref<Shape> sharp = box::create({.half_extents = vec3f::splat(1.0f), .convex_radius = 0.0f});
     collide_shape::reset(collector);
     collide(collector, settings, sharp, pose({0, 1.3f, 0}, {0, 0, 0.38268343f, 0.92387953f}), ground, pose({0, 0, 0}));
     CHECK(ctx, collector.hits.length == 1);
@@ -297,7 +297,7 @@ void test_plane_collide_sphere_and_box(TestCtx &ctx) {
 void test_plane_collide_faces(TestCtx &ctx) {
     dispatch::init();
     Ref<Shape> ground = make_ground(2);
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}, .material_id = 7});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f), .material_id = 7});
     CollideShapeSettings settings = collide_shape::default_settings();
     settings.collect_faces = true;
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
@@ -333,7 +333,7 @@ void test_plane_cast_sphere_at_a_pose(TestCtx &ctx) {
     CastShapeCollector collector = cast_shape::create_collector(CollectorKind::CLOSEST);
 
     // dropped onto a plane at y = -3: the bottom travels from -1 to -3, 2 of 10
-    cast(collector, settings, s, pose({0, 0, 0}), {0, -10, 0}, ground, LOWERED_POSE);
+    cast(collector, settings, s, pose({0, 0, 0}), {0, -10, 0}, ground, lowered_pose());
     CHECK(ctx, collector.has_hit);
     if (collector.has_hit) {
         const CastShapeHit &hit = collector.hits[0];
@@ -346,7 +346,7 @@ void test_plane_cast_sphere_at_a_pose(TestCtx &ctx) {
 
     // along +x onto the plane turned about z at x = 4: the leading point travels from 1 to 4, 3 of 10
     cast_shape::reset(collector);
-    cast(collector, settings, s, pose({0, 0, 0}), {10, 0, 0}, ground, ROTATED_POSE);
+    cast(collector, settings, s, pose({0, 0, 0}), {10, 0, 0}, ground, rotated_pose());
     CHECK(ctx, collector.has_hit);
     if (collector.has_hit) {
         const CastShapeHit &hit = collector.hits[0];
@@ -359,7 +359,7 @@ void test_plane_cast_sphere_at_a_pose(TestCtx &ctx) {
 
     // starting 0.5 into the turned plane: the depth at fraction 0
     cast_shape::reset(collector);
-    cast(collector, settings, s, pose({3.5f, 0, 0}), {1, 0, 0}, ground, ROTATED_POSE);
+    cast(collector, settings, s, pose({3.5f, 0, 0}), {1, 0, 0}, ground, rotated_pose());
     CHECK(ctx, collector.has_hit);
     if (collector.has_hit) {
         const CastShapeHit &hit = collector.hits[0];
@@ -405,11 +405,11 @@ void test_plane_cast_box_faces_at_a_pose(TestCtx &ctx) {
     // a unit box at (0, 2, 0) cast +10 x onto the turned plane at x = 4: its +x face travels from 1 to 4, and both faces
     // lie on the plane at the hit
     Ref<Shape> ground = make_ground();
-    Ref<Shape> b = box::create({.half_extents = {1, 1, 1}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(1.0f)});
     CastShapeSettings settings = cast_shape::default_settings();
     settings.collect_faces = true;
     CastShapeCollector collector = cast_shape::create_collector(CollectorKind::CLOSEST);
-    cast(collector, settings, b, pose({0, 2, 0}), {10, 0, 0}, ground, ROTATED_POSE);
+    cast(collector, settings, b, pose({0, 2, 0}), {10, 0, 0}, ground, rotated_pose());
     CHECK(ctx, collector.has_hit);
     if (collector.has_hit) {
         const CastShapeHit &hit = collector.hits[0];
@@ -448,7 +448,7 @@ void test_plane_reversed_cast(TestCtx &ctx) {
 
     // and a collide through the transformed wrapper: the sphere moved to (2, 0, 0) sits with its centre on the ground,
     // its radius deep
-    Ref<Shape> moved = transformed::create({.shape = s, .position = {2, 0, 0}, .quaternion = IDENTITY});
+    Ref<Shape> moved = transformed::create({.shape = s, .position = vec3f::make(2, 0, 0), .quaternion = quatf::identity()});
     CollideShapeCollector collide_collector = collide_shape::create_collector(CollectorKind::ALL);
     collide(collide_collector, collide_shape::default_settings(), moved, pose({0, 0, 0}), ground, pose({0, 0, 0}));
     CHECK(ctx, collide_collector.hits.length == 1);

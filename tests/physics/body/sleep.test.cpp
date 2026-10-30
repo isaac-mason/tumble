@@ -15,18 +15,18 @@ static constexpr float MAX_MOVEMENT = 0.03f * TIME_BEFORE_SLEEP;
 static constexpr float DT = 1.0f / 60.0f;
 
 /** the stored point within 1e-5 of (x, y, z) */
-static bool near_point(const Float3 &a, float x, float y, float z) { return vec3f::distance(vec3f::load(a), vec3f::make(x, y, z)) < 1e-5f; }
+static bool near_point(Vec3f a, float x, float y, float z) { return vec3f::distance(a, vec3f::make(x, y, z)) < 1e-5f; }
 
 /** a dynamic body over `shape` (whose aabb the test sets) at `com`, unrotated, allowed to sleep */
 static RigidBody make_body(BoxShape &shape, const Box3f &aabb, const Float3 &com) {
     shape.type = ShapeType::BOX;
-    shape.aabb = aabb;
+    shape.aabb = aabox::load(aabb);
     shapes::set_embedded(&shape);
     RigidBody body = {};
     body.shape = &shape;
     body.motion_type = MotionType::DYNAMIC;
-    body.center_of_mass_position = com;
-    body.quaternion = {0.0f, 0.0f, 0.0f, 1.0f};
+    body.center_of_mass_position = vec3f::load(com);
+    body.quaternion = quatf::identity();
     body.motion_properties = motion_properties::create();
     return body;
 }
@@ -37,31 +37,31 @@ void test_sleep_test_points(TestCtx &ctx) {
     const Box3f aabb = {{-0.5f, -1.0f, -2.0f}, {0.5f, 1.0f, 2.0f}};
     BoxShape shape{};
     RigidBody body = make_body(shape, aabb, {1.0f, 2.0f, 3.0f});
-    Float3 points[3];
+    Vec3f points[3];
     sleep::get_sleep_test_points(points, &body);
     CHECK(ctx, near_point(points[0], 1.0f, 2.0f, 3.0f));
     CHECK(ctx, near_point(points[1], 1.0f, 3.0f, 3.0f));
     CHECK(ctx, near_point(points[2], 1.0f, 2.0f, 5.0f));
 
     // a quarter turn about x carries y to z and z to -y
-    body.quaternion = stored_axis_angle(vec3f::make(1.0f, 0.0f, 0.0f), scalar::PI * 0.5f);
+    body.quaternion = axis_angle(vec3f::axis_x(), scalar::PI * 0.5f);
     sleep::get_sleep_test_points(points, &body);
     CHECK(ctx, near_point(points[1], 1.0f, 2.0f, 4.0f));
     CHECK(ctx, near_point(points[2], 1.0f, 0.0f, 3.0f));
 
     // y smallest: x and z axes; z smallest: x and y axes
-    body.quaternion = {0.0f, 0.0f, 0.0f, 1.0f};
-    shape.aabb = {{-2.0f, -0.1f, -1.0f}, {2.0f, 0.1f, 1.0f}};
+    body.quaternion = quatf::identity();
+    shape.aabb = aabox::make(vec3f::make(-2.0f, -0.1f, -1.0f), vec3f::make(2.0f, 0.1f, 1.0f));
     sleep::get_sleep_test_points(points, &body);
     CHECK(ctx, near_point(points[1], 3.0f, 2.0f, 3.0f));
     CHECK(ctx, near_point(points[2], 1.0f, 2.0f, 4.0f));
-    shape.aabb = {{-2.0f, -1.0f, -0.1f}, {2.0f, 1.0f, 0.1f}};
+    shape.aabb = aabox::make(vec3f::make(-2.0f, -1.0f, -0.1f), vec3f::make(2.0f, 1.0f, 0.1f));
     sleep::get_sleep_test_points(points, &body);
     CHECK(ctx, near_point(points[1], 3.0f, 2.0f, 3.0f));
     CHECK(ctx, near_point(points[2], 1.0f, 3.0f, 3.0f));
 
     // equal extents: a cube tests its x and z axes
-    shape.aabb = {{-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f}};
+    shape.aabb = aabox::make(vec3f::splat(-0.5f), vec3f::splat(0.5f));
     sleep::get_sleep_test_points(points, &body);
     CHECK(ctx, near_point(points[1], 1.5f, 2.0f, 3.0f));
     CHECK(ctx, near_point(points[2], 1.0f, 2.0f, 3.5f));
@@ -74,8 +74,8 @@ static int steps_until_sleep(TestCtx &ctx, const Float3 &velocity, float spin, i
     sleep::reset_sleep_timer(&body);
     CHECK(ctx, body.motion_properties.sleep_test_timer == 0.0f && body.motion_properties.sleep_test_spheres[0].radius == 0.0f);
     for (int step = 1; step <= max_steps; step++) {
-        vec3f::store(body.center_of_mass_position, vec3f::scale_and_add(vec3f::load(body.center_of_mass_position), vec3f::load(velocity), DT));
-        quatf::store(body.quaternion, quatf::multiply(axis_angle(vec3f::axis_y(), spin * DT), quatf::load(body.quaternion)));
+        body.center_of_mass_position = vec3f::scale_and_add(body.center_of_mass_position, vec3f::load(velocity), DT);
+        body.quaternion = quatf::multiply(axis_angle(vec3f::axis_y(), spin * DT), body.quaternion);
         if (sleep::update_sleep_state(&body, DT, MAX_MOVEMENT, TIME_BEFORE_SLEEP)) {
             return step;
         }
@@ -122,22 +122,22 @@ void test_sleep_reset_and_exclusions(TestCtx &ctx) {
 
     // a jump past max_movement recentres every sphere on the new points and zeroes the timer
     mp.sleep_test_timer = 0.4f;
-    body.center_of_mass_position = {1.0f, 0.0f, 0.0f};
+    body.center_of_mass_position = vec3f::make(1.0f, 0.0f, 0.0f);
     CHECK(ctx, !sleep::update_sleep_state(&body, DT, MAX_MOVEMENT, TIME_BEFORE_SLEEP));
     CHECK(ctx, mp.sleep_test_timer == 0.0f);
-    CHECK(ctx, near_point(mp.sleep_test_spheres[0].center, 1.0f, 0.0f, 0.0f) && mp.sleep_test_spheres[0].radius == 0.0f);
+    CHECK(ctx, near_point(vec3f::load(mp.sleep_test_spheres[0].center), 1.0f, 0.0f, 0.0f) && mp.sleep_test_spheres[0].radius == 0.0f);
     CHECK(ctx, mp.sleep_test_spheres[1].radius == 0.0f && mp.sleep_test_spheres[2].radius == 0.0f);
 
     // resetting the timer only touches dynamic bodies
-    body.center_of_mass_position = {0.0f, 0.0f, 0.0f};
+    body.center_of_mass_position = vec3f::zero();
     mp.sleep_test_timer = 0.3f;
     body.motion_type = MotionType::KINEMATIC;
     sleep::reset_sleep_timer(&body);
     CHECK(ctx, mp.sleep_test_timer == 0.3f);
-    CHECK(ctx, near_point(mp.sleep_test_spheres[0].center, 1.0f, 0.0f, 0.0f));
+    CHECK(ctx, near_point(vec3f::load(mp.sleep_test_spheres[0].center), 1.0f, 0.0f, 0.0f));
     body.motion_type = MotionType::DYNAMIC;
     sleep::reset_sleep_timer(&body);
-    CHECK(ctx, mp.sleep_test_timer == 0.0f && near_point(mp.sleep_test_spheres[0].center, 0.0f, 0.0f, 0.0f));
+    CHECK(ctx, mp.sleep_test_timer == 0.0f && near_point(vec3f::load(mp.sleep_test_spheres[0].center), 0.0f, 0.0f, 0.0f));
 
     CHECK(ctx, sleep::INACTIVE_BODY_INDEX == 0xffffffffu);
 }

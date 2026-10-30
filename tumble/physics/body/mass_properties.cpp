@@ -15,16 +15,16 @@ MassProperties &set_mass_and_inertia_of_solid_box(MassProperties &out, Vec3f box
     const float sx = vec3f::x(size_sq), sy = vec3f::y(size_sq), sz = vec3f::z(size_sq);
     const Vec3f scale = vec3f::make((sy + sz) * (out.mass / 12.0f), (sx + sz) * (out.mass / 12.0f), (sx + sy) * (out.mass / 12.0f));
 
-    mat4f::store(out.inertia, mat4f::from_scaling(scale));
+    out.inertia = mat4f::from_scaling(scale);
 
     return out;
 }
 
 MassProperties &scale(MassProperties &out, const MassProperties &source, Vec3f scale) {
-    const float *in = source.inertia.m;
+    Mat4f inertia = source.inertia;
 
-    // diagonal of the 3x3 inertia tensor (elements 0, 5, 10)
-    const Vec3f diagonal = vec3f::make(in[0], in[5], in[10]);
+    // diagonal of the 3x3 inertia tensor
+    const Vec3f diagonal = vec3f::make(mat4f::element(inertia, 0, 0), mat4f::element(inertia, 1, 1), mat4f::element(inertia, 2, 2));
 
     // xyz_sq = 0.5 * dot(diagonal) - diagonal
     const float half_dot = 0.5f * (vec3f::x(diagonal) + vec3f::y(diagonal) + vec3f::z(diagonal));
@@ -38,34 +38,30 @@ MassProperties &scale(MassProperties &out, const MassProperties &source, Vec3f s
     const float i_yy = vec3f::x(xyz_scaled_sq) + vec3f::z(xyz_scaled_sq);
     const float i_zz = vec3f::x(xyz_scaled_sq) + vec3f::y(xyz_scaled_sq);
 
-    // new off-diagonal elements (column-major: 4 is (0,1), 8 is (0,2), 9 is (1,2))
+    // new off-diagonal elements
     const float scale_x = vec3f::x(scale), scale_y = vec3f::y(scale), scale_z = vec3f::z(scale);
-    const float i_xy = scale_x * scale_y * in[4];
-    const float i_xz = scale_x * scale_z * in[8];
-    const float i_yz = scale_y * scale_z * in[9];
+    const float i_xy = scale_x * scale_y * mat4f::element(inertia, 0, 1);
+    const float i_xz = scale_x * scale_z * mat4f::element(inertia, 0, 2);
+    const float i_yz = scale_y * scale_z * mat4f::element(inertia, 1, 2);
 
     // mass scales by volume (absolute value of scale factors product)
     const float mass_scale = scalar::abs(scale_x * scale_y * scale_z);
 
-    // copy and update inertia tensor
-    out.inertia = source.inertia;
-    float *o = out.inertia.m;
-    o[0] = i_xx;
-    o[1] = i_xy;
-    o[4] = i_xy;
-    o[5] = i_yy;
-    o[2] = i_xz;
-    o[8] = i_xz;
-    o[6] = i_yz;
-    o[9] = i_yz;
-    o[10] = i_zz;
+    mat4f::set_element(inertia, 0, 0, i_xx);
+    mat4f::set_element(inertia, 1, 1, i_yy);
+    mat4f::set_element(inertia, 2, 2, i_zz);
+    mat4f::set_element(inertia, 0, 1, i_xy);
+    mat4f::set_element(inertia, 1, 0, i_xy);
+    mat4f::set_element(inertia, 0, 2, i_xz);
+    mat4f::set_element(inertia, 2, 0, i_xz);
+    mat4f::set_element(inertia, 1, 2, i_yz);
+    mat4f::set_element(inertia, 2, 1, i_yz);
 
     out.mass = source.mass * mass_scale;
 
     // inertia scales linearly with mass
-    for (int i = 0; i < 15; i++) o[i] *= mass_scale;
-
-    o[15] = 1.0f;
+    out.inertia = mat4f::multiply_scalar(inertia, mass_scale);
+    mat4f::set_element(out.inertia, 3, 3, 1.0f);
 
     return out;
 }
@@ -75,14 +71,14 @@ MassProperties &rotate(MassProperties &out, const MassProperties &source, const 
     out.mass = source.mass;
 
     // I' = R * I * R^T over the upper 3x3, the rest identity
-    const Mat4f rotated = mat4f::multiply3x3(rotation, mat4f::load(source.inertia));
-    mat4f::store(out.inertia, mat4f::multiply3x3_right_transposed(rotated, rotation));
+    const Mat4f rotated = mat4f::multiply3x3(rotation, source.inertia);
+    out.inertia = mat4f::multiply3x3_right_transposed(rotated, rotation);
 
     return out;
 }
 
 MassProperties &translate(MassProperties &out, const MassProperties &source, Vec3f translation) {
-    out.inertia = source.inertia;
+    Mat4f inertia = source.inertia;
     out.mass = source.mass;
 
     // parallel axis theorem: I' = I + m * (translation^2 * E - translation * translation^T)
@@ -93,13 +89,14 @@ MassProperties &translate(MassProperties &out, const MassProperties &source, Vec
     for (int col = 0; col < 3; col++) {
         for (int row = 0; row < 3; row++) {
             const float diagonal = row == col ? translation_dot_self : 0.0f;
-            out.inertia.m[col * 4 + row] += source.mass * (diagonal - t[row] * t[col]);
+            mat4f::set_element(inertia, row, col, mat4f::element(inertia, row, col) + out.mass * (diagonal - t[row] * t[col]));
         }
     }
 
-    out.inertia.m[13] = 0.0f;
-    out.inertia.m[14] = 0.0f;
-    out.inertia.m[15] = 1.0f;
+    mat4f::set_element(inertia, 1, 3, 0.0f);
+    mat4f::set_element(inertia, 2, 3, 0.0f);
+    mat4f::set_element(inertia, 3, 3, 1.0f);
+    out.inertia = inertia;
 
     return out;
 }
@@ -113,7 +110,7 @@ MassProperties &scale_to_mass(MassProperties &out, float new_mass) {
 
         // scale the 3x3 inertia tensor (upper-left of the 4x4 matrix)
         for (int col = 0; col < 3; col++) {
-            for (int row = 0; row < 3; row++) out.inertia.m[col * 4 + row] *= mass_scale;
+            for (int row = 0; row < 3; row++) mat4f::set_element(out.inertia, row, col, mat4f::element(out.inertia, row, col) * mass_scale);
         }
     } else {
         // just set the mass if the current mass is zero

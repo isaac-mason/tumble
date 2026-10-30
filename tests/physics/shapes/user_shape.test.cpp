@@ -42,7 +42,7 @@ void ball_get_supporting_face(SupportingFaceResult &io, Vec3f direction, const S
 int32_t ball_get_material(const Shape *shape, SubShapeId) { return shape->material_id; }
 float ball_get_inner_radius(const Shape *shape) { return sphere::get_inner_radius(inner_of(shape)); }
 void ball_collide_point(CollidePointCollector &collector, const CollidePointSettings &settings, Vec3f point,
-                        const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
+                        const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform) {
     sphere::collide_point_vs_sphere(collector, settings, point, inner_of(shape), sub_shape_id, transform);
 }
 void destroy_ball(Shape *shape) { shapes::release<BallShape>(shape); }
@@ -84,7 +84,7 @@ WorldScene make_floor_scene() {
     WorldScene scene = {};
     WorldSettings settings = make_world_test_settings(scene.moving, scene.not_moving);
     scene.world = world::create(settings);
-    add_body(scene, box::create({.half_extents = {10.0f, 0.5f, 10.0f}}), MotionType::STATIC, {0.0f, -0.5f, 0.0f});
+    add_body(scene, box::create({.half_extents = vec3f::make(10.0f, 0.5f, 10.0f)}), MotionType::STATIC, {0.0f, -0.5f, 0.0f});
     return scene;
 }
 
@@ -104,7 +104,7 @@ void test_user_shape_rests_through_the_generic_rows(TestCtx &ctx) {
     WorldScene scene = make_floor_scene();
     RigidBody *alone = add_awake_body(scene, shape, {0.0f, 2.0f, 0.0f});
     for (uint32_t i = 0; i < 120; i++) step_world(*scene.world);
-    CHECK_NEAR(ctx, alone->position.y, 0.5f, 0.02f);
+    CHECK_NEAR(ctx, vec3f::y(alone->position), 0.5f, 0.02f);
     bool material_reported = scene.world->events.contacts_persisted.length > 0;
     for (uint32_t i = 0; i < scene.world->events.contacts_persisted.length; i++) {
         const ContactEvent &event = scene.world->events.contacts_persisted[i];
@@ -115,15 +115,15 @@ void test_user_shape_rests_through_the_generic_rows(TestCtx &ctx) {
     release_world_scene(scene);
 
     // as a compound's child and under a scale it gets the compound's and the wrapper's rows
-    const CompoundShapeSettings::Child child = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, shape};
+    const CompoundShapeSettings::Child child = {vec3f::make(0.0f, 0.0f, 0.0f), quatf::identity(), shape};
     Ref<Shape> compound_shape = compound::create({.children = &child, .num_children = 1});
-    Ref<Shape> scaled_shape = scaled::create({.shape = shape, .scale = {2.0f, 2.0f, 2.0f}});
+    Ref<Shape> scaled_shape = scaled::create({.shape = shape, .scale = vec3f::splat(2.0f)});
     scene = make_floor_scene();
     RigidBody *in_compound = add_awake_body(scene, compound_shape, {-3.0f, 2.0f, 0.0f});
     RigidBody *scaled_body = add_awake_body(scene, scaled_shape, {3.0f, 3.0f, 0.0f});
     for (uint32_t i = 0; i < 120; i++) step_world(*scene.world);
-    CHECK_NEAR(ctx, in_compound->position.y, 0.5f, 0.02f);
-    CHECK_NEAR(ctx, scaled_body->position.y, 1.0f, 0.02f);
+    CHECK_NEAR(ctx, vec3f::y(in_compound->position), 0.5f, 0.02f);
+    CHECK_NEAR(ctx, vec3f::y(scaled_body->position), 1.0f, 0.02f);
     release_world_scene(scene);
 
     compound_shape = nullptr;
@@ -158,11 +158,11 @@ void test_user_shape_skipping_the_cache_reaches_through_compounds_and_wrappers(T
     init_with_ball(true);
     Ref<Shape> shape = create_ball(0.5f);
     Ref<Shape> plain = sphere::create({.radius = 0.5f});
-    const CompoundShapeSettings::Child children[2] = {{{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, plain},
-                                                      {{1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, shape}};
+    const CompoundShapeSettings::Child children[2] = {{vec3f::make(0.0f, 0.0f, 0.0f), quatf::identity(), plain},
+                                                      {vec3f::make(1.0f, 0.0f, 0.0f), quatf::identity(), shape}};
     Ref<Shape> with_ball = compound::create({.children = children, .num_children = 2});
     Ref<Shape> without_ball = compound::create({.children = children, .num_children = 1});
-    Ref<Shape> scaled_ball = scaled::create({.shape = shape, .scale = {2.0f, 2.0f, 2.0f}});
+    Ref<Shape> scaled_ball = scaled::create({.shape = shape, .scale = vec3f::splat(2.0f)});
     CHECK(ctx, !shapes::caches_pairs(shape));
     CHECK(ctx, !shapes::caches_pairs(with_ball) && shapes::caches_pairs(without_ball));
     CHECK(ctx, !shapes::caches_pairs(scaled_ball) && shapes::caches_pairs(plain));
@@ -174,8 +174,8 @@ void test_user_shape_skipping_the_cache_reaches_through_compounds_and_wrappers(T
 }
 
 void counting_collide(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                      const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                      const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                      const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                      const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     counters.own_collides++;
     convex::collide_convex_vs_convex(collector, settings, shape_a, sub_shape_id_a, transform_a, shape_b, sub_shape_id_b, transform_b);
 }
@@ -191,7 +191,7 @@ void test_user_shape_own_pair_row_replaces_the_generic_one(TestCtx &ctx) {
     RigidBody *body = add_awake_body(scene, shape, {0.0f, 0.5f, 0.0f});
     for (uint32_t i = 0; i < 10; i++) step_world(*scene.world);
     CHECK(ctx, counters.own_collides == 10);
-    CHECK_NEAR(ctx, body->position.y, 0.5f, 0.02f);
+    CHECK_NEAR(ctx, vec3f::y(body->position), 0.5f, 0.02f);
     release_world_scene(scene);
     shape = nullptr;
 
@@ -200,8 +200,8 @@ void test_user_shape_own_pair_row_replaces_the_generic_one(TestCtx &ctx) {
     CHECK(ctx, shapes::collide_fn(ShapeType::USER_1, ShapeType::BOX) == convex::collide_convex_vs_convex);
 }
 
-void draw_cross(DebugDraw &out, const Shape *, const Transformf &transform, Vec3f color) {
-    const Vec3f at = vec3f::load(transform.position);
+void draw_cross(DebugDraw &out, const Shape *, const Transform &transform, Vec3f color) {
+    const Vec3f at = transform.position;
     debug::line(out, vec3f::subtract(at, vec3f::make(1.0f, 0.0f, 0.0f)), vec3f::add(at, vec3f::make(1.0f, 0.0f, 0.0f)), color);
     debug::line(out, vec3f::subtract(at, vec3f::make(0.0f, 1.0f, 0.0f)), vec3f::add(at, vec3f::make(0.0f, 1.0f, 0.0f)), color);
 }

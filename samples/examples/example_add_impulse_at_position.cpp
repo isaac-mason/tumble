@@ -29,7 +29,7 @@ static RigidBody *add_body(App &app, Shape *shape, Float3 position, bool dynamic
     settings.shape = shape;
     settings.object_layer = dynamic ? state.layers.moving : state.layers.not_moving;
     settings.motion_type = dynamic ? MotionType::DYNAMIC : MotionType::STATIC;
-    settings.position = position;
+    settings.position = vec3f::load(position);
     settings.restitution = 0.3f;
     settings.friction = 0.5f;
     if (dynamic) settings.mass = 10.0f;
@@ -40,8 +40,8 @@ static void init(App &app) {
     state.impulse_strength = 20.0f;
     state.hit_shown_for = 0.0f;
     app.world = app::create_world(state.layers);
-    add_body(app, app::keep(app, box::create({.half_extents = {30.0f, 0.5f, 30.0f}})), {0.0f, -0.5f, 0.0f}, false);
-    add_body(app, app::keep(app, box::create({.half_extents = {1.0f, 1.0f, 1.0f}, .convex_radius = 0.05f})), {-3.0f, 2.0f, 0.0f}, true);
+    add_body(app, app::keep(app, box::create({.half_extents = vec3f::make(30.0f, 0.5f, 30.0f)})), {0.0f, -0.5f, 0.0f}, false);
+    add_body(app, app::keep(app, box::create({.half_extents = vec3f::splat(1.0f), .convex_radius = 0.05f})), {-3.0f, 2.0f, 0.0f}, true);
     add_body(app, app::keep(app, sphere::create({.radius = 1.0f})), {3.0f, 2.0f, 0.0f}, true);
     state.collector = cast_ray::create_collector(CollectorKind::CLOSEST);
     state.filter = filter::create(app.world->settings.layers);

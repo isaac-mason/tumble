@@ -81,8 +81,6 @@ void find_pairs(tumble::World *world);
 void narrowphase(tumble::World *world);
 void solve(tumble::World *world);
 void step_end(tumble::World *world);
-/** the bodies the last narrowphase woke, whose pairs are not found yet */
-uint32_t woken(const tumble::World *world);
 
 /** the surfaces material ids name, as friction and restitution pairs */
 void set_materials(tumble::World *world, const float *friction_restitution, uint32_t count);
@@ -92,43 +90,6 @@ void get_gravity(tumble::Float3 &out, const tumble::World *world);
 void set_gravity(tumble::World *world, const tumble::Float3 &gravity);
 
 }  // namespace world
-
-/** tumble::PairEvent as js reads it: bodies by id, user data in halves */
-struct PairEvent {
-    tumble::BodyId body_a;
-    tumble::BodyId body_b;
-    uint32_t user_data_a_low;
-    uint32_t user_data_a_high;
-    uint32_t user_data_b_low;
-    uint32_t user_data_b_high;
-};
-
-/** tumble::ContactEvent as js reads it */
-struct ContactEvent {
-    tumble::BodyId body_a;
-    tumble::BodyId body_b;
-    uint32_t user_data_a_low;
-    uint32_t user_data_a_high;
-    uint32_t user_data_b_low;
-    uint32_t user_data_b_high;
-    uint32_t sub_shape_a;
-    uint32_t sub_shape_b;
-    int32_t material_a;
-    int32_t material_b;
-    tumble::Float3 normal;
-    float penetration;
-    uint32_t num_points;
-    tumble::Float3 points_a[tumble::manifold::MAX_CONTACT_POINTS];
-    tumble::Float3 points_b[tumble::manifold::MAX_CONTACT_POINTS];
-    tumble::ContactSettings settings;
-};
-
-struct ContactRemovedEvent {
-    tumble::BodyId body_a;
-    tumble::BodyId body_b;
-    uint32_t sub_shape_a;
-    uint32_t sub_shape_b;
-};
 
 /** one body of the active list as js reads it */
 struct ActiveBodyRow {
@@ -143,8 +104,7 @@ struct ActiveBodyRow {
 /** BodyActivationEvent as js reads it */
 struct ActivationEvent {
     tumble::BodyId body;
-    uint32_t user_data_low;
-    uint32_t user_data_high;
+    uint64_t user_data;
     /** 0 for a deactivation */
     uint32_t activated;
 };
@@ -184,38 +144,12 @@ const uint32_t *rows(const tumble::World *world);
 
 }  // namespace active_bodies
 
-// a step's events: a count, and a reader of one by index (false past the count)
-namespace events {
-
-uint32_t pairs(const tumble::World *world);
-bool read_pair(PairEvent &out, const tumble::World *world, uint32_t index);
-uint32_t contacts_added(const tumble::World *world);
-bool read_contact_added(ContactEvent &out, const tumble::World *world, uint32_t index);
-uint32_t contacts_persisted(const tumble::World *world);
-bool read_contact_persisted(ContactEvent &out, const tumble::World *world, uint32_t index);
-uint32_t contacts_removed(const tumble::World *world);
-bool read_contact_removed(ContactRemovedEvent &out, const tumble::World *world, uint32_t index);
-
-// the caller's say over an event, by the index it was read at. false past the count
-
-/** no narrowphase for the pair, and its contacts go */
-bool reject_pair(tumble::World *world, uint32_t index);
-/** the contact dropped before the solve */
-bool reject_contact_added(tumble::World *world, uint32_t index);
-bool reject_contact_persisted(tumble::World *world, uint32_t index);
-/** the contact solved with these settings */
-bool change_contact_added(tumble::World *world, uint32_t index, const tumble::ContactSettings &settings);
-bool change_contact_persisted(tumble::World *world, uint32_t index, const tumble::ContactSettings &settings);
-
-}  // namespace events
-
 /** RigidBodySettings as js gives it: the mass properties inline, used when has_mass_properties, for the pointer */
 struct BodySettings {
     tumble::Shape *shape;
     uint32_t object_layer;
     uint32_t motion_type;
-    uint32_t user_data_low;
-    uint32_t user_data_high;
+    uint64_t user_data;
     tumble::Float3 position;
     tumble::Float4 quaternion;
     uint32_t motion_quality;
@@ -252,27 +186,11 @@ void default_settings(BodySettings &out);
 /** the new body's id, or INVALID_BODY_ID (Error::QUOTA) when the pool is full */
 tumble::BodyId create(tumble::World *world, const BodySettings &settings);
 bool remove(tumble::World *world, tumble::BodyId id);
-/** whether the id names a live body */
-bool exists(tumble::World *world, tumble::BodyId id);
 
-// readers: false (out unchanged) or 0 when the id names no body
-bool get_position(tumble::Float3 &out, tumble::World *world, tumble::BodyId id);
-bool get_quaternion(tumble::Float4 &out, tumble::World *world, tumble::BodyId id);
-bool get_transform(tumble::Float3 &out_position, tumble::Float4 &out_quaternion, tumble::World *world, tumble::BodyId id);
-bool get_center_of_mass_position(tumble::Float3 &out, tumble::World *world, tumble::BodyId id);
-bool get_linear_velocity(tumble::Float3 &out, tumble::World *world, tumble::BodyId id);
-bool get_angular_velocity(tumble::Float3 &out, tumble::World *world, tumble::BodyId id);
+// the readers js cannot do from the body's fields: false (out unchanged) or -1 when the id names no body
 bool get_velocity_at_point(tumble::Float3 &out, tumble::World *world, tumble::BodyId id, const tumble::Float3 &point);
-bool get_aabb(tumble::Box3f &out, tumble::World *world, tumble::BodyId id);
-float get_mass(tumble::World *world, tumble::BodyId id);
-uint32_t get_motion_type(tumble::World *world, tumble::BodyId id);
-uint32_t get_object_layer(tumble::World *world, tumble::BodyId id);
-uint32_t get_user_data_low(tumble::World *world, tumble::BodyId id);
-uint32_t get_user_data_high(tumble::World *world, tumble::BodyId id);
-tumble::Shape *get_shape(tumble::World *world, tumble::BodyId id);
 /** the material id of the part of the body's shape the sub shape id names; -1 for none or a body id naming no body */
 int32_t get_material(tumble::World *world, tumble::BodyId id, uint32_t sub_shape_id);
-bool is_sleeping(tumble::World *world, tumble::BodyId id);
 
 // writers: false when the id names no body
 bool set_position(tumble::World *world, tumble::BodyId id, const tumble::Float3 &position, bool wake);
@@ -297,9 +215,6 @@ bool move_kinematic(tumble::World *world, tumble::BodyId id, const tumble::Float
                     float delta_time);
 bool sleep(tumble::World *world, tumble::BodyId id);
 bool wake(tumble::World *world, tumble::BodyId id);
-bool set_user_data(tumble::World *world, tumble::BodyId id, uint32_t low, uint32_t high);
-bool set_friction(tumble::World *world, tumble::BodyId id, float friction);
-bool set_restitution(tumble::World *world, tumble::BodyId id, float restitution);
 
 }  // namespace rigid_body
 
@@ -381,11 +296,23 @@ struct ConvexHullCreate {
     int32_t result;
 };
 
+/** ConvexHullShapeSettings as js writes them: the points flat xyz, 3 floats a point */
+struct ConvexHullSettings {
+    const float *positions;
+    uint32_t num_positions;
+    float convex_radius;
+    float hull_tolerance;
+    float max_error_convex_radius;
+    tumble::ConvexHullShape::BakeSupportAdjacency bake_support_adjacency;
+    float density;
+    int32_t material_id;
+};
+
 namespace convex_hull {
 
-void default_settings(tumble::ConvexHullShapeSettings &out);
-/** false when the points make no hull, out.result saying why */
-bool create(ConvexHullCreate &out, const tumble::ConvexHullShapeSettings &settings);
+void default_settings(ConvexHullSettings &out);
+/** out.shape null when the points make no hull, out.result saying why */
+void create(ConvexHullCreate &out, const ConvexHullSettings &settings);
 
 }  // namespace convex_hull
 
@@ -674,14 +601,16 @@ struct CollideShapeSettings {
 
 // each query into the adapters' own collector of its type, of `kind` (a CollectorKind but CUSTOM) and
 // starting at early_out_fraction, under the filter with the group and mask given (written into it): how many hits it
-// holds, read by index (false past the count) until the next query of the type; 0 for a CUSTOM kind
+// holds, until the next query of the type; 0 for a CUSTOM kind. a ray's and a point's hits are read where they lie, the
+// others by index (false past the count)
 namespace query {
 
 void default_cast_ray_settings(tumble::CastRaySettings &out);
 uint32_t cast_ray(tumble::World *world, uint32_t kind, float early_out_fraction, const tumble::CastRaySettings &settings,
                   const tumble::Float3 &origin, const tumble::Float3 &direction, float length, tumble::Filter *filter,
                   uint32_t collision_groups, uint32_t collision_mask);
-bool read_cast_ray_hit(tumble::CastRayHit &out, uint32_t index);
+/** the first of the hits, the rest CastRayHit's size apart */
+const uint32_t *cast_ray_hits();
 
 void default_cast_shape_settings(CastShapeSettings &out);
 uint32_t cast_shape(tumble::World *world, uint32_t kind, float early_out_fraction, const CastShapeSettings &settings,
@@ -702,7 +631,8 @@ void default_collide_point_settings(tumble::CollidePointSettings &out);
 uint32_t collide_point(tumble::World *world, uint32_t kind, const tumble::CollidePointSettings &settings,
                        const tumble::Float3 &point, tumble::Filter *filter, uint32_t collision_groups,
                        uint32_t collision_mask);
-bool read_collide_point_hit(tumble::CollidePointHit &out, uint32_t index);
+/** the first of the hits, the rest CollidePointHit's size apart */
+const uint32_t *collide_point_hits();
 
 }  // namespace query
 
@@ -741,8 +671,7 @@ struct KCCSettings {
     bool enhanced_internal_edge_removal;
     bool has_supporting_volume_plane;
     tumble::Plane3f supporting_volume_plane;
-    uint32_t user_data_low;
-    uint32_t user_data_high;
+    uint64_t user_data;
     bool observes_contacts;
     tumble::Shape *inner_rigid_body_shape;
     uint32_t inner_rigid_body_object_layer;
@@ -919,13 +848,11 @@ struct ContactPair {
     uint32_t handle;
     tumble::BodyId body_a;
     uint32_t sub_shape_a;
-    uint32_t user_data_a_low;
-    uint32_t user_data_a_high;
+    uint64_t user_data_a;
     bool sensor_a;
     tumble::BodyId body_b;
     uint32_t sub_shape_b;
-    uint32_t user_data_b_low;
-    uint32_t user_data_b_high;
+    uint64_t user_data_b;
     bool sensor_b;
     tumble::Float3 point;
     tumble::Float3 normal;

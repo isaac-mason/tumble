@@ -1,6 +1,7 @@
 #include "tumble/physics/shapes/convex_hull.h"
 
 #include "tumble/math/mat4f.h"
+#include "tumble/math/plane3f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec3f.h"
@@ -16,7 +17,12 @@
 /** the hull the shape is over */
 static ConvexHullShape::Data &hull_data(const Shape *shape) { return *shapes::as<ConvexHullShape>(shape).data; }
 
-static const float CUBE_POINTS[24] = {-1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1, -1, -1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1};
+/** the 8 corners of the 2 x 2 x 2 cube */
+static const Vec3f *cube_points() {
+    static const Vec3f points[8] = {vec3f::make(-1, -1, -1), vec3f::make(1, -1, -1), vec3f::make(1, 1, -1), vec3f::make(-1, 1, -1),
+                                    vec3f::make(-1, -1, 1),  vec3f::make(1, -1, 1),  vec3f::make(1, 1, 1),  vec3f::make(-1, 1, 1)};
+    return points;
+}
 
 static const SubShapeIdBuilder NO_SUB_SHAPE = {sub_shape::EMPTY_SUB_SHAPE_ID, 0};
 
@@ -30,46 +36,36 @@ static Shape *make(ConvexHullShapeSettings settings, ConvexHullShape::BuildResul
 
 static void drop(Ref<Shape> &h) { h = nullptr; }
 
-static Shape *hull(const float *positions, uint32_t num_positions, float convex_radius,
+static Shape *hull(const Vec3f *positions, uint32_t num_positions, float convex_radius,
                    ConvexHullShape::BakeSupportAdjacency bake = ConvexHullShape::BakeSupportAdjacency::AUTO) {
     return make({.positions = positions, .num_positions = num_positions, .convex_radius = convex_radius, .bake_support_adjacency = bake});
 }
 
 /** the 8 corners of a box of these half extents */
-static void box_corners(float *out, const Float3 &half_extents) {
-    for (uint32_t i = 0; i < 8; i++) {
-        out[i * 3] = CUBE_POINTS[i * 3] * half_extents.x;
-        out[i * 3 + 1] = CUBE_POINTS[i * 3 + 1] * half_extents.y;
-        out[i * 3 + 2] = CUBE_POINTS[i * 3 + 2] * half_extents.z;
-    }
+static void box_corners(Vec3f *out, Vec3f half_extents) {
+    for (uint32_t i = 0; i < 8; i++) out[i] = vec3f::multiply(cube_points()[i], half_extents);
 }
 
 /** ~n points spread on a unit sphere, every one a hull vertex */
-static void fibonacci_sphere(float *out, uint32_t n) {
+static void fibonacci_sphere(Vec3f *out, uint32_t n) {
     const float phi = scalar::PI * (3.0f - scalar::sqrt(5.0f));
     for (uint32_t i = 0; i < n; i++) {
         const float y = 1.0f - ((float)i / (float)(n - 1)) * 2.0f;
         const float r = scalar::sqrt(scalar::max(0.0f, 1.0f - y * y));
         const float theta = phi * (float)i;
-        out[i * 3] = scalar::cos(theta) * r;
-        out[i * 3 + 1] = y;
-        out[i * 3 + 2] = scalar::sin(theta) * r;
+        out[i] = vec3f::make(scalar::cos(theta) * r, y, scalar::sin(theta) * r);
     }
 }
 
 /** a thin slab with a 5x5 grid of points on each large face: many coplanar points; 50 points */
-static void slab_grid(float *out) {
+static void slab_grid(Vec3f *out) {
     uint32_t k = 0;
     for (int ix = 0; ix < 5; ix++) {
         for (int iz = 0; iz < 5; iz++) {
             const float x = (float)(ix - 2);
             const float z = (float)(iz - 2);
-            out[k++] = x;
-            out[k++] = 0.1f;
-            out[k++] = z;
-            out[k++] = x;
-            out[k++] = -0.1f;
-            out[k++] = z;
+            out[k++] = vec3f::make(x, 0.1f, z);
+            out[k++] = vec3f::make(x, -0.1f, z);
         }
     }
 }
@@ -100,12 +96,12 @@ static void rotating_directions(Vec3f *out, uint32_t count) {
 
 static Vec3f support_point(Support &s, Vec3f direction) { return s.get_support(s, direction); }
 
-/** the first vertex with the greatest dot, over flat xyz */
-static Vec3f brute_force_max_dot(const float *positions, uint32_t count, Vec3f direction) {
+/** the first vertex with the greatest dot */
+static Vec3f brute_force_max_dot(const Vec3f *positions, uint32_t count, Vec3f direction) {
     float best = -__builtin_inff();
     Vec3f result = vec3f::zero();
     for (uint32_t i = 0; i < count; i++) {
-        const Vec3f p = vec3f::load(positions, i * 3);
+        const Vec3f p = positions[i];
         const float dot = vec3f::dot(p, direction);
         if (dot > best) {
             best = dot;
@@ -137,32 +133,31 @@ static bool same_vertex_set(const SupportingFace &a, const SupportingFace &b, fl
 void test_convex_hull_create_box_corners(TestCtx &ctx) {
     dispatch::init();
 
-    float corners[24];
-    box_corners(corners, {1, 2, 3});
+    Vec3f corners[8];
+    box_corners(corners, vec3f::make(1, 2, 3));
     ConvexHullShape::BuildResult result = ConvexHullShape::BuildResult::TOO_MANY_POINTS;
     Ref<Shape> h = make({.positions = corners, .num_positions = 8, .convex_radius = 0.0f}, &result, 10.0f, 4);
     CHECK(ctx, h != nullptr && result == ConvexHullShape::BuildResult::SUCCESS);
     CHECK(ctx, h->type == ShapeType::CONVEX_HULL && h->material_id == 4);
     const ConvexHullShape::Data &data = hull_data(h);
-    CHECK(ctx, data.num_points == 8 && data.point_positions.length == 24);
+    CHECK(ctx, data.points.length == 8);
     CHECK(ctx, data.convex_radius == 0.0f && shapes::as<ConvexHullShape>(h).density == 10.0f);
 
     // six quads, each with its unit outward plane through the face
     CHECK(ctx, data.faces.length == 6 && data.planes.length == 6 && data.vertex_indices.length == 24);
     for (uint32_t f = 0; f < data.faces.length; f++) {
         CHECK(ctx, data.faces[f].num_vertices == 4);
-        const Plane3f &plane = data.planes[f];
-        const Vec3f normal = vec3f::load(plane.normal);
+        const Vec3f normal = plane3f::normal(data.planes[f]);
         CHECK_NEAR(ctx, vec3f::length(normal), 1.0f, 1e-6f);
         for (uint32_t v = 0; v < 4; v++) {
-            const Vec3f p = vec3f::load(data.point_positions.data, data.vertex_indices[data.faces[f].first_vertex + v] * 3);
-            CHECK_NEAR(ctx, vec3f::dot(normal, p) + plane.constant, 0.0f, 1e-5f);
+            const Vec3f p = data.points[data.vertex_indices[data.faces[f].first_vertex + v]];
+            CHECK_NEAR(ctx, plane3f::distance_to_point(data.planes[f], p), 0.0f, 1e-5f);
         }
         // the ring winds counter clockwise seen from outside
         const uint32_t first = data.faces[f].first_vertex;
-        const Vec3f p0 = vec3f::load(data.point_positions.data, data.vertex_indices[first] * 3);
-        const Vec3f p1 = vec3f::load(data.point_positions.data, data.vertex_indices[first + 1] * 3);
-        const Vec3f p2 = vec3f::load(data.point_positions.data, data.vertex_indices[first + 2] * 3);
+        const Vec3f p0 = data.points[data.vertex_indices[first]];
+        const Vec3f p1 = data.points[data.vertex_indices[first + 1]];
+        const Vec3f p2 = data.points[data.vertex_indices[first + 2]];
         const Vec3f winding = vec3f::cross(vec3f::subtract(p1, p0), vec3f::subtract(p2, p1));
         CHECK(ctx, vec3f::dot(winding, normal) > 0.0f);
     }
@@ -179,14 +174,14 @@ void test_convex_hull_create_box_corners(TestCtx &ctx) {
     CHECK(ctx, near3(h->center_of_mass, 0, 0, 0, 1e-6f));
 
     // update recomputes the same bounds
-    h->aabb = {{0, 0, 0}, {0, 0, 0}};
+    h->aabb = aabox::make(vec3f::zero(), vec3f::zero());
     convex_hull::update(h);
     CHECK(ctx, near3(h->aabb.min, -1, -2, -3, 0.0f) && near3(h->aabb.max, 1, 2, 3, 0.0f));
 
     // 8 points: no adjacency by default, so the support brute scans
     CHECK(ctx, data.point_neighbors_start.length == 0 && data.point_neighbors.length == 0);
     // radius 0: no shrunk copy, the fill reads the points
-    CHECK(ctx, data.shrunk_point_positions.length == 0);
+    CHECK(ctx, data.shrunk_points.length == 0);
     drop(h);
 }
 
@@ -195,23 +190,23 @@ void test_convex_hull_create_rejects(TestCtx &ctx) {
     ConvexHullShape::BuildResult result = ConvexHullShape::BuildResult::SUCCESS;
 
     // a negative convex radius
-    CHECK(ctx, make({.positions = CUBE_POINTS, .num_positions = 8, .convex_radius = -0.1f}, &result) == nullptr);
+    CHECK(ctx, make({.positions = cube_points(), .num_positions = 8, .convex_radius = -0.1f}, &result) == nullptr);
     CHECK(ctx, result == ConvexHullShape::BuildResult::INVALID_CONVEX_RADIUS);
 
     // too few points
-    CHECK(ctx, make({.positions = CUBE_POINTS, .num_positions = 2}, &result) == nullptr);
+    CHECK(ctx, make({.positions = cube_points(), .num_positions = 2}, &result) == nullptr);
     CHECK(ctx, result == ConvexHullShape::BuildResult::TOO_FEW_POINTS);
 
     // all at one spot
-    const float same[12] = {1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3};
+    const Vec3f same[4] = {vec3f::make(1, 2, 3), vec3f::make(1, 2, 3), vec3f::make(1, 2, 3), vec3f::make(1, 2, 3)};
     CHECK(ctx, make({.positions = same, .num_positions = 4}, &result) == nullptr);
     CHECK(ctx, result == ConvexHullShape::BuildResult::DEGENERATE);
 
     // coplanar is not a rejection: a flat square is a two-sided hull with no volume
-    const float square[12] = {0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1};
+    const Vec3f square[4] = {vec3f::make(0, 0, 0), vec3f::make(1, 0, 0), vec3f::make(1, 0, 1), vec3f::make(0, 0, 1)};
     Ref<Shape> flat = make({.positions = square, .num_positions = 4}, &result);
     CHECK(ctx, flat != nullptr && result == ConvexHullShape::BuildResult::SUCCESS);
-    CHECK(ctx, hull_data(flat).faces.length == 2 && hull_data(flat).num_points == 4);
+    CHECK(ctx, hull_data(flat).faces.length == 2 && hull_data(flat).points.length == 4);
     CHECK(ctx, flat->volume == 0.0f && hull_data(flat).convex_radius == 0.0f);
     CHECK(ctx, convex_hull::get_inner_radius(flat) == 0.0f);
     drop(flat);
@@ -226,12 +221,12 @@ void test_convex_hull_create_rejects(TestCtx &ctx) {
     CHECK(ctx, util::allocated_bytes() == bytes && util::allocated_blocks() == blocks);
 
     // nor does a full build with every array filled, once destroyed
-    float points[100 * 3];
+    Vec3f points[100];
     fibonacci_sphere(points, 100);
     bytes = util::allocated_bytes();
     blocks = util::allocated_blocks();
     Ref<Shape> h = make({.positions = points, .num_positions = 100, .bake_support_adjacency = ConvexHullShape::BakeSupportAdjacency::ALWAYS});
-    CHECK(ctx, hull_data(h).shrunk_point_positions.length > 0 && hull_data(h).point_neighbors.length > 0);
+    CHECK(ctx, hull_data(h).shrunk_points.length > 0 && hull_data(h).point_neighbors.length > 0);
     drop(h);
     CHECK(ctx, util::allocated_bytes() == bytes && util::allocated_blocks() == blocks);
 }
@@ -240,12 +235,12 @@ void test_convex_hull_interior_points(TestCtx &ctx) {
     dispatch::init();
 
     // cube vertices plus interior points, which the builder drops
-    float positions[30];
-    for (uint32_t i = 0; i < 24; i++) positions[i] = CUBE_POINTS[i];
-    const float interior[6] = {0, 0, 0, 0.5f, 0.5f, 0.5f};
-    for (uint32_t i = 0; i < 6; i++) positions[24 + i] = interior[i];
+    Vec3f positions[10];
+    for (uint32_t i = 0; i < 8; i++) positions[i] = cube_points()[i];
+    positions[8] = vec3f::zero();
+    positions[9] = vec3f::splat(0.5f);
     Ref<Shape> h = make({.positions = positions, .num_positions = 10, .convex_radius = 0.1f, .max_error_convex_radius = 1.0f});
-    CHECK(ctx, hull_data(h).num_points == 8);
+    CHECK(ctx, hull_data(h).points.length == 8);
     // interior points filtered, radius kept with a high error tolerance
     CHECK_NEAR(ctx, hull_data(h).convex_radius, 0.1f, 5e-4f);
     drop(h);
@@ -257,71 +252,78 @@ void test_convex_hull_radius_thickness(TestCtx &ctx) {
     dispatch::init();
 
     // very thin disk, 0.02 thick: radius reduced to fit twice in the thickness
-    const float thin[24] = {-10, -10, 0.01f, 10, -10, 0.01f, 10, 10, 0.01f, -10, 10, 0.01f,
-                            -10, -10, -0.01f, 10, -10, -0.01f, 10, 10, -0.01f, -10, 10, -0.01f};
+    const Vec3f thin[8] = {vec3f::make(-10, -10, 0.01f),  vec3f::make(10, -10, 0.01f),  vec3f::make(10, 10, 0.01f),  vec3f::make(-10, 10, 0.01f),
+                           vec3f::make(-10, -10, -0.01f), vec3f::make(10, -10, -0.01f), vec3f::make(10, 10, -0.01f), vec3f::make(-10, 10, -0.01f)};
     Ref<Shape> h = hull(thin, 8, 5.0f);
     CHECK(ctx, hull_data(h).convex_radius < 0.02f && hull_data(h).convex_radius > 0.0f);
     drop(h);
 
     // a cube's sharp corners: the 3-plane shift is |(1, 1, 1)| = sqrt 3, so the radius is 0.05 / (sqrt 3 - 1)
-    h = hull(CUBE_POINTS, 8, 0.1f);
+    h = hull(cube_points(), 8, 0.1f);
     CHECK(ctx, hull_data(h).convex_radius < 0.1f && hull_data(h).convex_radius > 0.05f);
     CHECK_NEAR(ctx, hull_data(h).convex_radius, 0.05f / (scalar::sqrt(3.0f) - 1.0f), 1e-5f);
     drop(h);
 
     // with a larger error tolerance the radius survives
-    h = make({.positions = CUBE_POINTS, .num_positions = 8, .convex_radius = 0.1f, .max_error_convex_radius = 1.0f});
+    h = make({.positions = cube_points(), .num_positions = 8, .convex_radius = 0.1f, .max_error_convex_radius = 1.0f});
     CHECK_NEAR(ctx, hull_data(h).convex_radius, 0.1f, 5e-4f);
     drop(h);
 
     // zero stays zero
-    h = hull(CUBE_POINTS, 8, 0.0f);
+    h = hull(cube_points(), 8, 0.0f);
     CHECK(ctx, hull_data(h).convex_radius == 0.0f);
     drop(h);
 }
 
-static const float PYRAMID[15] = {0, 10, 0, -5, 0, -5, -5, 0, 5, 5, 0, -5, 5, 0, 5};
+/** a square pyramid of base 10 x 10 and height 10 */
+static const Vec3f *pyramid_points() {
+    static const Vec3f points[5] = {vec3f::make(0, 10, 0), vec3f::make(-5, 0, -5), vec3f::make(-5, 0, 5), vec3f::make(5, 0, -5),
+                                    vec3f::make(5, 0, 5)};
+    return points;
+}
 
 void test_convex_hull_radius_sharp_edges(TestCtx &ctx) {
     dispatch::init();
 
     // a sharp apex reduces the radius
-    Ref<Shape> pyramid = make({.positions = PYRAMID, .num_positions = 5, .convex_radius = 2.0f, .max_error_convex_radius = 0.05f});
+    Ref<Shape> pyramid = make({.positions = pyramid_points(), .num_positions = 5, .convex_radius = 2.0f, .max_error_convex_radius = 0.05f});
     CHECK(ctx, hull_data(pyramid).convex_radius < 2.0f);
     drop(pyramid);
 
     // stricter tolerance, smaller radius
-    Ref<Shape> strict = make({.positions = PYRAMID, .num_positions = 5, .convex_radius = 2.0f, .max_error_convex_radius = 0.01f});
-    Ref<Shape> lenient = make({.positions = PYRAMID, .num_positions = 5, .convex_radius = 2.0f, .max_error_convex_radius = 0.1f});
+    Ref<Shape> strict = make({.positions = pyramid_points(), .num_positions = 5, .convex_radius = 2.0f, .max_error_convex_radius = 0.01f});
+    Ref<Shape> lenient = make({.positions = pyramid_points(), .num_positions = 5, .convex_radius = 2.0f, .max_error_convex_radius = 0.1f});
     CHECK(ctx, hull_data(strict).convex_radius < hull_data(lenient).convex_radius);
     drop(strict);
     drop(lenient);
 
     // a very sharp needle
-    const float needle[15] = {0, 20, 0, -0.5f, 0, -0.5f, -0.5f, 0, 0.5f, 0.5f, 0, -0.5f, 0.5f, 0, 0.5f};
+    const Vec3f needle[5] = {vec3f::make(0, 20, 0), vec3f::make(-0.5f, 0, -0.5f), vec3f::make(-0.5f, 0, 0.5f), vec3f::make(0.5f, 0, -0.5f),
+                             vec3f::make(0.5f, 0, 0.5f)};
     Ref<Shape> h = make({.positions = needle, .num_positions = 5, .convex_radius = 1.0f, .max_error_convex_radius = 0.05f});
     CHECK(ctx, hull_data(h).convex_radius < 0.3f && hull_data(h).convex_radius >= 0.0f);
     drop(h);
 
     // the default max error still reduces
-    h = hull(PYRAMID, 5, 2.0f);
+    h = hull(pyramid_points(), 5, 2.0f);
     CHECK(ctx, hull_data(h).convex_radius <= 2.0f);
     drop(h);
 
     // a very flat hull: the radius goes to nearly nothing
-    const float flat[24] = {-10, -10, 0.001f, 10, -10, 0.001f, 10, 10, 0.001f, -10, 10, 0.001f,
-                            -10, -10, -0.001f, 10, -10, -0.001f, 10, 10, -0.001f, -10, 10, -0.001f};
+    const Vec3f flat[8] = {vec3f::make(-10, -10, 0.001f),  vec3f::make(10, -10, 0.001f),  vec3f::make(10, 10, 0.001f),
+                           vec3f::make(-10, 10, 0.001f),   vec3f::make(-10, -10, -0.001f), vec3f::make(10, -10, -0.001f),
+                           vec3f::make(10, 10, -0.001f),   vec3f::make(-10, 10, -0.001f)};
     h = make({.positions = flat, .num_positions = 8, .convex_radius = 5.0f, .max_error_convex_radius = 0.05f});
     CHECK(ctx, hull_data(h).convex_radius < 0.01f);
     drop(h);
 
     // the other properties stay valid after a reduction
-    h = make({.positions = PYRAMID, .num_positions = 5, .convex_radius = 2.0f}, nullptr, 1000.0f);
+    h = make({.positions = pyramid_points(), .num_positions = 5, .convex_radius = 2.0f}, nullptr, 1000.0f);
     const ConvexHullShape::Data &data = hull_data(h);
-    CHECK(ctx, data.num_points == 5 && data.faces.length == 5 && data.planes.length == data.faces.length);
+    CHECK(ctx, data.points.length == 5 && data.faces.length == 5 && data.planes.length == data.faces.length);
     // a square pyramid of base 10 x 10 and height 10
     CHECK_NEAR(ctx, h->volume, 1000.0f / 3.0f, 1e-2f);
-    CHECK_NEAR(ctx, h->center_of_mass.y, 2.5f, 1e-4f);
+    CHECK_NEAR(ctx, vec3f::y(h->center_of_mass), 2.5f, 1e-4f);
     CHECK(ctx, shapes::as<ConvexHullShape>(h).density == 1000.0f);
     drop(h);
 }
@@ -335,19 +337,15 @@ static Plane tetrahedron_plane(const Float3 *vertices, uint32_t excluded) {
     }
     Vec3f normal = vec3f::normalize(vec3f::cross(vec3f::subtract(face[1], face[0]), vec3f::subtract(face[2], face[0])));
     if (vec3f::dot(normal, vec3f::subtract(vec3f::load(vertices[excluded]), face[0])) > 0.0f) normal = vec3f::negate(normal);
-    return {normal, -vec3f::dot(normal, face[0])};
+    return plane3f::make(normal, -vec3f::dot(normal, face[0]));
 }
 
 void test_convex_hull_radius_non_orthogonal_planes(TestCtx &ctx) {
     dispatch::init();
 
     const Float3 vertices[4] = {{0, 0, 0}, {3, 0, 0}, {0.5f, 2, 0}, {0.8f, 0.7f, 1.9f}};
-    float positions[12];
-    for (uint32_t i = 0; i < 4; i++) {
-        positions[i * 3] = vertices[i].x;
-        positions[i * 3 + 1] = vertices[i].y;
-        positions[i * 3 + 2] = vertices[i].z;
-    }
+    Vec3f positions[4];
+    for (uint32_t i = 0; i < 4; i++) positions[i] = vec3f::load(vertices[i]);
     const float convex_radius = 0.5f;
     const float max_error_convex_radius = 0.05f;
     Ref<Shape> h = make(
@@ -355,7 +353,7 @@ void test_convex_hull_radius_non_orthogonal_planes(TestCtx &ctx) {
     const ConvexHullShape::Data &data = hull_data(h);
 
     // every vertex is shifted along its 3 planes
-    CHECK(ctx, data.num_points == 4);
+    CHECK(ctx, data.points.length == 4);
     for (uint32_t p = 0; p < 4; p++) CHECK(ctx, data.point_num_faces[p] == 3);
 
     Plane planes[4];
@@ -366,7 +364,7 @@ void test_convex_hull_radius_non_orthogonal_planes(TestCtx &ctx) {
     for (uint32_t f = 0; f < 4; f++) {
         float thickness = 0.0f;
         for (uint32_t v = 0; v < 4; v++)
-            thickness = scalar::max(thickness, -(vec3f::dot(planes[f].normal, vec3f::load(vertices[v])) + planes[f].constant));
+            thickness = scalar::max(thickness, -plane3f::distance_to_point(planes[f], positions[v]));
         expected = scalar::min(expected, 0.5f * thickness);
     }
 
@@ -376,7 +374,7 @@ void test_convex_hull_radius_non_orthogonal_planes(TestCtx &ctx) {
         Vec3f normals[3];
         uint32_t k = 0;
         for (uint32_t f = 0; f < 4; f++) {
-            if (f != v) normals[k++] = planes[f].normal;
+            if (f != v) normals[k++] = plane3f::normal(planes[f]);
         }
         const Vec3f n2_cross_n3 = vec3f::cross(normals[1], normals[2]);
         const Vec3f n3_cross_n1 = vec3f::cross(normals[2], normals[0]);
@@ -396,16 +394,10 @@ void test_convex_hull_radius_non_orthogonal_planes(TestCtx &ctx) {
 /* hull max error */
 
 /** a wide square with one point this high above its centre */
-static void square_with_apex(float *out, float half_extent, float apex_height) {
+static void square_with_apex(Vec3f *out, float half_extent, float apex_height) {
     const float corners[8] = {-1, -1, 1, -1, 1, 1, -1, 1};
-    for (uint32_t i = 0; i < 4; i++) {
-        out[i * 3] = corners[i * 2] * half_extent;
-        out[i * 3 + 1] = corners[i * 2 + 1] * half_extent;
-        out[i * 3 + 2] = 0.0f;
-    }
-    out[12] = 0.0f;
-    out[13] = 0.0f;
-    out[14] = apex_height;
+    for (uint32_t i = 0; i < 4; i++) out[i] = vec3f::make(corners[i * 2] * half_extent, corners[i * 2 + 1] * half_extent, 0.0f);
+    out[4] = vec3f::make(0.0f, 0.0f, apex_height);
 }
 
 void test_convex_hull_max_error(TestCtx &ctx) {
@@ -416,12 +408,10 @@ void test_convex_hull_max_error(TestCtx &ctx) {
     // two-sided hull, but the hull is only allowed an error of 4 * max(coplanar distance, hull tolerance)
     const float half_extent = 10000.0f;
     const float coplanar_distance = 3.0f * 1.1920929e-7f * (2.0f * half_extent);
-    float positions[15];
+    Vec3f positions[5];
     square_with_apex(positions, half_extent, 5.0f * coplanar_distance);
 
-    Vec3f points[5];
-    for (uint32_t i = 0; i < 5; i++) points[i] = vec3f::load(positions, i * 3);
-    ConvexHullBuilder builder = convex_hull_builder::create(points, 5);
+    ConvexHullBuilder builder = convex_hull_builder::create(positions, 5);
     CHECK(ctx, convex_hull_builder::initialize(builder, convex_hull::MAX_POINTS_IN_HULL, 1e-3f) == ConvexHullBuilder::Result::SUCCESS);
     CHECK(ctx, builder.faces.length == 2);
     ConvexHullBuilder::MaxError max_error;
@@ -445,8 +435,8 @@ void test_convex_hull_max_error(TestCtx &ctx) {
     drop(h);
 
     // a clean box
-    float corners[24];
-    box_corners(corners, {1, 2, 3});
+    Vec3f corners[8];
+    box_corners(corners, vec3f::make(1, 2, 3));
     h = make({.positions = corners, .num_positions = 8}, &result);
     CHECK(ctx, h != nullptr && result == ConvexHullShape::BuildResult::SUCCESS && hull_data(h).faces.length == 6);
     CHECK_NEAR(ctx, h->volume, 48.0f, 1e-4f);
@@ -458,20 +448,17 @@ static void check_shrunk_on_planes(TestCtx &ctx, const Shape *h) {
     const ConvexHullShape::Data &data = hull_data(h);
     const float r = data.convex_radius;
     CHECK(ctx, r > 0.0f);
-    CHECK(ctx, data.shrunk_point_positions.length == data.num_points * 3);
-    const float *shrunk = data.shrunk_point_positions.data;
-    for (uint32_t p = 0; p < data.num_points; p++) {
+    CHECK(ctx, data.shrunk_points.length == data.points.length);
+    for (uint32_t p = 0; p < data.points.length; p++) {
         const uint32_t b = p * 3;
-        const Vec3f sp = vec3f::load(shrunk, b);
+        const Vec3f sp = data.shrunk_points[p];
         const uint32_t num_faces = data.point_num_faces[p];
         if (num_faces == 1) {
-            const Float3 &n = data.planes[data.point_faces[b]].normal;
-            const float *pp = data.point_positions.data + b;
-            CHECK(ctx, near3(sp, pp[0] - n.x * r, pp[1] - n.y * r, pp[2] - n.z * r, 1e-6f));
+            const Vec3f n = plane3f::normal(data.planes[data.point_faces[b]]);
+            CHECK(ctx, near3(sp, vec3f::subtract(data.points[p], vec3f::scale(n, r)), 1e-6f));
         } else {
             for (uint32_t f = 0; f < num_faces; f++) {
-                const Plane3f &plane = data.planes[data.point_faces[b + f]];
-                CHECK_NEAR(ctx, vec3f::dot(vec3f::load(plane.normal), sp) + plane.constant + r, 0.0f, 2e-6f);
+                CHECK_NEAR(ctx, plane3f::distance_to_point(data.planes[data.point_faces[b + f]], sp) + r, 0.0f, 2e-6f);
             }
         }
     }
@@ -479,25 +466,27 @@ static void check_shrunk_on_planes(TestCtx &ctx, const Shape *h) {
 
 void test_convex_hull_shrunk_points(TestCtx &ctx) {
     dispatch::init();
-    float sphere_points[100 * 3];
+    Vec3f sphere_points[100];
     fibonacci_sphere(sphere_points, 100);
     Ref<Shape> h = hull(sphere_points, 100, 0.05f);
     check_shrunk_on_planes(ctx, h);
     drop(h);
 
-    h = hull(CUBE_POINTS, 8, 0.05f);
+    h = hull(cube_points(), 8, 0.05f);
     check_shrunk_on_planes(ctx, h);
     // a cube corner shrinks diagonally inward by the radius on every axis
     const ConvexHullShape::Data &data = hull_data(h);
-    for (uint32_t i = 0; i < 24; i++) {
-        const float p = data.point_positions.data[i];
-        CHECK_NEAR(ctx, data.shrunk_point_positions.data[i], p - scalar::sign(p) * 0.05f, 1e-6f);
+    for (uint32_t i = 0; i < 8; i++) {
+        const Vec3f p = data.points[i];
+        const Vec3f expected = vec3f::make(vec3f::x(p) - scalar::sign(vec3f::x(p)) * 0.05f, vec3f::y(p) - scalar::sign(vec3f::y(p)) * 0.05f,
+                                           vec3f::z(p) - scalar::sign(vec3f::z(p)) * 0.05f);
+        CHECK(ctx, near3(data.shrunk_points[i], expected, 1e-6f));
     }
     drop(h);
 
     // radius 0: the shrink is the identity and nothing is stored
-    h = hull(CUBE_POINTS, 8, 0.0f);
-    CHECK(ctx, hull_data(h).convex_radius == 0.0f && hull_data(h).shrunk_point_positions.length == 0);
+    h = hull(cube_points(), 8, 0.0f);
+    CHECK(ctx, hull_data(h).convex_radius == 0.0f && hull_data(h).shrunk_points.length == 0);
     drop(h);
 }
 
@@ -530,13 +519,13 @@ static bool is_face_edge(const ConvexHullShape::Data &data, uint32_t a, uint32_t
 static void check_adjacency(TestCtx &ctx, const Shape *h) {
     const ConvexHullShape::Data &data = hull_data(h);
     // csr layout: numPoints + 1 starts from 0, monotone, ending at the neighbour count
-    CHECK(ctx, data.point_neighbors_start.length == data.num_points + 1);
+    CHECK(ctx, data.point_neighbors_start.length == data.points.length + 1);
     CHECK(ctx, data.point_neighbors_start[0] == 0);
-    for (uint32_t p = 0; p < data.num_points; p++) CHECK(ctx, data.point_neighbors_start[p + 1] >= data.point_neighbors_start[p]);
-    CHECK(ctx, data.point_neighbors_start[data.num_points] == data.point_neighbors.length);
+    for (uint32_t p = 0; p < data.points.length; p++) CHECK(ctx, data.point_neighbors_start[p + 1] >= data.point_neighbors_start[p]);
+    CHECK(ctx, data.point_neighbors_start[data.points.length] == data.point_neighbors.length);
 
     bool symmetric = true, no_self_or_duplicate = true, pairs_are_edges = true, spans = true;
-    for (uint32_t p = 0; p < data.num_points; p++) {
+    for (uint32_t p = 0; p < data.points.length; p++) {
         if (neighbor_count(data, p) == 0) spans = false;
         for (uint32_t i = data.point_neighbors_start[p]; i < data.point_neighbors_start[p + 1]; i++) {
             const uint32_t n = data.point_neighbors[i];
@@ -573,21 +562,21 @@ void test_convex_hull_adjacency_flag(TestCtx &ctx) {
     dispatch::init();
 
     // a box (8 points) is not baked by default
-    Ref<Shape> b = hull(CUBE_POINTS, 8, 0.05f);
-    CHECK(ctx, hull_data(b).num_points == 8 && hull_data(b).num_points <= convex_hull::SUPPORT_HILL_CLIMB_MIN_POINTS);
+    Ref<Shape> b = hull(cube_points(), 8, 0.05f);
+    CHECK(ctx, hull_data(b).points.length == 8 && hull_data(b).points.length <= convex_hull::SUPPORT_HILL_CLIMB_MIN_POINTS);
     CHECK(ctx, hull_data(b).point_neighbors_start.length == 0 && hull_data(b).point_neighbors.length == 0);
     drop(b);
 
     // forced
-    b = hull(CUBE_POINTS, 8, 0.05f, ConvexHullShape::BakeSupportAdjacency::ALWAYS);
+    b = hull(cube_points(), 8, 0.05f, ConvexHullShape::BakeSupportAdjacency::ALWAYS);
     CHECK(ctx, hull_data(b).point_neighbors_start.length == 9 && hull_data(b).point_neighbors.length > 0);
     drop(b);
 
     // never, even above the threshold
-    float points[256 * 3];
+    Vec3f points[256];
     fibonacci_sphere(points, 100);
     Ref<Shape> h = hull(points, 100, 0.05f, ConvexHullShape::BakeSupportAdjacency::NEVER);
-    CHECK(ctx, hull_data(h).num_points > convex_hull::SUPPORT_HILL_CLIMB_MIN_POINTS);
+    CHECK(ctx, hull_data(h).points.length > convex_hull::SUPPORT_HILL_CLIMB_MIN_POINTS);
     CHECK(ctx, hull_data(h).point_neighbors_start.length == 0 && hull_data(h).point_neighbors.length == 0);
     drop(h);
 
@@ -596,17 +585,17 @@ void test_convex_hull_adjacency_flag(TestCtx &ctx) {
     for (uint32_t n : counts) {
         fibonacci_sphere(points, n);
         h = hull(points, n, 0.05f);
-        CHECK(ctx, hull_data(h).num_points > convex_hull::SUPPORT_HILL_CLIMB_MIN_POINTS);
-        CHECK(ctx, hull_data(h).point_neighbors_start.length == hull_data(h).num_points + 1);
+        CHECK(ctx, hull_data(h).points.length > convex_hull::SUPPORT_HILL_CLIMB_MIN_POINTS);
+        CHECK(ctx, hull_data(h).point_neighbors_start.length == hull_data(h).points.length + 1);
         drop(h);
     }
 }
 
 void test_convex_hull_adjacency_csr(TestCtx &ctx) {
     dispatch::init();
-    float points[256 * 3];
+    Vec3f points[256];
 
-    Ref<Shape> h = hull(CUBE_POINTS, 8, 0.05f, ConvexHullShape::BakeSupportAdjacency::ALWAYS);
+    Ref<Shape> h = hull(cube_points(), 8, 0.05f, ConvexHullShape::BakeSupportAdjacency::ALWAYS);
     check_adjacency(ctx, h);
     // a cube vertex has three neighbours
     for (uint32_t p = 0; p < 8; p++) CHECK(ctx, neighbor_count(hull_data(h), p) == 3);
@@ -632,10 +621,10 @@ static const Float3 BOX_HALF_EXTENTS = {1, 2, 3};
 
 void test_convex_hull_as_box_mass_and_radius(TestCtx &ctx) {
     dispatch::init();
-    float corners[24];
-    box_corners(corners, BOX_HALF_EXTENTS);
+    Vec3f corners[8];
+    box_corners(corners, vec3f::load(BOX_HALF_EXTENTS));
     Ref<Shape> h = make({.positions = corners, .num_positions = 8}, nullptr, 10.0f);
-    Ref<Shape> b = box::create({.half_extents = BOX_HALF_EXTENTS, .density = 10.0f});
+    Ref<Shape> b = box::create({.half_extents = vec3f::load(BOX_HALF_EXTENTS), .density = 10.0f});
 
     MassProperties hull_mass = mass_properties::create();
     MassProperties box_mass = mass_properties::create();
@@ -643,15 +632,17 @@ void test_convex_hull_as_box_mass_and_radius(TestCtx &ctx) {
     box::compute_mass_properties(box_mass, b);
     CHECK_NEAR(ctx, hull_mass.mass, box_mass.mass, 1e-2f);
     CHECK_NEAR(ctx, hull_mass.mass, 480.0f, 1e-2f);
+    const Float4x4 hull_inertia = elements(hull_mass.inertia);
+    const Float4x4 box_inertia = elements(box_mass.inertia);
     for (uint32_t col = 0; col < 3; col++) {
         for (uint32_t row = 0; row < 3; row++) {
-            CHECK_NEAR(ctx, hull_mass.inertia.m[col * 4 + row], box_mass.inertia.m[col * 4 + row], 1e-2f);
+            CHECK_NEAR(ctx, hull_inertia.m[col * 4 + row], box_inertia.m[col * 4 + row], 1e-2f);
         }
     }
     // m / 12 (b^2 + c^2) and so on, for full extents 2, 4, 6
-    CHECK_NEAR(ctx, hull_mass.inertia.m[0], 480.0f / 12.0f * (16.0f + 36.0f), 1e-2f);
-    CHECK_NEAR(ctx, hull_mass.inertia.m[5], 480.0f / 12.0f * (4.0f + 36.0f), 1e-2f);
-    CHECK_NEAR(ctx, hull_mass.inertia.m[10], 480.0f / 12.0f * (4.0f + 16.0f), 1e-2f);
+    CHECK_NEAR(ctx, hull_inertia.m[0], 480.0f / 12.0f * (16.0f + 36.0f), 1e-2f);
+    CHECK_NEAR(ctx, hull_inertia.m[5], 480.0f / 12.0f * (4.0f + 36.0f), 1e-2f);
+    CHECK_NEAR(ctx, hull_inertia.m[10], 480.0f / 12.0f * (4.0f + 16.0f), 1e-2f);
 
     // bounds and inner radius
     CHECK(ctx, near3(h->aabb.min, b->aabb.min, 0.0f) && near3(h->aabb.max, b->aabb.max, 0.0f));
@@ -662,13 +653,13 @@ void test_convex_hull_as_box_mass_and_radius(TestCtx &ctx) {
     b = nullptr;
 
     // the inner radius of a 2x2x2 box hull
-    h = make({.positions = CUBE_POINTS, .num_positions = 8});
+    h = make({.positions = cube_points(), .num_positions = 8});
     CHECK_NEAR(ctx, convex_hull::get_inner_radius(h), 1.0f, 1e-6f);
     drop(h);
 
     // the inner radius is measured from the centre of mass, wherever the hull sits
-    float shifted[24];
-    for (uint32_t i = 0; i < 24; i++) shifted[i] = CUBE_POINTS[i] + (i % 3 == 0 ? 10.0f : 0.0f);
+    Vec3f shifted[8];
+    for (uint32_t i = 0; i < 8; i++) shifted[i] = vec3f::add(cube_points()[i], vec3f::make(10, 0, 0));
     h = make({.positions = shifted, .num_positions = 8});
     CHECK(ctx, near3(h->center_of_mass, 10, 0, 0, 1e-5f));
     CHECK_NEAR(ctx, convex_hull::get_inner_radius(h), 1.0f, 1e-5f);
@@ -676,12 +667,10 @@ void test_convex_hull_as_box_mass_and_radius(TestCtx &ctx) {
 
     // a skewed tetrahedron: the shortest centre of mass to plane distance
     const Float3 vertices[4] = {{3, 1, 2}, {7, 1, 2}, {4, 6, 2}, {5, 3, 8}};
-    float positions[12];
+    Vec3f positions[4];
     Vec3f center_of_mass = vec3f::zero();
     for (uint32_t i = 0; i < 4; i++) {
-        positions[i * 3] = vertices[i].x;
-        positions[i * 3 + 1] = vertices[i].y;
-        positions[i * 3 + 2] = vertices[i].z;
+        positions[i] = vec3f::load(vertices[i]);
         // a tetrahedron's centre of mass is the mean of its vertices
         center_of_mass = vec3f::scale_and_add(center_of_mass, vec3f::load(vertices[i]), 0.25f);
     }
@@ -690,7 +679,7 @@ void test_convex_hull_as_box_mass_and_radius(TestCtx &ctx) {
     float expected = __FLT_MAX__;
     for (uint32_t i = 0; i < 4; i++) {
         const Plane plane = tetrahedron_plane(vertices, i);
-        expected = scalar::min(expected, -(vec3f::dot(plane.normal, center_of_mass) + plane.constant));
+        expected = scalar::min(expected, -plane3f::distance_to_point(plane, center_of_mass));
     }
     CHECK(ctx, expected > 0.5f);
     CHECK_NEAR(ctx, convex_hull::get_inner_radius(h), expected, 1e-5f);
@@ -699,10 +688,10 @@ void test_convex_hull_as_box_mass_and_radius(TestCtx &ctx) {
 
 void test_convex_hull_as_box_surface_normal(TestCtx &ctx) {
     dispatch::init();
-    float corners[24];
-    box_corners(corners, BOX_HALF_EXTENTS);
+    Vec3f corners[8];
+    box_corners(corners, vec3f::load(BOX_HALF_EXTENTS));
     Ref<Shape> h = hull(corners, 8, 0.0f);
-    Ref<Shape> b = box::create({.half_extents = BOX_HALF_EXTENTS});
+    Ref<Shape> b = box::create({.half_extents = vec3f::load(BOX_HALF_EXTENTS)});
 
     const Float3 positions[] = {{1.1f, 0.0f, 0.0f}, {0.3f, 2.0f, -0.2f}, {-0.5f, 0.5f, -3.0f + 1e-3f}, {0.0f, -2.1f, 0.0f},
                                {-1.0f, 0.2f, 0.4f}, {0.2f, 0.3f, 2.95f}, {0.9f, 1.5f, 0.5f}};
@@ -737,10 +726,10 @@ static void hull_face(SupportingFaceResult &io, const Shape *shape, Vec3f direct
 
 void test_convex_hull_as_box_supporting_face(TestCtx &ctx) {
     dispatch::init();
-    float corners[24];
-    box_corners(corners, BOX_HALF_EXTENTS);
+    Vec3f corners[8];
+    box_corners(corners, vec3f::load(BOX_HALF_EXTENTS));
     Ref<Shape> h = hull(corners, 8, 0.0f);
-    Ref<Shape> b = box::create({.half_extents = BOX_HALF_EXTENTS});
+    Ref<Shape> b = box::create({.half_extents = vec3f::load(BOX_HALF_EXTENTS)});
 
     const Mat4f placed = mat4f::from_rotation_translation(axis_angle(vec3f::make(1, 2, -3), 0.7f), vec3f::make(5, -6, 7));
     const Mat4f identity = mat4f::identity();
@@ -772,10 +761,10 @@ void test_convex_hull_as_box_supporting_face(TestCtx &ctx) {
 
 void test_convex_hull_as_box_support(TestCtx &ctx) {
     dispatch::init();
-    float corners[24];
-    box_corners(corners, BOX_HALF_EXTENTS);
+    Vec3f corners[8];
+    box_corners(corners, vec3f::load(BOX_HALF_EXTENTS));
     Ref<Shape> h = hull(corners, 8, 0.05f);
-    Ref<Shape> b = box::create({.half_extents = BOX_HALF_EXTENTS, .convex_radius = 0.05f});
+    Ref<Shape> b = box::create({.half_extents = vec3f::load(BOX_HALF_EXTENTS), .convex_radius = 0.05f});
     CHECK(ctx, hull_data(h).convex_radius == 0.05f);
 
     Vec3f directions[40];
@@ -805,7 +794,7 @@ void test_convex_hull_as_box_support(TestCtx &ctx) {
 
 void test_convex_hull_supporting_face_cases(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> h = hull(CUBE_POINTS, 8, 0.0f);
+    Ref<Shape> h = hull(cube_points(), 8, 0.0f);
     const Mat4f identity = mat4f::identity();
     SupportingFace face;
 
@@ -836,7 +825,7 @@ void test_convex_hull_supporting_face_cases(TestCtx &ctx) {
     drop(h);
 
     // a pyramid: -y returns one of the triangular sides
-    const float pyramid[15] = {-1, 0, -1, 1, 0, -1, -1, 0, 1, 1, 0, 1, 0, 2, 0};
+    const Vec3f pyramid[5] = {vec3f::make(-1, 0, -1), vec3f::make(1, 0, -1), vec3f::make(-1, 0, 1), vec3f::make(1, 0, 1), vec3f::make(0, 2, 0)};
     h = hull(pyramid, 5, 0.0f);
     shapes::get_shape_supporting_face(face, h, sub_shape::EMPTY_SUB_SHAPE_ID, vec3f::make(0, -1, 0), identity, vec3f::make(1, 1, 1));
     CHECK(ctx, face.num_vertices == 3);
@@ -847,11 +836,11 @@ void test_convex_hull_supporting_face_cases(TestCtx &ctx) {
 static void reference_supporting_face(SupportingFaceResult &io, Vec3f direction, const Shape *shape) {
     const ConvexHullShape::Data &data = hull_data(shape);
     const Vec3f inv_scale = vec3f::make(1.0f / vec3f::x(io.scale), 1.0f / vec3f::y(io.scale), 1.0f / vec3f::z(io.scale));
-    Vec3f plane_normal = vec3f::multiply(inv_scale, vec3f::load(data.planes[0].normal));
+    Vec3f plane_normal = vec3f::multiply(inv_scale, plane3f::normal(data.planes[0]));
     float best_dot = vec3f::dot(plane_normal, direction) / vec3f::length(plane_normal);
     uint32_t best_face_idx = 0;
     for (uint32_t i = 1; i < data.planes.length; i++) {
-        plane_normal = vec3f::multiply(inv_scale, vec3f::load(data.planes[i].normal));
+        plane_normal = vec3f::multiply(inv_scale, plane3f::normal(data.planes[i]));
         const float dot = vec3f::dot(plane_normal, direction) / vec3f::length(plane_normal);
         if (dot < best_dot) {
             best_dot = dot;
@@ -868,19 +857,18 @@ static void reference_supporting_face(SupportingFaceResult &io, Vec3f direction,
     const bool inside_out = face::is_scale_inside_out(io.scale);
     for (int32_t k = 0; k < num_vertices; k += delta_vtx) {
         const int32_t i = inside_out ? num_vertices - 1 - k : k;
-        const uint32_t pbase = data.vertex_indices[best_face.first_vertex + (uint32_t)i] * 3;
-        face.vertices[face.num_vertices++] = vec3f::load(data.point_positions.data, pbase);
+        face.vertices[face.num_vertices++] = data.points[data.vertex_indices[best_face.first_vertex + (uint32_t)i]];
     }
     face::transform_with_mat4_scale(face, io.transform, io.scale);
 }
 
 void test_convex_hull_supporting_face_uniform_fast_path(TestCtx &ctx) {
     dispatch::init();
-    float sphere_points[100 * 3];
+    Vec3f sphere_points[100];
     fibonacci_sphere(sphere_points, 100);
-    float slab[50 * 3];
+    Vec3f slab[50];
     slab_grid(slab);
-    Ref<Shape> hulls[3] = {hull(CUBE_POINTS, 8, 0.05f), hull(sphere_points, 100, 0.05f),
+    Ref<Shape> hulls[3] = {hull(cube_points(), 8, 0.05f), hull(sphere_points, 100, 0.05f),
                        hull(slab, 50, 0.02f, ConvexHullShape::BakeSupportAdjacency::ALWAYS)};
 
     Vec3f directions[83];
@@ -919,29 +907,25 @@ void test_convex_hull_supporting_face_uniform_fast_path(TestCtx &ctx) {
 
 void test_convex_hull_support_include(TestCtx &ctx) {
     // unit cube corners plus the centre, which must not survive the hull
-    float positions[27];
-    for (uint32_t i = 0; i < 24; i++) positions[i] = CUBE_POINTS[i];
-    positions[24] = positions[25] = positions[26] = 0.0f;
+    Vec3f positions[9];
+    for (uint32_t i = 0; i < 8; i++) positions[i] = cube_points()[i];
+    positions[8] = vec3f::zero();
     Ref<Shape> h = hull(positions, 9, 0.0f);
     const ConvexHullShape::Data &data = hull_data(h);
-    CHECK(ctx, data.num_points == 8);
+    CHECK(ctx, data.points.length == 8);
 
     const Float3 axes[] = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}, {1, 1, 1}, {-1, 2, -3}};
     Support s = support::create();
     convex_hull::set_support(s, h, SupportFunctionMode::INCLUDE_CONVEX_RADIUS, vec3f::make(1, 1, 1));
     CHECK(ctx, s.get_support == support::hull_support && s.convex_radius == 0.0f && s.hull.output_scale == 1.0f);
     for (const Float3 &axis : axes) {
-        CHECK(ctx, near3(support_point(s, vec3f::load(axis)), brute_force_max_dot(data.point_positions.data, 8, vec3f::load(axis)), 0.0f));
+        CHECK(ctx, near3(support_point(s, vec3f::load(axis)), brute_force_max_dot(data.points.data, 8, vec3f::load(axis)), 0.0f));
     }
 
     // scaled include scans the scaled vertices
     const Float3 scale = {2, 0.5f, 3};
-    float scaled[24];
-    for (uint32_t i = 0; i < 24; i += 3) {
-        scaled[i] = data.point_positions.data[i] * 2.0f;
-        scaled[i + 1] = data.point_positions.data[i + 1] * 0.5f;
-        scaled[i + 2] = data.point_positions.data[i + 2] * 3.0f;
-    }
+    Vec3f scaled[8];
+    for (uint32_t i = 0; i < 8; i++) scaled[i] = vec3f::multiply(data.points[i], vec3f::load(scale));
     convex_hull::set_support(s, h, SupportFunctionMode::INCLUDE_CONVEX_RADIUS, vec3f::load(scale));
     CHECK(ctx, s.hull.output_scale == 1.0f && s.hull.vertices == s.hull.scratch);
     for (const Float3 &axis : axes) CHECK(ctx, near3(support_point(s, vec3f::load(axis)), brute_force_max_dot(scaled, 8, vec3f::load(axis)), 0.0f));
@@ -953,7 +937,7 @@ void test_convex_hull_support_include(TestCtx &ctx) {
 
     // through the def: the dispatch installs the hull evaluator
     dispatch::init();
-    const float tetrahedron[12] = {-1, -1, -1, 1, -1, -1, 0, 1, -1, 0, 0, 1};
+    const Vec3f tetrahedron[4] = {vec3f::make(-1, -1, -1), vec3f::make(1, -1, -1), vec3f::make(0, 1, -1), vec3f::make(0, 0, 1)};
     Ref<Shape> t = hull(tetrahedron, 4, support::DEFAULT_CONVEX_RADIUS);
     CHECK(ctx, shapes::is_convex(t));
     shapes::set_shape_support(s, t, SupportFunctionMode::INCLUDE_CONVEX_RADIUS, vec3f::make(1, 1, 1));
@@ -965,49 +949,49 @@ void test_convex_hull_support_include(TestCtx &ctx) {
 
 void test_convex_hull_support_scaling(TestCtx &ctx) {
     dispatch::init();
-    float sphere_points[100 * 3];
+    Vec3f sphere_points[100];
     fibonacci_sphere(sphere_points, 100);
     Ref<Shape> h = hull(sphere_points, 100, 0.05f);
     const ConvexHullShape::Data &data = hull_data(h);
     Vec3f directions[50];
     random_directions(directions, 50, 0x9e3779b9u);
 
-    static float scaled[256 * 3];
+    static Vec3f scaled[256];
     Support s = support::create();
     const float uniform_scales[3] = {0.5f, 1.0f, 2.37f};
     for (float k : uniform_scales) {
         // include: the raw vertices scaled by k, through the output scale
         convex_hull::set_support(s, h, SupportFunctionMode::INCLUDE_CONVEX_RADIUS, vec3f::make(k, k, k));
-        CHECK(ctx, s.convex_radius == 0.0f && s.hull.output_scale == k && s.hull.vertices == data.point_positions.data);
-        for (uint32_t i = 0; i < data.num_points * 3; i++) scaled[i] = data.point_positions.data[i] * k;
+        CHECK(ctx, s.convex_radius == 0.0f && s.hull.output_scale == k && s.hull.vertices == data.points.data);
+        for (uint32_t i = 0; i < data.points.length; i++) scaled[i] = vec3f::scale(data.points[i], k);
         for (Vec3f direction : directions) {
-            CHECK(ctx, near3(support_point(s, direction), brute_force_max_dot(scaled, data.num_points, direction), 1e-6f));
+            CHECK(ctx, near3(support_point(s, direction), brute_force_max_dot(scaled, data.points.length, direction), 1e-6f));
         }
 
         // exclude: the shrunk vertices scaled by k, the radius reported as r k
         convex_hull::set_support(s, h, SupportFunctionMode::EXCLUDE_CONVEX_RADIUS, vec3f::make(k, k, k));
         CHECK_NEAR(ctx, s.convex_radius, data.convex_radius * k, 1e-7f);
-        CHECK(ctx, s.hull.vertices == data.shrunk_point_positions.data);
-        for (uint32_t i = 0; i < data.num_points * 3; i++) scaled[i] = data.shrunk_point_positions.data[i] * k;
+        CHECK(ctx, s.hull.vertices == data.shrunk_points.data);
+        for (uint32_t i = 0; i < data.points.length; i++) scaled[i] = vec3f::scale(data.shrunk_points[i], k);
         for (Vec3f direction : directions) {
-            CHECK(ctx, near3(support_point(s, direction), brute_force_max_dot(scaled, data.num_points, direction), 1e-6f));
+            CHECK(ctx, near3(support_point(s, direction), brute_force_max_dot(scaled, data.points.length, direction), 1e-6f));
         }
     }
     drop(h);
 
     // non-uniform exclude bakes the scaled shrunk vertices: each scaled corner pushed in by r minScale along its three normals
-    Ref<Shape> cube = hull(CUBE_POINTS, 8, 0.05f);
+    Ref<Shape> cube = hull(cube_points(), 8, 0.05f);
     const Float3 scale = {1, 2, 0.5f};
     const float scaled_radius = hull_data(cube).convex_radius * 0.5f;
     convex_hull::set_support(s, cube, SupportFunctionMode::EXCLUDE_CONVEX_RADIUS, vec3f::load(scale));
     CHECK_NEAR(ctx, s.convex_radius, scaled_radius, 1e-7f);
     CHECK(ctx, s.hull.output_scale == 1.0f);
-    float reference[24];
-    for (uint32_t i = 0; i < 24; i += 3) {
-        const float *c = hull_data(cube).point_positions.data + i;
-        reference[i] = c[0] * scale.x - scalar::sign(c[0]) * scaled_radius;
-        reference[i + 1] = c[1] * scale.y - scalar::sign(c[1]) * scaled_radius;
-        reference[i + 2] = c[2] * scale.z - scalar::sign(c[2]) * scaled_radius;
+    Vec3f reference[8];
+    for (uint32_t i = 0; i < 8; i++) {
+        const Vec3f c = hull_data(cube).points[i];
+        reference[i] = vec3f::make(vec3f::x(c) * scale.x - scalar::sign(vec3f::x(c)) * scaled_radius,
+                                   vec3f::y(c) * scale.y - scalar::sign(vec3f::y(c)) * scaled_radius,
+                                   vec3f::z(c) * scale.z - scalar::sign(vec3f::z(c)) * scaled_radius);
     }
     for (Vec3f direction : directions) CHECK(ctx, near3(support_point(s, direction), brute_force_max_dot(reference, 8, direction), 1e-6f));
     drop(cube);
@@ -1015,13 +999,16 @@ void test_convex_hull_support_scaling(TestCtx &ctx) {
 
 static float max_abs_vertex(const Support &s) {
     float m = 0.0f;
-    for (uint32_t i = 0; i < s.hull.vertex_count * 3; i++) m = scalar::max(m, scalar::abs(s.hull.vertices[i]));
+    for (uint32_t i = 0; i < s.hull.vertex_count; i++) {
+        const Vec3f a = vec3f::abs(s.hull.vertices[i]);
+        m = scalar::max(m, scalar::max(vec3f::x(a), scalar::max(vec3f::y(a), vec3f::z(a))));
+    }
     return m * s.hull.output_scale;
 }
 
 void test_convex_hull_support_hill_climb(TestCtx &ctx) {
     dispatch::init();
-    static float points[256 * 3];
+    static Vec3f points[256];
     Ref<Shape> hulls[5];
     const bool strictly_convex[5] = {true, true, true, false, false};
     fibonacci_sphere(points, 60);
@@ -1030,7 +1017,7 @@ void test_convex_hull_support_hill_climb(TestCtx &ctx) {
     hulls[1] = hull(points, 100, 0.05f);
     fibonacci_sphere(points, 256);
     hulls[2] = hull(points, 256, 0.05f);
-    hulls[3] = hull(CUBE_POINTS, 8, 0.05f, ConvexHullShape::BakeSupportAdjacency::ALWAYS);
+    hulls[3] = hull(cube_points(), 8, 0.05f, ConvexHullShape::BakeSupportAdjacency::ALWAYS);
     slab_grid(points);
     hulls[4] = hull(points, 50, 0.02f, ConvexHullShape::BakeSupportAdjacency::ALWAYS);
 
@@ -1046,7 +1033,7 @@ void test_convex_hull_support_hill_climb(TestCtx &ctx) {
         Ref<Shape> h = hulls[hi];
         // the adjacency must be baked, else the climb is never exercised
         CHECK(ctx, hull_data(h).point_neighbors.length > 0);
-        random_directions(random, 60, 0x1234 + hull_data(h).num_points);
+        random_directions(random, 60, 0x1234 + hull_data(h).points.length);
 
         for (const Float3 &scale : scales) {
             for (SupportFunctionMode mode : modes) {
@@ -1085,7 +1072,7 @@ void test_convex_hull_support_hill_climb(TestCtx &ctx) {
 /* through the dispatch tables */
 
 static void collide(CollideShapeCollector &collector, const CollideShapeSettings &settings, const Shape *a,
-                    const Transformf &transform_a, const Shape *b, const Transformf &transform_b) {
+                    const Transform &transform_a, const Shape *b, const Transform &transform_b) {
     shapes::collide_fn(a->type, b->type)(collector, settings, a, NO_SUB_SHAPE, transform_a, b, NO_SUB_SHAPE, transform_b);
 }
 
@@ -1112,7 +1099,7 @@ void test_convex_hull_dispatch_wiring(TestCtx &ctx) {
 
 void test_convex_hull_collide_sphere(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> h = make({.positions = CUBE_POINTS, .num_positions = 8}, nullptr, shapes::DEFAULT_SHAPE_DENSITY, 5);
+    Ref<Shape> h = make({.positions = cube_points(), .num_positions = 8}, nullptr, shapes::DEFAULT_SHAPE_DENSITY, 5);
     Ref<Shape> s = sphere::create({.radius = 0.5f, .material_id = 2});
     CollideShapeSettings settings = collide_shape::default_settings();
     settings.collect_faces = true;
@@ -1134,7 +1121,7 @@ void test_convex_hull_collide_sphere(TestCtx &ctx) {
     // hull vs sphere: radius 1.51 at 2.5 just reaches the x = 1 face, 0.01 deep
     s = nullptr;
     s = sphere::create({.radius = 1.51f});
-    Ref<Shape> sharp = hull(CUBE_POINTS, 8, 0.0f);
+    Ref<Shape> sharp = hull(cube_points(), 8, 0.0f);
     collide_shape::reset(collector);
     collide(collector, settings, sharp, pose({0, 0, 0}), s, pose({2.5f, 0, 0}));
     CHECK(ctx, collector.hits.length == 1);
@@ -1179,9 +1166,9 @@ void test_convex_hull_collide_sphere(TestCtx &ctx) {
 
 void test_convex_hull_collide_box_and_hull(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> h = hull(CUBE_POINTS, 8, 0.0f);
-    Ref<Shape> rounded = hull(CUBE_POINTS, 8, 0.05f);
-    Ref<Shape> b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> h = hull(cube_points(), 8, 0.0f);
+    Ref<Shape> rounded = hull(cube_points(), 8, 0.05f);
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(0.5f)});
     CollideShapeCollector collector = collide_shape::create_collector(CollectorKind::ALL);
 
     // a box 0.05 into the hull's +y face, the rounded cores still apart
@@ -1193,22 +1180,22 @@ void test_convex_hull_collide_box_and_hull(TestCtx &ctx) {
     CHECK_NEAR(ctx, vec3f::y(collector.hits[0].point_b), 0.95f, 1e-4f);
 
     // hull vs hull: two 2-cubes 1.5 apart overlap by 0.5
-    Ref<Shape> other = hull(CUBE_POINTS, 8, 0.0f);
+    Ref<Shape> other = hull(cube_points(), 8, 0.0f);
     collide_shape::reset(collector);
     collide(collector, collide_shape::default_settings(), h, pose({0, 0, 0}), other, pose({1.5f, 0, 0}));
     CHECK(ctx, collector.hits.length == 1);
     CHECK_NEAR(ctx, collector.hits[0].penetration, 0.5f, 1e-4f);
 
     // with a convex radius on both, 1.8 apart: 0.2 overlap
-    Ref<Shape> rounded_a = hull(CUBE_POINTS, 8, 0.1f);
-    Ref<Shape> rounded_b = hull(CUBE_POINTS, 8, 0.1f);
+    Ref<Shape> rounded_a = hull(cube_points(), 8, 0.1f);
+    Ref<Shape> rounded_b = hull(cube_points(), 8, 0.1f);
     collide_shape::reset(collector);
     collide(collector, collide_shape::default_settings(), rounded_a, pose({0, 0, 0}), rounded_b, pose({1.8f, 0, 0}));
     CHECK(ctx, collector.hits.length == 1);
     CHECK_NEAR(ctx, collector.hits[0].penetration, 0.2f, 1e-4f);
 
     // a tetrahedron hull overlapping the cube
-    const float tetrahedron[12] = {-1, 0, -1, 0, 0, 1, 1, 0, -1, 0, -1, 0};
+    const Vec3f tetrahedron[4] = {vec3f::make(-1, 0, -1), vec3f::make(0, 0, 1), vec3f::make(1, 0, -1), vec3f::make(0, -1, 0)};
     Ref<Shape> t = hull(tetrahedron, 4, 0.0f);
     collide_shape::reset(collector);
     collide(collector, collide_shape::default_settings(), h, pose({0, 0, 0}), t, pose({0.5f, 0, 0}));
@@ -1225,9 +1212,9 @@ void test_convex_hull_collide_box_and_hull(TestCtx &ctx) {
 
 void test_convex_hull_cast(TestCtx &ctx) {
     dispatch::init();
-    Ref<Shape> h = make({.positions = CUBE_POINTS, .num_positions = 8});
+    Ref<Shape> h = make({.positions = cube_points(), .num_positions = 8});
     Ref<Shape> s = sphere::create({.radius = 0.5f});
-    Ref<Shape> b = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> b = box::create({.half_extents = vec3f::splat(0.5f)});
 
     // a sphere down from y = 5 by 10 meets the +y face with its centre at 1.5: fraction 3.5 / 10
     CastShapeCollector collector = cast_shape::create_collector(CollectorKind::CLOSEST);
@@ -1278,9 +1265,9 @@ void test_convex_hull_owns_its_hull(TestCtx &ctx) {
     // two hulls of the same points, each with its density and material and its own built hull, freed with it
     const size_t bytes = util::allocated_bytes();
     const size_t blocks = util::allocated_blocks();
-    Ref<Shape> light = convex_hull::create({.positions = CUBE_POINTS, .num_positions = 8, .density = 1.0f, .material_id = 1});
-    Ref<Shape> heavy = convex_hull::create({.positions = CUBE_POINTS, .num_positions = 8, .density = 2.0f, .material_id = 2});
-    CHECK(ctx, light != nullptr && heavy != nullptr && hull_data(light).num_points == 8 && &hull_data(light) != &hull_data(heavy));
+    Ref<Shape> light = convex_hull::create({.positions = cube_points(), .num_positions = 8, .density = 1.0f, .material_id = 1});
+    Ref<Shape> heavy = convex_hull::create({.positions = cube_points(), .num_positions = 8, .density = 2.0f, .material_id = 2});
+    CHECK(ctx, light != nullptr && heavy != nullptr && hull_data(light).points.length == 8 && &hull_data(light) != &hull_data(heavy));
     CHECK(ctx, light->material_id == 1 && heavy->material_id == 2);
     MassProperties a = mass_properties::create();
     MassProperties b = mass_properties::create();
@@ -1297,7 +1284,7 @@ void test_convex_hull_owns_its_hull(TestCtx &ctx) {
 
     // points that make no hull make no shape, and leave nothing behind
     ConvexHullShape::BuildResult result = ConvexHullShape::BuildResult::SUCCESS;
-    CHECK(ctx, convex_hull::create({.positions = CUBE_POINTS, .num_positions = 2}, &result) == nullptr && result != ConvexHullShape::BuildResult::SUCCESS);
+    CHECK(ctx, convex_hull::create({.positions = cube_points(), .num_positions = 2}, &result) == nullptr && result != ConvexHullShape::BuildResult::SUCCESS);
     CHECK(ctx, util::allocated_bytes() == bytes && util::allocated_blocks() == blocks);
 }
 
@@ -1306,8 +1293,8 @@ void test_convex_hull_owns_its_hull(TestCtx &ctx) {
 void test_convex_hull_material(TestCtx &ctx) {
     dispatch::init();
     // a hull is one leaf: the empty sub shape id names its own material
-    Ref<Shape> painted = make({.positions = CUBE_POINTS, .num_positions = 8}, nullptr, shapes::DEFAULT_SHAPE_DENSITY, 6);
-    Ref<Shape> plain = make({.positions = CUBE_POINTS, .num_positions = 8});
+    Ref<Shape> painted = make({.positions = cube_points(), .num_positions = 8}, nullptr, shapes::DEFAULT_SHAPE_DENSITY, 6);
+    Ref<Shape> plain = make({.positions = cube_points(), .num_positions = 8});
     CHECK(ctx, painted != nullptr && plain != nullptr);
     CHECK(ctx, shapes::get_shape_material(painted, sub_shape::EMPTY_SUB_SHAPE_ID) == 6);
     CHECK(ctx, shapes::get_shape_material(plain, sub_shape::EMPTY_SUB_SHAPE_ID) == -1);

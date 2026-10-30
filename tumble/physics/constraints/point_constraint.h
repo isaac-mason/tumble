@@ -26,9 +26,9 @@ struct PointConstraint {
 
 struct PointConstraintSettings {
     /** point on body a in world space or local space depending on `space` */
-    Float3 point_a = {0.0f, 0.0f, 0.0f};
+    Vec3f point_a = vec3f::zero();
     /** point on body b in world space or local space depending on `space` */
-    Float3 point_b = {0.0f, 0.0f, 0.0f};
+    Vec3f point_b = vec3f::zero();
     ConstraintSpace space = ConstraintSpace::WORLD;
     /** higher numbers are more likely to be solved correctly (solved later) */
     uint32_t constraint_priority = 0;

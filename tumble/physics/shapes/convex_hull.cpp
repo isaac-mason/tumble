@@ -2,6 +2,7 @@
 
 #include "tumble/math/aabox.h"
 #include "tumble/math/mat4f.h"
+#include "tumble/math/plane3f.h"
 #include "tumble/math/scalar.h"
 #include "tumble/math/vec4f.h"
 #include "tumble/math/vec3f.h"
@@ -20,7 +21,6 @@ namespace {
 
 /** what create works in, freed with it */
 struct CreateScratch {
-    collections::Array<Vec3f> input_points;
     collections::Array<int32_t> vertex_map;
     collections::Array<int32_t> neighboring_faces;
     collections::Array<collections::Array<uint32_t>> neighbor_sets;
@@ -51,11 +51,8 @@ static bool build(ConvexHullShape::Data &data, const ConvexHullShapeSettings &se
     // validate convex radius
     if (convex_radius < 0.0f) return refuse(out_result, ConvexHullShape::BuildResult::INVALID_CONVEX_RADIUS);
 
-    // convert flat positions array to Float3[]
     const uint32_t num_input_points = settings.num_positions;
-    scratch.input_points.resize(num_input_points);
-    for (uint32_t i = 0; i < num_input_points; i++) scratch.input_points[i] = vec3f::load(settings.positions, i * 3);
-    const Vec3f *input_points = scratch.input_points.data;
+    const Vec3f *input_points = settings.positions;
 
     // build convex hull
     ConvexHullBuilder builder = convex_hull_builder::create(input_points, num_input_points);
@@ -138,7 +135,7 @@ static bool build(ConvexHullShape::Data &data, const ConvexHullShapeSettings &se
 
     // calculate inertia matrix: I = identity * trace(C) - C
     const float trace = v4f::lane<0>(covariance_matrix.c[0]) + v4f::lane<1>(covariance_matrix.c[1]) + v4f::lane<2>(covariance_matrix.c[2]);
-    mat4f::store(data.inertia, mat4f::subtract(mat4f::multiply_scalar(mat4f::identity(), trace), covariance_matrix));
+    data.inertia = mat4f::subtract(mat4f::multiply_scalar(mat4f::identity(), trace), covariance_matrix);
 
     // convert polygons from the builder into the shape's flat vertex arrays
     uint32_t total_face_vertices = 0;
@@ -153,7 +150,7 @@ static bool build(ConvexHullShape::Data &data, const ConvexHullShapeSettings &se
     // a vertex appears on at least one face, so the face vertex count bounds the point count
     const uint32_t max_points = total_face_vertices < num_input_points ? total_face_vertices : num_input_points;
     scratch.vertex_map.reserve(num_input_points);
-    data.point_positions.reserve(max_points * 3);
+    data.points.reserve(max_points);
     data.point_num_faces.reserve(max_points);
     data.point_faces.reserve(max_points * 3);
     data.faces.reserve(faces.length);
@@ -184,9 +181,7 @@ static bool build(ConvexHullShape::Data &data, const ConvexHullShapeSettings &se
 
                 // append vertex to the packed arrays (num faces / faces filled in below)
                 new_idx = (int32_t)num_points++;
-                data.point_positions.push(vec3f::x(src));
-                data.point_positions.push(vec3f::y(src));
-                data.point_positions.push(vec3f::z(src));
+                data.points.push(src);
                 data.point_num_faces.push(0);
                 data.point_faces.push(-1);
                 data.point_faces.push(-1);
@@ -208,21 +203,17 @@ static bool build(ConvexHullShape::Data &data, const ConvexHullShapeSettings &se
         // plane equation: normal . (x - centroid) = 0  =>  normal . x = normal . centroid
         // standard form: normal . x + constant = 0  =>  constant = -normal . centroid
         const Vec3f normal = vec3f::normalize(builder_face.normal);
-        Plane3f plane;
-        vec3f::store(plane.normal, normal);
-        plane.constant = -vec3f::dot(normal, builder_face.centroid);
-        data.planes.push(plane);
+        data.planes.push(plane3f::make(normal, -vec3f::dot(normal, builder_face.centroid)));
     }
-    data.num_points = num_points;
 
     // validate number of points
     if (num_points > (uint32_t)MAX_POINTS_IN_HULL) return refuse(out_result, ConvexHullShape::BuildResult::TOO_MANY_POINTS);
 
     const ConvexHullShape::Face *hull_faces = data.faces.data;
     const uint32_t num_faces = data.faces.length;
-    const Plane3f *planes = data.planes.data;
+    const Plane *planes = data.planes.data;
     const uint32_t *vertex_indices = data.vertex_indices.data;
-    float *point_positions = data.point_positions.data;
+    const Vec3f *points = data.points.data;
     uint32_t *point_num_faces = data.point_num_faces.data;
     int32_t *point_faces = data.point_faces.data;
     collections::Array<int32_t> &neighboring_faces = scratch.neighboring_faces;
@@ -253,9 +244,9 @@ static bool build(ConvexHullShape::Data &data, const ConvexHullShapeSettings &se
         int32_t best2[2] = {-1, -1};
 
         for (uint32_t face1 = 0; face1 < neighboring_faces.length; face1++) {
-            const Vec3f normal1 = vec3f::load(planes[neighboring_faces[face1]].normal);
+            const Vec3f normal1 = plane3f::normal(planes[neighboring_faces[face1]]);
             for (uint32_t face2 = face1 + 1; face2 < neighboring_faces.length; face2++) {
-                const Vec3f normal2 = vec3f::load(planes[neighboring_faces[face2]].normal);
+                const Vec3f normal2 = plane3f::normal(planes[neighboring_faces[face2]]);
                 const Vec3f face_normal_cross = vec3f::cross(normal1, normal2);
                 const float dot = vec3f::dot(normal1, normal2);
 
@@ -266,7 +257,7 @@ static bool build(ConvexHullShape::Data &data, const ConvexHullShapeSettings &se
                 }
 
                 for (uint32_t face3 = face2 + 1; face3 < neighboring_faces.length; face3++) {
-                    const Vec3f normal3 = vec3f::load(planes[neighboring_faces[face3]].normal);
+                    const Vec3f normal3 = plane3f::normal(planes[neighboring_faces[face3]]);
                     const float tetrahedron_volume = scalar::abs(vec3f::dot(face_normal_cross, normal3));
                     if (tetrahedron_volume > biggest_volume) {
                         biggest_volume = tetrahedron_volume;
@@ -307,12 +298,10 @@ static bool build(ConvexHullShape::Data &data, const ConvexHullShapeSettings &se
 
         // for each plane, find the furthest point behind it (hull thickness in that direction)
         for (uint32_t f = 0; f < num_faces; f++) {
-            const Plane3f &plane = planes[f];
             float max_dist = 0.0f;
-            const float nx = plane.normal.x, ny = plane.normal.y, nz = plane.normal.z;
-            for (uint32_t i = 0; i < num_points * 3; i += 3) {
+            for (uint32_t i = 0; i < num_points; i++) {
                 // point is always behind plane (hull is convex), so negate signed distance
-                const float dist = -(nx * point_positions[i] + ny * point_positions[i + 1] + nz * point_positions[i + 2] + plane.constant);
+                const float dist = -plane3f::distance_to_point(planes[f], points[i]);
                 if (dist > max_dist) max_dist = dist;
             }
             min_size = scalar::min(min_size, max_dist);
@@ -333,13 +322,13 @@ static bool build(ConvexHullShape::Data &data, const ConvexHullShapeSettings &se
 
             const uint32_t fb = p * 3;
             // get the 3 planes that define this vertex
-            const Vec3f n1 = vec3f::load(planes[point_faces[fb]].normal);
-            const Vec3f n2 = vec3f::load(planes[point_faces[fb + 1]].normal);
+            const Vec3f n1 = plane3f::normal(planes[point_faces[fb]]);
+            const Vec3f n2 = plane3f::normal(planes[point_faces[fb + 1]]);
             Vec3f n3, offset_mask;
 
             if (point_face_count == 3) {
                 // all 3 neighboring planes are offset by convex radius
-                n3 = vec3f::load(planes[point_faces[fb + 2]].normal);
+                n3 = plane3f::normal(planes[point_faces[fb + 2]]);
                 offset_mask = vec3f::make(1.0f, 1.0f, 1.0f);
             } else {
                 // only 2 planes, create perpendicular plane through vertex (its constant does not enter the shift)
@@ -375,11 +364,10 @@ static bool build(ConvexHullShape::Data &data, const ConvexHullShapeSettings &se
     }
 
     // compute the convex-radius-shrunk vertex set once; the exclude-mode support fill borrows it per pair.
-    // with no convex radius the shrink is the identity and the fill reads point_positions instead.
+    // with no convex radius the shrink is the identity and the fill reads points instead.
     if (final_convex_radius != 0.0f) {
-        data.shrunk_point_positions.reserve(num_points * 3);
-        support::compute_shrunk_hull_points(data.shrunk_point_positions, num_points, point_positions, point_num_faces, point_faces, planes,
-                                            final_convex_radius);
+        data.shrunk_points.reserve(num_points);
+        support::compute_shrunk_hull_points(data.shrunk_points, num_points, points, point_num_faces, point_faces, planes, final_convex_radius);
     }
 
     // bake the vertex 1-ring adjacency (csr) for support hill climbing. one table serves every scale
@@ -415,8 +403,8 @@ static bool build(ConvexHullShape::Data &data, const ConvexHullShapeSettings &se
     }
 
     data.convex_radius = final_convex_radius;
-    aabox::store(data.aabb, local_bounds);
-    vec3f::store(data.center_of_mass, center_of_mass);
+    data.aabb = local_bounds;
+    data.center_of_mass = center_of_mass;
     data.volume = volume;
 
     if (out_result != nullptr) *out_result = ConvexHullShape::BuildResult::SUCCESS;
@@ -448,8 +436,8 @@ void update(Shape *shape) {
     TUMBLE_ASSERT(data.convex_radius >= 0.0f);
 
     AABox bounds = aabox::empty();
-    for (uint32_t p = 0; p < data.num_points; p++) bounds = aabox::expand_by_point(bounds, vec3f::load(data.point_positions.data, p * 3));
-    aabox::store(shape->aabb, bounds);
+    for (uint32_t p = 0; p < data.points.length; p++) bounds = aabox::expand_by_point(bounds, data.points[p]);
+    shape->aabb = bounds;
 }
 
 void compute_mass_properties(MassProperties &out, const Shape *shape) {
@@ -459,7 +447,7 @@ void compute_mass_properties(MassProperties &out, const Shape *shape) {
     out.mass = shape->volume * shapes::as<ConvexHullShape>(shape).density;
 
     // scale inertia tensor by density
-    mat4f::store(out.inertia, mat4f::multiply_scalar(mat4f::load(data.inertia), shapes::as<ConvexHullShape>(shape).density));
+    out.inertia = mat4f::multiply_scalar(data.inertia, shapes::as<ConvexHullShape>(shape).density);
 }
 
 void get_surface_normal(SurfaceNormalResult &io, const Shape *shape, SubShapeId sub_shape_id) {
@@ -468,17 +456,14 @@ void get_surface_normal(SurfaceNormalResult &io, const Shape *shape, SubShapeId 
     const ConvexHullShape::Data &data = *shapes::as<ConvexHullShape>(shape).data;
 
     // find the plane with the smallest absolute signed distance to the surface point
-    const Plane3f &first_plane = data.planes[0];
-    io.normal = vec3f::load(first_plane.normal);
-    float best_dist = scalar::abs(first_plane.constant + vec3f::dot(io.normal, io.position));
+    io.normal = plane3f::normal(data.planes[0]);
+    float best_dist = scalar::abs(plane3f::distance_to_point(data.planes[0], io.position));
 
     for (uint32_t i = 1; i < data.planes.length; i++) {
-        const Plane3f &plane = data.planes[i];
-        const Vec3f normal = vec3f::load(plane.normal);
-        const float dist = scalar::abs(plane.constant + vec3f::dot(normal, io.position));
+        const float dist = scalar::abs(plane3f::distance_to_point(data.planes[i], io.position));
         if (dist < best_dist) {
             best_dist = dist;
-            io.normal = normal;
+            io.normal = plane3f::normal(data.planes[i]);
         }
     }
 }
@@ -488,7 +473,7 @@ void get_supporting_face(SupportingFaceResult &io, Vec3f direction, const Shape 
     SupportingFace &face = io.face;
     const Vec3f scale = io.scale;
 
-    const Plane3f *planes = data.planes.data;
+    const Plane *planes = data.planes.data;
     const uint32_t num_planes = data.planes.length;
     uint32_t best_face_idx = 0;
 
@@ -498,10 +483,10 @@ void get_supporting_face(SupportingFaceResult &io, Vec3f direction, const Shape 
         // scale flips every dot equally, folded into the sign.
         const float dx = vec3f::x(direction), dy = vec3f::y(direction), dz = vec3f::z(direction);
         const float sign = vec3f::x(scale) < 0.0f ? -1.0f : 1.0f;
-        const Vec3f n0 = vec3f::load(planes[0].normal);
+        const Vec3f n0 = plane3f::normal(planes[0]);
         float best_dot = sign * (vec3f::x(n0) * dx + vec3f::y(n0) * dy + vec3f::z(n0) * dz);
         for (uint32_t i = 1; i < num_planes; i++) {
-            const Vec3f n = vec3f::load(planes[i].normal);
+            const Vec3f n = plane3f::normal(planes[i]);
             const float dot = sign * (vec3f::x(n) * dx + vec3f::y(n) * dy + vec3f::z(n) * dz);
             if (dot < best_dot) {
                 best_dot = dot;
@@ -513,13 +498,13 @@ void get_supporting_face(SupportingFaceResult &io, Vec3f direction, const Shape 
         const Vec3f inv_scale = vec3f::make(1.0f / vec3f::x(scale), 1.0f / vec3f::y(scale), 1.0f / vec3f::z(scale));
 
         // transform first plane normal and find initial best
-        Vec3f plane_normal = vec3f::multiply(inv_scale, vec3f::load(planes[0].normal));
+        Vec3f plane_normal = vec3f::multiply(inv_scale, plane3f::normal(planes[0]));
         const float plane0_normal_length = vec3f::length(plane_normal);
         float best_dot = vec3f::dot(plane_normal, direction) / plane0_normal_length;
 
         // find face with smallest (most negative) dot product
         for (uint32_t i = 1; i < num_planes; i++) {
-            plane_normal = vec3f::multiply(inv_scale, vec3f::load(planes[i].normal));
+            plane_normal = vec3f::multiply(inv_scale, plane3f::normal(planes[i]));
             const float plane_normal_length = vec3f::length(plane_normal);
             const float dot = vec3f::dot(plane_normal, direction) / plane_normal_length;
 
@@ -544,18 +529,14 @@ void get_supporting_face(SupportingFaceResult &io, Vec3f direction, const Shape 
 
     face.num_vertices = 0;
     const uint32_t *vertex_indices = data.vertex_indices.data;
-    const float *point_positions = data.point_positions.data;
+    const Vec3f *points = data.points.data;
 
     if (inside_out) {
         // flip winding of supporting face
-        for (int32_t i = num_vertices - 1; i >= 0; i -= delta_vtx) {
-            face.vertices[face.num_vertices++] = vec3f::load(point_positions, vertex_indices[first_vtx_idx + (uint32_t)i] * 3);
-        }
+        for (int32_t i = num_vertices - 1; i >= 0; i -= delta_vtx) face.vertices[face.num_vertices++] = points[vertex_indices[first_vtx_idx + (uint32_t)i]];
     } else {
         // normal winding of supporting face
-        for (int32_t i = 0; i < num_vertices; i += delta_vtx) {
-            face.vertices[face.num_vertices++] = vec3f::load(point_positions, vertex_indices[first_vtx_idx + (uint32_t)i] * 3);
-        }
+        for (int32_t i = 0; i < num_vertices; i += delta_vtx) face.vertices[face.num_vertices++] = points[vertex_indices[first_vtx_idx + (uint32_t)i]];
     }
 
     face::transform_with_mat4_scale(face, io.transform, scale);
@@ -566,12 +547,9 @@ float get_inner_radius(const Shape *shape) {
 
     // calculate the inner radius by getting the minimum distance from the center of mass to the planes of the hull
     // (the planes are in input space, not relative to the center of mass)
-    const Vec3f center_of_mass = vec3f::load(shape->center_of_mass);
+    const Vec3f center_of_mass = shape->center_of_mass;
     float inner_radius = scalar::FLOAT_MAX;
-    for (uint32_t i = 0; i < data.planes.length; i++) {
-        const Plane3f &plane = data.planes[i];
-        inner_radius = scalar::min(inner_radius, -(vec3f::dot(vec3f::load(plane.normal), center_of_mass) + plane.constant));
-    }
+    for (uint32_t i = 0; i < data.planes.length; i++) inner_radius = scalar::min(inner_radius, -plane3f::distance_to_point(data.planes[i], center_of_mass));
     // clamp against zero for numerical stability (flat convex hulls may have round-off issues)
     return scalar::max(0.0f, inner_radius);
 }
@@ -583,7 +561,7 @@ void set_support(Support &out, const Shape *shape, SupportFunctionMode mode, Vec
     out.add_radius = 0.0f;
 
     auto &hull = out.hull;
-    hull.vertex_count = data.num_points;
+    hull.vertex_count = data.points.length;
 
     // borrow the shape's csr adjacency (empty means not baked: brute scan). valid for the shrunk set (same
     // count/order) and every scale path (affine transforms preserve hull vertex adjacency). reset the
@@ -604,29 +582,26 @@ void set_support(Support &out, const Shape *shape, SupportFunctionMode mode, Vec
         hull.output_scale = s;
         if (raw_vertices) {
             out.convex_radius = 0.0f;
-            hull.vertices = data.point_positions.data;
+            hull.vertices = data.points.data;
         } else {
             out.convex_radius = data.convex_radius * s;
-            hull.vertices = data.shrunk_point_positions.data;
+            hull.vertices = data.shrunk_points.data;
         }
         return;
     }
 
     // slow path: non-uniform / mirrored scale bakes per-pair vertices into scratch
     hull.output_scale = 1.0f;
-    TUMBLE_ASSERT(data.num_points <= support::MAX_HULL_POINTS);
+    TUMBLE_ASSERT(data.points.length <= support::MAX_HULL_POINTS);
 
     if (raw_vertices) {
         out.convex_radius = 0.0f;
         // bake scaled raw vertices into scratch
-        const float *positions = data.point_positions.data;
-        float *scratch = hull.scratch;
-        const uint32_t required_length = data.num_points * 3;
-        for (uint32_t i = 0; i < required_length; i += 3) vec3f::store(scratch, vec3f::multiply(vec3f::load(positions, i), scale), i);
-        hull.vertices = scratch;
+        for (uint32_t i = 0; i < data.points.length; i++) hull.scratch[i] = vec3f::multiply(data.points[i], scale);
+        hull.vertices = hull.scratch;
     } else {
         // exclude convex radius (nonzero): scaled shrunk vertices
-        support::compute_scaled_shrunk_hull_points(hull.scratch, data.num_points, data.point_positions.data, data.point_num_faces.data,
+        support::compute_scaled_shrunk_hull_points(hull.scratch, data.points.length, data.points.data, data.point_num_faces.data,
                                                    data.point_faces.data, data.planes.data, data.convex_radius, scale);
         out.convex_radius = support::scale_convex_radius(data.convex_radius, scale);
         hull.vertices = hull.scratch;

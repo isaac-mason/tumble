@@ -20,7 +20,7 @@ static constexpr int MAX_LABELS = 18;
 struct Belt {
     BodyId body_id;
     bool angular;
-    Float3 local_velocity;
+    Vec3f local_velocity;
 };
 
 namespace {
@@ -40,7 +40,6 @@ static struct {
     int label_count;
 } state;
 
-static const Float4 IDENTITY = {0.0f, 0.0f, 0.0f, 1.0f};
 
 static const Belt *belt_of(BodyId id) {
     for (int i = 0; i < state.belt_count; i++) {
@@ -49,11 +48,11 @@ static const Belt *belt_of(BodyId id) {
     return nullptr;
 }
 
-static void add_belt(const RigidBody *body, bool angular, Float3 local_velocity) {
+static void add_belt(const RigidBody *body, bool angular, Vec3f local_velocity) {
     state.belts[state.belt_count++] = {body->id, angular, local_velocity};
 }
 
-static RigidBody *add_body(World &world, Shape *shape, bool moving, Float3 position, Float4 quaternion, float friction) {
+static RigidBody *add_body(World &world, Shape *shape, bool moving, Vec3f position, Quatf quaternion, float friction) {
     RigidBodySettings settings;
     settings.shape = shape;
     settings.object_layer = moving ? state.layers.moving : state.layers.not_moving;
@@ -71,19 +70,19 @@ static void move_surfaces(ContactSettings &settings, const RigidBody *a, const R
     const bool linear_a = belt_a != nullptr && !belt_a->angular;
     const bool linear_b = belt_b != nullptr && !belt_b->angular;
     if (linear_a || linear_b) {
-        const Float3 velocity_a = linear_a ? vec::rotate(a->quaternion, belt_a->local_velocity) : Float3{0.0f, 0.0f, 0.0f};
-        const Float3 velocity_b = linear_b ? vec::rotate(b->quaternion, belt_b->local_velocity) : Float3{0.0f, 0.0f, 0.0f};
-        settings.relative_linear_surface_velocity = vec::subtract(velocity_b, velocity_a);
+        const Vec3f velocity_a = linear_a ? vec3f::transform_quat(belt_a->local_velocity, a->quaternion) : vec3f::zero();
+        const Vec3f velocity_b = linear_b ? vec3f::transform_quat(belt_b->local_velocity, b->quaternion) : vec3f::zero();
+        settings.relative_linear_surface_velocity = vec3f::subtract(velocity_b, velocity_a);
     }
     const bool angular_a = belt_a != nullptr && belt_a->angular;
     const bool angular_b = belt_b != nullptr && belt_b->angular;
     if (angular_a || angular_b) {
-        const Float3 turn_a = angular_a ? vec::rotate(a->quaternion, belt_a->local_velocity) : Float3{0.0f, 0.0f, 0.0f};
-        const Float3 turn_b = angular_b ? vec::rotate(b->quaternion, belt_b->local_velocity) : Float3{0.0f, 0.0f, 0.0f};
+        const Vec3f turn_a = angular_a ? vec3f::transform_quat(belt_a->local_velocity, a->quaternion) : vec3f::zero();
+        const Vec3f turn_b = angular_b ? vec3f::transform_quat(belt_b->local_velocity, b->quaternion) : vec3f::zero();
         // the angular velocity is about a's centre of mass: b's turning moves a's centre relative to b's
         settings.relative_linear_surface_velocity =
-            angular_b ? vec::cross(turn_b, vec::subtract(a->center_of_mass_position, b->center_of_mass_position)) : Float3{0.0f, 0.0f, 0.0f};
-        settings.relative_angular_surface_velocity = vec::subtract(turn_b, turn_a);
+            angular_b ? vec3f::cross(turn_b, vec3f::subtract(a->center_of_mass_position, b->center_of_mass_position)) : vec3f::zero();
+        settings.relative_angular_surface_velocity = vec3f::subtract(turn_b, turn_a);
     }
 }
 
@@ -116,42 +115,44 @@ static void init(App &app) {
     state.label_count = 0;
     app.world = app::create_world(state.layers);
 
-    add_body(*app.world, app::keep(app, box::create({.half_extents = {100.0f, 0.5f, 100.0f}})), false, {0.0f, -0.5f, 0.0f}, IDENTITY, 1.0f);
+    add_body(*app.world, app::keep(app, box::create({.half_extents = vec3f::make(100.0f, 0.5f, 100.0f)})), false, vec3f::make(0.0f, -0.5f, 0.0f),
+             quatf::identity(), 1.0f);
 
     // four belts around a square, each turned a quarter from the last and tilted up a degree, rougher each time
-    Shape *belt_shape = app::keep(app, box::create({.half_extents = {BELT_WIDTH, 0.1f, BELT_LENGTH}}));
+    Shape *belt_shape = app::keep(app, box::create({.half_extents = vec3f::make(BELT_WIDTH, 0.1f, BELT_LENGTH)}));
     for (int i = 0; i < 4; i++) {
-        const Float4 turn = vec::quat_axis_angle({0.0f, 1.0f, 0.0f}, 0.5f * PI * (float)i);
-        const Float4 tilt = vec::quat_axis_angle({1.0f, 0.0f, 0.0f}, PI / 180.0f);
-        const Float4 rotation = vec::quat_multiply(turn, tilt);
-        const Float3 position = vec::rotate(rotation, {BELT_LENGTH, 6.0f, BELT_WIDTH});
-        add_belt(add_body(*app.world, belt_shape, false, position, rotation, 0.25f * (float)(i + 1)), false, {0.0f, 0.0f, -10.0f});
+        const Quatf turn = quatf::set_axis_angle(vec3f::axis_y(), 0.5f * PI * (float)i);
+        const Quatf tilt = quatf::set_axis_angle(vec3f::axis_x(), PI / 180.0f);
+        const Quatf rotation = quatf::multiply(turn, tilt);
+        const Vec3f position = vec3f::transform_quat(vec3f::make(BELT_LENGTH, 6.0f, BELT_WIDTH), rotation);
+        add_belt(add_body(*app.world, belt_shape, false, position, rotation, 0.25f * (float)(i + 1)), false, vec3f::make(0.0f, 0.0f, -10.0f));
     }
 
-    Shape *cargo = app::keep(app, box::create({.half_extents = {2.0f, 2.0f, 2.0f}}));
+    Shape *cargo = app::keep(app, box::create({.half_extents = vec3f::splat(2.0f)}));
     for (int i = 0; i <= 10; i++) {
         const float friction = 1.0f - 0.1f * (float)i;
         const float x = -BELT_LENGTH + (float)i * 10.0f;
-        add_body(*app.world, cargo, true, {x, 10.0f, -BELT_LENGTH}, IDENTITY, friction);
+        add_body(*app.world, cargo, true, vec3f::make(x, 10.0f, -BELT_LENGTH), quatf::identity(), friction);
         state.labels[state.label_count++] = {{x, 14.0f, -BELT_LENGTH}, friction};
     }
 
     // a belt that is itself dynamic, lying on two loose rollers
     Shape *roller = app::keep(app, cylinder::create({.half_height = 6.0f, .radius = 1.0f}));
-    const Float4 roller_rotation = vec::quat_axis_angle({0.0f, 0.0f, 1.0f}, 0.5f * PI);
-    add_body(*app.world, roller, true, {-25.0f, 1.0f, -20.0f}, roller_rotation, 0.1f);
-    add_body(*app.world, roller, true, {-25.0f, 1.0f, 20.0f}, roller_rotation, 0.1f);
-    Shape *dynamic_belt = app::keep(app, box::create({.half_extents = {5.0f, 0.1f, 25.0f}}));
-    add_belt(add_body(*app.world, dynamic_belt, true, {-25.0f, 3.0f, 0.0f}, IDENTITY, 1.0f), false, {0.0f, 0.0f, -10.0f});
-    add_body(*app.world, cargo, true, {-25.0f, 6.0f, 15.0f}, IDENTITY, 1.0f);
+    const Quatf roller_rotation = quatf::set_axis_angle(vec3f::axis_z(), 0.5f * PI);
+    add_body(*app.world, roller, true, vec3f::make(-25.0f, 1.0f, -20.0f), roller_rotation, 0.1f);
+    add_body(*app.world, roller, true, vec3f::make(-25.0f, 1.0f, 20.0f), roller_rotation, 0.1f);
+    Shape *dynamic_belt = app::keep(app, box::create({.half_extents = vec3f::make(5.0f, 0.1f, 25.0f)}));
+    add_belt(add_body(*app.world, dynamic_belt, true, vec3f::make(-25.0f, 3.0f, 0.0f), quatf::identity(), 1.0f), false, vec3f::make(0.0f, 0.0f, -10.0f));
+    add_body(*app.world, cargo, true, vec3f::make(-25.0f, 6.0f, 15.0f), quatf::identity(), 1.0f);
 
     // a lazy susan, turning 10 degrees a second
-    Shape *turntable = app::keep(app, box::create({.half_extents = {20.0f, 0.1f, 20.0f}}));
-    add_belt(add_body(*app.world, turntable, false, {10.0f, 3.0f, 0.0f}, IDENTITY, 1.0f), true, {0.0f, 10.0f * PI / 180.0f, 0.0f});
+    Shape *turntable = app::keep(app, box::create({.half_extents = vec3f::make(20.0f, 0.1f, 20.0f)}));
+    add_belt(add_body(*app.world, turntable, false, vec3f::make(10.0f, 3.0f, 0.0f), quatf::identity(), 1.0f), true,
+             vec3f::make(0.0f, 10.0f * PI / 180.0f, 0.0f));
     for (int i = 0; i <= 6; i++) {
         const float friction = 1.0f - 0.1f * (float)i;
         const float z = -15.0f + 5.0f * (float)i;
-        add_body(*app.world, cargo, true, {10.0f, 10.0f, z}, IDENTITY, friction);
+        add_body(*app.world, cargo, true, vec3f::make(10.0f, 10.0f, z), quatf::identity(), friction);
         state.labels[state.label_count++] = {{10.0f, 14.0f, z}, friction};
     }
 

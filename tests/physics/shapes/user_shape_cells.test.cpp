@@ -1,5 +1,6 @@
 #include "physics/world_test_scene.h"
 #include "test.h"
+#include "test_math.h"
 #include "tumble/math/mat4f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
@@ -54,7 +55,7 @@ bool pop_cell(uint32_t &out_index, SubShapeId &out_remainder, const CellsShape &
 }
 
 void cells_compute_mass_properties(MassProperties &out, const Shape *shape) {
-    mass_properties::set_mass_and_inertia_of_solid_box(out, aabox::size(aabox::load(shape->aabb)), 1000.0f);
+    mass_properties::set_mass_and_inertia_of_solid_box(out, aabox::size(shape->aabb), 1000.0f);
 }
 
 void cells_get_surface_normal(SurfaceNormalResult &io, const Shape *shape, SubShapeId sub_shape_id) {
@@ -99,26 +100,26 @@ void cells_get_leaf_shape(GetLeafShapeResult &out, const Shape *shape, SubShapeI
 float cells_get_inner_radius(const Shape *) { return 0.5f; }
 
 void cells_cast_ray(CastRayCollector &collector, const CastRaySettings &settings, const Rayf &ray,
-                    const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
+                    const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform) {
     const CellsShape &cells = cells_of(shape);
     for (uint32_t i = 0; i < cell_count(cells); i++) {
         if (cells.solid[i] == 0) continue;
         SubShapeIdBuilder cell_id;
         sub_shape::push_index(cell_id, sub_shape_id, i, cell_count(cells));
-        Transformf at;
+        Transform at;
         compound::child_transform(at, transform, cell_child(cells, i));
         shapes::def_of(cells.cube).cast_ray(collector, settings, ray, cells.cube, cell_id, at);
     }
 }
 
 void cells_collide_point(CollidePointCollector &collector, const CollidePointSettings &settings, Vec3f point,
-                         const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transformf &transform) {
+                         const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform) {
     const CellsShape &cells = cells_of(shape);
     for (uint32_t i = 0; i < cell_count(cells); i++) {
         if (cells.solid[i] == 0) continue;
         SubShapeIdBuilder cell_id;
         sub_shape::push_index(cell_id, sub_shape_id, i, cell_count(cells));
-        Transformf at;
+        Transform at;
         compound::child_transform(at, transform, cell_child(cells, i));
         shapes::def_of(cells.cube).collide_point(collector, settings, point, cells.cube, cell_id, at);
     }
@@ -126,42 +127,42 @@ void cells_collide_point(CollidePointCollector &collector, const CollidePointSet
 
 /** the cells as shape a: each solid cell's cube against b, through the row its type and b's take */
 void collide_cells_vs_shape(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                            const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                            const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                            const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                            const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     const CellsShape &cells = cells_of(shape_a);
     for (uint32_t i = 0; i < cell_count(cells); i++) {
         if (cells.solid[i] == 0) continue;
         SubShapeIdBuilder cell_id;
         sub_shape::push_index(cell_id, sub_shape_id_a, i, cell_count(cells));
-        Transformf at;
+        Transform at;
         compound::child_transform(at, transform_a, cell_child(cells, i));
         shapes::collide_fn(cells.cube->type, shape_b->type)(collector, settings, cells.cube, cell_id, at, shape_b, sub_shape_id_b, transform_b);
     }
 }
 
 void collide_shape_vs_cells(CollideShapeCollector &collector, const CollideShapeSettings &settings,
-                            const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a,
-                            const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                            const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
+                            const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     const CellsShape &cells = cells_of(shape_b);
     for (uint32_t i = 0; i < cell_count(cells); i++) {
         if (cells.solid[i] == 0) continue;
         SubShapeIdBuilder cell_id;
         sub_shape::push_index(cell_id, sub_shape_id_b, i, cell_count(cells));
-        Transformf at;
+        Transform at;
         compound::child_transform(at, transform_b, cell_child(cells, i));
         shapes::collide_fn(shape_a->type, cells.cube->type)(collector, settings, shape_a, sub_shape_id_a, transform_a, cells.cube, cell_id, at);
     }
 }
 
 void cast_shape_vs_cells(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *shape_a,
-                         const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
-                         const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                         const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a, Vec3f displacement_a,
+                         const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     const CellsShape &cells = cells_of(shape_b);
     for (uint32_t i = 0; i < cell_count(cells); i++) {
         if (cells.solid[i] == 0) continue;
         SubShapeIdBuilder cell_id;
         sub_shape::push_index(cell_id, sub_shape_id_b, i, cell_count(cells));
-        Transformf at;
+        Transform at;
         compound::child_transform(at, transform_b, cell_child(cells, i));
         shapes::cast_fn(shape_a->type, cells.cube->type)(collector, settings, shape_a, sub_shape_id_a, transform_a, displacement_a, cells.cube,
                                                          cell_id, at);
@@ -169,14 +170,14 @@ void cast_shape_vs_cells(CastShapeCollector &collector, const CastShapeSettings 
 }
 
 void cast_cells_vs_shape(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *shape_a,
-                         const SubShapeIdBuilder &sub_shape_id_a, const Transformf &transform_a, Vec3f displacement_a,
-                         const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transformf &transform_b) {
+                         const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a, Vec3f displacement_a,
+                         const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
     const CellsShape &cells = cells_of(shape_a);
     for (uint32_t i = 0; i < cell_count(cells); i++) {
         if (cells.solid[i] == 0) continue;
         SubShapeIdBuilder cell_id;
         sub_shape::push_index(cell_id, sub_shape_id_a, i, cell_count(cells));
-        Transformf at;
+        Transform at;
         compound::child_transform(at, transform_a, cell_child(cells, i));
         shapes::cast_fn(cells.cube->type, shape_b->type)(collector, settings, cells.cube, cell_id, at, displacement_a, shape_b, sub_shape_id_b,
                                                          transform_b);
@@ -260,8 +261,8 @@ Shape *create_cells(uint32_t size, const uint8_t *solid, const int32_t *material
         bounds = aabox::union_(bounds, aabox::make(vec3f::make((float)x, (float)y, (float)z), vec3f::make((float)x + 1.0f, (float)y + 1.0f, (float)z + 1.0f)));
         volume += 1.0f;
     }
-    aabox::store(shape->aabb, bounds);
-    vec3f::store(shape->center_of_mass, aabox::center(bounds));
+    shape->aabb = bounds;
+    shape->center_of_mass = aabox::center(bounds);
     shape->volume = volume;
     shape->material_id = -1;
     return shape;
@@ -293,23 +294,23 @@ RigidBody *add_awake_body(WorldScene &scene, Shape *shape, const Float3 &positio
     return rigid_body::create(*scene.world, settings);
 }
 
-float tilt(const RigidBody *body) { return 2.0f * scalar::acos(scalar::min(1.0f, scalar::abs(body->quaternion.w))); }
+float tilt(const RigidBody *body) { return 2.0f * scalar::acos(scalar::min(1.0f, scalar::abs(quatf::w(body->quaternion)))); }
 
 }  // namespace
 
 void test_user_shape_cells_hold_a_box_flat_and_their_contacts_name_cells(TestCtx &ctx) {
-    Ref<Shape> cube = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> cube = box::create({.half_extents = vec3f::splat(0.5f)});
     Floor floor;
     make_floor(floor, cube);
     // after the scene, whose making starts the tables over with the built-ins alone
     WorldScene scene = make_world_scene(ctx);
     init_cells();
     RigidBody *ground = add_floor_body(scene, floor.shape);
-    RigidBody *crate = add_awake_body(scene, box::create({.half_extents = {0.5f, 0.5f, 0.5f}}), {0.2f, 2.0f, 0.3f});
+    RigidBody *crate = add_awake_body(scene, box::create({.half_extents = vec3f::splat(0.5f)}), {0.2f, 2.0f, 0.3f});
     for (uint32_t i = 0; i < 120; i++) step_world(*scene.world);
 
     // resting flat on the cells' faces: the supporting faces the cells' ids name gave a manifold, not a point
-    CHECK_NEAR(ctx, crate->position.y, 0.5f, 0.02f);
+    CHECK_NEAR(ctx, vec3f::y(crate->position), 0.5f, 0.02f);
     CHECK(ctx, tilt(crate) < 0.01f);
 
     // every contact names a top cell under the crate, and reports that cell's material; skipping the pair cache, the
@@ -334,7 +335,7 @@ void test_user_shape_cells_hold_a_box_flat_and_their_contacts_name_cells(TestCtx
 }
 
 void test_user_shape_cells_body_rests_on_cells_and_beside_a_user_sphere(TestCtx &ctx) {
-    Ref<Shape> cube = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> cube = box::create({.half_extents = vec3f::splat(0.5f)});
     Floor floor;
     make_floor(floor, cube);
 
@@ -360,9 +361,9 @@ void test_user_shape_cells_body_rests_on_cells_and_beside_a_user_sphere(TestCtx 
     for (uint32_t i = 0; i < 180; i++) step_world(*scene.world);
 
     // the plank's origin is its low corner, so it rests at y 0, flat
-    CHECK_NEAR(ctx, plank_body->position.y, 0.0f, 0.02f);
+    CHECK_NEAR(ctx, vec3f::y(plank_body->position), 0.0f, 0.02f);
     CHECK(ctx, tilt(plank_body) < 0.01f);
-    CHECK_NEAR(ctx, ball_body->position.y, 0.5f, 0.02f);
+    CHECK_NEAR(ctx, vec3f::y(ball_body->position), 0.5f, 0.02f);
     release_world_scene(scene);
 
     held_ball = nullptr;
@@ -372,7 +373,7 @@ void test_user_shape_cells_body_rests_on_cells_and_beside_a_user_sphere(TestCtx 
 }
 
 void test_user_shape_cells_queries_name_the_cell_they_meet(TestCtx &ctx) {
-    Ref<Shape> cube = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
+    Ref<Shape> cube = box::create({.half_extents = vec3f::splat(0.5f)});
     Floor floor;
     make_floor(floor, cube);
     WorldScene scene = make_world_scene(ctx);
@@ -409,7 +410,7 @@ void test_user_shape_cells_queries_name_the_cell_they_meet(TestCtx &ctx) {
     // a sphere swept down onto the same cell: it touches at y 0 and names the cell
     Ref<Shape> probe = sphere::create({.radius = 0.25f});
     CastShapeCollector sweep = cast_shape::create_collector(CollectorKind::CLOSEST);
-    const Transformf start = {{1.5f, 2.25f, -1.5f}, {0.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}};
+    const Transform start = pose({1.5f, 2.25f, -1.5f});
     query::cast_shape(*scene.world, sweep, cast_shape::default_settings(), probe, start, vec3f::make(0.0f, -4.0f, 0.0f), filter);
     const CastShapeHit *touch = cast_shape::hit(sweep);
     CHECK(ctx, touch != nullptr);
@@ -426,7 +427,7 @@ void test_user_shape_cells_queries_name_the_cell_they_meet(TestCtx &ctx) {
     int32_t plank_materials[8] = {};
     Ref<Shape> plank = create_cells(2, plank_solid, plank_materials, cube);
     CastShapeCollector drop = cast_shape::create_collector(CollectorKind::CLOSEST);
-    const Transformf above = {{-1.7f, 3.0f, 0.2f}, {0.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}};
+    const Transform above = pose({-1.7f, 3.0f, 0.2f});
     query::cast_shape(*scene.world, drop, cast_shape::default_settings(), plank, above, vec3f::make(0.0f, -4.0f, 0.0f), filter);
     const CastShapeHit *landing = cast_shape::hit(drop);
     CHECK(ctx, landing != nullptr);

@@ -26,13 +26,13 @@ static bool near(float a, float b, float tolerance) { return a - b <= tolerance 
 int main() {
     dispatch::init();
     World *world = make_world();
-    Ref<Shape> box_shape = box::create({.half_extents = {0.5f, 0.5f, 0.5f}});
-    Ref<Shape> ground_shape = box::create({.half_extents = {50.0f, 0.5f, 50.0f}});
+    Ref<Shape> box_shape = box::create({.half_extents = vec3f::splat(0.5f)});
+    Ref<Shape> ground_shape = box::create({.half_extents = vec3f::make(50.0f, 0.5f, 50.0f)});
     rigid_body::create(*world, {
         .shape = ground_shape,
         .object_layer = not_moving,
         .motion_type = MotionType::STATIC,
-        .position = {0.0f, -0.5f, 0.0f},
+        .position = vec3f::make(0.0f, -0.5f, 0.0f),
     });
 
     {
@@ -42,7 +42,7 @@ int main() {
             .shape = box_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {0.0f, 2.0f, 0.0f},
+            .position = vec3f::make(0.0f, 2.0f, 0.0f),
             .friction = 0.6f,
         });
 
@@ -67,7 +67,7 @@ int main() {
             .shape = box_shape,
             .object_layer = moving,
             .motion_type = MotionType::KINEMATIC,
-            .position = {4.0f, 1.0f, 0.0f},
+            .position = vec3f::make(4.0f, 1.0f, 0.0f),
         });
 
         // a body can change its motion type. `wake` wakes a body that keeps moving
@@ -75,7 +75,7 @@ int main() {
         /* SNIPPET_END: motion-types */
         /* HIDE_START */
         steps(*world, 60);
-        if (!near(platform->position.y, 0.5f, 0.05f)) return 1;
+        if (!near(vec3f::y(platform->position), 0.5f, 0.05f)) return 1;
         rigid_body::remove(*world, platform);
         /* HIDE_END */
     }
@@ -84,7 +84,7 @@ int main() {
         .shape = box_shape,
         .object_layer = moving,
         .motion_type = MotionType::DYNAMIC,
-        .position = {0.0f, 0.5f, 0.0f},
+        .position = vec3f::make(0.0f, 0.5f, 0.0f),
     });
     {
         /* SNIPPET_START: transform */
@@ -96,11 +96,11 @@ int main() {
 
         // read the pose from the body's fields. position is the shape's origin, and
         // center_of_mass_position is its centre of mass
-        const Float3 &position = body->position;
-        printf("at %.2f %.2f %.2f\n", position.x, position.y, position.z);
+        const Vec3f position = body->position;
+        printf("at %.2f %.2f %.2f\n", vec3f::x(position), vec3f::y(position), vec3f::z(position));
         /* SNIPPET_END: transform */
         /* HIDE_START */
-        if (body->position.y != 0.5f || body->quaternion.w != 1.0f) return 1;
+        if (vec3f::y(body->position) != 0.5f || quatf::w(body->quaternion) != 1.0f) return 1;
         /* HIDE_END */
     }
 
@@ -116,7 +116,7 @@ int main() {
         const Vec3f corner_velocity = rigid_body::get_velocity_at_point(body, corner);
         /* SNIPPET_END: velocity */
         /* HIDE_START */
-        if (!near(vec3f::x(corner_velocity), 2.5f, 1e-5f) || body->motion_properties.linear_velocity.y != 1.0f) return 1;
+        if (!near(vec3f::x(corner_velocity), 2.5f, 1e-5f) || vec3f::y(body->motion_properties.linear_velocity) != 1.0f) return 1;
         rigid_body::set_linear_velocity(*world, body, vec3f::zero());
         rigid_body::set_angular_velocity(*world, body, vec3f::zero());
         /* HIDE_END */
@@ -139,7 +139,7 @@ int main() {
         /* SNIPPET_END: forces */
         /* HIDE_START */
         // a 1000 kg box: the impulse alone is 0.5 m/s up
-        if (!near(body->motion_properties.linear_velocity.y, 0.5f, 1e-4f)) return 1;
+        if (!near(vec3f::y(body->motion_properties.linear_velocity), 0.5f, 1e-4f)) return 1;
         world::step(*world, 1.0f / 60.0f);
         if (body->motion_properties.force.y != 0.0f) return 1;
         steps(*world, 120);
@@ -157,7 +157,7 @@ int main() {
             .shape = box_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {3.0f, 0.5f, 3.0f},
+            .position = vec3f::make(3.0f, 0.5f, 3.0f),
             .mass = 10.0f,
         });
 
@@ -168,7 +168,7 @@ int main() {
             .shape = box_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {-3.0f, 0.5f, 3.0f},
+            .position = vec3f::make(-3.0f, 0.5f, 3.0f),
             .mass_properties_override = &heavy,
         });
         /* SNIPPET_END: mass */
@@ -190,7 +190,7 @@ int main() {
             .shape = box_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {6.0f, 3.0f, 0.0f},
+            .position = vec3f::make(6.0f, 3.0f, 0.0f),
             .allowed_degrees_of_freedom = dof::TRANSLATION_X | dof::TRANSLATION_Y,
             .gravity_factor = 0.0f,
             .linear_damping = 0.0f,
@@ -202,8 +202,8 @@ int main() {
         /* HIDE_START */
         world::step(*world, 1.0f / 60.0f);
         // the limit clamped the velocity to 20 m/s, then the lock zeroed z; nothing fell
-        const Float3 &velocity = puck->motion_properties.linear_velocity;
-        if (velocity.z != 0.0f || velocity.x > 20.0f || velocity.x < 19.0f || velocity.y != 0.0f) {
+        const Vec3f velocity = puck->motion_properties.linear_velocity;
+        if (vec3f::z(velocity) != 0.0f || vec3f::x(velocity) > 20.0f || vec3f::x(velocity) < 19.0f || vec3f::y(velocity) != 0.0f) {
             return 1;
         }
         rigid_body::remove(*world, puck);
@@ -232,7 +232,7 @@ int main() {
             .shape = box_shape,
             .object_layer = moving,
             .motion_type = MotionType::KINEMATIC,
-            .position = {-6.0f, 0.5f, 0.0f},
+            .position = vec3f::make(-6.0f, 0.5f, 0.0f),
         });
 
         const float step_time = 1.0f / 60.0f;
@@ -243,7 +243,7 @@ int main() {
         }
         /* SNIPPET_END: kinematic */
         /* HIDE_START */
-        if (!near(lift->position.y, 2.5f, 1e-3f)) return 1;
+        if (!near(vec3f::y(lift->position), 2.5f, 1e-3f)) return 1;
         rigid_body::remove(*world, lift);
         /* HIDE_END */
     }
@@ -257,14 +257,14 @@ int main() {
             .shape = pellet_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {10.0f, 5.0f, 0.0f},
+            .position = vec3f::make(10.0f, 5.0f, 0.0f),
             .motion_quality = MotionQuality::LINEAR_CAST,
         });
         rigid_body::set_linear_velocity(*world, pellet, vec3f::make(0.0f, -200.0f, 0.0f));
         /* SNIPPET_END: ccd */
         /* HIDE_START */
         steps(*world, 30);
-        if (pellet->position.y < 0.0f) return 1;
+        if (vec3f::y(pellet->position) < 0.0f) return 1;
         rigid_body::remove(*world, pellet);
         pellet_shape = nullptr;
         /* HIDE_END */
@@ -279,7 +279,7 @@ int main() {
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
             .user_data = 42,
-            .position = {0.0f, 0.5f, 6.0f},
+            .position = vec3f::make(0.0f, 0.5f, 6.0f),
         });
         tagged->user_data = 43;
         /* SNIPPET_END: user-data */
@@ -306,7 +306,7 @@ int main() {
             .shape = box_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {-10.0f, 0.5f, 0.0f},
+            .position = vec3f::make(-10.0f, 0.5f, 0.0f),
             .collision_groups = PLAYERS,
             .collision_mask = ~PROJECTILES,
         });
@@ -316,7 +316,7 @@ int main() {
             .shape = box_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {-10.0f, 3.0f, 0.0f},
+            .position = vec3f::make(-10.0f, 3.0f, 0.0f),
             .collision_groups = PROJECTILES,
             .collision_mask = ~PLAYERS,
         });
@@ -324,7 +324,7 @@ int main() {
         /* HIDE_START */
         steps(*world, 90);
         // the shot fell through the player to the ground
-        if (!near(shot->position.y, 0.5f, 0.05f) || !near(player->position.y, 0.5f, 0.05f)) return 1;
+        if (!near(vec3f::y(shot->position), 0.5f, 0.05f) || !near(vec3f::y(player->position), 0.5f, 0.05f)) return 1;
         rigid_body::remove(*world, player);
         rigid_body::remove(*world, shot);
         /* HIDE_END */
@@ -338,7 +338,7 @@ int main() {
             .shape = box_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {12.0f, 4.0f, 0.0f},
+            .position = vec3f::make(12.0f, 4.0f, 0.0f),
             .friction = 0.9f,
             .restitution = 0.8f,
             .restitution_combine_mode = MaterialCombineMode::MAX,
@@ -349,8 +349,10 @@ int main() {
         bool fell = false;
         for (int i = 0; i < 120; i++) {
             world::step(*world, 1.0f / 60.0f);
-            if (bouncy->motion_properties.linear_velocity.y < -1.0f) fell = true;
-            if (fell && bouncy->motion_properties.linear_velocity.y > 0.0f && bouncy->position.y > highest_after_bounce) highest_after_bounce = bouncy->position.y;
+            if (vec3f::y(bouncy->motion_properties.linear_velocity) < -1.0f) fell = true;
+            if (fell && vec3f::y(bouncy->motion_properties.linear_velocity) > 0.0f && vec3f::y(bouncy->position) > highest_after_bounce) {
+                highest_after_bounce = vec3f::y(bouncy->position);
+            }
         }
         if (highest_after_bounce < 1.5f) return 1;
         rigid_body::remove(*world, bouncy);
@@ -364,7 +366,7 @@ int main() {
             .shape = box_shape,
             .object_layer = moving,
             .motion_type = MotionType::KINEMATIC,
-            .position = {14.0f, 0.5f, 0.0f},
+            .position = vec3f::make(14.0f, 0.5f, 0.0f),
             .sensor = true,
         });
         /* SNIPPET_END: sensors */
@@ -373,7 +375,7 @@ int main() {
             .shape = box_shape,
             .object_layer = moving,
             .motion_type = MotionType::DYNAMIC,
-            .position = {14.0f, 3.0f, 0.0f},
+            .position = vec3f::make(14.0f, 3.0f, 0.0f),
         });
         bool reported = false;
         for (int i = 0; i < 90; i++) {
@@ -384,7 +386,7 @@ int main() {
             }
         }
         // it fell through the sensor to the ground, and the sensor saw it
-        if (!reported || !near(visitor->position.y, 0.5f, 0.05f)) return 1;
+        if (!reported || !near(vec3f::y(visitor->position), 0.5f, 0.05f)) return 1;
         rigid_body::remove(*world, visitor);
         rigid_body::remove(*world, trigger);
         /* HIDE_END */
@@ -394,16 +396,16 @@ int main() {
         /* SNIPPET_START: shape */
         // a new shape updates the mass and bounds. constraints keep their anchors where they were on
         // the body
-        Ref<Shape> bigger = box::create({.half_extents = {1.0f, 1.0f, 1.0f}});
+        Ref<Shape> bigger = box::create({.half_extents = vec3f::splat(1.0f)});
         rigid_body::set_shape(*world, body, bigger, true);
 
         // after changing a shape in place, pass it to set_shape for each body that uses it
-        shapes::as<BoxShape>(bigger).half_extents = {1.0f, 2.0f, 1.0f};
+        shapes::as<BoxShape>(bigger).half_extents = vec3f::make(1.0f, 2.0f, 1.0f);
         box::update(bigger);
         rigid_body::set_shape(*world, body, bigger, true);
         /* SNIPPET_END: shape */
         /* HIDE_START */
-        if (body->shape != bigger || !near(body->aabb.max.y - body->aabb.min.y, 4.0f, 1e-3f)) return 1;
+        if (body->shape != bigger || !near(vec3f::y(body->aabb.max) - vec3f::y(body->aabb.min), 4.0f, 1e-3f)) return 1;
         rigid_body::set_shape(*world, body, box_shape, false);
         bigger = nullptr;
         /* HIDE_END */

@@ -114,15 +114,15 @@ bool update(QuadTree &tree, const RigidBody *body);
 void rebuild(QuadTree &tree, const Bodies &bodies);
 
 /** the bounds of every body's fat box; empty when there are none */
-Box3f &bounds(Box3f &out, const QuadTree &tree);
+AABox bounds(const QuadTree &tree);
 
 /** the body's fat box, from its slot */
-Box3f &read_body_bounds(Box3f &out, const QuadTree &tree, const RigidBody &body);
+AABox read_body_bounds(const QuadTree &tree, const RigidBody &body);
 
 /** overlap walk against the fat boxes, no tight re-test and no filtering: the persistent pairs' discovery */
-void intersect_aabb_fat_leaves(const Bodies &bodies, QuadTree &tree, const Box3f &aabb, BodyVisitor &visitor);
+void intersect_aabb_fat_leaves(const Bodies &bodies, QuadTree &tree, const AABox &aabb, BodyVisitor &visitor);
 
-void intersect_aabb(const Bodies &bodies, QuadTree &tree, const Box3f &aabb, const Filter &query_filter, BodyVisitor &visitor);
+void intersect_aabb(const Bodies &bodies, QuadTree &tree, const AABox &aabb, const Filter &query_filter, BodyVisitor &visitor);
 
 void intersect_point(const Bodies &bodies, QuadTree &tree, Vec3f point, const Filter &query_filter, BodyVisitor &visitor);
 
@@ -139,7 +139,7 @@ void walk(const Bodies &bodies, QuadTree &tree, BodyVisitor &visitor);
 
 void cast_ray(const Bodies &bodies, QuadTree &tree, const Rayf &ray, const Filter &query_filter, BodyVisitor &visitor);
 
-void cast_aabb(const Bodies &bodies, QuadTree &tree, const Box3f &cast_bounds, Vec3f displacement, const Filter &query_filter,
+void cast_aabb(const Bodies &bodies, QuadTree &tree, const AABox &cast_bounds, Vec3f displacement, const Filter &query_filter,
                BodyVisitor &visitor);
 
 }  // namespace quad_tree

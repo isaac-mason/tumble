@@ -140,11 +140,11 @@ void test_contact_constraint_part_position_solve(TestCtx &ctx) {
                                                                                                  0.0f, 1.0f)));
     CHECK(ctx, (contact_constraint_part::solve_position_constraint<MotionType::DYNAMIC, MotionType::DYNAMIC>(part, a, 1.0f, b, 1.0f, vec3f::axis_x(),
                                                                                                 -0.1f, 1.0f)));
-    CHECK_NEAR(ctx, a.center_of_mass_position.x, -0.05f, 1e-6f);
-    CHECK_NEAR(ctx, b.center_of_mass_position.x, 0.95f, 1e-6f);
-    CHECK(ctx, same_bits(quatf::load(a.quaternion), quatf::identity()));
+    CHECK_NEAR(ctx, vec3f::x(a.center_of_mass_position), -0.05f, 1e-6f);
+    CHECK_NEAR(ctx, vec3f::x(b.center_of_mass_position), 0.95f, 1e-6f);
+    CHECK(ctx, same_bits(a.quaternion, quatf::identity()));
     // velocities are untouched: the correction does not add momentum
-    CHECK(ctx, vec3f::exact_equals(vec3f::load(a.motion_properties.linear_velocity), vec3f::zero()));
+    CHECK(ctx, vec3f::exact_equals(a.motion_properties.linear_velocity, vec3f::zero()));
 
     // against static ground only the dynamic side moves, by the whole depth
     RigidBody ground = make_body(MotionType::STATIC, 0.0f, {0.0f, 0.0f, 0.0f}, {0.0f, -1.0f, 0.0f});
@@ -153,6 +153,6 @@ void test_contact_constraint_part_position_solve(TestCtx &ctx) {
     contact_constraint_part::calculate_constraint_properties<MotionType::STATIC, MotionType::DYNAMIC>(
         part, 0.0f, mat4f::zero(), vec3f::make(0.0f, 0.95f, 0.0f), 1.0f, inverse_inertia(1.0f), vec3f::make(0.0f, -0.05f, 0.0f), up, 0.0f);
     CHECK(ctx, (contact_constraint_part::solve_position_constraint<MotionType::STATIC, MotionType::DYNAMIC>(part, ground, 0.0f, box, 1.0f, up, -0.1f, 1.0f)));
-    CHECK_NEAR(ctx, box.center_of_mass_position.y, 0.1f, 1e-6f);
-    CHECK(ctx, ground.center_of_mass_position.y == -1.0f);
+    CHECK_NEAR(ctx, vec3f::y(box.center_of_mass_position), 0.1f, 1e-6f);
+    CHECK(ctx, vec3f::y(ground.center_of_mass_position) == -1.0f);
 }

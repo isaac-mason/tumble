@@ -23,11 +23,11 @@ constexpr uint32_t STEP_STAMP_NONE = 0xffffffffu;
 }  // namespace motion_properties
 
 struct MotionProperties {
-    Float3 linear_velocity;
-    Float3 angular_velocity;
+    Vec3f linear_velocity;
+    Vec3f angular_velocity;
 
-    Float3 inv_inertia_diagonal;
-    Float4 inertia_rotation;
+    Vec3f inv_inertia_diagonal;
+    Quatf inertia_rotation;
 
     /** accumulated over the step */
     Float3 force;
@@ -55,7 +55,7 @@ struct MotionProperties {
     float sleep_test_timer;
 
     /** get_world_inverse_inertia's memo, meaningful while world_inverse_inertia_stamp matches the step's stamp */
-    Float4x4 world_inverse_inertia;
+    Mat4f world_inverse_inertia;
     /** motion_properties::STEP_STAMP_NONE when the memo holds nothing usable */
     uint32_t world_inverse_inertia_stamp;
 };

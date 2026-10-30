@@ -11,6 +11,7 @@
 #include "tumble/math/plane3f.h"
 #include "tumble/math/quatf.h"
 #include "tumble/math/scalar.h"
+#include "tumble/math/transform.h"
 #include "tumble/math/types.h"
 #include "tumble/math/vec2f.h"
 #include "tumble/math/vec3f.h"
