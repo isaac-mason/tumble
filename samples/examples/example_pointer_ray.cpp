@@ -37,7 +37,7 @@ static struct {
     Random random;
 } state;
 
-static Color hex(uint32_t rgb) { return {(float)((rgb >> 16) & 255) / 255.0f, (float)((rgb >> 8) & 255) / 255.0f, (float)(rgb & 255) / 255.0f, 1.0f}; }
+static Color hex(uint32_t rgb) { return color::make((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255); }
 
 static void init(App &app) {
     state.steps = 0;
@@ -122,7 +122,7 @@ static void update(App &app, float) {
     const CastRayHit *hit = cast_ray::hit(state.collector);
     state.hit = hit != nullptr;
     if (hit) state.hit_point = vec::scale_and_add(pointer.origin, pointer.direction, hit->fraction * RAY_LENGTH);
-    if (state.hit) renderer::point(app::frame(app), state.hit_point, 0.3f, {1.0f, 0.0f, 0.0f, 1.0f});
+    if (state.hit) renderer::point(app::frame(app), state.hit_point, 0.3f, color::RED);
 }
 
 static void ui(App &) {

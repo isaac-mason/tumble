@@ -95,7 +95,7 @@ static Agent make_agent(App &app, float x, float z) {
     const Float3 position = {x, SPAWN_Y, z};
     Ref<KCC> character = kcc::create(settings, vec3f::load(position), quatf::identity());
     kcc::add(*app.world, *character);
-    app::set_color(app, rigid_body::get(*app.world, character->inner_rigid_body_id), {0.95f, 0.75f, 0.3f, 1.0f});
+    app::set_color(app, rigid_body::get(*app.world, character->inner_rigid_body_id), color::make(242, 191, 77));
     return {character, seeded::next(state.random) * 2 * PI, 1 + seeded::next(state.random) * 2, position};
 }
 

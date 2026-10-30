@@ -345,7 +345,7 @@ static void update_frame(App &app, float) {
         if (state.dragging) release_drag(app);
         else grab(app, app.click.ray);
     }
-    if (state.dragging) renderer::point(app::frame(app), state.pointer_position, 0.2f, {1.0f, 0.0f, 0.0f, 1.0f});
+    if (state.dragging) renderer::point(app::frame(app), state.pointer_position, 0.2f, color::RED);
 }
 
 static void ui(App &) { ImGui::TextUnformatted(state.dragging ? "click to let go" : "click a ragdoll to grab it"); }

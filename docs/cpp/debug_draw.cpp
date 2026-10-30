@@ -6,14 +6,15 @@ using namespace tumble;
 
 /** a renderer's line list upload, standing in for yours: here it keeps the highest point drawn */
 static float highest_drawn = -1e30f;
-void upload_line_vertices(const float *vertices, uint32_t vertex_count) {
+void upload_line_vertices(const DebugDraw::Vertex *vertices, uint32_t vertex_count) {
     for (uint32_t i = 0; i < vertex_count; i++) {
-        if (vertices[i * 6 + 1] > highest_drawn) highest_drawn = vertices[i * 6 + 1];
+        if (vertices[i].position.y > highest_drawn) highest_drawn = vertices[i].position.y;
     }
 }
 
 /* SNIPPET_START: read */
-// line_count lines of two vertices each. each vertex is x y z r g b, ready to use as a vertex array
+// line_count lines of two vertices each. each vertex is x y z as floats, then r g b a as
+// bytes: ready to use as a vertex array of float3 and unorm8x4
 void draw_lines(const DebugDraw &buffers) {
     upload_line_vertices(buffers.lines.data, buffers.line_count * 2);
 }
@@ -62,8 +63,7 @@ int main() {
 
     // a shape at any pose, such as a preview of where something would go
     const Vec3f preview_position = vec3f::make(3.0f, 0.5f, 0.0f);
-    const Vec3f green = vec3f::make(0.0f, 1.0f, 0.0f);
-    debug::shape(buffers, ball_shape, preview_position, quatf::identity(), {.color = green});
+    debug::shape(buffers, ball_shape, preview_position, quatf::identity(), {.color = color::GREEN});
     draw_lines(buffers);
     printf("%u lines\n", buffers.line_count);
     /* HIDE_START */

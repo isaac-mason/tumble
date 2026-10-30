@@ -58,7 +58,7 @@ static struct {
     Random random;
 } state;
 
-static Color hex(uint32_t rgb) { return {(float)((rgb >> 16) & 255) / 255.0f, (float)((rgb >> 8) & 255) / 255.0f, (float)(rgb & 255) / 255.0f, 1.0f}; }
+static Color hex(uint32_t rgb) { return color::make((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255); }
 
 /* simplex noise, as crashcat's examples make their terrain */
 

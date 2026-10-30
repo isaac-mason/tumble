@@ -128,7 +128,7 @@ static void make_character(App &app) {
     state.crouched = false;
     state.desired_velocity = vec3f::zero();
     kcc::add(*app.world, *state.character);
-    app::set_color(app, rigid_body::get(*app.world, state.character->inner_rigid_body_id), {0.95f, 0.75f, 0.3f, 1.0f});
+    app::set_color(app, rigid_body::get(*app.world, state.character->inner_rigid_body_id), color::make(242, 191, 77));
     state.followed = stored(rigid_body::get(*app.world, state.character->inner_rigid_body_id)->position);
 }
 
@@ -171,9 +171,9 @@ static Shape *make_terrain(App &app) {
 static void make_level(App &app) {
     // lava far below: falling in sends the character back to the start
     state.lava = add_static(app, box_of(app, vec3f::make(1000, 2, 1000)), vec3f::make(0, -50, 0));
-    app::set_color(app, state.lava, {0.9f, 0.3f, 0.1f, 1.0f});
+    app::set_color(app, state.lava, color::make(230, 77, 26));
     state.conveyor = add_static(app, box_of(app, vec3f::make(10, 0.25f, 2)), vec3f::make(0, 0, -10));
-    app::set_color(app, state.conveyor, {0.3f, 0.3f, 0.75f, 1.0f});
+    app::set_color(app, state.conveyor, color::make(77, 77, 191));
 
     add_static(app, box_of(app, vec3f::make(50, 0.5f, 50)), vec3f::make(0, -0.5f, 0));
     Shape *wall = box_of(app, vec3f::make(0.5f, 2, 45));
@@ -413,7 +413,7 @@ static void update(App &app, float) {
             renderer::arrow(frame, from, stored(vec3f::scale_and_add(position, character.ground.normal, 2)), {0, 1, 0, 1});
         }
         if (state.show_ground_velocity) renderer::arrow(frame, from, stored(vec3f::add(position, character.ground.velocity)), {0, 0, 1, 1});
-        if (state.show_ground_position) renderer::point(frame, stored(character.ground.position), 0.15f, {1, 0.53f, 0, 1});
+        if (state.show_ground_position) renderer::point(frame, stored(character.ground.position), 0.15f, color::make(255, 135, 0));
     }
     if (state.show_velocity) renderer::arrow(frame, from, stored(vec3f::add(position, character.linear_velocity)), {1, 0, 1, 1});
     if (state.show_supporting_plane) {
@@ -425,8 +425,8 @@ static void update(App &app, float) {
         const Float3 u = vec::rotate(turn, {2, 0, 0}), w = vec::rotate(turn, {0, 0, 2});
         const Float3 a = vec::subtract(vec::subtract(center, u), w), b = vec::add(vec::subtract(center, u), w);
         const Float3 c = vec::add(vec::add(center, u), w), d = vec::subtract(vec::add(center, u), w);
-        renderer::triangle(frame, a, b, c, {1, 0.67f, 0, 0.3f});
-        renderer::triangle(frame, a, c, d, {1, 0.67f, 0, 0.3f});
+        renderer::triangle(frame, a, b, c, color::make(255, 171, 0, 77));
+        renderer::triangle(frame, a, c, d, color::make(255, 171, 0, 77));
     }
 }
 

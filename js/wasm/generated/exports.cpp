@@ -260,9 +260,9 @@ WASM_EXPORT void tumble_kcc_end_contact_tracking(KCC * character) { adapters::kc
 WASM_EXPORT DebugDraw * tumble_debug_create() { return adapters::debug::create(); }
 WASM_EXPORT void tumble_debug_destroy(DebugDraw * buffers) { adapters::debug::destroy(buffers); }
 WASM_EXPORT void tumble_debug_clear(DebugDraw * buffers) { adapters::debug::clear(buffers); }
-WASM_EXPORT const float * tumble_debug_lines(const DebugDraw * buffers) { return adapters::debug::lines(buffers); }
+WASM_EXPORT const uint8_t * tumble_debug_lines(const DebugDraw * buffers) { return adapters::debug::lines(buffers); }
 WASM_EXPORT uint32_t tumble_debug_line_count(const DebugDraw * buffers) { return adapters::debug::line_count(buffers); }
-WASM_EXPORT const float * tumble_debug_triangles(const DebugDraw * buffers) { return adapters::debug::triangles(buffers); }
+WASM_EXPORT const uint8_t * tumble_debug_triangles(const DebugDraw * buffers) { return adapters::debug::triangles(buffers); }
 WASM_EXPORT uint32_t tumble_debug_triangle_count(const DebugDraw * buffers) { return adapters::debug::triangle_count(buffers); }
 WASM_EXPORT void tumble_debug_default_bodies_options(DebugDraw::BodiesOptions * out) { adapters::debug::default_bodies_options(*out); }
 WASM_EXPORT void tumble_debug_default_body_options(DebugDraw::BodyOptions * out) { adapters::debug::default_body_options(*out); }
@@ -270,7 +270,7 @@ WASM_EXPORT void tumble_debug_default_shape_options(DebugDraw::ShapeOptions * ou
 WASM_EXPORT void tumble_debug_default_joints_options(DebugDraw::JointsOptions * out) { adapters::debug::default_joints_options(*out); }
 WASM_EXPORT void tumble_debug_bodies(DebugDraw * out, const World * world, const DebugDraw::BodiesOptions * options) { adapters::debug::bodies(out, world, *options); }
 WASM_EXPORT bool tumble_debug_body(DebugDraw * out, World * world, uint32_t body, const DebugDraw::BodyOptions * options) { return adapters::debug::body(out, world, body, *options); }
-WASM_EXPORT void tumble_debug_line(DebugDraw * out, const Float3 * a, const Float3 * b, const Float3 * color) { adapters::debug::line(out, *a, *b, *color); }
+WASM_EXPORT void tumble_debug_line(DebugDraw * out, const Float3 * a, const Float3 * b, const Color * color) { adapters::debug::line(out, *a, *b, *color); }
 WASM_EXPORT void tumble_debug_shape(DebugDraw * out, const Shape * shape, const Float3 * position, const Float4 * quaternion, const DebugDraw::ShapeOptions * options) { adapters::debug::shape(out, shape, *position, *quaternion, *options); }
 WASM_EXPORT void tumble_debug_contacts(DebugDraw * out, const World * world) { adapters::debug::contacts(out, world); }
 WASM_EXPORT void tumble_debug_character_contacts(DebugDraw * out, const KCC * character) { adapters::debug::character_contacts(out, character); }

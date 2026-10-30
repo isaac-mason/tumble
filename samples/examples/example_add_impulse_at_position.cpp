@@ -51,8 +51,8 @@ static void init(App &app) {
 static void update(App &app, float delta_time) {
     state.hit_shown_for -= delta_time;
     if (state.hit_shown_for > 0.0f) {
-        renderer::point(app::frame(app), state.hit_position, 0.1f, {1.0f, 0.0f, 0.0f, 1.0f});
-        renderer::arrow(app::frame(app), state.hit_position, vec::scale_and_add(state.hit_position, state.hit_direction, 2.0f), {0.0f, 1.0f, 0.0f, 1.0f});
+        renderer::point(app::frame(app), state.hit_position, 0.1f, color::RED);
+        renderer::arrow(app::frame(app), state.hit_position, vec::scale_and_add(state.hit_position, state.hit_direction, 2.0f), color::GREEN);
     }
 
     if (!app.click.clicked || app.click.secondary) return;

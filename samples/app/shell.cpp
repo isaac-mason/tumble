@@ -84,12 +84,12 @@ Float4 blend(const App &app, Float4 before, Float4 now) { return app.alpha >= 1.
 
 void set_color(App &app, const RigidBody *body, Color color) {
     const uint32_t index = body_id::index(body->id);
-    while (app.body_colors.length <= index) app.body_colors.push({0, 0, 0, 0});
+    while (app.body_colors.length <= index) app.body_colors.push(color::make(0, 0, 0, 0));
     app.body_colors[index] = color;
 }
 
 static ImU32 packed(Color color) {
-    return ImGui::ColorConvertFloat4ToU32({color.r, color.g, color.b, color.a});
+    return IM_COL32(color.r, color.g, color.b, color.a);
 }
 
 /** a world point's place on the screen, false behind the camera */
@@ -225,6 +225,9 @@ void shutdown() {
     state = {};
 }
 
+/** a channel in [0, 1] as its nearest byte */
+static uint8_t channel(float value) { return (uint8_t)(value * 255.0f + 0.5f); }
+
 /** sleeping bodies darker, statics grey: the debug colour modes, for solid meshes */
 static Color body_color(const RigidBody &body) {
     const uint32_t index = body_id::index(body.id);
@@ -232,23 +235,26 @@ static Color body_color(const RigidBody &body) {
     if (index < state.body_colors.length && state.body_colors[index].a > 0) {
         color = state.body_colors[index];
     } else if (body.motion_type == MotionType::STATIC) {
-        color = {0.45f, 0.45f, 0.47f, 1.0f};
+        color = color::make(115, 115, 120);
     } else if (body.motion_type == MotionType::KINEMATIC) {
-        color = {0.55f, 0.75f, 0.95f, 1.0f};
+        color = color::make(140, 191, 242);
     } else {
         const uint32_t hash = (index + 1) * 2654435761u;
-        color = {0.45f + 0.5f * (float)((hash >> 8) & 255) / 255.0f, 0.45f + 0.5f * (float)((hash >> 16) & 255) / 255.0f,
-                 0.45f + 0.5f * (float)((hash >> 24) & 255) / 255.0f, 1.0f};
+        const auto pastel = [](uint32_t byte) { return channel(0.45f + 0.5f * (float)byte / 255.0f); };
+        color = color::make(pastel((hash >> 8) & 255), pastel((hash >> 16) & 255), pastel((hash >> 24) & 255));
     }
-    if (body.motion_type == MotionType::DYNAMIC && rigid_body::is_sleeping(body)) color = {color.r * 0.6f, color.g * 0.6f, color.b * 0.6f, color.a};
-    if (body.sensor) color.a = fminf(color.a, 0.35f);
+    if (body.motion_type == MotionType::DYNAMIC && rigid_body::is_sleeping(body)) {
+        const auto dimmed = [](uint8_t byte) { return channel((float)byte / 255.0f * 0.6f); };
+        color = color::make(dimmed(color.r), dimmed(color.g), dimmed(color.b), color.a);
+    }
+    if (body.sensor && color.a > 89) color.a = 89;
     return color;
 }
 
 static void draw_grid() {
     const int half = 25;
     for (int i = -half; i <= half; i++) {
-        const Color color = i == 0 ? Color{0.35f, 0.35f, 0.38f, 1.0f} : (i % 5 == 0 ? Color{0.5f, 0.5f, 0.53f, 1.0f} : Color{0.6f, 0.6f, 0.63f, 1.0f});
+        const Color color = i == 0 ? color::make(89, 89, 97) : (i % 5 == 0 ? color::make(128, 128, 135) : color::make(153, 153, 161));
         const float at = (float)i;
         // a hair above y = 0, clear of a ground's surface
         renderer::line(state.renderer.frame, {at, 0.002f, (float)-half}, {at, 0.002f, (float)half}, color);

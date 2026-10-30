@@ -58,7 +58,7 @@ static struct {
 } state;
 
 static Color hex(uint32_t rgb, float alpha = 1.0f) {
-    return {(float)((rgb >> 16) & 255) / 255.0f, (float)((rgb >> 8) & 255) / 255.0f, (float)(rgb & 255) / 255.0f, alpha};
+    return color::make((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255, (uint8_t)(alpha * 255.0f + 0.5f));
 }
 
 static Quatf quat_from_degrees(float x, float y, float z, EulerOrder order) {

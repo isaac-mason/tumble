@@ -35,15 +35,15 @@ static struct {
     Random random;
 } state;
 
-static Color hex(uint32_t rgb) { return {(float)((rgb >> 16) & 255) / 255.0f, (float)((rgb >> 8) & 255) / 255.0f, (float)(rgb & 255) / 255.0f, 1.0f}; }
+static Color hex(uint32_t rgb) { return color::make((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255); }
 
 static Color hsl(float hue, float saturation, float lightness) {
     const auto channel = [&](float n) {
         const float k = fmodf(n + hue * 12.0f, 12.0f);
         const float a = saturation * fminf(lightness, 1.0f - lightness);
-        return lightness - a * fmaxf(-1.0f, fminf(fminf(k - 3.0f, 9.0f - k), 1.0f));
+        return (uint8_t)((lightness - a * fmaxf(-1.0f, fminf(fminf(k - 3.0f, 9.0f - k), 1.0f))) * 255.0f + 0.5f);
     };
-    return {channel(0.0f), channel(8.0f), channel(4.0f), 1.0f};
+    return color::make(channel(0.0f), channel(8.0f), channel(4.0f));
 }
 
 /** somewhere over the cat's path, high up, at rest */

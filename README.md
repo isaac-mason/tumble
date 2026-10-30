@@ -2376,7 +2376,7 @@ void ellipsoid_collide_point(
 }
 
 // three rings, one in each axis plane
-void ellipsoid_draw(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
+void ellipsoid_draw(DebugDraw &out, const Shape *shape, const Transform &transform, Color color) {
     const EllipsoidShape &ellipsoid = shapes::as<EllipsoidShape>(shape);
     const Vec3f radii = vec3f::multiply(ellipsoid.radii, transform.scale);
     const Quatf rotation = transform.quaternion;
@@ -2506,14 +2506,14 @@ debug::joints(buffers, *world, {});
 
 // a shape at any pose, such as a preview of where something would go
 const Vec3f preview_position = vec3f::make(3.0f, 0.5f, 0.0f);
-const Vec3f green = vec3f::make(0.0f, 1.0f, 0.0f);
-debug::shape(buffers, ball_shape, preview_position, quatf::identity(), {.color = green});
+debug::shape(buffers, ball_shape, preview_position, quatf::identity(), {.color = color::GREEN});
 draw_lines(buffers);
 printf("%u lines\n", buffers.line_count);
 ```
 
 ```cpp
-// line_count lines of two vertices each. each vertex is x y z r g b, ready to use as a vertex array
+// line_count lines of two vertices each. each vertex is x y z as floats, then r g b a as
+// bytes: ready to use as a vertex array of float3 and unorm8x4
 void draw_lines(const DebugDraw &buffers) {
     upload_line_vertices(buffers.lines.data, buffers.line_count * 2);
 }

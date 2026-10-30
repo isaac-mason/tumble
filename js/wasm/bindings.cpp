@@ -53,6 +53,7 @@ TUMBLE_BINDINGS {
     LANES_AS(Mat4f, "Mat4f", 16);
     VALUE(AABox).field(FIELD(AABox, min)).field(FIELD(AABox, max));
     LANES_AS(Plane, "Planef", 4);
+    TUPLE(Color).doc("8 bits a channel, 255 opaque.").field(FIELD(Color, r)).field(FIELD(Color, g)).field(FIELD(Color, b)).field(FIELD(Color, a));
     VALUE(Transform).field(FIELD(Transform, position)).field(FIELD(Transform, quaternion)).field(FIELD(Transform, scale));
     VALUE_AS(Box3f, "Box3").field(FIELD(Box3f, min)).field(FIELD(Box3f, max));
     VALUE_AS(MassProperties, "MassProperties")
@@ -989,7 +990,8 @@ TUMBLE_BINDINGS {
     VALUE_AS(DebugDraw::JointsOptions, "DebugJointsOptions")
         .field(FIELD(DebugDraw::JointsOptions, size))
         .field(FIELD(DebugDraw::JointsOptions, draw_limits));
-    bind::constant(b, "DEBUG_VERTEX_STRIDE", debug::VERTEX_STRIDE, "floats per vertex: x, y, z, r, g, b.");
+    bind::constant(b, "DEBUG_VERTEX_BYTES", sizeof(DebugDraw::Vertex), "bytes per vertex: x, y, z as f32s, then r, g, b, a as bytes.");
+    bind::constant(b, "DEBUG_VERTEX_COLOR_OFFSET", offsetof(DebugDraw::Vertex, color), "where a vertex's colour starts.");
     bind::fn(b, BIND(adapters::debug::create), names(), GROWS);
     bind::fn(b, BIND(adapters::debug::destroy), names("buffers"));
     bind::fn(b, BIND(adapters::debug::clear), names("buffers"));

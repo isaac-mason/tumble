@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "tumble/config.h"
+#include "tumble/math/color.h"
 #include "tumble/math/types.h"
 #include "tumble/math/vec3f.h"
 #include "tumble/physics/body/rigid_body.h"
@@ -14,23 +15,17 @@ TUMBLE_NAMESPACE_BEGIN
 
 struct KCC;
 
-namespace debug {
-
-/** floats per vertex: x, y, z, r, g, b */
-constexpr uint32_t VERTEX_STRIDE = 6;
-/** floats per line: two vertices */
-constexpr uint32_t LINE_STRIDE = 2 * VERTEX_STRIDE;
-/** floats per triangle: three vertices */
-constexpr uint32_t TRIANGLE_STRIDE = 3 * VERTEX_STRIDE;
-
-}  // namespace debug
-
 /**
- * wireframes of bodies, contacts and joints. `lines` holds line_count * debug::LINE_STRIDE floats, `triangles` triangle_count
- * * debug::TRIANGLE_STRIDE; a draw may grow them, moving their data. clear keeps the memory, so drawing the same scene again
- * does not grow them
+ * wireframes of bodies, contacts and joints. `lines` holds two vertices a line, `triangles` three a triangle; a draw may
+ * grow them, moving their data. clear keeps the memory, so drawing the same scene again does not grow them
  */
 struct DebugDraw {
+    /** 16 bytes: the position's three floats, then the colour's four bytes */
+    struct Vertex {
+        Float3 position;
+        Color color;
+    };
+
     enum class BodyColorMode : uint32_t {
         MOTION_TYPE = 0,
         INSTANCE = 1,
@@ -49,14 +44,14 @@ struct DebugDraw {
     struct BodyOptions {
         /** use `color` instead of the colour mode's */
         bool has_color = false;
-        Vec3f color = vec3f::splat(1.0f);
+        Color color = color::WHITE;
         BodyColorMode color_mode = BodyColorMode::MOTION_TYPE;
         bool show_linear_velocity = false;
         bool show_angular_velocity = false;
     };
 
     struct ShapeOptions {
-        Vec3f color = vec3f::splat(1.0f);
+        Color color = color::WHITE;
     };
 
     struct JointsOptions {
@@ -66,9 +61,9 @@ struct DebugDraw {
         bool draw_limits = true;
     };
 
-    collections::Array<float> lines;
+    collections::Array<Vertex> lines;
     uint32_t line_count = 0;
-    collections::Array<float> triangles;
+    collections::Array<Vertex> triangles;
     uint32_t triangle_count = 0;
 };
 
@@ -84,7 +79,7 @@ void bodies(DebugDraw &out, const World &world, const DebugDraw::BodiesOptions &
 /** one body's shape and velocities */
 void body(DebugDraw &out, const RigidBody &body, const DebugDraw::BodyOptions &options);
 /** one line, as a user shape's draw makes its wireframe */
-void line(DebugDraw &out, Vec3f a, Vec3f b, Vec3f color);
+void line(DebugDraw &out, Vec3f a, Vec3f b, Color color);
 /** a shape at a world-space pose */
 void shape(DebugDraw &out, const Shape *shape, Vec3f position, Quatf quaternion, const DebugDraw::ShapeOptions &options);
 /** each contact constraint's points on body a with the normal */

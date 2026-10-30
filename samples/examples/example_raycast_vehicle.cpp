@@ -115,7 +115,7 @@ static struct {
     Float3 camera_look_at;
 } state;
 
-static Color hex(uint32_t rgb) { return {(float)((rgb >> 16) & 255) / 255.0f, (float)((rgb >> 8) & 255) / 255.0f, (float)(rgb & 255) / 255.0f, 1.0f}; }
+static Color hex(uint32_t rgb) { return color::make((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255); }
 
 static Float3 stored(Vec3f v) {
     Float3 out;
@@ -524,7 +524,7 @@ static void draw_wheel(App &app, const Wheel &wheel) {
 
     // its edges: both rims, and the seams between the side's faces
     DrawList &frame = app::frame(app);
-    const Color white = {1.0f, 1.0f, 1.0f, 1.0f};
+    const Color white = color::WHITE;
     const auto rim = [&](float side, int segment) {
         const float angle = 2.0f * scalar::PI * (float)segment / (float)WHEEL_SEGMENTS;
         const Float3 local = {side * WHEEL_WIDTH * 0.5f, WHEEL_RADIUS * cosf(angle), WHEEL_RADIUS * sinf(angle)};
@@ -553,14 +553,14 @@ static void update(App &app, float delta_time) {
         if (state.show_rays) {
             // green to the hit, red past it
             const Float3 hit = vec::scale_and_add(origin, direction, hit_distance);
-            renderer::line(frame, origin, hit, {0.0f, 1.0f, 0.0f, 1.0f});
-            renderer::line(frame, wheel.in_contact_with_ground ? hit : origin, vec::scale_and_add(origin, direction, ray_length), {1.0f, 0.0f, 0.0f, 0.5f});
+            renderer::line(frame, origin, hit, color::GREEN);
+            renderer::line(frame, wheel.in_contact_with_ground ? hit : origin, vec::scale_and_add(origin, direction, ray_length), color::make(255, 0, 0, 128));
         }
         if (state.show_suspension) {
             // beside the ray, outboard
             const Float3 offset = stored(vec3f::transform_quat(vec3f::make(i % 2 == 0 ? -0.1f : 0.1f, 0.0f, 0.0f), state.chassis->quaternion));
             const Float3 top = vec::add(origin, offset);
-            renderer::line(frame, top, vec::scale_and_add(top, direction, fmaxf(0.0f, wheel.suspension_length)), {0.0f, 1.0f, 1.0f, 1.0f});
+            renderer::line(frame, top, vec::scale_and_add(top, direction, fmaxf(0.0f, wheel.suspension_length)), color::CYAN);
         }
     }
 

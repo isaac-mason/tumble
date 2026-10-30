@@ -1,6 +1,6 @@
 import type { Vec3 } from './generated/tumble.js';
 
-export type { Box3, Mat4, Quat, Vec2, Vec3 } from './generated/tumble.js';
+export type { Box3, Color, Mat4, Quat, Vec2, Vec3 } from './generated/tumble.js';
 
 export function copyVec3(out: Vec3, from: Vec3): void {
     out[0] = from[0];

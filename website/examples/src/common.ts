@@ -4,7 +4,8 @@ import {
     type ActiveBody,
     type BodyId,
     createActiveBody,
-    DEBUG_VERTEX_STRIDE,
+    DEBUG_VERTEX_BYTES,
+    DEBUG_VERTEX_COLOR_OFFSET,
     getActiveBodies,
     getActiveBodyAt,
     init as initTumble,
@@ -297,13 +298,14 @@ export function createDebugLines(scene: g.Scene): DebugLines {
 }
 
 function bucketOf(debugLines: DebugLines, r: number, gr: number, b: number): DebugBucket {
-    const key = (Math.round(r * 255) << 16) | (Math.round(gr * 255) << 8) | Math.round(b * 255);
+    const key = (r << 16) | (gr << 8) | b;
     let bucket = debugLines.buckets.get(key);
     if (bucket === undefined) {
         const points = new Float32Array(6 * 1024);
         // it grows as an update needs
         const geometry = new g.LineSegmentsGeometry(new Float32Array(6), 2048);
-        const lines = new g.LineSegments(geometry, new g.LineMaterial({ color: g.vec4f(r, gr, b, 1) as never, lineWidth: 1.5 }));
+        const color = g.vec4f(r / 255, gr / 255, b / 255, 1);
+        const lines = new g.LineSegments(geometry, new g.LineMaterial({ color: color as never, lineWidth: 1.5 }));
         debugLines.scene.add(lines);
         bucket = { points, count: 0, geometry, lines };
         debugLines.buckets.set(key, bucket);
@@ -311,13 +313,19 @@ function bucketOf(debugLines: DebugLines, r: number, gr: number, b: number): Deb
     return bucket;
 }
 
-/** lines as debugDraw.read gives them, into the scene's line segments, in place of the last */
+/**
+ * lines as debugDraw.read gives them, into the scene's line segments, in place of the last: each vertex four floats,
+ * x y z and then the colour's four bytes
+ */
 export function showDebugLines(debugLines: DebugLines, lines: Float32Array, lineCount: number): void {
     for (const bucket of debugLines.buckets.values()) bucket.count = 0;
+    const colors = new Uint8Array(lines.buffer, lines.byteOffset, lines.byteLength);
+    const floats = DEBUG_VERTEX_BYTES / 4;
     for (let i = 0; i < lineCount; i++) {
-        const a = i * 2 * DEBUG_VERTEX_STRIDE;
-        const b = a + DEBUG_VERTEX_STRIDE;
-        const bucket = bucketOf(debugLines, lines[a + 3]!, lines[a + 4]!, lines[a + 5]!);
+        const a = i * 2 * floats;
+        const b = a + floats;
+        const color = a * 4 + DEBUG_VERTEX_COLOR_OFFSET;
+        const bucket = bucketOf(debugLines, colors[color]!, colors[color + 1]!, colors[color + 2]!);
         if ((bucket.count + 2) * 3 > bucket.points.length) {
             const grown = new Float32Array(bucket.points.length * 2);
             grown.set(bucket.points);

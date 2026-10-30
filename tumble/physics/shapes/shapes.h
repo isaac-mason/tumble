@@ -201,7 +201,7 @@ typedef void (*CastShapeVsShapeFn)(CastShapeCollector &collector, const CastShap
                                    const Transform &transform_b);
 
 /** appends the shape's wireframe at `transform` (scale included) to `out`, through debug::line */
-typedef void (*ShapeDrawFn)(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color);
+typedef void (*ShapeDrawFn)(DebugDraw &out, const Shape *shape, const Transform &transform, Color color);
 
 /** frees a shape of the def's type, and lets go of what it holds; called by release_ref when no Ref holds it */
 typedef void (*ShapeDestroyFn)(Shape *shape);

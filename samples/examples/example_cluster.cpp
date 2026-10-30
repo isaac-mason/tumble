@@ -22,7 +22,7 @@ static struct {
     Random random;
 } state;
 
-static Color hex(uint32_t rgb) { return {(float)((rgb >> 16) & 255) / 255.0f, (float)((rgb >> 8) & 255) / 255.0f, (float)(rgb & 255) / 255.0f, 1.0f}; }
+static Color hex(uint32_t rgb) { return color::make((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255); }
 
 static void init(App &app) {
     state.random = {3};
@@ -60,7 +60,7 @@ static void init(App &app) {
     pointer.friction = 0.5f;
     state.pointer = rigid_body::create(*app.world, pointer);
     // crashcat draws the pointer only as a light: a faint ball here
-    app::set_color(app, state.pointer, {1.0f, 1.0f, 1.0f, 0.08f});
+    app::set_color(app, state.pointer, color::make(255, 255, 255, 20));
 
     camera::look_at(app.camera, {0.0f, 0.0f, 20.0f}, {0.0f, 0.0f, 0.0f});
 }

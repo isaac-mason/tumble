@@ -200,7 +200,7 @@ void test_user_shape_own_pair_row_replaces_the_generic_one(TestCtx &ctx) {
     CHECK(ctx, shapes::collide_fn(ShapeType::USER_1, ShapeType::BOX) == convex::collide_convex_vs_convex);
 }
 
-void draw_cross(DebugDraw &out, const Shape *, const Transform &transform, Vec3f color) {
+void draw_cross(DebugDraw &out, const Shape *, const Transform &transform, Color color) {
     const Vec3f at = transform.position;
     debug::line(out, vec3f::subtract(at, vec3f::make(1.0f, 0.0f, 0.0f)), vec3f::add(at, vec3f::make(1.0f, 0.0f, 0.0f)), color);
     debug::line(out, vec3f::subtract(at, vec3f::make(0.0f, 1.0f, 0.0f)), vec3f::add(at, vec3f::make(0.0f, 1.0f, 0.0f)), color);
@@ -215,7 +215,7 @@ void test_user_shape_draws_its_bounds_or_its_own_lines(TestCtx &ctx) {
     debug::shape(buffers, shape, vec3f::make(0.0f, 2.0f, 0.0f), quatf::identity(), {});
     CHECK(ctx, buffers.line_count == 12);
     float lowest = scalar::INF;
-    for (uint32_t i = 0; i < buffers.line_count * 2; i++) lowest = scalar::min(lowest, buffers.lines[i * debug::VERTEX_STRIDE + 1]);
+    for (uint32_t i = 0; i < buffers.line_count * 2; i++) lowest = scalar::min(lowest, buffers.lines[i].position.y);
     CHECK_NEAR(ctx, lowest, 1.5f, 1e-6f);
 
     // a def's draw replaces them
@@ -225,7 +225,7 @@ void test_user_shape_draws_its_bounds_or_its_own_lines(TestCtx &ctx) {
     debug::clear(buffers);
     debug::shape(buffers, shape, vec3f::make(0.0f, 2.0f, 0.0f), quatf::identity(), {});
     CHECK(ctx, buffers.line_count == 2);
-    CHECK_NEAR(ctx, buffers.lines[1], 2.0f, 1e-6f);
+    CHECK_NEAR(ctx, buffers.lines[0].position.y, 2.0f, 1e-6f);
 
     shape = nullptr;
 }

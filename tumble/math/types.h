@@ -117,9 +117,15 @@ struct Transformf {
     Float3 scale;
 };
 
+/** 8 bits a channel, 255 opaque */
+struct Color {
+    uint8_t r, g, b, a;
+};
+
 static_assert(sizeof(Float3) == 12, "Float3 is three packed floats");
 static_assert(sizeof(Float4) == 16, "Float4 loads as one lane");
 static_assert(sizeof(Float4x4) == 64, "Float4x4 is four lanes");
 static_assert(alignof(Vec3f) == 16 && alignof(Mat4f) == 16, "register types are whole lanes");
+static_assert(sizeof(Color) == 4, "Color is four packed bytes");
 
 TUMBLE_NAMESPACE_END

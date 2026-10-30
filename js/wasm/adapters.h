@@ -818,9 +818,11 @@ namespace debug {
 tumble::DebugDraw *create();
 void destroy(tumble::DebugDraw *buffers);
 void clear(tumble::DebugDraw *buffers);
-const float *lines(const tumble::DebugDraw *buffers);
+/** two DebugDraw::Vertex a line */
+const uint8_t *lines(const tumble::DebugDraw *buffers);
 uint32_t line_count(const tumble::DebugDraw *buffers);
-const float *triangles(const tumble::DebugDraw *buffers);
+/** three DebugDraw::Vertex a triangle */
+const uint8_t *triangles(const tumble::DebugDraw *buffers);
 uint32_t triangle_count(const tumble::DebugDraw *buffers);
 
 void default_bodies_options(tumble::DebugDraw::BodiesOptions &out);
@@ -832,7 +834,7 @@ void default_joints_options(tumble::DebugDraw::JointsOptions &out);
 void bodies(tumble::DebugDraw *out, const tumble::World *world, const tumble::DebugDraw::BodiesOptions &options);
 bool body(tumble::DebugDraw *out, tumble::World *world, tumble::BodyId body,
           const tumble::DebugDraw::BodyOptions &options);
-void line(tumble::DebugDraw *out, const tumble::Float3 &a, const tumble::Float3 &b, const tumble::Float3 &color);
+void line(tumble::DebugDraw *out, const tumble::Float3 &a, const tumble::Float3 &b, const tumble::Color &color);
 void shape(tumble::DebugDraw *out, const tumble::Shape *shape, const tumble::Float3 &position, const tumble::Float4 &quaternion,
            const tumble::DebugDraw::ShapeOptions &options);
 void contacts(tumble::DebugDraw *out, const tumble::World *world);

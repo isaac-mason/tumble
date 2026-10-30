@@ -68,7 +68,7 @@ struct App {
     Drawing drawing;
     tumble::DebugDraw debug;
     /** a colour per body index, for bodies an example coloured; alpha 0 where it did not */
-    tumble::collections::Array<Color> body_colors;
+    tumble::collections::Array<tumble::Color> body_colors;
     Click click;
     Pointer pointer;
     bool keys[512];
@@ -113,8 +113,8 @@ struct LabelStyle {
     /** of the height, the text's */
     float text_fraction = 0.5f;
     /** none when its alpha is 0 */
-    Color background = {0.0f, 0.0f, 0.0f, 0.0f};
-    Color color = {1.0f, 1.0f, 1.0f, 1.0f};
+    tumble::Color background = tumble::color::make(0, 0, 0, 0);
+    tumble::Color color = tumble::color::WHITE;
 };
 
 /** text centred on a world point, over the scene; call it each frame from update or ui */
@@ -128,7 +128,7 @@ void snap(App &app, const tumble::RigidBody &body);
 tumble::Float3 blend(const App &app, tumble::Float3 before, tumble::Float3 now);
 tumble::Float4 blend(const App &app, tumble::Float4 before, tumble::Float4 now);
 
-void set_color(App &app, const tumble::RigidBody *body, Color color);
+void set_color(App &app, const tumble::RigidBody *body, tumble::Color color);
 DrawList &frame(App &app);
 double now_milliseconds();
 

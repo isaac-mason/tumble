@@ -1218,8 +1218,9 @@ step.
 ### Debug drawing
 
 ```ts
-// wireframes drawn into buffers in the wasm. clear, draw, then read. each vertex is x y z r g b. a line has two
-// vertices and a triangle three. the views point into wasm memory, so copy them out before the next draw
+// wireframes drawn into buffers in the wasm. clear, draw, then read. each vertex is x y z as floats, then r g b a as
+// bytes: a gpu reads it as float32x3 and unorm8x4. a line has two vertices and a triangle three. the views point into
+// wasm memory, so copy them out before the next draw. copying the float view copies the colour bytes with it
 const buffers = debugDraw.create();
 let gpuLines = new Float32Array(1 << 16);
 function drawDebug(): number {

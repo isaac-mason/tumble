@@ -5,18 +5,15 @@
 #include "app/camera.h"
 #include "app/matrix.h"
 #include "sokol_gfx.h"
+#include "tumble/math/color.h"
 #include "tumble/math/types.h"
 #include "tumble/physics/debug.h"
 #include "tumble/physics/shapes/shapes.h"
 #include "tumble/util/collections.h"
 
 struct ColorVertex {
-    float x, y, z;
-    uint32_t color;
-};
-
-struct Color {
-    float r, g, b, a;
+    tumble::Float3 position;
+    tumble::Color color;
 };
 
 struct DrawList {
@@ -33,7 +30,7 @@ struct GpuMesh {
 struct MeshDraw {
     GpuMesh mesh;
     Mat4 model;
-    Color color;
+    tumble::Color color;
 };
 
 struct ShapeKey {
@@ -76,13 +73,13 @@ void destroy(Renderer &renderer);
 GpuMesh mesh_of(Renderer &renderer, const tumble::Shape *shape);
 /** drops every shape's mesh: after the shapes are freed, before a freed shape's memory is reused */
 void forget_shapes(Renderer &renderer);
-void mesh(Renderer &renderer, GpuMesh mesh, const Mat4 &model, Color color);
+void mesh(Renderer &renderer, GpuMesh mesh, const Mat4 &model, tumble::Color color);
 
 void clear(Renderer &renderer);
-void line(DrawList &list, tumble::Float3 a, tumble::Float3 b, Color color);
-void triangle(DrawList &list, tumble::Float3 a, tumble::Float3 b, tumble::Float3 c, Color color);
-void point(DrawList &list, tumble::Float3 position, float radius, Color color);
-void arrow(DrawList &list, tumble::Float3 from, tumble::Float3 to, Color color);
+void line(DrawList &list, tumble::Float3 a, tumble::Float3 b, tumble::Color color);
+void triangle(DrawList &list, tumble::Float3 a, tumble::Float3 b, tumble::Float3 c, tumble::Color color);
+void point(DrawList &list, tumble::Float3 position, float radius, tumble::Color color);
+void arrow(DrawList &list, tumble::Float3 from, tumble::Float3 to, tumble::Color color);
 /** the library's debug lines and triangles */
 void debug(DrawList &list, const tumble::DebugDraw &buffers);
 

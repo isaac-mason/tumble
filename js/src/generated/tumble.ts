@@ -7,7 +7,7 @@
 import type { Instance } from '../module.js';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x71b6ca48;
+export const SCHEMA_HASH = 0xc417d76d;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 400;
 
@@ -100,8 +100,11 @@ export const KCC_CONTACT_CAN_PUSH_CHARACTER = 91;
 
 export const KCC_CONTACT_CAN_RECEIVE_IMPULSES = 92;
 
-/** floats per vertex: x, y, z, r, g, b. */
-export const DEBUG_VERTEX_STRIDE = 6;
+/** bytes per vertex: x, y, z as f32s, then r, g, b, a as bytes. */
+export const DEBUG_VERTEX_BYTES = 16;
+
+/** where a vertex's colour starts. */
+export const DEBUG_VERTEX_COLOR_OFFSET = 12;
 
 /** what error() reports: the first failure since the last clear. */
 export const WasmError = {
@@ -783,6 +786,47 @@ export const Planef = {
         out[1] = view.getFloat32(offset + 4, true);
         out[2] = view.getFloat32(offset + 8, true);
         out[3] = view.getFloat32(offset + 12, true);
+        return out;
+    },
+};
+
+/** 8 bits a channel, 255 opaque. */
+export type Color = [r: number, g: number, b: number, a: number];
+export const Color = {
+    size: 4,
+    create(): Color {
+        return [0, 0, 0, 0];
+    },
+    /** reads the value at a byte address of the wasm's memory into out, and returns out. */
+    read(out: Color, address: number): Color {
+        const mem = wasm.mem;
+        out[0] = mem.u8[address + 0]!;
+        out[1] = mem.u8[address + 1]!;
+        out[2] = mem.u8[address + 2]!;
+        out[3] = mem.u8[address + 3]!;
+        return out;
+    },
+    /** writes the value at a byte address of the wasm's memory. */
+    write(address: number, value: Color): void {
+        const mem = wasm.mem;
+        mem.u8[address + 0] = value[0];
+        mem.u8[address + 1] = value[1];
+        mem.u8[address + 2] = value[2];
+        mem.u8[address + 3] = value[3];
+    },
+    /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
+    writeTo(view: DataView, offset: number, value: Color): void {
+        view.setUint8(offset + 0, value[0]);
+        view.setUint8(offset + 1, value[1]);
+        view.setUint8(offset + 2, value[2]);
+        view.setUint8(offset + 3, value[3]);
+    },
+    /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
+    readFrom(out: Color, view: DataView, offset: number): Color {
+        out[0] = view.getUint8(offset + 0);
+        out[1] = view.getUint8(offset + 1);
+        out[2] = view.getUint8(offset + 2);
+        out[3] = view.getUint8(offset + 3);
         return out;
     },
 };
@@ -5930,98 +5974,102 @@ export const DebugBodiesOptions = {
 
 export type DebugBodyOptions = {
     hasColor: boolean;
-    color: Vec3f;
+    color: Color;
     colorMode: number;
     showLinearVelocity: boolean;
     showAngularVelocity: boolean;
 };
 export const DebugBodyOptions = {
-    size: 48,
+    size: 16,
     create(): DebugBodyOptions {
-        return { hasColor: false, color: Vec3f.create(), colorMode: 0, showLinearVelocity: false, showAngularVelocity: false };
+        return { hasColor: false, color: Color.create(), colorMode: 0, showLinearVelocity: false, showAngularVelocity: false };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: DebugBodyOptions, address: number): DebugBodyOptions {
         const mem = wasm.mem;
         out.hasColor = mem.u8[address + 0]! !== 0;
-        out.color[0] = mem.f32[(address + 16) >> 2]!;
-        out.color[1] = mem.f32[(address + 20) >> 2]!;
-        out.color[2] = mem.f32[(address + 24) >> 2]!;
-        out.colorMode = mem.u32[(address + 32) >> 2]!;
-        out.showLinearVelocity = mem.u8[address + 36]! !== 0;
-        out.showAngularVelocity = mem.u8[address + 37]! !== 0;
+        out.color[0] = mem.u8[address + 1]!;
+        out.color[1] = mem.u8[address + 2]!;
+        out.color[2] = mem.u8[address + 3]!;
+        out.color[3] = mem.u8[address + 4]!;
+        out.colorMode = mem.u32[(address + 8) >> 2]!;
+        out.showLinearVelocity = mem.u8[address + 12]! !== 0;
+        out.showAngularVelocity = mem.u8[address + 13]! !== 0;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
     write(address: number, value: DebugBodyOptions): void {
         const mem = wasm.mem;
         mem.u8[address + 0] = value.hasColor ? 1 : 0;
-        mem.f32[(address + 16) >> 2] = value.color[0];
-        mem.f32[(address + 20) >> 2] = value.color[1];
-        mem.f32[(address + 24) >> 2] = value.color[2];
-        mem.f32[(address + 28) >> 2] = value.color[2];
-        mem.u32[(address + 32) >> 2] = value.colorMode;
-        mem.u8[address + 36] = value.showLinearVelocity ? 1 : 0;
-        mem.u8[address + 37] = value.showAngularVelocity ? 1 : 0;
+        mem.u8[address + 1] = value.color[0];
+        mem.u8[address + 2] = value.color[1];
+        mem.u8[address + 3] = value.color[2];
+        mem.u8[address + 4] = value.color[3];
+        mem.u32[(address + 8) >> 2] = value.colorMode;
+        mem.u8[address + 12] = value.showLinearVelocity ? 1 : 0;
+        mem.u8[address + 13] = value.showAngularVelocity ? 1 : 0;
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: DebugBodyOptions): void {
         view.setUint8(offset + 0, value.hasColor ? 1 : 0);
-        view.setFloat32(offset + 16, value.color[0], true);
-        view.setFloat32(offset + 20, value.color[1], true);
-        view.setFloat32(offset + 24, value.color[2], true);
-        view.setFloat32(offset + 28, value.color[2], true);
-        view.setUint32(offset + 32, value.colorMode, true);
-        view.setUint8(offset + 36, value.showLinearVelocity ? 1 : 0);
-        view.setUint8(offset + 37, value.showAngularVelocity ? 1 : 0);
+        view.setUint8(offset + 1, value.color[0]);
+        view.setUint8(offset + 2, value.color[1]);
+        view.setUint8(offset + 3, value.color[2]);
+        view.setUint8(offset + 4, value.color[3]);
+        view.setUint32(offset + 8, value.colorMode, true);
+        view.setUint8(offset + 12, value.showLinearVelocity ? 1 : 0);
+        view.setUint8(offset + 13, value.showAngularVelocity ? 1 : 0);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: DebugBodyOptions, view: DataView, offset: number): DebugBodyOptions {
         out.hasColor = view.getUint8(offset + 0) !== 0;
-        out.color[0] = view.getFloat32(offset + 16, true);
-        out.color[1] = view.getFloat32(offset + 20, true);
-        out.color[2] = view.getFloat32(offset + 24, true);
-        out.colorMode = view.getUint32(offset + 32, true);
-        out.showLinearVelocity = view.getUint8(offset + 36) !== 0;
-        out.showAngularVelocity = view.getUint8(offset + 37) !== 0;
+        out.color[0] = view.getUint8(offset + 1);
+        out.color[1] = view.getUint8(offset + 2);
+        out.color[2] = view.getUint8(offset + 3);
+        out.color[3] = view.getUint8(offset + 4);
+        out.colorMode = view.getUint32(offset + 8, true);
+        out.showLinearVelocity = view.getUint8(offset + 12) !== 0;
+        out.showAngularVelocity = view.getUint8(offset + 13) !== 0;
         return out;
     },
 };
 
-export type DebugShapeOptions = { color: Vec3f };
+export type DebugShapeOptions = { color: Color };
 export const DebugShapeOptions = {
-    size: 16,
+    size: 4,
     create(): DebugShapeOptions {
-        return { color: Vec3f.create() };
+        return { color: Color.create() };
     },
     /** reads the value at a byte address of the wasm's memory into out, and returns out. */
     read(out: DebugShapeOptions, address: number): DebugShapeOptions {
         const mem = wasm.mem;
-        out.color[0] = mem.f32[(address + 0) >> 2]!;
-        out.color[1] = mem.f32[(address + 4) >> 2]!;
-        out.color[2] = mem.f32[(address + 8) >> 2]!;
+        out.color[0] = mem.u8[address + 0]!;
+        out.color[1] = mem.u8[address + 1]!;
+        out.color[2] = mem.u8[address + 2]!;
+        out.color[3] = mem.u8[address + 3]!;
         return out;
     },
     /** writes the value at a byte address of the wasm's memory. */
     write(address: number, value: DebugShapeOptions): void {
         const mem = wasm.mem;
-        mem.f32[(address + 0) >> 2] = value.color[0];
-        mem.f32[(address + 4) >> 2] = value.color[1];
-        mem.f32[(address + 8) >> 2] = value.color[2];
-        mem.f32[(address + 12) >> 2] = value.color[2];
+        mem.u8[address + 0] = value.color[0];
+        mem.u8[address + 1] = value.color[1];
+        mem.u8[address + 2] = value.color[2];
+        mem.u8[address + 3] = value.color[3];
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: DebugShapeOptions): void {
-        view.setFloat32(offset + 0, value.color[0], true);
-        view.setFloat32(offset + 4, value.color[1], true);
-        view.setFloat32(offset + 8, value.color[2], true);
-        view.setFloat32(offset + 12, value.color[2], true);
+        view.setUint8(offset + 0, value.color[0]);
+        view.setUint8(offset + 1, value.color[1]);
+        view.setUint8(offset + 2, value.color[2]);
+        view.setUint8(offset + 3, value.color[3]);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: DebugShapeOptions, view: DataView, offset: number): DebugShapeOptions {
-        out.color[0] = view.getFloat32(offset + 0, true);
-        out.color[1] = view.getFloat32(offset + 4, true);
-        out.color[2] = view.getFloat32(offset + 8, true);
+        out.color[0] = view.getUint8(offset + 0);
+        out.color[1] = view.getUint8(offset + 1);
+        out.color[2] = view.getUint8(offset + 2);
+        out.color[3] = view.getUint8(offset + 3);
         return out;
     },
 };
@@ -8651,9 +8699,9 @@ export const Debug = {
         wasm.exports.tumble_debug_clear(buffers);
     },
 
-    lines(buffers: DebugDraw): Pointer<'f32'> {
+    lines(buffers: DebugDraw): Pointer<'u8'> {
         const r = wasm.exports.tumble_debug_lines(buffers);
-        return r as Pointer<'f32'>;
+        return r as Pointer<'u8'>;
     },
 
     lineCount(buffers: DebugDraw): number {
@@ -8661,9 +8709,9 @@ export const Debug = {
         return r >>> 0;
     },
 
-    triangles(buffers: DebugDraw): Pointer<'f32'> {
+    triangles(buffers: DebugDraw): Pointer<'u8'> {
         const r = wasm.exports.tumble_debug_triangles(buffers);
-        return r as Pointer<'f32'>;
+        return r as Pointer<'u8'>;
     },
 
     triangleCount(buffers: DebugDraw): number {
@@ -8714,11 +8762,11 @@ export const Debug = {
         return r !== 0;
     },
 
-    line(out: DebugDraw, a: Vec3, b: Vec3, color: Vec3): void {
+    line(out: DebugDraw, a: Vec3, b: Vec3, color: Color): void {
         const scratch = wasm.scratch;
         Vec3.write(scratch + 0, a);
         Vec3.write(scratch + 16, b);
-        Vec3.write(scratch + 32, color);
+        Color.write(scratch + 32, color);
         wasm.exports.tumble_debug_line(out, scratch + 0, scratch + 16, scratch + 32);
         wasm.grew();
     },

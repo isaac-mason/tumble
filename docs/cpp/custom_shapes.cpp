@@ -100,7 +100,7 @@ void ellipsoid_collide_point(
 }
 
 // three rings, one in each axis plane
-void ellipsoid_draw(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
+void ellipsoid_draw(DebugDraw &out, const Shape *shape, const Transform &transform, Color color) {
     const EllipsoidShape &ellipsoid = shapes::as<EllipsoidShape>(shape);
     const Vec3f radii = vec3f::multiply(ellipsoid.radii, transform.scale);
     const Quatf rotation = transform.quaternion;

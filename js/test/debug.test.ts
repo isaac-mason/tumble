@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'vitest';
 import {
     box,
+    type Color,
     createWorld,
     createWorldSettings,
-    DEBUG_VERTEX_STRIDE,
+    DEBUG_VERTEX_BYTES,
+    DEBUG_VERTEX_COLOR_OFFSET,
+    type DebugViews,
     debug,
     debugDraw,
     destroyWorld,
@@ -13,15 +16,18 @@ import {
     releaseShape,
     rigidBody,
     sphere,
-    type Vec3,
 } from '../src';
 import * as Low from '../src/generated/tumble';
 import { makeScene, releaseScene, steps } from './helpers';
 
-/** the vertices of the views' lines, as [x, y, z, r, g, b] */
-function vertices(lines: Float32Array): number[][] {
+/** the vertices of the views' lines, as [x, y, z, r, g, b, a] */
+function vertices(views: DebugViews): number[][] {
     const out: number[][] = [];
-    for (let i = 0; i < lines.length; i += DEBUG_VERTEX_STRIDE) out.push(Array.from(lines.subarray(i, i + DEBUG_VERTEX_STRIDE)));
+    const floats = DEBUG_VERTEX_BYTES / 4;
+    for (let i = 0; i < views.lineCount * 2; i++) {
+        const color = i * DEBUG_VERTEX_BYTES + DEBUG_VERTEX_COLOR_OFFSET;
+        out.push([...views.lines.subarray(i * floats, i * floats + 3), ...views.lineColors.subarray(color, color + 4)]);
+    }
     return out;
 }
 
@@ -41,7 +47,7 @@ describe('debug drawing', () => {
         const views = debugDraw.read(buffers);
         expect(views.lineCount).toBe(12);
         expect(views.triangleCount).toBe(0);
-        const points = vertices(views.lines);
+        const points = vertices(views);
         expect(points.length).toBe(24);
         const xs = points.map((p) => p[0]!);
         const ys = points.map((p) => p[1]!);
@@ -49,7 +55,7 @@ describe('debug drawing', () => {
         expect([Math.min(...xs), Math.max(...xs)]).toEqual([2.5, 3.5]);
         expect([Math.min(...ys), Math.max(...ys)]).toEqual([1.75, 2.25]);
         expect([Math.min(...zs), Math.max(...zs)]).toEqual([-2, 0]);
-        for (const p of points) expect(p.slice(3)).toEqual([Math.fround(0.2), 1, Math.fround(0.2)]);
+        for (const p of points) expect(p.slice(3)).toEqual([51, 255, 51, 255]);
         debugDraw.destroy(buffers);
         releaseScene(scene);
         releaseShape(crate);
@@ -85,16 +91,16 @@ describe('debug drawing', () => {
             position: [0, 3, 0],
         });
         const buffers = debugDraw.create();
-        const purple: Vec3 = [0.5, 0, 1];
+        const purple: Color = [128, 0, 255, 255];
         debug.line(buffers, [0, 0, 0], [1, 2, 3], purple);
-        expect(vertices(debugDraw.read(buffers).lines)).toEqual([
-            [0, 0, 0, 0.5, 0, 1],
-            [1, 2, 3, 0.5, 0, 1],
+        expect(vertices(debugDraw.read(buffers))).toEqual([
+            [0, 0, 0, 128, 0, 255, 255],
+            [1, 2, 3, 128, 0, 255, 255],
         ]);
         expect(debug.body(buffers, scene.world, body, { color: purple })).toBe(true);
-        const drawn = vertices(debugDraw.read(buffers).lines);
+        const drawn = vertices(debugDraw.read(buffers));
         expect(drawn.length).toBeGreaterThan(2);
-        for (const p of drawn) expect(p.slice(3)).toEqual([0.5, 0, 1]);
+        for (const p of drawn) expect(p.slice(3)).toEqual([128, 0, 255, 255]);
         rigidBody.remove(scene.world, body);
         const before = debugDraw.read(buffers).lineCount;
         expect(debug.body(buffers, scene.world, body)).toBe(false);
@@ -156,9 +162,9 @@ describe('debug drawing', () => {
         const grown = debugDraw.read(buffers);
         // the memory grew: a view kept from before is detached, empty, and read hands back new ones
         expect(small.length).toBe(0);
-        expect(grown.lines.length).toBe(grown.lineCount * 2 * DEBUG_VERTEX_STRIDE);
+        expect(grown.lineColors.length).toBe(grown.lineCount * 2 * DEBUG_VERTEX_BYTES);
         // the last sphere's lines are about x 399
-        const last = vertices(grown.lines).at(-1)!;
+        const last = vertices(grown).at(-1)!;
         expect(Math.abs(last[0]! - 399)).toBeLessThan(0.25);
         debugDraw.destroy(buffers);
         releaseScene(scene);
@@ -172,7 +178,7 @@ describe('debug drawing', () => {
         const before = Low.allocatedBytes();
         const buffers = debugDraw.create();
         const ball = sphere.create({ radius: 0.5 });
-        debug.shape(buffers, ball, [0, 0, 0], [0, 0, 0, 1], { color: [1, 0, 0] });
+        debug.shape(buffers, ball, [0, 0, 0], [0, 0, 0, 1], { color: [255, 0, 0, 255] });
         debug.bodies(buffers, world);
         debugDraw.destroy(buffers);
         releaseShape(ball);

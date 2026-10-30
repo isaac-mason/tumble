@@ -110,7 +110,7 @@ static struct {
     bool brush_keys_down[2];
 } state;
 
-static Color hex(uint32_t rgb) { return {(float)((rgb >> 16) & 255) / 255.0f, (float)((rgb >> 8) & 255) / 255.0f, (float)(rgb & 255) / 255.0f, 1.0f}; }
+static Color hex(uint32_t rgb) { return color::make((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255); }
 
 static const Voxels &voxels_of(const Shape *shape) { return *shapes::as<VoxelsShape>(shape).voxels; }
 
@@ -573,7 +573,7 @@ static void draw_terrain(DrawList &list) {
     for (uint32_t face = 0; face < VOXEL_FACE_COUNT; face++) {
         // as the app's meshes are lit
         const float shade = powf(0.35f + 0.65f * (0.5f + 0.5f * vec::dot({FACE_NORMALS[face][0], FACE_NORMALS[face][1], FACE_NORMALS[face][2]}, light)), 1.0f / 2.2f);
-        shaded[face] = {base.r * shade, base.g * shade, base.b * shade, 1.0f};
+        shaded[face] = color::make((uint8_t)(base.r * shade + 0.5f), (uint8_t)(base.g * shade + 0.5f), (uint8_t)(base.b * shade + 0.5f));
     }
     for (uint32_t i = 0; i < state.chunk_quads.length; i++) {
         const collections::Array<Quad> &quads = state.chunk_quads[i];
@@ -629,12 +629,12 @@ static void cast_pointer(App &app) {
 /** the hit point, its normal, and the cube of voxels a break would take */
 static void draw_brush(DrawList &list) {
     if (!state.hovering) return;
-    renderer::point(list, state.hit_position, 0.3f, {1.0f, 0.0f, 0.0f, 1.0f});
-    renderer::arrow(list, state.hit_position, vec::scale_and_add(state.hit_position, state.hit_normal, 2.0f), {0.0f, 1.0f, 0.0f, 1.0f});
+    renderer::point(list, state.hit_position, 0.3f, color::RED);
+    renderer::arrow(list, state.hit_position, vec::scale_and_add(state.hit_position, state.hit_normal, 2.0f), color::GREEN);
     const Float3 inside = vec::scale_and_add(state.hit_position, state.hit_normal, -0.01f);
     const Float3 centre = {floorf(inside.x) + 0.5f, floorf(inside.y) + 0.5f, floorf(inside.z) + 0.5f};
     const float h = 0.5f * (float)state.brush_size;
-    const Color white = {1.0f, 1.0f, 1.0f, 0.8f};
+    const Color white = color::make(255, 255, 255, 204);
     for (int axis = 0; axis < 3; axis++) {
         for (int corner = 0; corner < 4; corner++) {
             float from[3], to[3];

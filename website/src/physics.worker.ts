@@ -8,7 +8,7 @@ import {
     createWorld,
     createWorldSettings,
     cylinder,
-    DEBUG_VERTEX_STRIDE,
+    DEBUG_VERTEX_BYTES,
     debug,
     debugDraw,
     enableCollision,
@@ -141,9 +141,9 @@ self.onmessage = (event: MessageEvent<FrameRequest>) => {
         debugDraw.clear(debugBuffers);
         debug.bodies(debugBuffers, world, {});
         const read = debugDraw.read(debugBuffers);
-        // the read is a view onto the wasm's memory, so it is copied out to be sent
+        // the read is a view onto the wasm's memory, so it is copied out to be sent, the colours' bytes with it
         lineCount = read.lineCount;
-        lines = read.lines.slice(0, lineCount * 2 * DEBUG_VERTEX_STRIDE);
+        lines = read.lines.slice(0, (lineCount * 2 * DEBUG_VERTEX_BYTES) / 4);
     }
 
     const message: WorkerMessage = { type: 'frame', poses, lines, lineCount };

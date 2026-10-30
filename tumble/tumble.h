@@ -5,6 +5,7 @@
 #include "tumble/config.h"
 
 #include "tumble/math/aabox.h"
+#include "tumble/math/color.h"
 #include "tumble/math/eulerf.h"
 #include "tumble/math/mat2f.h"
 #include "tumble/math/mat4f.h"

@@ -43,35 +43,27 @@ void clear(DebugDraw &buffers) {
 }
 
 
-static void push_line(DebugDraw &out, Vec3f a, Vec3f b, Vec3f color) {
-    collections::Array<float> &lines = out.lines;
-    if (lines.length + LINE_STRIDE > lines.capacity) {
+static void push_line(DebugDraw &out, Vec3f a, Vec3f b, Color color) {
+    collections::Array<DebugDraw::Vertex> &lines = out.lines;
+    if (lines.length + 2 > lines.capacity) {
         const uint32_t doubled = lines.capacity * 2;
-        const uint32_t wanted = lines.length + LINE_STRIDE * 64;
+        const uint32_t wanted = lines.length + 2 * 64;
         lines.reserve(doubled > wanted ? doubled : wanted);
     }
-    float *vertex = lines.data + lines.length;
-    vertex[0] = vec3f::x(a);
-    vertex[1] = vec3f::y(a);
-    vertex[2] = vec3f::z(a);
-    vertex[3] = vec3f::x(color);
-    vertex[4] = vec3f::y(color);
-    vertex[5] = vec3f::z(color);
-    vertex[6] = vec3f::x(b);
-    vertex[7] = vec3f::y(b);
-    vertex[8] = vec3f::z(b);
-    vertex[9] = vec3f::x(color);
-    vertex[10] = vec3f::y(color);
-    vertex[11] = vec3f::z(color);
-    lines.length += LINE_STRIDE;
+    DebugDraw::Vertex *vertex = lines.data + lines.length;
+    vec3f::store(vertex[0].position, a);
+    vertex[0].color = color;
+    vec3f::store(vertex[1].position, b);
+    vertex[1].color = color;
+    lines.length += 2;
     out.line_count++;
 }
 
-void line(DebugDraw &out, Vec3f a, Vec3f b, Vec3f color) { push_line(out, a, b, color); }
+void line(DebugDraw &out, Vec3f a, Vec3f b, Color color) { push_line(out, a, b, color); }
 
 /** circle in the plane of two perpendicular unit axes u and v, centred at `center` */
 static void push_circle(DebugDraw &out, Vec3f center, Vec3f u, Vec3f v, float radius, uint32_t segments,
-                        Vec3f color) {
+                        Color color) {
     const float step = (2.0f * scalar::PI) / (float)segments;
     Vec3f previous = vec3f::scale_and_add(center, u, radius);
     for (uint32_t i = 1; i <= segments; i++) {
@@ -86,7 +78,7 @@ static void push_circle(DebugDraw &out, Vec3f center, Vec3f u, Vec3f v, float ra
 }
 
 /** 3-axis cross/marker at a point */
-static void push_cross(DebugDraw &out, Vec3f position, float size, Vec3f color) {
+static void push_cross(DebugDraw &out, Vec3f position, float size, Color color) {
     push_line(out, vec3f::make(vec3f::x(position) - size, vec3f::y(position), vec3f::z(position)), vec3f::make(vec3f::x(position) + size, vec3f::y(position), vec3f::z(position)), color);
     push_line(out, vec3f::make(vec3f::x(position), vec3f::y(position) - size, vec3f::z(position)), vec3f::make(vec3f::x(position), vec3f::y(position) + size, vec3f::z(position)), color);
     push_line(out, vec3f::make(vec3f::x(position), vec3f::y(position), vec3f::z(position) - size), vec3f::make(vec3f::x(position), vec3f::y(position), vec3f::z(position) + size), color);
@@ -101,48 +93,57 @@ static float hue_to_rgb(float p, float q, float t) {
     return p;
 }
 
-static Vec3f hsl_to_rgb(float h, float s, float l) {
-    if (s == 0.0f) return vec3f::make(l, l, l);
+/** a channel in [0, 1] as its nearest byte */
+static uint8_t channel_byte(float value) { return (uint8_t)(value * 255.0f + 0.5f); }
+
+static Color hsl_to_color(float h, float s, float l) {
+    if (s == 0.0f) return color::make(channel_byte(l), channel_byte(l), channel_byte(l));
     const float q = l < 0.5f ? l * (1.0f + s) : l + s - l * s;
     const float p = 2.0f * l - q;
-    return vec3f::make(hue_to_rgb(p, q, h + 1.0f / 3.0f), hue_to_rgb(p, q, h), hue_to_rgb(p, q, h - 1.0f / 3.0f));
+    return color::make(channel_byte(hue_to_rgb(p, q, h + 1.0f / 3.0f)), channel_byte(hue_to_rgb(p, q, h)),
+                       channel_byte(hue_to_rgb(p, q, h - 1.0f / 3.0f)));
 }
+
+static constexpr Color SOFT_RED = color::make(255, 51, 51);
+static constexpr Color SOFT_GREEN = color::make(51, 255, 51);
+static constexpr Color SOFT_BLUE = color::make(51, 51, 255);
+static constexpr Color DARK_PURPLE = color::make(128, 0, 128);
 
 /** (n * 137.5) % modulus for a non-negative integer n, exact: n * 137.5 is (n * 275) / 2 */
 static float golden_hash_mod(uint64_t n, uint32_t modulus) { return (float)((n * 275u) % (2u * (uint64_t)modulus)) * 0.5f; }
 
-static Vec3f body_color(const RigidBody &body, DebugDraw::BodyColorMode mode) {
+static Color body_color(const RigidBody &body, DebugDraw::BodyColorMode mode) {
     switch (mode) {
         case DebugDraw::BodyColorMode::MOTION_TYPE:
             switch (body.motion_type) {
                 case MotionType::DYNAMIC:
-                    return vec3f::make(0.2f, 1.0f, 0.2f);  // green
+                    return SOFT_GREEN;
                 case MotionType::KINEMATIC:
-                    return vec3f::make(1.0f, 1.0f, 0.0f);  // yellow
+                    return color::YELLOW;
                 case MotionType::STATIC:
-                    return vec3f::make(0.2f, 0.2f, 1.0f);  // blue
+                    return SOFT_BLUE;
                 default:
-                    return vec3f::make(1.0f, 1.0f, 1.0f);
+                    return color::WHITE;
             }
 
         case DebugDraw::BodyColorMode::INSTANCE: {
             if (body.motion_type == MotionType::STATIC) {
                 const float l = 0.22f + (golden_hash_mod(body.id, 100) / 100.0f) * 0.2f;
-                return hsl_to_rgb(0.0f, 0.0f, l);
+                return hsl_to_color(0.0f, 0.0f, l);
             }
             const float hue = golden_hash_mod(body.id, 360) / 360.0f;
-            return hsl_to_rgb(hue, 0.7f, 0.6f);
+            return hsl_to_color(hue, 0.7f, 0.6f);
         }
 
         case DebugDraw::BodyColorMode::SLEEPING:
-            return rigid_body::is_sleeping(body) ? vec3f::make(0.2f, 0.2f, 1.0f) : vec3f::make(1.0f, 0.2f, 0.2f);
+            return rigid_body::is_sleeping(body) ? SOFT_BLUE : SOFT_RED;
 
         case DebugDraw::BodyColorMode::ISLAND: {
-            if (body.island_index < 0) return vec3f::make(1.0f, 1.0f, 1.0f);
-            return hsl_to_rgb(golden_hash_mod((uint64_t)body.island_index, 360) / 360.0f, 0.8f, 0.6f);
+            if (body.island_index < 0) return color::WHITE;
+            return hsl_to_color(golden_hash_mod((uint64_t)body.island_index, 360) / 360.0f, 0.8f, 0.6f);
         }
     }
-    return vec3f::make(1.0f, 1.0f, 1.0f);
+    return color::WHITE;
 }
 
 /** a pair of unit axes perpendicular to `n` */
@@ -166,9 +167,9 @@ static Vec3f &transform_point(Vec3f &out, Vec3f local, const Transform &transfor
     return (out = vec3f::add(out, transform.position));
 }
 
-static void draw_shape(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color);
+static void draw_shape(DebugDraw &out, const Shape *shape, const Transform &transform, Color color);
 
-static void draw_sphere(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
+static void draw_sphere(DebugDraw &out, const Shape *shape, const Transform &transform, Color color) {
     // sphere only supports uniform scaling
     const float radius = shapes::as<SphereShape>(shape).radius * vec3f::x(transform.scale);
     const float a =1.0f / scalar::sqrt(2.0f);
@@ -181,7 +182,7 @@ static void draw_sphere(DebugDraw &out, const Shape *shape, const Transform &tra
 }
 
 /** the 12 edges of the local box from lo to hi */
-static void draw_local_box(DebugDraw &out, Vec3f lo, Vec3f hi, const Transform &transform, Vec3f color) {
+static void draw_local_box(DebugDraw &out, Vec3f lo, Vec3f hi, const Transform &transform, Color color) {
     const Vec3f corners[8] = {
         vec3f::make(vec3f::x(lo), vec3f::y(lo), vec3f::z(lo)), vec3f::make(vec3f::x(hi), vec3f::y(lo), vec3f::z(lo)), vec3f::make(vec3f::x(hi), vec3f::y(lo), vec3f::z(hi)), vec3f::make(vec3f::x(lo), vec3f::y(lo), vec3f::z(hi)),
         vec3f::make(vec3f::x(lo), vec3f::y(hi), vec3f::z(lo)), vec3f::make(vec3f::x(hi), vec3f::y(hi), vec3f::z(lo)), vec3f::make(vec3f::x(hi), vec3f::y(hi), vec3f::z(hi)), vec3f::make(vec3f::x(lo), vec3f::y(hi), vec3f::z(hi)),
@@ -196,12 +197,12 @@ static void draw_local_box(DebugDraw &out, Vec3f lo, Vec3f hi, const Transform &
     for (uint32_t i = 0; i < 12; i++) push_line(out, world_corners[EDGES[i][0]], world_corners[EDGES[i][1]], color);
 }
 
-static void draw_box(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
+static void draw_box(DebugDraw &out, const Shape *shape, const Transform &transform, Color color) {
     const Vec3f h = shapes::as<BoxShape>(shape).half_extents;
     draw_local_box(out, vec3f::negate(h), h, transform, color);
 }
 
-static void draw_capsule(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
+static void draw_capsule(DebugDraw &out, const Shape *shape, const Transform &transform, Color color) {
     // capsule only supports uniform scaling
     const CapsuleShape &capsule = shapes::as<CapsuleShape>(shape);
     const float radius = capsule.radius * vec3f::x(transform.scale);
@@ -247,7 +248,7 @@ static void draw_capsule(DebugDraw &out, const Shape *shape, const Transform &tr
     }
 }
 
-static void draw_cylinder(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
+static void draw_cylinder(DebugDraw &out, const Shape *shape, const Transform &transform, Color color) {
     // cylinder scales radius by x/z (uniform) and half-height by y
     const CylinderShape &cylinder = shapes::as<CylinderShape>(shape);
     const float radius = cylinder.radius * vec3f::x(transform.scale);
@@ -271,7 +272,7 @@ static void draw_cylinder(DebugDraw &out, const Shape *shape, const Transform &t
     }
 }
 
-static void draw_plane(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
+static void draw_plane(DebugDraw &out, const Shape *shape, const Transform &transform, Color color) {
     // infinite plane: draw a grid (sized by half_extent) in the plane's local frame, then transform every point into
     // world space by the node transform
     const PlaneShape &plane = shapes::as<PlaneShape>(shape);
@@ -295,7 +296,7 @@ static void draw_plane(DebugDraw &out, const Shape *shape, const Transform &tran
     }
 }
 
-static void draw_convex_hull(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
+static void draw_convex_hull(DebugDraw &out, const Shape *shape, const Transform &transform, Color color) {
     // emit all face edges (may duplicate, fine for debug use)
     const ConvexHullShape::Data &hull = *shapes::as<ConvexHullShape>(shape).data;
     for (uint32_t f = 0; f < hull.faces.length; f++) {
@@ -312,7 +313,7 @@ static void draw_convex_hull(DebugDraw &out, const Shape *shape, const Transform
     }
 }
 
-static void draw_triangle_mesh(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
+static void draw_triangle_mesh(DebugDraw &out, const Shape *shape, const Transform &transform, Color color) {
     const TriangleMeshShape::Data &mesh = *shapes::as<TriangleMeshShape>(shape).data;
     const float *positions = mesh.positions;
     for (uint32_t i = 0; i < mesh.triangle_count; i++) {
@@ -329,7 +330,7 @@ static void draw_triangle_mesh(DebugDraw &out, const Shape *shape, const Transfo
 }
 
 /** recursively emits a shape and its children, accumulating the local to world transform as it descends */
-static void draw_shape(DebugDraw &out, const Shape *shape, const Transform &transform, Vec3f color) {
+static void draw_shape(DebugDraw &out, const Shape *shape, const Transform &transform, Color color) {
     switch (shape->type) {
         case ShapeType::SPHERE:
             draw_sphere(out, shape, transform, color);
@@ -398,11 +399,11 @@ static void draw_shape(DebugDraw &out, const Shape *shape, const Transform &tran
     }
 }
 
-static const Float3 VELOCITY_LINEAR_COLOR = {1.0f, 1.0f, 0.0f};
-static const Float3 VELOCITY_ANGULAR_COLOR = {1.0f, 0.5f, 0.0f};
+static constexpr Color VELOCITY_LINEAR_COLOR = color::YELLOW;
+static constexpr Color VELOCITY_ANGULAR_COLOR = color::ORANGE;
 
 static void push_velocity(DebugDraw &out, Vec3f origin, Vec3f velocity, float length_scale, float max_length,
-                          Vec3f color) {
+                          Color color) {
     const float magnitude = vec3f::length(velocity);
     if (magnitude <= 0.01f) return;
     const float length = scalar::min(magnitude * length_scale, max_length);
@@ -411,15 +412,15 @@ static void push_velocity(DebugDraw &out, Vec3f origin, Vec3f velocity, float le
 }
 
 /** shape and velocity arrows for one body */
-static void draw_body_lines(DebugDraw &out, const RigidBody &body, Vec3f color, bool show_linear_velocity,
+static void draw_body_lines(DebugDraw &out, const RigidBody &body, Color color, bool show_linear_velocity,
                             bool show_angular_velocity) {
     draw_shape(out, body.shape, transform::make(body.position, body.quaternion), color);
     if (body.motion_type == MotionType::STATIC) return;
     if (show_linear_velocity) {
-        push_velocity(out, body.center_of_mass_position, body.motion_properties.linear_velocity, 1.0f, 5.0f, vec3f::load(VELOCITY_LINEAR_COLOR));
+        push_velocity(out, body.center_of_mass_position, body.motion_properties.linear_velocity, 1.0f, 5.0f, VELOCITY_LINEAR_COLOR);
     }
     if (show_angular_velocity) {
-        push_velocity(out, body.center_of_mass_position, body.motion_properties.angular_velocity, 0.5f, 3.0f, vec3f::load(VELOCITY_ANGULAR_COLOR));
+        push_velocity(out, body.center_of_mass_position, body.motion_properties.angular_velocity, 0.5f, 3.0f, VELOCITY_ANGULAR_COLOR);
     }
 }
 
@@ -439,7 +440,7 @@ void bodies(DebugDraw &out, const World &world, const DebugDraw::BodiesOptions &
 }
 
 void body(DebugDraw &out, const RigidBody &body, const DebugDraw::BodyOptions &options) {
-    const Vec3f color = options.has_color ? options.color : body_color(body, options.color_mode);
+    const Color color = options.has_color ? options.color : body_color(body, options.color_mode);
     draw_body_lines(out, body, color, options.show_linear_velocity, options.show_angular_velocity);
 }
 
@@ -454,10 +455,10 @@ void contacts(DebugDraw &out, const World &world) {
         for (uint32_t j = 0; j < constraint.num_contact_points; j++) {
             const Vec3f a = vec3f::load(constraint.contact_points[j].position_a);
             // cross at contact point a, red
-            push_cross(out, a, 0.05f, vec3f::make(1.0f, 0.0f, 0.0f));
+            push_cross(out, a, 0.05f, color::RED);
             // normal line from contact point a, magenta
             Vec3f tip = vec3f::scale_and_add(a, vec3f::load(constraint.normal), 0.15f);
-            push_line(out, a, tip, vec3f::make(1.0f, 0.0f, 1.0f));
+            push_line(out, a, tip, color::PURPLE);
         }
     }
 }
@@ -466,9 +467,9 @@ void character_contacts(DebugDraw &out, const KCC &character) {
     for (uint32_t i = 0; i < character.contacts.length; i++) {
         const KCC::Contact &contact = character.contacts[i];
         // a collision red, a predictive contact yellow, a discarded one grey; the normal toward the character
-        const Vec3f color = contact.was_discarded ? vec3f::make(0.5f, 0.5f, 0.5f)
-                            : contact.had_collision ? vec3f::make(1.0f, 0.0f, 0.0f)
-                                                    : vec3f::make(1.0f, 1.0f, 0.0f);
+        const Color color = contact.was_discarded ? color::GREY
+                            : contact.had_collision ? color::RED
+                                                    : color::YELLOW;
         push_cross(out, contact.position, 0.05f, color);
         push_line(out, contact.position, vec3f::scale_and_add(contact.position, contact.contact_normal, 0.15f), color);
     }
@@ -476,7 +477,7 @@ void character_contacts(DebugDraw &out, const KCC &character) {
 
 void contact_constraints(DebugDraw &out, const World &world) {
     const ContactConstraints &manifolds = world.contact_constraints;
-    const Vec3f edge_color = vec3f::make(0.8f, 0.8f, 0.0f);
+    const Color edge_color = color::make(204, 204, 0);
     for (uint32_t i = 0; i < manifolds.count; i++) {
         const ContactConstraints::Constraint &constraint = manifolds.pool[i];
         if (constraint.num_contact_points == 0) continue;
@@ -489,8 +490,8 @@ void contact_constraints(DebugDraw &out, const World &world) {
             const bool has_impulse = manifold_impulse || point.normal_constraint.total_lambda != 0.0f;
             const float size = has_impulse ? 0.04f : 0.02f;
             // point a cyan, point b magenta, bright if active
-            push_cross(out, vec3f::load(point.position_a), size, has_impulse ? vec3f::make(0.0f, 1.0f, 1.0f) : vec3f::make(0.0f, 0.4f, 0.6f));
-            push_cross(out, vec3f::load(point.position_b), size, has_impulse ? vec3f::make(1.0f, 0.0f, 1.0f) : vec3f::make(0.5f, 0.0f, 0.5f));
+            push_cross(out, vec3f::load(point.position_a), size, has_impulse ? color::CYAN : color::make(0, 102, 153));
+            push_cross(out, vec3f::load(point.position_b), size, has_impulse ? color::PURPLE : DARK_PURPLE);
             // edge between consecutive a points, yellow
             if (j > 0) push_line(out, vec3f::load(constraint.contact_points[j - 1].position_a), vec3f::load(point.position_a), edge_color);
         }
@@ -504,16 +505,16 @@ void contact_constraints(DebugDraw &out, const World &world) {
         const Vec3f first = vec3f::load(constraint.contact_points[0].position_a);
         Vec3f tip;
         // normal arrow from first point, magenta
-        push_line(out, first, (tip = vec3f::scale_and_add(first, vec3f::load(constraint.normal), 0.3f)), vec3f::make(1.0f, 0.0f, 1.0f));
+        push_line(out, first, (tip = vec3f::scale_and_add(first, vec3f::load(constraint.normal), 0.3f)), color::PURPLE);
         // tangent 1 green, tangent 2 blue
-        push_line(out, first, (tip = vec3f::scale_and_add(first, vec3f::load(constraint.tangent_1), 0.2f)), vec3f::make(0.0f, 1.0f, 0.0f));
-        push_line(out, first, (tip = vec3f::scale_and_add(first, vec3f::load(constraint.tangent_2), 0.2f)), vec3f::make(0.0f, 0.4f, 1.0f));
+        push_line(out, first, (tip = vec3f::scale_and_add(first, vec3f::load(constraint.tangent_1), 0.2f)), color::GREEN);
+        push_line(out, first, (tip = vec3f::scale_and_add(first, vec3f::load(constraint.tangent_2), 0.2f)), color::make(0, 102, 255));
     }
 }
 
 
 static void draw_pie(DebugDraw &out, Vec3f center, float radius, Vec3f normal, Vec3f axis, float min_angle,
-                     float max_angle, Vec3f color) {
+                     float max_angle, Color color) {
     if (min_angle >= max_angle) return;
     const uint32_t segments = 32;
     const float step = (max_angle - min_angle) / (float)segments;
@@ -531,7 +532,7 @@ static void draw_pie(DebugDraw &out, Vec3f center, float radius, Vec3f normal, V
 
 static void draw_swing_cone_limits(DebugDraw &out, Vec3f center, Vec3f twist_axis, Vec3f plane_axis,
                                    Vec3f normal_axis, float plane_half_angle, float normal_half_angle, float radius,
-                                   Vec3f color) {
+                                   Color color) {
     const float max_angle = scalar::max(plane_half_angle, normal_half_angle);
     if (max_angle <= 0.0f) return;
     const uint32_t segments = 32;
@@ -578,16 +579,10 @@ static bool constraint_transforms(BodyTransform &out_a, BodyTransform &out_b, co
     return true;
 }
 
-static void push_axis(DebugDraw &out, Vec3f from, Vec3f direction, float length, Vec3f color) {
+static void push_axis(DebugDraw &out, Vec3f from, Vec3f direction, float length, Color color) {
     Vec3f tip;
     push_line(out, from, (tip = vec3f::scale_and_add(from, direction, length)), color);
 }
-
-static const Float3 RED = {1.0f, 0.0f, 0.0f};
-static const Float3 GREEN = {0.0f, 1.0f, 0.0f};
-static const Float3 BLUE = {0.0f, 0.0f, 1.0f};
-static const Float3 WHITE = {1.0f, 1.0f, 1.0f};
-static const Float3 PURPLE = {0.5f, 0.0f, 0.5f};
 
 static void draw_hinge(DebugDraw &out, const HingeConstraint &constraint, const BodyTransform &a,
                        const BodyTransform &b, const DebugDraw::JointsOptions &options) {
@@ -600,15 +595,15 @@ static void draw_hinge(DebugDraw &out, const HingeConstraint &constraint, const 
     normal_axis_a = transform_direction_to_world(constraint.local_space_normal_axis1, a);
     normal_axis_b = transform_direction_to_world(constraint.local_space_normal_axis2, b);
 
-    push_cross(out, point_a, size * 0.1f, vec3f::load(RED));
-    push_axis(out, point_a, hinge_axis_a, size, vec3f::load(RED));
-    push_cross(out, point_b, size * 0.1f, vec3f::load(GREEN));
-    push_axis(out, point_b, hinge_axis_b, size, vec3f::load(GREEN));
+    push_cross(out, point_a, size * 0.1f, color::RED);
+    push_axis(out, point_a, hinge_axis_a, size, color::RED);
+    push_cross(out, point_b, size * 0.1f, color::GREEN);
+    push_axis(out, point_b, hinge_axis_b, size, color::GREEN);
     // b's normal axis, which turns against a's limit pie as the hinge swings
-    push_axis(out, point_b, normal_axis_b, size, vec3f::load(WHITE));
+    push_axis(out, point_b, normal_axis_b, size, color::WHITE);
 
     if (options.draw_limits && constraint.has_limits && constraint.limits_max > constraint.limits_min) {
-        draw_pie(out, point_a, size, hinge_axis_a, normal_axis_a, constraint.limits_min, constraint.limits_max, vec3f::load(PURPLE));
+        draw_pie(out, point_a, size, hinge_axis_a, normal_axis_a, constraint.limits_min, constraint.limits_max, DARK_PURPLE);
     }
 }
 
@@ -626,9 +621,9 @@ static void draw_swing_twist(DebugDraw &out, const SwingTwistConstraint &constra
     Vec3f point_a, point_b;
     point_a = transform_point_to_world(constraint.local_space_position1, a);
     point_b = transform_point_to_world(constraint.local_space_position2, b);
-    push_cross(out, point_a, size * 0.1f, vec3f::load(RED));
-    push_cross(out, point_b, size * 0.1f, vec3f::load(GREEN));
-    push_line(out, point_a, point_b, vec3f::load(WHITE));
+    push_cross(out, point_a, size * 0.1f, color::RED);
+    push_cross(out, point_b, size * 0.1f, color::GREEN);
+    push_line(out, point_a, point_b, color::WHITE);
 
     if (!options.draw_limits) return;
     // twist, plane, normal
@@ -636,10 +631,10 @@ static void draw_swing_twist(DebugDraw &out, const SwingTwistConstraint &constra
     constraint_space_axes(axes, a, constraint.constraint_to_body1);
     if (constraint.plane_half_cone_angle > 0.0f || constraint.normal_half_cone_angle > 0.0f) {
         draw_swing_cone_limits(out, point_a, axes[0], axes[1], axes[2], constraint.plane_half_cone_angle, constraint.normal_half_cone_angle,
-                               size, vec3f::load(GREEN));
+                               size, color::GREEN);
     }
     if (constraint.twist_max_angle > constraint.twist_min_angle) {
-        draw_pie(out, point_a, size, axes[0], axes[1], constraint.twist_min_angle, constraint.twist_max_angle, vec3f::load(PURPLE));
+        draw_pie(out, point_a, size, axes[0], axes[1], constraint.twist_min_angle, constraint.twist_max_angle, DARK_PURPLE);
     }
 }
 
@@ -648,7 +643,7 @@ static void draw_distance(DebugDraw &out, const DistanceConstraint &constraint, 
     Vec3f point_a, point_b;
     point_a = transform_point_to_world(constraint.local_space_position1, a);
     point_b = transform_point_to_world(constraint.local_space_position2, b);
-    push_line(out, point_a, point_b, vec3f::load(GREEN));
+    push_line(out, point_a, point_b, color::GREEN);
 
     if (!options.draw_limits) return;
     const Vec3f delta = vec3f::subtract(point_b, point_a);
@@ -657,8 +652,8 @@ static void draw_distance(DebugDraw &out, const DistanceConstraint &constraint, 
     Vec3f direction = vec3f::scale(delta, 1.0f / distance);
     Vec3f u, v;
     perpendicular_axes(u, v, direction);
-    if (constraint.min_distance > 0.0f) push_circle(out, point_a, u, v, constraint.min_distance, 16, vec3f::make(0.0f, 0.4f, 1.0f));
-    if (constraint.max_distance < scalar::INF) push_circle(out, point_a, u, v, constraint.max_distance, 16, vec3f::make(1.0f, 0.2f, 0.2f));
+    if (constraint.min_distance > 0.0f) push_circle(out, point_a, u, v, constraint.min_distance, 16, color::make(0, 102, 255));
+    if (constraint.max_distance < scalar::INF) push_circle(out, point_a, u, v, constraint.max_distance, 16, SOFT_RED);
 }
 
 static void draw_cone(DebugDraw &out, const ConeConstraint &constraint, const BodyTransform &a, const BodyTransform &b,
@@ -670,24 +665,24 @@ static void draw_cone(DebugDraw &out, const ConeConstraint &constraint, const Bo
     twist_axis_a = transform_direction_to_world(constraint.local_space_twist_axis1, a);
     twist_axis_b = transform_direction_to_world(constraint.local_space_twist_axis2, b);
 
-    push_cross(out, point_a, size * 0.1f, vec3f::load(RED));
-    push_axis(out, point_a, twist_axis_a, size, vec3f::load(RED));
-    push_cross(out, point_b, size * 0.1f, vec3f::load(GREEN));
-    push_axis(out, point_b, twist_axis_b, size, vec3f::load(GREEN));
+    push_cross(out, point_a, size * 0.1f, color::RED);
+    push_axis(out, point_a, twist_axis_a, size, color::RED);
+    push_cross(out, point_b, size * 0.1f, color::GREEN);
+    push_axis(out, point_b, twist_axis_b, size, color::GREEN);
 
     if (options.draw_limits && constraint.cos_half_cone_angle < 1.0f) {
         const float half_angle = scalar::acos(constraint.cos_half_cone_angle);
         Vec3f u, v;
         perpendicular_axes(u, v, twist_axis_a);
-        draw_swing_cone_limits(out, point_a, twist_axis_a, u, v, half_angle, half_angle, size, vec3f::make(1.0f, 1.0f, 0.0f));
+        draw_swing_cone_limits(out, point_a, twist_axis_a, u, v, half_angle, half_angle, size, color::YELLOW);
     }
 }
 
 static void draw_fixed(DebugDraw &out, const FixedConstraint &constraint, const BodyTransform &a, const BodyTransform &b,
                        const DebugDraw::JointsOptions &options) {
     Vec3f point_a, point_b;
-    push_cross(out, point_a = transform_point_to_world(constraint.local_space_position1, a), options.size * 0.1f, vec3f::load(BLUE));
-    push_cross(out, point_b = transform_point_to_world(constraint.local_space_position2, b), options.size * 0.1f, vec3f::load(BLUE));
+    push_cross(out, point_a = transform_point_to_world(constraint.local_space_position1, a), options.size * 0.1f, color::BLUE);
+    push_cross(out, point_b = transform_point_to_world(constraint.local_space_position2, b), options.size * 0.1f, color::BLUE);
 }
 
 static void draw_point(DebugDraw &out, const PointConstraint &constraint, const BodyTransform &a, const BodyTransform &b,
@@ -695,9 +690,9 @@ static void draw_point(DebugDraw &out, const PointConstraint &constraint, const 
     Vec3f point_a, point_b;
     point_a = transform_point_to_world(constraint.local_space_position1, a);
     point_b = transform_point_to_world(constraint.local_space_position2, b);
-    push_cross(out, point_a, options.size * 0.1f, vec3f::load(WHITE));
-    push_cross(out, point_b, options.size * 0.1f, vec3f::load(WHITE));
-    push_line(out, point_a, point_b, vec3f::load(WHITE));
+    push_cross(out, point_a, options.size * 0.1f, color::WHITE);
+    push_cross(out, point_b, options.size * 0.1f, color::WHITE);
+    push_line(out, point_a, point_b, color::WHITE);
 }
 
 static void draw_slider(DebugDraw &out, const SliderConstraint &constraint, const BodyTransform &a,
@@ -708,18 +703,18 @@ static void draw_slider(DebugDraw &out, const SliderConstraint &constraint, cons
     point_b = transform_point_to_world(constraint.local_space_position_b, b);
     slider_axis = transform_direction_to_world(constraint.local_space_slider_axis_a, a);
 
-    push_cross(out, point_a, size * 0.1f, vec3f::load(RED));
-    push_axis(out, point_a, slider_axis, size, vec3f::load(RED));
-    push_cross(out, point_b, size * 0.1f, vec3f::load(GREEN));
+    push_cross(out, point_a, size * 0.1f, color::RED);
+    push_axis(out, point_a, slider_axis, size, color::RED);
+    push_cross(out, point_b, size * 0.1f, color::GREEN);
 
     if (!options.draw_limits || !constraint.has_limits) return;
     Vec3f min_point = vec3f::scale_and_add(point_a, slider_axis, constraint.limits_min);
     Vec3f max_point = vec3f::scale_and_add(point_a, slider_axis, constraint.limits_max);
     const bool has_min = constraint.limits_min > -scalar::INF;
     const bool has_max = constraint.limits_max < scalar::INF;
-    if (has_min) push_cross(out, min_point, size * 0.15f, vec3f::load(BLUE));
-    if (has_max) push_cross(out, max_point, size * 0.15f, vec3f::load(RED));
-    if (has_min && has_max) push_line(out, min_point, max_point, vec3f::load(PURPLE));
+    if (has_min) push_cross(out, min_point, size * 0.15f, color::BLUE);
+    if (has_max) push_cross(out, max_point, size * 0.15f, color::RED);
+    if (has_min && has_max) push_line(out, min_point, max_point, DARK_PURPLE);
 }
 
 static void draw_six_dof(DebugDraw &out, const SixDOFConstraint &constraint, const BodyTransform &a,
@@ -728,13 +723,13 @@ static void draw_six_dof(DebugDraw &out, const SixDOFConstraint &constraint, con
     Vec3f point_a, point_b;
     point_a = transform_point_to_world(constraint.local_space_position1, a);
     point_b = transform_point_to_world(constraint.local_space_position2, b);
-    push_cross(out, point_a, size * 0.1f, vec3f::load(PURPLE));
-    push_cross(out, point_b, size * 0.1f, vec3f::load(PURPLE));
+    push_cross(out, point_a, size * 0.1f, DARK_PURPLE);
+    push_cross(out, point_b, size * 0.1f, DARK_PURPLE);
 
     if (!options.draw_limits) return;
     Vec3f axes[3];
     constraint_space_axes(axes, a, constraint.constraint_to_body1);
-    const Vec3f axis_colors[3] = {vec3f::load(RED), vec3f::load(GREEN), vec3f::load(BLUE)};
+    const Color axis_colors[3] = {color::RED, color::GREEN, color::BLUE};
     const float big = 3.4e38f;
 
     for (uint32_t i = 0; i < 3; i++) {

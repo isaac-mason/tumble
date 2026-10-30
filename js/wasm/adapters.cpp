@@ -1688,9 +1688,9 @@ namespace debug {
 tumble::DebugDraw *create() { return util::create<tumble::DebugDraw>(); }
 void destroy(tumble::DebugDraw *buffers) { util::destroy(buffers); }
 void clear(tumble::DebugDraw *buffers) { tumble::debug::clear(*buffers); }
-const float *lines(const tumble::DebugDraw *buffers) { return buffers->lines.data; }
+const uint8_t *lines(const tumble::DebugDraw *buffers) { return (const uint8_t *)buffers->lines.data; }
 uint32_t line_count(const tumble::DebugDraw *buffers) { return buffers->line_count; }
-const float *triangles(const tumble::DebugDraw *buffers) { return buffers->triangles.data; }
+const uint8_t *triangles(const tumble::DebugDraw *buffers) { return (const uint8_t *)buffers->triangles.data; }
 uint32_t triangle_count(const tumble::DebugDraw *buffers) { return buffers->triangle_count; }
 
 void default_bodies_options(tumble::DebugDraw::BodiesOptions &out) { out = {}; }
@@ -1709,8 +1709,8 @@ bool body(tumble::DebugDraw *out, tumble::World *world, BodyId body, const tumbl
     return true;
 }
 
-void line(tumble::DebugDraw *out, const Float3 &a, const Float3 &b, const Float3 &color) {
-    tumble::debug::line(*out, vec3f::load(a), vec3f::load(b), vec3f::load(color));
+void line(tumble::DebugDraw *out, const Float3 &a, const Float3 &b, const tumble::Color &color) {
+    tumble::debug::line(*out, vec3f::load(a), vec3f::load(b), color);
 }
 
 void shape(tumble::DebugDraw *out, const Shape *shape, const Float3 &position, const Float4 &quaternion,

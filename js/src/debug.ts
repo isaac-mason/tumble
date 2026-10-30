@@ -2,7 +2,7 @@ import type { BodyId } from './body.js';
 import type { DebugDraw } from './debug-draw.js';
 import * as Low from './generated/tumble.js';
 import type { KCC } from './kcc.js';
-import type { Quat, Vec3 } from './math.js';
+import type { Color, Quat, Vec3 } from './math.js';
 import { defaultsOf, over } from './settings.js';
 import type { Shape } from './shapes/shapes.js';
 import type { World } from './world.js';
@@ -20,13 +20,13 @@ export type BodiesOptions = {
 
 export type BodyOptions = {
     /** in place of the colour mode's */
-    color?: Vec3 | null;
+    color?: Color | null;
     colorMode?: BodyColorMode;
     showLinearVelocity?: boolean;
     showAngularVelocity?: boolean;
 };
 
-export type ShapeOptions = { color?: Vec3 };
+export type ShapeOptions = { color?: Color };
 
 export type JointsOptions = {
     /** the length of an axis's arm */
@@ -68,7 +68,7 @@ export function body(out: DebugDraw, world: World, body: BodyId, options: BodyOp
     return drawn;
 }
 
-export function line(out: DebugDraw, a: Vec3, b: Vec3, color: Vec3): void {
+export function line(out: DebugDraw, a: Vec3, b: Vec3, color: Color): void {
     drawing(() => Low.Debug.line(out.handle, a, b, color));
 }
 

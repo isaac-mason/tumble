@@ -6,7 +6,7 @@ import {
     createActiveBody,
     createWorld,
     createWorldSettings,
-    DEBUG_VERTEX_STRIDE,
+    DEBUG_VERTEX_BYTES,
     debug,
     debugDraw,
     destroyWorld,
@@ -102,8 +102,9 @@ for (const body of balls) {
 }
 
 /* SNIPPET_START: debug */
-// wireframes drawn into buffers in the wasm. clear, draw, then read. each vertex is x y z r g b. a line has two
-// vertices and a triangle three. the views point into wasm memory, so copy them out before the next draw
+// wireframes drawn into buffers in the wasm. clear, draw, then read. each vertex is x y z as floats, then r g b a as
+// bytes: a gpu reads it as float32x3 and unorm8x4. a line has two vertices and a triangle three. the views point into
+// wasm memory, so copy them out before the next draw. copying the float view copies the colour bytes with it
 const buffers = debugDraw.create();
 let gpuLines = new Float32Array(1 << 16);
 function drawDebug(): number {
@@ -118,9 +119,10 @@ function drawDebug(): number {
 }
 /* SNIPPET_END: debug */
 const lineCount = drawDebug();
-const floats = DEBUG_VERTEX_STRIDE * 2 * lineCount;
+const floats = (DEBUG_VERTEX_BYTES / 4) * 2 * lineCount;
+// the last vertex's z
 check(
-    lineCount > 50 && gpuLines.length >= floats && gpuLines[floats - 1] === debugDraw.read(buffers).lines[floats - 1],
+    lineCount > 50 && gpuLines.length >= floats && gpuLines[floats - 2] === debugDraw.read(buffers).lines[floats - 2],
     `drew ${lineCount} lines`,
 );
 // drawn again, the same scene takes no more memory

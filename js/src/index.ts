@@ -33,7 +33,7 @@ export * as contactPairs from './contact-pairs.js';
 export type { BodiesOptions, BodyOptions, JointsOptions, ShapeOptions } from './debug.js';
 export * as debug from './debug.js';
 export * as debugDraw from './debug-draw.js';
-export { DEBUG_VERTEX_STRIDE, type DebugDraw, type DebugViews } from './debug-draw.js';
+export { DEBUG_VERTEX_BYTES, DEBUG_VERTEX_COLOR_OFFSET, type DebugDraw, type DebugViews } from './debug-draw.js';
 export type { ContactEvent, ContactRemovedEvent, ContactSettings, Listener } from './events.js';
 export type { Filter } from './filter.js';
 export * as filter from './filter.js';
@@ -51,7 +51,7 @@ export type {
 export * as kcc from './kcc.js';
 export type { KCCBodyPolicy, KCCPolicy } from './kcc-policy.js';
 export * as kccPolicy from './kcc-policy.js';
-export type { Box3, Mat4, Quat, Vec2, Vec3 } from './math.js';
+export type { Box3, Color, Mat4, Quat, Vec2, Vec3 } from './math.js';
 export * from './queries.js';
 export type { RigidBodySettings } from './rigid-body.js';
 export * as rigidBody from './rigid-body.js';

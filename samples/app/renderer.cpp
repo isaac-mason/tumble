@@ -59,11 +59,6 @@ struct MeshUniforms {
     float light[4];
 };
 
-static uint32_t pack(Color color) {
-    const auto byte = [](float value) { return (uint32_t)(fminf(fmaxf(value, 0.0f), 1.0f) * 255.0f + 0.5f); };
-    return byte(color.r) | (byte(color.g) << 8) | (byte(color.b) << 16) | (byte(color.a) << 24);
-}
-
 static sg_shader make_color_shader() {
     sg_shader_desc desc = {};
     desc.vertex_func.source = COLOR_VERTEX_SHADER;
@@ -198,20 +193,16 @@ void clear(Renderer &renderer) {
     renderer.meshes.length = 0;
 }
 
-static void push(collections::Array<ColorVertex> &vertices, Float3 p, uint32_t color) { vertices.push({p.x, p.y, p.z, color}); }
-
 void line(DrawList &list, Float3 a, Float3 b, Color color) {
-    const uint32_t packed = pack(color);
-    push(list.lines, a, packed);
-    push(list.lines, b, packed);
+    list.lines.push({a, color});
+    list.lines.push({b, color});
 }
 
 void triangle(DrawList &list, Float3 a, Float3 b, Float3 c, Color color) {
-    collections::Array<ColorVertex> &vertices = color.a < 1 ? list.transparent_triangles : list.opaque_triangles;
-    const uint32_t packed = pack(color);
-    push(vertices, a, packed);
-    push(vertices, b, packed);
-    push(vertices, c, packed);
+    collections::Array<ColorVertex> &vertices = color.a < 255 ? list.transparent_triangles : list.opaque_triangles;
+    vertices.push({a, color});
+    vertices.push({b, color});
+    vertices.push({c, color});
 }
 
 void point(DrawList &list, Float3 position, float radius, Color color) {
@@ -235,16 +226,10 @@ void arrow(DrawList &list, Float3 from, Float3 to, Color color) {
 }
 
 void debug(DrawList &list, const DebugDraw &buffers) {
-    const auto at = [](const float *v) { return Float3{v[0], v[1], v[2]}; };
-    const auto color = [](const float *v) { return Color{v[3], v[4], v[5], 1.0f}; };
-    for (uint32_t i = 0; i < buffers.line_count; i++) {
-        const float *v = buffers.lines.data + i * debug::LINE_STRIDE;
-        push(list.lines, at(v), pack(color(v)));
-        push(list.lines, at(v + debug::VERTEX_STRIDE), pack(color(v + debug::VERTEX_STRIDE)));
-    }
-    for (uint32_t i = 0; i < buffers.triangle_count; i++) {
-        const float *v = buffers.triangles.data + i * debug::TRIANGLE_STRIDE;
-        triangle(list, at(v), at(v + debug::VERTEX_STRIDE), at(v + 2 * debug::VERTEX_STRIDE), color(v));
+    for (uint32_t i = 0; i < buffers.lines.length; i++) list.lines.push({buffers.lines[i].position, buffers.lines[i].color});
+    for (uint32_t i = 0; i + 2 < buffers.triangles.length; i += 3) {
+        const DebugDraw::Vertex *v = buffers.triangles.data + i;
+        triangle(list, v[0].position, v[1].position, v[2].position, v[0].color);
     }
 }
 
@@ -289,7 +274,7 @@ static void draw_meshes(Renderer &renderer, const Camera &camera, bool transpare
     bool applied = false;
     for (uint32_t i = 0; i < renderer.meshes.length; i++) {
         const MeshDraw &draw = renderer.meshes[i];
-        if ((draw.color.a < 1.0f) != transparent) continue;
+        if ((draw.color.a < 255) != transparent) continue;
         if (!applied) {
             sg_apply_pipeline(transparent ? renderer.transparent_mesh_pipeline : renderer.mesh_pipeline);
             applied = true;
@@ -299,10 +284,10 @@ static void draw_meshes(Renderer &renderer, const Camera &camera, bool transpare
             uniforms.mvp[k] = camera.view_projection.m[k];
             uniforms.model[k] = draw.model.m[k];
         }
-        uniforms.tint[0] = draw.color.r;
-        uniforms.tint[1] = draw.color.g;
-        uniforms.tint[2] = draw.color.b;
-        uniforms.tint[3] = draw.color.a;
+        uniforms.tint[0] = (float)draw.color.r / 255.0f;
+        uniforms.tint[1] = (float)draw.color.g / 255.0f;
+        uniforms.tint[2] = (float)draw.color.b / 255.0f;
+        uniforms.tint[3] = (float)draw.color.a / 255.0f;
         uniforms.light[0] = light.x;
         uniforms.light[1] = light.y;
         uniforms.light[2] = light.z;

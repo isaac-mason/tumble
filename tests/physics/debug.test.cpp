@@ -56,15 +56,11 @@ Shape *make_cube_hull() {
     return convex_hull::create({.positions = corners, .num_positions = 8});
 }
 
-Float3 vertex_position(const DebugDraw &buffers, uint32_t vertex) {
-    const float *v = buffers.lines.data + vertex * debug::VERTEX_STRIDE;
-    return {v[0], v[1], v[2]};
-}
+Float3 vertex_position(const DebugDraw &buffers, uint32_t vertex) { return buffers.lines[vertex].position; }
 
-Float3 vertex_color(const DebugDraw &buffers, uint32_t vertex) {
-    const float *v = buffers.lines.data + vertex * debug::VERTEX_STRIDE + 3;
-    return {v[0], v[1], v[2]};
-}
+Color vertex_color(const DebugDraw &buffers, uint32_t vertex) { return buffers.lines[vertex].color; }
+
+bool same_color(Color a, Color b) { return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a; }
 
 /** the shape's line count drawn alone at the origin, the buffers cleared first */
 uint32_t shape_lines(DebugDraw &buffers, const Shape *shape) {
@@ -96,10 +92,10 @@ void test_debug_buffers_start_empty_and_clear(TestCtx &ctx) {
     Shape *box_shape = box::create({.half_extents = vec3f::splat(1.0f)});
     debug::shape(buffers, box_shape, vec3f::make(0.0f, 0.0f, 0.0f), quatf::load(IDENTITY), {});
     CHECK(ctx, buffers.line_count == BOX_LINES);
-    CHECK(ctx, buffers.lines.length == BOX_LINES * debug::LINE_STRIDE);
+    CHECK(ctx, buffers.lines.length == BOX_LINES * 2);
     debug::clear(buffers);
     CHECK(ctx, buffers.line_count == 0 && buffers.lines.length == 0);
-    CHECK(ctx, buffers.lines.capacity >= BOX_LINES * debug::LINE_STRIDE);
+    CHECK(ctx, buffers.lines.capacity >= BOX_LINES * 2);
 }
 
 void test_debug_shape_line_counts_per_type(TestCtx &ctx) {
@@ -150,13 +146,13 @@ void test_debug_box_corners_under_pose(TestCtx &ctx) {
     // a quarter turn about y maps local (x, y, z) to (z, y, -x)
     Float4 rotation = stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), scalar::PI * 0.5f);
     const Float3 position = {10.0f, 0.0f, 0.0f};
-    debug::shape(buffers, box_shape, vec3f::load(position), quatf::load(rotation), {.color = vec3f::make(0.25f, 0.5f, 0.75f)});
+    debug::shape(buffers, box_shape, vec3f::load(position), quatf::load(rotation), {.color = color::make(64, 128, 191)});
     CHECK(ctx, buffers.line_count == BOX_LINES);
     // the first edge runs from corner (-1, -2, -3) to (1, -2, -3)
     CHECK(ctx, near3(vertex_position(buffers, 0), 10.0f - 3.0f, -2.0f, 1.0f, 1e-5f));
     CHECK(ctx, near3(vertex_position(buffers, 1), 10.0f - 3.0f, -2.0f, -1.0f, 1e-5f));
-    CHECK(ctx, near3(vertex_color(buffers, 0), 0.25f, 0.5f, 0.75f, 0.0f));
-    CHECK(ctx, near3(vertex_color(buffers, 1), 0.25f, 0.5f, 0.75f, 0.0f));
+    CHECK(ctx, same_color(vertex_color(buffers, 0), color::make(64, 128, 191)));
+    CHECK(ctx, same_color(vertex_color(buffers, 1), color::make(64, 128, 191)));
     // every edge has the length of one of the box's sides
     for (uint32_t i = 0; i < BOX_LINES; i++) {
         const float length = vec3f::distance(vec3f::load(vertex_position(buffers, 2 * i)), vec3f::load(vertex_position(buffers, 2 * i + 1)));
@@ -250,8 +246,8 @@ void test_debug_bodies_one_of_each_shape(TestCtx &ctx) {
     CHECK(ctx, buffers.line_count == expected);
     CHECK(ctx, buffers.triangle_count == 0);
     // motion type colours: the plane drawn first is static blue, the kinematic box last is yellow
-    CHECK(ctx, near3(vertex_color(buffers, 0), 0.2f, 0.2f, 1.0f, 0.0f));
-    CHECK(ctx, near3(vertex_color(buffers, expected * 2 - 1), 1.0f, 1.0f, 0.0f, 0.0f));
+    CHECK(ctx, same_color(vertex_color(buffers, 0), color::make(51, 51, 255)));
+    CHECK(ctx, same_color(vertex_color(buffers, expected * 2 - 1), color::YELLOW));
     CHECK(ctx, near3(vertex_position(buffers, (expected - BOX_LINES) * 2), 17.5f, 4.5f, -0.5f, 1e-5f));
 
     // the not-moving layer excluded: the plane and the mesh go, the moving bodies stay
@@ -268,9 +264,9 @@ void test_debug_bodies_one_of_each_shape(TestCtx &ctx) {
 
     // body() with an explicit colour
     debug::clear(buffers);
-    debug::body(buffers, *kinematic, {.has_color = true, .color = vec3f::make(0.1f, 0.2f, 0.3f)});
+    debug::body(buffers, *kinematic, {.has_color = true, .color = color::make(26, 51, 77)});
     CHECK(ctx, buffers.line_count == BOX_LINES);
-    CHECK(ctx, near3(vertex_color(buffers, 0), 0.1f, 0.2f, 0.3f, 0.0f));
+    CHECK(ctx, same_color(vertex_color(buffers, 0), color::make(26, 51, 77)));
 
     release_world_scene(scene);
 }
@@ -284,29 +280,30 @@ void test_debug_body_colour_modes(TestCtx &ctx) {
 
     // instance: a static body is a grey, a moving one saturated
     debug::body(buffers, *ground, {.color_mode = DebugDraw::BodyColorMode::INSTANCE});
-    const Float3 grey = vertex_color(buffers, 0);
-    CHECK(ctx, grey.x == grey.y && grey.y == grey.z && grey.x >= 0.22f && grey.x <= 0.42f);
+    const Color grey = vertex_color(buffers, 0);
+    CHECK(ctx, grey.r == grey.g && grey.g == grey.b && grey.r >= 56 && grey.r <= 108);
     debug::clear(buffers);
     debug::body(buffers, *dynamic, {.color_mode = DebugDraw::BodyColorMode::INSTANCE});
-    const Float3 hued = vertex_color(buffers, 0);
-    // s 0.7, l 0.6: the brightest channel 0.88, the dimmest 0.32
-    CHECK_NEAR(ctx, scalar::max(hued.x, scalar::max(hued.y, hued.z)), 0.88f, 1e-5f);
-    CHECK_NEAR(ctx, scalar::min(hued.x, scalar::min(hued.y, hued.z)), 0.32f, 1e-5f);
+    const Color hued = vertex_color(buffers, 0);
+    // s 0.7, l 0.6: the brightest channel 0.88 (224), the dimmest 0.32 (82)
+    const int brightest = hued.r > hued.g ? (hued.r > hued.b ? hued.r : hued.b) : (hued.g > hued.b ? hued.g : hued.b);
+    const int dimmest = hued.r < hued.g ? (hued.r < hued.b ? hued.r : hued.b) : (hued.g < hued.b ? hued.g : hued.b);
+    CHECK(ctx, brightest >= 223 && brightest <= 225 && dimmest >= 81 && dimmest <= 83);
 
     // sleeping: awake red, asleep blue
     debug::clear(buffers);
     debug::body(buffers, *dynamic, {.color_mode = DebugDraw::BodyColorMode::SLEEPING});
-    CHECK(ctx, near3(vertex_color(buffers, 0), 1.0f, 0.2f, 0.2f, 0.0f));
+    CHECK(ctx, same_color(vertex_color(buffers, 0), color::make(255, 51, 51)));
     rigid_body::sleep(*scene.world, dynamic);
     debug::clear(buffers);
     debug::body(buffers, *dynamic, {.color_mode = DebugDraw::BodyColorMode::SLEEPING});
-    CHECK(ctx, near3(vertex_color(buffers, 0), 0.2f, 0.2f, 1.0f, 0.0f));
+    CHECK(ctx, same_color(vertex_color(buffers, 0), color::make(51, 51, 255)));
 
     // island: a body in no island is white
     debug::clear(buffers);
     debug::body(buffers, *ground, {.color_mode = DebugDraw::BodyColorMode::ISLAND});
     CHECK(ctx, ground->island_index == -1);
-    CHECK(ctx, near3(vertex_color(buffers, 0), 1.0f, 1.0f, 1.0f, 0.0f));
+    CHECK(ctx, same_color(vertex_color(buffers, 0), color::WHITE));
 
     release_world_scene(scene);
 }
@@ -323,10 +320,10 @@ void test_debug_body_velocities(TestCtx &ctx) {
     // linear: from the centre of mass along the velocity, its magnitude long (under the 5 cap), yellow
     CHECK(ctx, near3(vertex_position(buffers, BOX_LINES * 2), 0.0f, 5.0f, 0.0f, 1e-5f));
     CHECK(ctx, near3(vertex_position(buffers, BOX_LINES * 2 + 1), 3.0f, 5.0f, 0.0f, 1e-5f));
-    CHECK(ctx, near3(vertex_color(buffers, BOX_LINES * 2), 1.0f, 1.0f, 0.0f, 0.0f));
+    CHECK(ctx, same_color(vertex_color(buffers, BOX_LINES * 2), color::YELLOW));
     // angular: half its magnitude, capped at 3, orange
     CHECK(ctx, near3(vertex_position(buffers, BOX_LINES * 2 + 3), 0.0f, 8.0f, 0.0f, 1e-5f));
-    CHECK(ctx, near3(vertex_color(buffers, BOX_LINES * 2 + 2), 1.0f, 0.5f, 0.0f, 0.0f));
+    CHECK(ctx, same_color(vertex_color(buffers, BOX_LINES * 2 + 2), color::ORANGE));
 
     // a still body draws no arrows
     rigid_body::set_linear_velocity(*scene.world, body, vec3f::make(0.0f, 0.0f, 0.0f));
@@ -366,7 +363,7 @@ void test_debug_contacts_of_a_resting_box(TestCtx &ctx) {
         CHECK_NEAR(ctx, scalar::abs(from.x), 0.5f, 1e-2f);
         CHECK_NEAR(ctx, scalar::abs(from.z), 0.5f, 1e-2f);
         CHECK_NEAR(ctx, to.y - from.y, 0.15f * constraint.normal.y, 1e-5f);
-        CHECK(ctx, near3(vertex_color(buffers, normal_line * 2), 1.0f, 0.0f, 1.0f, 0.0f));
+        CHECK(ctx, same_color(vertex_color(buffers, normal_line * 2), color::PURPLE));
     }
 
     // the manifold: two crosses per point, the closed outline of 4 edges, the normal and both tangents
@@ -374,7 +371,7 @@ void test_debug_contacts_of_a_resting_box(TestCtx &ctx) {
     debug::contact_constraints(buffers, *scene.world);
     CHECK(ctx, buffers.line_count == 4 * 2 * CROSS_LINES + 4 + 3);
     // a resting box carries impulse, so its points draw bright
-    CHECK(ctx, near3(vertex_color(buffers, 0), 0.0f, 1.0f, 1.0f, 0.0f));
+    CHECK(ctx, same_color(vertex_color(buffers, 0), color::CYAN));
 
     release_world_scene(scene);
 }
@@ -398,10 +395,10 @@ void test_debug_joints_hinge(TestCtx &ctx) {
     CHECK(ctx, near3(vertex_position(buffers, 1), 0.55f, 0.0f, 0.0f, 1e-5f));
     CHECK(ctx, near3(vertex_position(buffers, CROSS_LINES * 2), 0.5f, 0.0f, 0.0f, 1e-5f));
     CHECK(ctx, near3(vertex_position(buffers, CROSS_LINES * 2 + 1), 0.5f, 0.5f, 0.0f, 1e-5f));
-    CHECK(ctx, near3(vertex_color(buffers, CROSS_LINES * 2), 1.0f, 0.0f, 0.0f, 0.0f));
+    CHECK(ctx, same_color(vertex_color(buffers, CROSS_LINES * 2), color::RED));
     // b's normal axis along +x, white
     CHECK(ctx, near3(vertex_position(buffers, (hinge_lines - 1) * 2 + 1), 1.0f, 0.0f, 0.0f, 1e-5f));
-    CHECK(ctx, near3(vertex_color(buffers, (hinge_lines - 1) * 2), 1.0f, 1.0f, 1.0f, 0.0f));
+    CHECK(ctx, same_color(vertex_color(buffers, (hinge_lines - 1) * 2), color::WHITE));
 
     // b turned a quarter about the hinge: b's normal axis turns with it
     Float4 quarter_y = stored_axis_angle(vec3f::make(0.0f, 1.0f, 0.0f), scalar::PI * 0.5f);
@@ -471,7 +468,7 @@ void test_debug_buffers_reused_without_growing(TestCtx &ctx) {
     debug::bodies(buffers, *scene.world, {.show_linear_velocity = true});
     debug::contacts(buffers, *scene.world);
     const uint32_t first_count = buffers.line_count;
-    const float *first_data = buffers.lines.data;
+    const DebugDraw::Vertex *first_data = buffers.lines.data;
     const uint32_t first_capacity = buffers.lines.capacity;
     CHECK(ctx, first_count >= BOX_LINES + 8 * SPHERE_LINES);
 
@@ -498,8 +495,7 @@ void test_debug_contacts_draw_each_manifold_point_with_its_normal(TestCtx &ctx) 
     debug::contacts(buffers, *scene.world);
     CHECK(ctx, buffers.line_count == points * 4);
     for (uint32_t line = 0; line < buffers.line_count; line++) {
-        const float *v = &buffers.lines.data[line * debug::LINE_STRIDE];
-        CHECK(ctx, scalar::abs(v[1] - 0.5f) < 0.2f);
+        CHECK(ctx, scalar::abs(buffers.lines[line * 2].position.y - 0.5f) < 0.2f);
     }
     release_world_scene(scene);
 }
@@ -521,9 +517,9 @@ void test_debug_character_contacts_cross_and_normal_per_contact(TestCtx &ctx) {
     CHECK(ctx, buffers.line_count == 4 * character->contacts.length);
     // the cross is at the first contact, and its normal line leaves it toward the character, up off the floor
     const Vec3f at = character->contacts[0].position;
-    CHECK_NEAR(ctx, (buffers.lines[0] + buffers.lines[6]) * 0.5f, vec3f::x(at), 1e-5f);
-    const float *normal_line = buffers.lines.data + 3 * debug::LINE_STRIDE;
-    CHECK(ctx, normal_line[7] > normal_line[1]);
+    CHECK_NEAR(ctx, (buffers.lines[0].position.x + buffers.lines[1].position.x) * 0.5f, vec3f::x(at), 1e-5f);
+    const DebugDraw::Vertex *normal_line = buffers.lines.data + 3 * 2;
+    CHECK(ctx, normal_line[1].position.y > normal_line[0].position.y);
 
     character = nullptr;
     release_world_scene(scene);
