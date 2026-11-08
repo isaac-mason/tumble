@@ -404,6 +404,12 @@ void test_motion_properties_velocity_clamps(TestCtx &ctx) {
     MotionProperties unbounded = motion_properties::create();
     motion_properties::set_linear_velocity(unbounded, vec3f::make(1e20f, 0.0f, 0.0f));
     CHECK(ctx, vec3f::x(unbounded.linear_velocity) == 1e20f);
+
+    // so fast its squared length overflows, as a blown up solve leaves a body: still the limit, along its direction
+    motion_properties::set_linear_velocity(mp, vec3f::make(3e20f, -4e20f, 0.0f));
+    CHECK(ctx, near3(mp.linear_velocity, 1.2f, -1.6f, 0.0f, 1e-6f));
+    motion_properties::set_linear_velocity(mp, vec3f::make(scalar::INF, 1e30f, -scalar::INF));
+    CHECK(ctx, near3(mp.linear_velocity, 2.0f * 0.70710678f, 0.0f, -2.0f * 0.70710678f, 1e-6f));
 }
 
 void test_motion_properties_forces_and_impulses(TestCtx &ctx) {

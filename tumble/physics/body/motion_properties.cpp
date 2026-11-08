@@ -368,8 +368,19 @@ Mat4f get_world_inverse_inertia(MotionProperties &motion_properties, Quatf body_
 
 Vec3f clamp_length(Vec3f velocity, float max_length) {
     const float len_sq = vec3f::squared_length(velocity);
-    if (len_sq > max_length * max_length) return vec3f::scale(vec3f::normalize(velocity), max_length);
-    return velocity;
+    TUMBLE_ASSERT(!__builtin_isnan(len_sq));
+    if (len_sq <= max_length * max_length) return velocity;
+    if (__builtin_isfinite(len_sq)) return vec3f::scale(vec3f::normalize(velocity), max_length);
+    // past about 1.8e19 the square overflows, and normalizing would give zero: the direction from the components shrunk
+    // by the largest of them, an infinite one counting as one and the rest as none
+    const float components[3] = {vec3f::x(velocity), vec3f::y(velocity), vec3f::z(velocity)};
+    const float largest = scalar::max(scalar::abs(components[0]), scalar::max(scalar::abs(components[1]), scalar::abs(components[2])));
+    float shrunk[3];
+    for (int i = 0; i < 3; i++) {
+        if (__builtin_isinf(largest)) shrunk[i] = __builtin_isinf(components[i]) ? (components[i] > 0.0f ? 1.0f : -1.0f) : 0.0f;
+        else shrunk[i] = components[i] / largest;
+    }
+    return vec3f::scale(vec3f::normalize(vec3f::make(shrunk[0], shrunk[1], shrunk[2])), max_length);
 }
 
 void clamp_linear_velocity(MotionProperties &motion_properties) {
