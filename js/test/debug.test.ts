@@ -144,12 +144,15 @@ describe('debug drawing', () => {
         releaseShape(crate);
     });
 
-    test('views follow the memory when a draw grows it past where they were', async () => {
+    test('views follow the memory when it grows past where they were', async () => {
         const scene = await makeScene();
         const ball = sphere.create({ radius: 0.2 });
         const buffers = debugDraw.create();
         debug.bodies(buffers, scene.world);
         const small = debugDraw.read(buffers).lines;
+        // more than the memory holds: it grows under the view kept above
+        const fillerBytes = Low.getWasm().mem.buffer.byteLength;
+        const filler = Low.allocBytes(fillerBytes);
         for (let i = 0; i < 400; i++) {
             rigidBody.create(scene.world, {
                 shape: ball,
@@ -166,6 +169,7 @@ describe('debug drawing', () => {
         // the last sphere's lines are about x 399
         const last = vertices(grown).at(-1)!;
         expect(Math.abs(last[0]! - 399)).toBeLessThan(0.25);
+        Low.freeBytes(filler, fillerBytes);
         debugDraw.destroy(buffers);
         releaseScene(scene);
         releaseShape(ball);

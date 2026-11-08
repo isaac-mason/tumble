@@ -19,20 +19,24 @@ export type Instance = {
 };
 
 const PAGE_BYTES = 65536;
-/** the wasm's own data and stack sit under 2 MiB; 4 MiB to start leaves room for the heap's first tables. */
-const INITIAL_PAGES = 64;
-/** the memory's ceiling: the whole 32-bit space where the host allows, else what it does. */
-const MAXIMUM_PAGES_PREFERRED = [65536, 32768, 16384, 8192];
+/** 32 MiB to start, as emscripten builds commonly do: more than most worlds' heaps, so it seldom grows at all. */
+const INITIAL_PAGES = 512;
+/** the ceilings tried unless `init` names one: 2 GiB, emscripten's usual, so no world runs out, and the next a host can
+ *  reserve if it can't. The ceiling caps growth only: committed memory is what the heap has grown to. */
+const DEFAULT_MAXIMUM_BYTES = [2048, 1024, 512].map((mib) => mib * 1024 * 1024);
 
-function createMemory(): WebAssembly.Memory {
-    for (const maximum of MAXIMUM_PAGES_PREFERRED) {
+function createMemory(maximumMemory: number | undefined): WebAssembly.Memory {
+    const ceilings = maximumMemory === undefined ? DEFAULT_MAXIMUM_BYTES : [maximumMemory];
+    let refused: unknown;
+    for (const bytes of ceilings) {
+        const maximum = Math.ceil(bytes / PAGE_BYTES);
         try {
-            return new WebAssembly.Memory({ initial: INITIAL_PAGES, maximum });
-        } catch {
-            // the host refused that ceiling; try a lower one
+            return new WebAssembly.Memory({ initial: Math.min(INITIAL_PAGES, maximum), maximum });
+        } catch (error) {
+            refused = error;
         }
     }
-    throw new Error(`tumble: the host cannot reserve ${(MAXIMUM_PAGES_PREFERRED.at(-1)! * PAGE_BYTES) >> 20} MiB of wasm memory`);
+    throw new Error(`tumble: the host cannot reserve ${ceilings.at(-1)! >> 20} MiB of wasm memory`, { cause: refused });
 }
 
 const ERROR_NAMES = Object.fromEntries(Object.entries(WasmError).map(([name, code]) => [code, name]));
@@ -42,8 +46,8 @@ export function errorName(code: number): string {
 }
 
 /** the wasm instantiated from its bytes or compiled module, initialised and bound as the realm's wasm. */
-export async function instantiate(source: BufferSource | WebAssembly.Module): Promise<Instance> {
-    const memory = createMemory();
+export async function instantiate(source: BufferSource | WebAssembly.Module, maximumMemory?: number): Promise<Instance> {
+    const memory = createMemory(maximumMemory);
     const imports = { env: { memory } };
     const module = source instanceof WebAssembly.Module ? source : await WebAssembly.compile(source);
     const instance = await WebAssembly.instantiate(module, imports);

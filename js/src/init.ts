@@ -4,6 +4,9 @@ import { instantiate } from './module.js';
 export type InitOptions = {
     /** the wasm itself, its bytes or compiled module, or where to fetch it from; by default the package's dist/tumble.wasm */
     wasm?: BufferSource | WebAssembly.Module | URL | string;
+    /** the most bytes the wasm's memory may grow to; by default 2 GiB, or the most below it the host can reserve. It
+     *  starts at 32 MiB and grows as the world needs */
+    maximumMemory?: number;
 };
 
 let booting: Promise<void> | null = null;
@@ -37,7 +40,7 @@ export function init(options: InitOptions = {}): Promise<void> {
             // a relative string resolves against the page, as fetch would resolve it
             const url = typeof source === 'string' ? new URL(source, globalThis.location?.href) : source;
             const wasm = url instanceof URL ? await bytesFrom(url) : url;
-            await instantiate(wasm);
+            await instantiate(wasm, options.maximumMemory);
         })();
     }
     return booting;
