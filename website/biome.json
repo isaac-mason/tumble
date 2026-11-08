@@ -3,7 +3,6 @@
     "files": {
         "includes": [
             "src/**",
-            "examples/src/**",
             "scripts/**",
             "vite.config.ts"
         ]

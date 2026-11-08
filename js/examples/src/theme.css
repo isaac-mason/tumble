@@ -1,0 +1,16 @@
+/* the gallery's and every example's theme. mirrors common/theme.ts */
+
+@import url("https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;700&display=swap");
+
+:root {
+    --tumble-base: #131518;
+    --tumble-page: #1c1f25;
+    --tumble-ink: #e8eaed;
+    --tumble-dim: #8a95a1;
+    --tumble-faint: #4b525c;
+    --tumble-line: #2c3138;
+    --tumble-accent: #54a0ff;
+    --tumble-mono: "Roboto Mono", ui-monospace, monospace;
+    font-synthesis: none;
+    color-scheme: dark;
+}

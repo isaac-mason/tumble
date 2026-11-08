@@ -13,5 +13,5 @@
         "isolatedModules": true,
         "types": ["@webgpu/types", "vite/client"]
     },
-    "include": ["src", "examples/src"]
+    "include": ["src"]
 }

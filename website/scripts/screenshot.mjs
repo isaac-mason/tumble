@@ -1,5 +1,5 @@
 // node scripts/screenshot.mjs <page> <out.png> [milliseconds] [key codes held...]: a page of the built site (vite build),
-// such as index or examples/example-character, in headless chromium with webgpu, saved after the given time, the keys
+// such as index or examples/example-kcc, in headless chromium with webgpu, saved after the given time, the keys
 // held from the start. no window opens
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';

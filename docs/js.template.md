@@ -25,9 +25,12 @@ WebAssembly, with a TypeScript API.
 
 **Examples**
 
-- [Falling shapes](https://isaac-mason.github.io/tumble/examples/example-falling-shapes.html)
-- [Character](https://isaac-mason.github.io/tumble/examples/example-character.html)
-- [Debug drawing](https://isaac-mason.github.io/tumble/examples/example-debug-drawing.html)
+[All the examples](https://isaac-mason.github.io/tumble/examples/), among them:
+
+- [Falling shapes](https://isaac-mason.github.io/tumble/examples/#example-falling-shapes)
+- [Kinematic character controller](https://isaac-mason.github.io/tumble/examples/#example-kcc)
+- [Ragdoll](https://isaac-mason.github.io/tumble/examples/#example-ragdoll)
+- [Debug drawing](https://isaac-mason.github.io/tumble/examples/#example-debug-drawing)
 
 **Documentation**
 
@@ -50,13 +53,27 @@ The rest of this guide leaves out the imports and the world setup.
 
 The package holds ES modules, their types, and `tumble.wasm`.
 
-Load the wasm once, before anything else, with `await init()`. With no options, `init` loads the wasm from next to the
-package's modules. This works in Node and in bundlers that copy the file. You can also pass the wasm as a URL, as bytes
-or as a compiled `WebAssembly.Module`. This example passes bytes:
+Load the wasm once, before anything else, with `await init()`. With no options, `init` finds the wasm with
+`new URL('../dist/tumble.wasm', import.meta.url)`. Node follows that URL. So do bundlers that copy the file it names,
+such as Vite, webpack and Parcel. You can also pass the wasm as a URL, as bytes or as a compiled `WebAssembly.Module`.
+This example passes bytes:
 
 <Snippet source="../js/docs/memory.ts" select="init" />
 
-The package exports the wasm as `tumble.js/tumble.wasm`. With Vite, import it with `?url` and pass the URL to `init`.
+Vite's dev server bundles dependencies into a folder of its own, where that URL finds nothing. Leave the package out of
+that step in your Vite config:
+
+```ts
+export default defineConfig({ optimizeDeps: { exclude: ['tumble.js'] } });
+```
+
+Or import the wasm yourself and pass its URL. The package exports it as `tumble.js/tumble.wasm`:
+
+```ts
+import wasm from 'tumble.js/tumble.wasm?url';
+
+await init({ wasm });
+```
 
 ## Conventions
 

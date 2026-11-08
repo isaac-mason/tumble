@@ -1,0 +1,191 @@
+{
+    "example-falling-shapes": {
+        "title": "Falling Shapes",
+        "description": "A pile of boxes, spheres, capsules and cylinders. Each body is drawn between its last two steps, so the motion stays smooth at any frame rate. Click to drop more.",
+        "tags": ["box", "sphere", "capsule", "cylinder", "interpolation"],
+        "category": "bodies"
+    },
+    "example-cube-heap": {
+        "title": "Cube Heap",
+        "description": "A heap of cubes under strong gravity. Every step one cube is lifted back over the middle and dropped, so the heap never settles. You can set the number of cubes, up to 2000.",
+        "tags": ["box", "plane", "stacking", "performance"],
+        "category": "bodies"
+    },
+    "example-cluster": {
+        "title": "Cluster",
+        "description": "Balls are pulled towards a point every step, and damping stops them overshooting. Move the pointer to push a kinematic ball through them. Hold it down to pull them towards it.",
+        "tags": ["addLinearVelocity", "damping", "kinematic", "moveKinematic"],
+        "category": "bodies"
+    },
+    "example-restitution": {
+        "title": "Restitution",
+        "description": "Balls with restitution from 0 to 1 are dropped onto a floor with none. The higher a ball's restitution, the higher it bounces.",
+        "tags": ["restitution", "material"],
+        "category": "bodies"
+    },
+    "example-friction": {
+        "title": "Friction",
+        "description": "Spheres, boxes that can't rotate, and capsules lying on their side are launched at 10 m/s with friction from 0 to 1. The rolling shapes barely slow down, and the sliding boxes stop sooner the more friction they have.",
+        "tags": ["friction", "material", "allowedDegreesOfFreedom"],
+        "category": "bodies"
+    },
+    "example-linear-damping": {
+        "title": "Linear Damping",
+        "description": "Boxes are launched at the same speed with no gravity. Each one has a different linear damping, from none to 0.9, so they slow down at different rates.",
+        "tags": ["linearDamping"],
+        "category": "bodies"
+    },
+    "example-angular-damping": {
+        "title": "Angular Damping",
+        "description": "Boxes start spinning at the same speed with no gravity. Each one has a different angular damping, from none to 0.9, so they stop spinning at different rates.",
+        "tags": ["angularDamping"],
+        "category": "bodies"
+    },
+    "example-gravity-factor": {
+        "title": "Gravity Factor",
+        "description": "Boxes are dropped together, each with a gravity factor from 0 to 2. A box with 0 floats, 1 falls normally, and 2 falls with double gravity.",
+        "tags": ["gravityFactor", "gravity"],
+        "category": "bodies"
+    },
+    "example-mass-properties": {
+        "title": "Mass Properties",
+        "description": "A box, an upside down L and two Ls stand on the ground. A compound gets its centre of mass and inertia from its children, and it stays standing when its centre of mass is over its base.",
+        "tags": ["compound", "centre of mass", "inertia"],
+        "category": "bodies"
+    },
+    "example-add-impulse-at-position": {
+        "title": "Add Impulse at Position",
+        "description": "Click a body to push it at the point you clicked, along the ray from the camera. Pushing it off centre makes it spin as well as move.",
+        "tags": ["addImpulseAtPosition", "castRay", "pointer"],
+        "category": "bodies"
+    },
+    "example-kinematic": {
+        "title": "Kinematic",
+        "description": "Maxwell the cat is a kinematic convex hull, moved side to side and spun with moveKinematic. It knocks away the balls that rain down on it. It pushes whatever it hits, and nothing can push it back.",
+        "tags": ["kinematic", "moveKinematic", "convexHull"],
+        "category": "bodies"
+    },
+    "example-ccd": {
+        "title": "Continuous Collision",
+        "description": "A heavy ball is fired at brick walls at 3.6 km/s, which is 60 m per step. Its motion quality is linear cast, so it is swept along each step and hits the walls instead of passing through them.",
+        "tags": ["ccd", "motionQuality", "LINEAR_CAST"],
+        "category": "bodies"
+    },
+    "example-shapes": {
+        "title": "Shapes",
+        "description": "Every shape type falls onto a plane. There are spheres, boxes, capsules, cylinders, a dumbbell compound, a ladder made from a static compound, a hammer whose head is a transformed shape inside a compound, and a pyramid convex hull. Each body is drawn from its shape data, read back from the wasm.",
+        "tags": ["sphere", "box", "capsule", "cylinder", "compound", "staticCompound", "transformed", "convexHull", "plane"],
+        "category": "shapes"
+    },
+    "example-static-compound": {
+        "title": "Static Compound",
+        "description": "A bridge of 75 beams in one static compound. Hollow boxes holding eight balls each, which are static compounds too, rain down onto it. A tree over the children quickly finds the few that each body touches.",
+        "tags": ["staticCompound", "bvh"],
+        "category": "shapes"
+    },
+    "example-triangle-mesh": {
+        "title": "Triangle Mesh",
+        "description": "Balls and boxes are dropped into a low poly jungle scene. The whole scene is a single static triangle mesh.",
+        "tags": ["triangleMesh", "bvh", "terrain"],
+        "category": "shapes"
+    },
+    "example-voxel-triangle-mesh": {
+        "title": "Voxel Triangle Mesh",
+        "description": "Voxel terrain is meshed one chunk at a time. Each chunk is its own static triangle mesh, made from the faces between solid and empty blocks, so a chunk can be rebuilt on its own when it changes.",
+        "tags": ["triangleMesh", "voxels", "chunks", "terrain"],
+        "category": "shapes"
+    },
+    "example-cast-ray": {
+        "title": "Cast Ray",
+        "description": "Rays are cast from all around towards the middle, and each one stops at the first shape it hits. The shapes in the middle are a torus knot triangle mesh, or spheres, boxes or capsules, and they turn as the rays circle around them.",
+        "tags": ["castRay", "triangleMesh", "scaled", "query"],
+        "category": "queries"
+    },
+    "example-cast-shape": {
+        "title": "Cast Shape",
+        "description": "Small boxes, spheres or capsules are swept from all around towards the middle. Each one is drawn where it starts and where it first touches the turning shapes in the middle.",
+        "tags": ["castShape", "triangleMesh", "query"],
+        "category": "queries"
+    },
+    "example-collide-point": {
+        "title": "Collide Point",
+        "description": "A point swings through a block, and collidePoint tells you whether it is inside.",
+        "tags": ["collidePoint", "query"],
+        "category": "queries"
+    },
+    "example-collide-shape": {
+        "title": "Collide Shape",
+        "description": "A box swings through a block. collideShape reports how they overlap, with the deepest point on each shape and the direction that separates them.",
+        "tags": ["collideShape", "penetration", "query"],
+        "category": "queries"
+    },
+    "example-pointer-ray": {
+        "title": "Pointer Ray",
+        "description": "A thousand static shapes move in and out over the shells of a sphere. Point at them, and a ray from the camera through the pointer picks the one in front.",
+        "tags": ["castRay", "pointer", "setTransform", "query"],
+        "category": "queries"
+    },
+    "example-collision-filtering": {
+        "title": "Collision Filtering",
+        "description": "Two platforms and a block of small cubes are split into two collision groups. Each cube only collides with the platform in its own group, and falls through the other one.",
+        "tags": ["collisionGroups", "collisionMask", "filtering"],
+        "category": "contacts"
+    },
+    "example-object-layer-filtering": {
+        "title": "Object Layer Filtering",
+        "description": "Debris is on a layer that collides with the floor and with itself, but not with characters. It falls straight through a character and lands on the floor.",
+        "tags": ["object layers", "broadphase layers", "enableCollision", "filtering"],
+        "category": "contacts"
+    },
+    "example-sensor": {
+        "title": "Sensor",
+        "description": "A kinematic sensor swings through a dynamic box and a static one. It reports what it touches without pushing anything. You can also set it to detect static bodies.",
+        "tags": ["sensor", "kinematic", "collideKinematicVsNonDynamic", "Listener"],
+        "category": "contacts"
+    },
+    "example-conveyor-belt": {
+        "title": "Conveyor Belt",
+        "description": "These belts move their surface rather than themselves. There are static belts with increasing friction, a dynamic belt on loose rollers, and a turntable. A contact hook sets the surface velocity that the solver drives towards.",
+        "tags": ["ContactSettings", "surface velocity", "Listener", "friction"],
+        "category": "contacts"
+    },
+    "example-constraints": {
+        "title": "Constraints",
+        "description": "A chain of boxes for each kind of constraint, hanging from a static box and knocked sideways. The constraints are fixed, point, distance, hinge, slider, cone, swing twist and six degrees of freedom.",
+        "tags": [
+            "fixedConstraint",
+            "pointConstraint",
+            "distanceConstraint",
+            "hingeConstraint",
+            "sliderConstraint",
+            "coneConstraint",
+            "swingTwistConstraint",
+            "sixDOFConstraint"
+        ],
+        "category": "constraints"
+    },
+    "example-constraints-motors": {
+        "title": "Constraint Motors",
+        "description": "A hinge velocity motor turns a windmill at a set speed, and it bats a ball against the walls. A slider position motor moves a box to each marker in turn.",
+        "tags": ["MotorState", "hingeConstraint", "sliderConstraint", "motor"],
+        "category": "constraints"
+    },
+    "example-ragdoll": {
+        "title": "Ragdoll",
+        "description": "Three ragdolls made of eleven boxes and swing twist joints are thrown up spinning. Their masses and inertias are evened out the way Jolt evens out its ragdolls. Press on a part to drag it.",
+        "tags": ["swingTwistConstraint", "massPropertiesOverride", "distanceConstraint", "castRay"],
+        "category": "constraints"
+    },
+    "example-kcc": {
+        "title": "Kinematic Character Controller",
+        "description": "A character that moves through the world with sweeps, over stairs, slopes, moving platforms, a conveyor, a platform on springs, things to push and lava. Use WASD to move, space to jump and shift to crouch.",
+        "tags": ["kcc", "kccPolicy", "stairs", "slopes", "moving platforms"],
+        "category": "characters and vehicles"
+    },
+    "example-debug-drawing": {
+        "title": "Debug Drawing",
+        "description": "The library's own debug drawing of a hinged chain, a pendulum and a pile. It draws wireframes coloured by motion type, sleep or island, along with velocities, contact manifolds and joints. The lines are read from debugDraw every frame.",
+        "tags": ["debug", "debugDraw", "wireframes", "contacts", "joints"],
+        "category": "debug"
+    }
+}

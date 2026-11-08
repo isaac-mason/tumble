@@ -103,12 +103,12 @@ jobs:
                   pnpm install --frozen-lockfile
                   pnpm run build
 
-            # the site, with the js samples under examples/
+            # the site, with the js examples built from js/examples under examples/
             - name: website
-              working-directory: website
               run: |
-                  npm ci --no-audit --no-fund
-                  npm run build
+                  (cd js/examples && npm ci --no-audit --no-fund && npm run typecheck)
+                  (cd website && npm ci --no-audit --no-fund)
+                  sh website/build.sh
 
             - uses: mymindstorm/setup-emsdk@v14
               with:

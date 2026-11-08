@@ -6,13 +6,12 @@
         "dev": "vite",
         "build": "vite build",
         "typecheck": "tsc --noEmit -p tsconfig.json",
-        "format": "biome format --write src examples/src scripts",
-        "lint": "biome lint src examples/src scripts",
+        "format": "biome format --write src scripts",
+        "lint": "biome lint src scripts",
         "screenshot": "node scripts/screenshot.mjs"
     },
     "dependencies": {
         "gpucat": "github:isaac-mason/gpucat#4adf918857a8e0a602aca2afbc7fc93a40868d78",
-        "lil-gui": "0.20.0",
         "math": "0.1.0",
         "tumble.js": "file:../js"
     },

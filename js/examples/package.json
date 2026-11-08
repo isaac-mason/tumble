@@ -1,0 +1,27 @@
+{
+    "name": "tumble.js-examples",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview",
+        "typecheck": "tsc --noEmit -p tsconfig.json",
+        "format": "biome format --write src scripts vite.config.ts",
+        "lint": "biome lint src scripts vite.config.ts",
+        "screenshot": "vite build && node scripts/screenshot-examples.mjs"
+    },
+    "dependencies": {
+        "dashcat": "github:isaac-mason/dashcat#303478bc4dd20cec56b0e4f2f58cfdc1a79e172d",
+        "gpucat": "github:isaac-mason/gpucat#4adf918857a8e0a602aca2afbc7fc93a40868d78",
+        "math": "0.1.0",
+        "tumble.js": "file:.."
+    },
+    "devDependencies": {
+        "@biomejs/biome": "2.2.0",
+        "@webgpu/types": "0.1.69",
+        "playwright": "1.61.1",
+        "typescript": "5.9.3",
+        "vite": "7.1.10"
+    }
+}
