@@ -17,7 +17,10 @@ type TypeRef =
     | { kind: 'void'; count: number; ref: boolean; const: boolean }
     | { kind: 'scalar' | 'ptr-scalar'; scalar: Scalar; count: number; ref: boolean; const: boolean; bits?: boolean }
     | { kind: StructKind; cpp: string | null; count: number; ref: boolean; const: boolean }
-    /** a record's field holding a growable array: the element's type, and the byte offsets of its data pointer and length */
+    /**
+     * a record's field holding a growable array, or a span: the element's type, and the byte offsets of its data pointer
+     * and length from the field (a span's length, a field of its own, may come before it)
+     */
     | { kind: 'array'; element: TypeRef; data: number; length: number; count: number; ref: boolean; const: boolean };
 type ParamDesc = { name: string | null; type: TypeRef };
 type FunctionDesc = {

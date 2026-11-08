@@ -1,5 +1,6 @@
 import { withCopies } from '../arrays.js';
 import * as Low from '../generated/tumble.js';
+import type { Vec3 } from '../math.js';
 import { defaultsOf } from '../settings.js';
 import type { BvhSplitStrategy, Shape } from './shapes.js';
 
@@ -47,4 +48,34 @@ export function create(settings: TriangleMeshShapeSettings): Shape {
             activeEdgeCosThresholdAngle: settings.activeEdgeCosThresholdAngle ?? defaults.activeEdgeCosThresholdAngle,
         });
     });
+}
+
+// a mesh as it was built: coincident vertices welded, degenerate and duplicate triangles dropped, the triangles in the
+// tree's order. the getters read a mesh only, a vertex or triangle by an index below its count
+
+/** a built triangle: its vertices' indices, counter clockwise seen from the front, and its front's normal */
+export type TriangleMeshTriangle = Low.TriangleMeshTriangle;
+
+export function createTriangle(): TriangleMeshTriangle {
+    return Low.TriangleMeshTriangle.create();
+}
+
+function dataOf(shape: Shape): Low.TriangleMeshData {
+    return Low.TriangleMesh.data(shape as number as Low.TriangleMesh)!;
+}
+
+export function getVertexCount(shape: Shape): number {
+    return Low.TriangleMeshData.positionsLength(dataOf(shape));
+}
+
+export function getVertex(out: Vec3, shape: Shape, index: number): Vec3 {
+    return Low.TriangleMeshData.readPositions(out, dataOf(shape), index);
+}
+
+export function getTriangleCount(shape: Shape): number {
+    return Low.TriangleMeshData.trianglesLength(dataOf(shape));
+}
+
+export function getTriangle(out: TriangleMeshTriangle, shape: Shape, index: number): TriangleMeshTriangle {
+    return Low.TriangleMeshData.readTriangles(out, dataOf(shape), index);
 }

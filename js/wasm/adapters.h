@@ -191,6 +191,12 @@ bool remove(tumble::World *world, tumble::BodyId id);
 bool get_velocity_at_point(tumble::Float3 &out, tumble::World *world, tumble::BodyId id, const tumble::Float3 &point);
 /** the material id of the part of the body's shape the sub shape id names; -1 for none or a body id naming no body */
 int32_t get_material(tumble::World *world, tumble::BodyId id, uint32_t sub_shape_id);
+bool get_surface_normal(tumble::Float3 &out, tumble::World *world, tumble::BodyId id, uint32_t sub_shape_id, const tumble::Float3 &position);
+bool get_inverse_inertia(tumble::Float4x4 &out, tumble::World *world, tumble::BodyId id);
+/** -1 for a body id naming no body */
+float get_gravity_factor(tumble::World *world, tumble::BodyId id);
+/** false too when either id names no body */
+bool bodies_share_constraint(tumble::World *world, tumble::BodyId a, tumble::BodyId b);
 
 // writers: false when the id names no body
 bool set_position(tumble::World *world, tumble::BodyId id, const tumble::Float3 &position, bool wake);
@@ -198,6 +204,7 @@ bool set_quaternion(tumble::World *world, tumble::BodyId id, const tumble::Float
 bool set_transform(tumble::World *world, tumble::BodyId id, const tumble::Float3 &position, const tumble::Float4 &quaternion,
                    bool wake);
 bool set_linear_velocity(tumble::World *world, tumble::BodyId id, const tumble::Float3 &velocity);
+bool set_gravity_factor(tumble::World *world, tumble::BodyId id, float gravity_factor);
 bool set_angular_velocity(tumble::World *world, tumble::BodyId id, const tumble::Float3 &velocity);
 bool add_linear_velocity(tumble::World *world, tumble::BodyId id, const tumble::Float3 &velocity);
 bool add_angular_velocity(tumble::World *world, tumble::BodyId id, const tumble::Float3 &velocity);

@@ -246,6 +246,31 @@ int32_t get_material(tumble::World *world, BodyId id, uint32_t sub_shape_id) {
     return body == nullptr ? -1 : tumble::rigid_body::get_material(body, sub_shape_id);
 }
 
+bool get_surface_normal(Float3 &out, tumble::World *world, BodyId id, uint32_t sub_shape_id, const Float3 &position) {
+    const tumble::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    vec3f::store(out, tumble::rigid_body::get_world_space_surface_normal(body, sub_shape_id, vec3f::load(position)));
+    return true;
+}
+
+bool get_inverse_inertia(Float4x4 &out, tumble::World *world, BodyId id) {
+    tumble::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    mat4f::store(out, tumble::rigid_body::get_inverse_inertia(body));
+    return true;
+}
+
+float get_gravity_factor(tumble::World *world, BodyId id) {
+    const tumble::RigidBody *body = resolve(world, id);
+    return body == nullptr ? -1.0f : body->motion_properties.gravity_factor;
+}
+
+bool bodies_share_constraint(tumble::World *world, BodyId a, BodyId b) {
+    const tumble::RigidBody *body_a = resolve(world, a);
+    const tumble::RigidBody *body_b = resolve(world, b);
+    return body_a != nullptr && body_b != nullptr && tumble::rigid_body::bodies_share_constraint(body_a, body_b);
+}
+
 bool set_position(tumble::World *world, BodyId id, const Float3 &position, bool wake) {
     tumble::RigidBody *body = resolve(world, id);
     if (body == nullptr) return false;
@@ -271,6 +296,13 @@ bool set_linear_velocity(tumble::World *world, BodyId id, const Float3 &velocity
     tumble::RigidBody *body = resolve(world, id);
     if (body == nullptr) return false;
     tumble::rigid_body::set_linear_velocity(*world, body, vec3f::load(velocity));
+    return true;
+}
+
+bool set_gravity_factor(tumble::World *world, BodyId id, float gravity_factor) {
+    tumble::RigidBody *body = resolve(world, id);
+    if (body == nullptr) return false;
+    body->motion_properties.gravity_factor = gravity_factor;
     return true;
 }
 

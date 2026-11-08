@@ -7,6 +7,7 @@
 
 #include "wasm/runtime/export.h"
 #include "wasm/adapters.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_data.h"
 
 using namespace tumble;
 
@@ -46,6 +47,11 @@ WASM_EXPORT uint32_t tumble_rigid_body_create(World * world, const adapters::Bod
 WASM_EXPORT bool tumble_rigid_body_remove(World * world, uint32_t body) { return adapters::rigid_body::remove(world, body); }
 WASM_EXPORT bool tumble_rigid_body_get_velocity_at_point(Float3 * out, World * world, uint32_t body, const Float3 * point) { return adapters::rigid_body::get_velocity_at_point(*out, world, body, *point); }
 WASM_EXPORT int32_t tumble_rigid_body_get_material(World * world, uint32_t body, uint32_t subShapeId) { return adapters::rigid_body::get_material(world, body, subShapeId); }
+WASM_EXPORT bool tumble_rigid_body_get_surface_normal(Float3 * out, World * world, uint32_t body, uint32_t subShapeId, const Float3 * position) { return adapters::rigid_body::get_surface_normal(*out, world, body, subShapeId, *position); }
+WASM_EXPORT bool tumble_rigid_body_get_inverse_inertia(Float4x4 * out, World * world, uint32_t body) { return adapters::rigid_body::get_inverse_inertia(*out, world, body); }
+WASM_EXPORT float tumble_rigid_body_get_gravity_factor(World * world, uint32_t body) { return adapters::rigid_body::get_gravity_factor(world, body); }
+WASM_EXPORT bool tumble_rigid_body_set_gravity_factor(World * world, uint32_t body, float gravityFactor) { return adapters::rigid_body::set_gravity_factor(world, body, gravityFactor); }
+WASM_EXPORT bool tumble_rigid_body_bodies_share_constraint(World * world, uint32_t bodyA, uint32_t bodyB) { return adapters::rigid_body::bodies_share_constraint(world, bodyA, bodyB); }
 WASM_EXPORT bool tumble_rigid_body_set_position(World * world, uint32_t body, const Float3 * position, bool wake) { return adapters::rigid_body::set_position(world, body, *position, wake); }
 WASM_EXPORT bool tumble_rigid_body_set_quaternion(World * world, uint32_t body, const Float4 * quaternion, bool wake) { return adapters::rigid_body::set_quaternion(world, body, *quaternion, wake); }
 WASM_EXPORT bool tumble_rigid_body_set_transform(World * world, uint32_t body, const Float3 * position, const Float4 * quaternion, bool wake) { return adapters::rigid_body::set_transform(world, body, *position, *quaternion, wake); }

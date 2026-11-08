@@ -21,3 +21,18 @@ export function create(settings: BoxShapeSettings): Shape {
 export function update(shape: Shape, settings: BoxShapeSettings): void {
     Low.Box.update(shape, over(boxDefaults(), settings));
 }
+
+// a box's fields, as it holds them: the getters read a box only
+
+export function getHalfExtents(out: Vec3, shape: Shape): Vec3 {
+    return Low.Box.readHalfExtents(out, shape as number as Low.Box);
+}
+
+/** clamped to the smallest half extent */
+export function getConvexRadius(shape: Shape): number {
+    return Low.Box.convexRadius(shape as number as Low.Box);
+}
+
+export function getDensity(shape: Shape): number {
+    return Low.Box.density(shape as number as Low.Box);
+}

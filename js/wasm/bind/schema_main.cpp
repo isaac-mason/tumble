@@ -49,6 +49,11 @@ void put_u32(Out &o, uint32_t v) {
     put(o, s);
 }
 
+void put_i32(Out &o, int32_t v) {
+    if (v < 0) put(o, "-");
+    put_u32(o, v < 0 ? 0u - (uint32_t)v : (uint32_t)v);
+}
+
 void put_bool(Out &o, bool v) { put(o, v ? "true" : "false"); }
 
 void put_str(Out &o, const char *s) {
@@ -85,7 +90,7 @@ void put_type(Out &o, const bind::TypeRef &t) {
             put(o, ",\"data\":");
             put_u32(o, t.data_offset);
             put(o, ",\"length\":");
-            put_u32(o, t.length_offset);
+            put_i32(o, t.length_offset);
             break;
         case bind::BASE_STRUCT: {
             const bool value = t.is_value();

@@ -30,6 +30,11 @@ export function getShapeVolume(shape: Shape): number {
     return Low.Shape.getVolume(shape);
 }
 
+/** the surface a hit on the shape reports, -1 for none; a mesh's triangles carry their own */
+export function getShapeMaterialId(shape: Shape): number {
+    return Low.Shape.materialId(shape);
+}
+
 /** at the shape's density, about its centre of mass */
 export function computeMassProperties(out: MassProperties, shape: Shape): MassProperties {
     return Low.Shape.getMassProperties(out, shape);

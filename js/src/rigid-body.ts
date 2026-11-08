@@ -1,6 +1,6 @@
 import { type BodyId, INVALID_BODY_ID, type MaterialCombineMode, type MotionQuality, MotionType } from './body.js';
 import * as Low from './generated/tumble.js';
-import type { Box3, Quat, Vec3 } from './math.js';
+import type { Box3, Mat4, Quat, Vec3 } from './math.js';
 import type { MassProperties, Shape } from './shapes/shapes.js';
 import type { World } from './world.js';
 
@@ -184,6 +184,26 @@ export function getMaterial(world: World, body: BodyId, subShapeId: number): num
     return Low.RigidBody.getMaterial(world, body, subShapeId);
 }
 
+/** world space: the normal of the part of the body's shape a hit's or a contact's sub shape id names, at a world point on it */
+export function getSurfaceNormal(out: Vec3, world: World, body: BodyId, subShapeId: number, position: Vec3): boolean {
+    return Low.RigidBody.getSurfaceNormal(out, world, body, subShapeId, position);
+}
+
+/** world space, the upper 3x3 of a column-major 4x4; zero for a body that is not dynamic */
+export function getInverseInertia(out: Mat4, world: World, body: BodyId): boolean {
+    return Low.RigidBody.getInverseInertia(out, world, body);
+}
+
+/** how much of the world's gravity the body feels; -1 for an id naming no body */
+export function getGravityFactor(world: World, body: BodyId): number {
+    return Low.RigidBody.getGravityFactor(world, body);
+}
+
+/** a constraint joins them; false too when either id names no body */
+export function bodiesShareConstraint(world: World, bodyA: BodyId, bodyB: BodyId): boolean {
+    return Low.RigidBody.bodiesShareConstraint(world, bodyA, bodyB);
+}
+
 /** a dynamic or kinematic body off the active list */
 export function isSleeping(world: World, body: BodyId): boolean {
     const record = Low.RigidBody.get(world, body);
@@ -217,6 +237,11 @@ export function setLinearVelocity(world: World, body: BodyId, velocity: Vec3): b
 /** rad/s, world space; wakes the body */
 export function setAngularVelocity(world: World, body: BodyId, velocity: Vec3): boolean {
     return Low.RigidBody.setAngularVelocity(world, body, velocity);
+}
+
+/** how much of the world's gravity the body feels: 0 none, 1 all of it, 2 twice it */
+export function setGravityFactor(world: World, body: BodyId, gravityFactor: number): boolean {
+    return Low.RigidBody.setGravityFactor(world, body, gravityFactor);
 }
 
 export function addLinearVelocity(world: World, body: BodyId, velocity: Vec3): boolean {

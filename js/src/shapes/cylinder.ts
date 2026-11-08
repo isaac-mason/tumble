@@ -22,3 +22,22 @@ export function create(settings: CylinderShapeSettings): Shape {
 export function update(shape: Shape, settings: CylinderShapeSettings): void {
     Low.Cylinder.update(shape, over(cylinderDefaults(), settings));
 }
+
+// a cylinder's fields, as it holds them: the getters read a cylinder only
+
+export function getHalfHeight(shape: Shape): number {
+    return Low.Cylinder.halfHeight(shape as number as Low.Cylinder);
+}
+
+export function getRadius(shape: Shape): number {
+    return Low.Cylinder.radius(shape as number as Low.Cylinder);
+}
+
+/** clamped to the half height and the radius */
+export function getConvexRadius(shape: Shape): number {
+    return Low.Cylinder.convexRadius(shape as number as Low.Cylinder);
+}
+
+export function getDensity(shape: Shape): number {
+    return Low.Cylinder.density(shape as number as Low.Cylinder);
+}

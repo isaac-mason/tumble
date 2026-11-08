@@ -12,3 +12,18 @@ export function create(settings: TransformedShapeSettings): Shape {
     Low.errorClear();
     return Low.Transformed.create(over(transformedDefaults(), settings));
 }
+
+// a transformed shape's fields: the getters read a transformed shape only
+
+/** the shape it places, which it holds: not to be released here */
+export function getInnerShape(shape: Shape): Shape {
+    return Low.Transformed.shape(shape as number as Low.Transformed)!;
+}
+
+export function getPosition(out: Vec3, shape: Shape): Vec3 {
+    return Low.Transformed.readPosition(out, shape as number as Low.Transformed);
+}
+
+export function getQuaternion(out: Quat, shape: Shape): Quat {
+    return Low.Transformed.readQuaternion(out, shape as number as Low.Transformed);
+}

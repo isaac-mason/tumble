@@ -15,3 +15,13 @@ export function create(settings: SphereShapeSettings): Shape {
 export function update(shape: Shape, settings: SphereShapeSettings): void {
     Low.Sphere.update(shape, over(sphereDefaults(), settings));
 }
+
+// a sphere's fields, as it holds them: the getters read a sphere only
+
+export function getRadius(shape: Shape): number {
+    return Low.Sphere.radius(shape as number as Low.Sphere);
+}
+
+export function getDensity(shape: Shape): number {
+    return Low.Sphere.density(shape as number as Low.Sphere);
+}

@@ -3,6 +3,7 @@
 // that is not would be what the scratch held before.
 
 #include "tumble/physics/body/sleep.h"
+#include "tumble/physics/shapes/utils/triangle_mesh_data.h"
 #include "tumble/util/error.h"
 #include "wasm/adapters.h"
 #include "wasm/bind/bind.h"
@@ -27,6 +28,7 @@ struct bind::TypeOf<collections::Array<E>> {
 
 TUMBLE_BINDINGS {
     bind::include(b, "wasm/adapters.h");
+    bind::include(b, "tumble/physics/shapes/utils/triangle_mesh_data.h");
 
     bind::enumeration<uint32_t>(b, "WasmError")
         .doc("what error() reports: the first failure since the last clear.")
@@ -102,7 +104,7 @@ TUMBLE_BINDINGS {
         .field(FIELD(WorldSettings, sleeping), bind::WRITABLE)
         .field(FIELD(WorldSettings, ccd), bind::WRITABLE);
     RECORD(World).field(FIELD(World, events));
-    RECORD_AS(Shape, "Shape");
+    RECORD_AS(Shape, "Shape").field(FIELD(Shape, material_id));
 
     bind::fn(b, BIND(adapters::world_settings::create), GROWS);
     bind::fn(b, BIND(adapters::world_settings::destroy));
@@ -271,6 +273,11 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::rigid_body::remove), names("world", "body"));
     bind::fn(b, BIND(adapters::rigid_body::get_velocity_at_point), names("out", "world", "body", "point"));
     bind::fn(b, BIND(adapters::rigid_body::get_material), names("world", "body", "subShapeId"));
+    bind::fn(b, BIND(adapters::rigid_body::get_surface_normal), names("out", "world", "body", "subShapeId", "position"));
+    bind::fn(b, BIND(adapters::rigid_body::get_inverse_inertia), names("out", "world", "body"));
+    bind::fn(b, BIND(adapters::rigid_body::get_gravity_factor), names("world", "body"));
+    bind::fn(b, BIND(adapters::rigid_body::set_gravity_factor), names("world", "body", "gravityFactor"));
+    bind::fn(b, BIND(adapters::rigid_body::bodies_share_constraint), names("world", "bodyA", "bodyB"));
     bind::fn(b, BIND(adapters::rigid_body::set_position), names("world", "body", "position", "wake"), GROWS);
     bind::fn(b, BIND(adapters::rigid_body::set_quaternion), names("world", "body", "quaternion", "wake"), GROWS);
     bind::fn(b, BIND(adapters::rigid_body::set_transform), names("world", "body", "position", "quaternion", "wake"), GROWS);
@@ -312,6 +319,63 @@ TUMBLE_BINDINGS {
     bind::fn(b, BIND(adapters::shape::get_mass_properties), names("out", "shape"));
     bind::fn(b, BIND(adapters::shape::get_ref_count), names("shape"));
     bind::fn(b, BIND(adapters::shape::release), names("shape"));
+
+    // each type's shape read where it lies, a shape of the type cast to its record
+    RECORD_AS(SphereShape, "Sphere").field(FIELD(SphereShape, radius)).field(FIELD(SphereShape, density));
+    RECORD_AS(BoxShape, "Box")
+        .field(FIELD(BoxShape, half_extents))
+        .field(FIELD(BoxShape, convex_radius))
+        .field(FIELD(BoxShape, density));
+    RECORD_AS(CapsuleShape, "Capsule")
+        .field(FIELD(CapsuleShape, half_height_of_cylinder))
+        .field(FIELD(CapsuleShape, radius))
+        .field(FIELD(CapsuleShape, density));
+    RECORD_AS(CylinderShape, "Cylinder")
+        .field(FIELD(CylinderShape, half_height))
+        .field(FIELD(CylinderShape, radius))
+        .field(FIELD(CylinderShape, convex_radius))
+        .field(FIELD(CylinderShape, density));
+    RECORD_AS(PlaneShape, "Plane").field(FIELD(PlaneShape, plane)).field(FIELD(PlaneShape, half_extent));
+    RECORD_AS(ScaledShape, "Scaled").field(FIELD(ScaledShape, shape)).field(FIELD(ScaledShape, scale));
+    RECORD_AS(TransformedShape, "Transformed")
+        .field(FIELD(TransformedShape, shape))
+        .field(FIELD(TransformedShape, position))
+        .field(FIELD(TransformedShape, quaternion));
+    RECORD_AS(OffsetCenterOfMassShape, "OffsetCenterOfMass")
+        .field(FIELD(OffsetCenterOfMassShape, shape))
+        .field(FIELD(OffsetCenterOfMassShape, offset));
+
+    VALUE_AS(CompoundShape::Child, "CompoundShapeChild")
+        .field(FIELD(CompoundShape::Child, position))
+        .field(FIELD(CompoundShape::Child, quaternion))
+        .field(FIELD(CompoundShape::Child, shape));
+    RECORD_AS(CompoundShape::Data, "CompoundData").field(FIELD(CompoundShape::Data, children));
+    RECORD_AS(CompoundShape, "Compound").field(FIELD(CompoundShape, data));
+    RECORD_AS(StaticCompoundShape::Data, "StaticCompoundData").field(FIELD(StaticCompoundShape::Data, children));
+    RECORD_AS(StaticCompoundShape, "StaticCompound").field(FIELD(StaticCompoundShape, data));
+
+    VALUE_AS(ConvexHullShape::Face, "ConvexHullFace")
+        .field(FIELD(ConvexHullShape::Face, first_vertex), "its first entry in vertexIndices.")
+        .field(FIELD(ConvexHullShape::Face, num_vertices));
+    RECORD_AS(ConvexHullShape::Data, "ConvexHullData")
+        .field(FIELD(ConvexHullShape::Data, points))
+        .field(FIELD(ConvexHullShape::Data, faces))
+        .field(FIELD(ConvexHullShape::Data, planes), "a face's: its normal in x, y and z, its constant in w.")
+        .field(FIELD(ConvexHullShape::Data, vertex_indices), "each face's points, counter clockwise seen from outside.")
+        .field(FIELD(ConvexHullShape::Data, convex_radius));
+    RECORD_AS(ConvexHullShape, "ConvexHull").field(FIELD(ConvexHullShape, data)).field(FIELD(ConvexHullShape, density));
+
+    VALUE_AS(TriangleMeshShape::Triangle, "TriangleMeshTriangle")
+        .field(FIELD(TriangleMeshShape::Triangle, index_a))
+        .field(FIELD(TriangleMeshShape::Triangle, index_b))
+        .field(FIELD(TriangleMeshShape::Triangle, index_c))
+        .field(FIELD(TriangleMeshShape::Triangle, normal))
+        .field(FIELD(TriangleMeshShape::Triangle, active_edges), "bit 0 the edge ab, bit 1 bc, bit 2 ca.")
+        .field(FIELD(TriangleMeshShape::Triangle, material_id));
+    RECORD_AS(TriangleMeshShape::Data, "TriangleMeshData")
+        .span(FIELD(TriangleMeshShape::Data, positions), &TriangleMeshShape::Data::vertex_count)
+        .span(FIELD(TriangleMeshShape::Data, triangles), &TriangleMeshShape::Data::triangle_count);
+    RECORD_AS(TriangleMeshShape, "TriangleMesh").field(FIELD(TriangleMeshShape, data));
 
     VALUE_AS(BoxShapeSettings, "BoxSettings")
         .field(FIELD(BoxShapeSettings, half_extents))

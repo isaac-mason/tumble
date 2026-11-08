@@ -23,7 +23,8 @@
 //            an object the caller supplied). values never come back by return. `LANES_AS(Vec3f,
 //            "Vec3f", 3)` is a SIMD register type crossing as a tuple of its lanes.
 //   arrays   a record's field holding a growable array (bind::array_of), read where it lies: its length and
-//            its elements.
+//            its elements. a span (StructBinder::span) is read the same way: a pointer field whose length is
+//            another field of the record.
 //   scalars  u8/u16/u32/i32/f32/bool, and pointers to them as addresses typed by the scalar
 //            (a `void *` as a plain number, which any address converts to). an enum crosses as
 //            its underlying scalar; an f64 only as a field, read as the js number it is; a u64
@@ -83,10 +84,13 @@ struct TypeRef {
     bool (*is_tuple)();
     /** a one-word handle struct (`{ uint32_t bits; }`, marked CROSSES_AS_BITS) that crosses as its u32. */
     bool bits;
-    /** BASE_ARRAY: the element's type, and the byte offsets of the array's data pointer and length; zero otherwise. */
+    /**
+     * BASE_ARRAY: the element's type, and the byte offsets of the data pointer and the length from the field; zero
+     * otherwise. a span's length is a field of its own, so its offset is negative when that comes first
+     */
     TypeRef (*element)();
     uint32_t data_offset;
-    uint32_t length_offset;
+    int32_t length_offset;
 };
 
 template <typename T>
@@ -374,7 +378,7 @@ inline uint32_t offset_of(M T::*member) {
 template <typename A, typename E>
 inline TypeRef array_of() {
     return {BASE_ARRAY, 0, false, false, 1, nullptr, nullptr, nullptr, nullptr, false, TypeOf<E>::get, offset_of<A>(&A::data),
-            offset_of<A>(&A::length)};
+            (int32_t)offset_of<A>(&A::length)};
 }
 
 template <typename T>
@@ -389,6 +393,19 @@ struct StructBinder {
     template <typename M>
     StructBinder &field(const char *name, M T::*member, const char *doc = nullptr) {
         return field(name, member, 0, doc);
+    }
+
+    /**
+     * a pointer to `length` elements, `length` another field of the record, which js reads where it lies as it does an
+     * array field: for memory the record points into but does not hold as a growable array
+     */
+    template <typename E>
+    StructBinder &span(const char *name, E *T::*data, uint32_t T::*length, const char *doc = nullptr) {
+        const uint32_t at = offset_of<T, E *>(data);
+        const TypeRef type = {BASE_ARRAY, 0, false, false, 1, nullptr, nullptr, nullptr, nullptr, false, TypeOf<E>::get, 0,
+                              (int32_t)offset_of<T, uint32_t>(length) - (int32_t)at};
+        desc.fields[take_slot(desc.field_count, MAX_FIELDS)] = {name, at, type, 0, doc};
+        return *this;
     }
 
     StructBinder &doc(const char *text) {

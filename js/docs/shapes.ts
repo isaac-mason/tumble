@@ -15,6 +15,7 @@ import {
     emptyShape,
     enableCollision,
     getShapeLocalBounds,
+    getShapeType,
     getShapeVolume,
     init,
     MotionType,
@@ -22,6 +23,7 @@ import {
     plane,
     releaseShape,
     rigidBody,
+    ShapeType,
     scaled,
     sphere,
     staticCompound,
@@ -135,6 +137,23 @@ check(near(getShapeVolume(stretched), 2 * getShapeVolume(crate)), 'scaled');
 // no volume and no collisions. use it as a static constraint anchor, or for a body whose shape comes later
 const nothing = emptyShape.create();
 /* SNIPPET_END: empty */
+
+/* SNIPPET_START: reading */
+// each type's getters read what a shape holds, such as to build a mesh that draws it. the shapes a compound or a
+// decorator holds are its own: never release them
+const size: [number, number, number] = [0, 0, 0];
+const position: [number, number, number] = [0, 0, 0];
+for (let i = 0; i < compound.getChildCount(table); i++) {
+    const child = compound.getChildShape(table, i);
+    compound.getChildPosition(position, table, i);
+    if (getShapeType(child) === ShapeType.BOX) box.getHalfExtents(size, child);
+}
+// a hull and a mesh as they were built: a hull's points and faces, a mesh's welded vertices and its triangles
+convexHull.getFaceCount(rock); // 6, the cube's sides
+triangleMesh.getTriangleCount(terrain); // 2
+/* SNIPPET_END: reading */
+check(near(size[0], 0.05) && near(position[0], 0.5) && near(position[2], 0.3), 'the last leg');
+check(convexHull.getFaceCount(rock) === 6 && triangleMesh.getTriangleCount(terrain) === 2, 'built');
 
 /* SNIPPET_START: freeing */
 // a shape built from another holds it, so you can release shapes in any order, before or after the world

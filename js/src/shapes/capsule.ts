@@ -21,3 +21,17 @@ export function create(settings: CapsuleShapeSettings): Shape {
 export function update(shape: Shape, settings: CapsuleShapeSettings): void {
     Low.Capsule.update(shape, over(capsuleDefaults(), settings));
 }
+
+// a capsule's fields, as it holds them: the getters read a capsule only
+
+export function getHalfHeightOfCylinder(shape: Shape): number {
+    return Low.Capsule.halfHeightOfCylinder(shape as number as Low.Capsule);
+}
+
+export function getRadius(shape: Shape): number {
+    return Low.Capsule.radius(shape as number as Low.Capsule);
+}
+
+export function getDensity(shape: Shape): number {
+    return Low.Capsule.density(shape as number as Low.Capsule);
+}

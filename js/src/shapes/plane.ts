@@ -26,3 +26,24 @@ export function create(settings: PlaneShapeSettings = {}): Shape {
         materialId: settings.materialId ?? defaults.materialId,
     });
 }
+
+// a plane's fields, as it holds them: the getters read a plane only
+
+const _plane: Low.Planef = [0, 0, 0, 0];
+
+/** normalised */
+export function getNormal(out: Vec3, shape: Shape): Vec3 {
+    Low.Plane.readPlane(_plane, shape as number as Low.Plane);
+    out[0] = _plane[0];
+    out[1] = _plane[1];
+    out[2] = _plane[2];
+    return out;
+}
+
+export function getConstant(shape: Shape): number {
+    return Low.Plane.readPlane(_plane, shape as number as Low.Plane)[3];
+}
+
+export function getHalfExtent(shape: Shape): number {
+    return Low.Plane.halfExtent(shape as number as Low.Plane);
+}

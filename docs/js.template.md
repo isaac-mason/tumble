@@ -119,7 +119,8 @@ stacks from jittering.
 <Snippet source="../js/docs/world.ts" select="materials" />
 
 A query hit names the part it hit with a sub shape id. `rigidBody.getMaterial(world, hit.bodyIdB, hit.subShapeId)`
-returns that part's material id.
+returns that part's material id. `rigidBody.getSurfaceNormal(out, world, hit.bodyIdB, hit.subShapeId, point)` returns
+the part's normal at a point on it, in world space.
 
 ## Rigid bodies
 
@@ -152,9 +153,14 @@ instead (see [Kinematic bodies](#kinematic-bodies)).
 
 A triangle mesh has no volume, so it has no mass. A dynamic body with a mesh shape needs `massPropertiesOverride`.
 
+`rigidBody.getInverseInertia` returns a body's inverse inertia in world space, as it turns. It is zero for a body that
+is not dynamic.
+
 ### Damping, limits and degrees of freedom
 
 <Snippet source="../js/docs/bodies.ts" select="tuning" />
+
+`rigidBody.setGravityFactor` changes how much gravity a body feels after it is made, to fall faster than it rises, say.
 
 ### Sleeping
 
@@ -226,6 +232,12 @@ Use meshes for static bodies. A mesh is hollow. It has no volume, no inside and 
 
 <Snippet source="../js/docs/shapes.ts" select="empty" />
 
+### Reading a shape
+
+<Snippet source="../js/docs/shapes.ts" select="reading" />
+
+A getter reads only its own type's shapes, so check `getShapeType` first.
+
 ### Freeing shapes
 
 <Snippet source="../js/docs/shapes.ts" select="freeing" />
@@ -237,6 +249,9 @@ Instead, `updateWorld` runs the step in phases and calls your hooks between them
 into the wasm.
 
 <Snippet source="../js/docs/events.ts" select="listener" />
+
+Bodies joined by a constraint often overlap at the joint. Return `!rigidBody.bodiesShareConstraint(world, bodyA, bodyB)`
+from `onBodyPairValidate` to keep them from colliding.
 
 <Snippet source="../js/docs/events.ts" select="rules" />
 

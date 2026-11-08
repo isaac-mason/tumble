@@ -81,6 +81,7 @@ export {
     computeMassProperties,
     getShapeCenterOfMass,
     getShapeLocalBounds,
+    getShapeMaterialId,
     getShapeRefCount,
     getShapeType,
     getShapeVolume,
@@ -95,7 +96,7 @@ export type { StaticCompoundShapeSettings } from './shapes/static-compound.js';
 export * as staticCompound from './shapes/static-compound.js';
 export type { TransformedShapeSettings } from './shapes/transformed.js';
 export * as transformed from './shapes/transformed.js';
-export type { TriangleMeshShapeSettings } from './shapes/triangle-mesh.js';
+export type { TriangleMeshShapeSettings, TriangleMeshTriangle } from './shapes/triangle-mesh.js';
 export * as triangleMesh from './shapes/triangle-mesh.js';
 export {
     type ActiveBody,

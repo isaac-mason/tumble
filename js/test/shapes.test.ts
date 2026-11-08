@@ -16,6 +16,7 @@ import {
     emptyShape,
     getShapeCenterOfMass,
     getShapeLocalBounds,
+    getShapeMaterialId,
     getShapeRefCount,
     getShapeType,
     getShapeVolume,
@@ -346,5 +347,143 @@ describe('changing a shape in place', () => {
         releaseScene(scene);
         releaseShape(crate);
         releaseShape(ball);
+    });
+});
+
+describe('reading a shape back', () => {
+    test('primitives read back what they hold, the convex radius as clamped', async () => {
+        await init();
+        const crate = box.create({ halfExtents: [1, 2, 0.04], convexRadius: 0.05, density: 500, materialId: 3 });
+        expect(box.getHalfExtents([0, 0, 0], crate)).toEqual([1, 2, expect.closeTo(0.04, 6)]);
+        expect(box.getConvexRadius(crate)).toBeCloseTo(0.04, 6);
+        expect(box.getDensity(crate)).toBe(500);
+        expect(getShapeMaterialId(crate)).toBe(3);
+
+        const ball = sphere.create({ radius: 0.75, density: 200 });
+        expect(sphere.getRadius(ball)).toBe(0.75);
+        expect(sphere.getDensity(ball)).toBe(200);
+        expect(getShapeMaterialId(ball)).toBe(-1);
+
+        const pill = capsule.create({ halfHeightOfCylinder: 0.5, radius: 0.25 });
+        expect(capsule.getHalfHeightOfCylinder(pill)).toBe(0.5);
+        expect(capsule.getRadius(pill)).toBe(0.25);
+
+        const can = cylinder.create({ halfHeight: 0.4, radius: 0.3, convexRadius: 0.02 });
+        expect(cylinder.getHalfHeight(can)).toBeCloseTo(0.4, 6);
+        expect(cylinder.getRadius(can)).toBeCloseTo(0.3, 6);
+        expect(cylinder.getConvexRadius(can)).toBeCloseTo(0.02, 6);
+
+        const ground = plane.create({ normal: [0, 2, 0], constant: 1.5, halfExtent: 40 });
+        // normalised as a plane: the same plane, y = -0.75
+        expect(plane.getNormal([0, 0, 0], ground)).toEqual([0, 1, 0]);
+        expect(plane.getConstant(ground)).toBe(0.75);
+        expect(plane.getHalfExtent(ground)).toBe(40);
+
+        for (const shape of [crate, ball, pill, can, ground]) releaseShape(shape);
+    });
+
+    test('wrappers and compounds hand back the shapes they hold and where they hold them', async () => {
+        await init();
+        const crate = box.create({ halfExtents: [0.5, 0.5, 0.5] });
+        const ball = sphere.create({ radius: 0.5 });
+
+        const stretched = scaled.create({ shape: crate, scale: [2, 1, 3] });
+        expect(scaled.getInnerShape(stretched)).toBe(crate);
+        expect(scaled.getScale([0, 0, 0], stretched)).toEqual([2, 1, 3]);
+
+        const turn = Math.SQRT1_2;
+        const placed = transformed.create({ shape: ball, position: [1, 2, 3], quaternion: [0, turn, 0, turn] });
+        expect(transformed.getInnerShape(placed)).toBe(ball);
+        expect(transformed.getPosition([0, 0, 0], placed)).toEqual([1, 2, 3]);
+        const quaternion = transformed.getQuaternion([0, 0, 0, 1], placed);
+        expect(quaternion[1]).toBeCloseTo(turn, 6);
+        expect(quaternion[3]).toBeCloseTo(turn, 6);
+
+        const lowered = offsetCenterOfMass.create({ shape: crate, offset: [0, -0.4, 0] });
+        expect(offsetCenterOfMass.getInnerShape(lowered)).toBe(crate);
+        expect(offsetCenterOfMass.getOffset([0, 0, 0], lowered)).toEqual([0, expect.closeTo(-0.4, 6), 0]);
+
+        const children = [
+            { shape: crate, position: [-1, 0, 0] as Vec3 },
+            { shape: ball, position: [1, 0.5, 0] as Vec3, quaternion: [0, 0, turn, turn] as [number, number, number, number] },
+        ];
+        for (const [module, shape] of [
+            [compound, compound.create({ children })],
+            [staticCompound, staticCompound.create({ children })],
+        ] as const) {
+            expect(module.getChildCount(shape)).toBe(2);
+            expect(module.getChildShape(shape, 0)).toBe(crate);
+            expect(module.getChildShape(shape, 1)).toBe(ball);
+            expect(module.getChildPosition([0, 0, 0], shape, 1)).toEqual([1, 0.5, 0]);
+            const childQuaternion = module.getChildQuaternion([0, 0, 0, 0], shape, 1);
+            expect(childQuaternion[2]).toBeCloseTo(turn, 6);
+            expect(childQuaternion[3]).toBeCloseTo(turn, 6);
+            expect(module.getChildQuaternion([0, 0, 0, 0], shape, 0)).toEqual([0, 0, 0, 1]);
+            releaseShape(shape);
+        }
+
+        for (const shape of [stretched, placed, lowered, crate, ball]) releaseShape(shape);
+    });
+
+    test('a hull of a cube reads back as six square faces, each wound counter clockwise about its outward normal', async () => {
+        await init();
+        // the corners and the centre, which the hull drops
+        const hull = convexHull.create({ positions: [...CUBE, 0, 0, 0], convexRadius: 0 });
+        expect(convexHull.getPointCount(hull)).toBe(8);
+        expect(convexHull.getFaceCount(hull)).toBe(6);
+        expect(convexHull.getConvexRadius(hull)).toBe(0);
+
+        const normal: Vec3 = [0, 0, 0];
+        const a: Vec3 = [0, 0, 0];
+        const b: Vec3 = [0, 0, 0];
+        const c: Vec3 = [0, 0, 0];
+        for (let face = 0; face < 6; face++) {
+            expect(convexHull.getFaceVertexCount(hull, face)).toBe(4);
+            convexHull.getFaceNormal(normal, hull, face);
+            expect(Math.abs(normal[0]) + Math.abs(normal[1]) + Math.abs(normal[2])).toBeCloseTo(1, 6);
+            convexHull.getPoint(a, hull, convexHull.getFaceVertex(hull, face, 0));
+            convexHull.getPoint(b, hull, convexHull.getFaceVertex(hull, face, 1));
+            convexHull.getPoint(c, hull, convexHull.getFaceVertex(hull, face, 2));
+            // every vertex on the face's side of the cube
+            expect(a[0] * normal[0] + a[1] * normal[1] + a[2] * normal[2]).toBeCloseTo(1, 6);
+            const ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+            const ac = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+            const winding =
+                (ab[1]! * ac[2]! - ab[2]! * ac[1]!) * normal[0] +
+                (ab[2]! * ac[0]! - ab[0]! * ac[2]!) * normal[1] +
+                (ab[0]! * ac[1]! - ab[1]! * ac[0]!) * normal[2];
+            expect(winding).toBeGreaterThan(0);
+        }
+        releaseShape(hull);
+    });
+
+    test('a mesh reads back as built: welded, the degenerate triangle dropped, its normals and materials kept', async () => {
+        await init();
+        // a 2 by 2 quad facing up from four vertices and a copy of one, and a triangle with no area
+        const mesh = triangleMesh.create({
+            positions: [-1, 0, -1, -1, 0, 1, 1, 0, 1, 1, 0, -1, -1, 0, -1],
+            indices: [0, 1, 2, 4, 2, 3, 0, 0, 2],
+            materialIds: [7, 8, 9],
+        });
+        expect(triangleMesh.getVertexCount(mesh)).toBe(4);
+        expect(triangleMesh.getTriangleCount(mesh)).toBe(2);
+
+        const triangle = triangleMesh.createTriangle();
+        const vertex: Vec3 = [0, 0, 0];
+        const materials: number[] = [];
+        for (let i = 0; i < 2; i++) {
+            triangleMesh.getTriangle(triangle, mesh, i);
+            expect(triangle.normal).toEqual([0, 1, 0]);
+            for (const index of [triangle.indexA, triangle.indexB, triangle.indexC]) {
+                expect(index).toBeLessThan(4);
+                triangleMesh.getVertex(vertex, mesh, index);
+                expect(vertex[1]).toBe(0);
+                expect(Math.abs(vertex[0])).toBe(1);
+                expect(Math.abs(vertex[2])).toBe(1);
+            }
+            materials.push(triangle.materialId);
+        }
+        expect(materials.sort()).toEqual([7, 8]);
+        releaseShape(mesh);
     });
 });

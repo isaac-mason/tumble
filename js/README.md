@@ -70,6 +70,7 @@ tumble is also a C++ library, with its own guide at
   - [Compounds](#compounds)
   - [Decorators](#decorators)
   - [Empty](#empty)
+  - [Reading a shape](#reading-a-shape)
   - [Freeing shapes](#freeing-shapes)
 - [Events](#events)
 - [Contact pairs](#contact-pairs)
@@ -307,7 +308,8 @@ rigidBody.create(world, { shape: iceShape, objectLayer: scenery, motionType: Mot
 ```
 
 A query hit names the part it hit with a sub shape id. `rigidBody.getMaterial(world, hit.bodyIdB, hit.subShapeId)`
-returns that part's material id.
+returns that part's material id. `rigidBody.getSurfaceNormal(out, world, hit.bodyIdB, hit.subShapeId, point)` returns
+the part's normal at a point on it, in world space.
 
 ## Rigid bodies
 
@@ -394,6 +396,9 @@ rigidBody.getMass(world, heavy); // 80
 
 A triangle mesh has no volume, so it has no mass. A dynamic body with a mesh shape needs `massPropertiesOverride`.
 
+`rigidBody.getInverseInertia` returns a body's inverse inertia in world space, as it turns. It is zero for a body that
+is not dynamic.
+
 ### Damping, limits and degrees of freedom
 
 ```ts
@@ -411,6 +416,8 @@ const puck = rigidBody.create(world, {
     allowedDegreesOfFreedom: Dof.TRANSLATION_X | Dof.TRANSLATION_Z | Dof.ROTATION_Y,
 });
 ```
+
+`rigidBody.setGravityFactor` changes how much gravity a body feels after it is made, to fall faster than it rises, say.
 
 ### Sleeping
 
@@ -613,6 +620,25 @@ const weighted = offsetCenterOfMass.create({ shape: pill, offset: [0, -0.4, 0] }
 const nothing = emptyShape.create();
 ```
 
+### Reading a shape
+
+```ts
+// each type's getters read what a shape holds, such as to build a mesh that draws it. the shapes a compound or a
+// decorator holds are its own: never release them
+const size: [number, number, number] = [0, 0, 0];
+const position: [number, number, number] = [0, 0, 0];
+for (let i = 0; i < compound.getChildCount(table); i++) {
+    const child = compound.getChildShape(table, i);
+    compound.getChildPosition(position, table, i);
+    if (getShapeType(child) === ShapeType.BOX) box.getHalfExtents(size, child);
+}
+// a hull and a mesh as they were built: a hull's points and faces, a mesh's welded vertices and its triangles
+convexHull.getFaceCount(rock); // 6, the cube's sides
+triangleMesh.getTriangleCount(terrain); // 2
+```
+
+A getter reads only its own type's shapes, so check `getShapeType` first.
+
 ### Freeing shapes
 
 ```ts
@@ -662,6 +688,9 @@ const listener: Listener = {
 };
 updateWorld(world, listener, 1 / 60);
 ```
+
+Bodies joined by a constraint often overlap at the joint. Return `!rigidBody.bodiesShareConstraint(world, bodyA, bodyB)`
+from `onBodyPairValidate` to keep them from colliding.
 
 ```ts
 // hook events are reused, so copy what you keep. the world is mid step while hooks run. read it, but do not change it.
