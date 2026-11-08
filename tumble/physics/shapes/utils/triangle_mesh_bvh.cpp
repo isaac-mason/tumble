@@ -86,16 +86,16 @@ static inline float axis_of(Vec3f v, int32_t axis) { return axis == 0 ? vec3f::x
 
 static void precompute_triangle_build_data(float *out, const TriangleMeshShape::Data &data) {
     const uint32_t count = data.triangle_count;
-    const float *positions = data.positions;
+    const Float3 *positions = data.positions;
 
     for (uint32_t tri_idx = 0; tri_idx < count; tri_idx++) {
         const TriangleMeshShape::Triangle &triangle = data.triangles[tri_idx];
         float *entry = out + tri_idx * BUILD_DATA_STRIDE;
 
         // get vertex positions
-        const float *a = positions + triangle.index_a * 3;
-        const float *b = positions + triangle.index_b * 3;
-        const float *c = positions + triangle.index_c * 3;
+        const float *a = &positions[triangle.index_a].x;
+        const float *b = &positions[triangle.index_b].x;
+        const float *c = &positions[triangle.index_c].x;
 
         // compute min bounds
         float min_x = a[0], min_y = a[1], min_z = a[2];

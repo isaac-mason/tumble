@@ -11,7 +11,7 @@ static uintptr_t address_of(const void *p) { return reinterpret_cast<uintptr_t>(
 /** two triangles over four vertices: a unit square in z = 0 and a tilted one above it */
 static TriangleMeshShape::Data *make_two_triangles() {
     TriangleMeshShape::Data *data = triangle_mesh_data::create(4, 2, 0);
-    const float positions[12] = {0, 0, 0, 2, 0, 0, 0, 3, 0, 1, -1, 4};
+    const Float3 positions[4] = {{0, 0, 0}, {2, 0, 0}, {0, 3, 0}, {1, -1, 4}};
     util::copy(data->positions, positions, sizeof(positions));
     data->triangles[0] = {0, 1, 2, {0, 0, 1}, 0b111, 5};
     data->triangles[1] = {1, 0, 3, {0, -1, 0}, 0b010, -1};
@@ -41,7 +41,7 @@ void test_triangle_mesh_data_layout(TestCtx &ctx) {
 
     // zeroed
     bool zeroed = true;
-    for (uint32_t i = 0; i < 15; i++) zeroed = zeroed && data->positions[i] == 0.0f;
+    for (uint32_t i = 0; i < 5; i++) zeroed = zeroed && data->positions[i].x == 0.0f && data->positions[i].y == 0.0f && data->positions[i].z == 0.0f;
     for (uint32_t i = 0; i < 3; i++) zeroed = zeroed && data->triangles[i].index_a == 0 && data->triangles[i].active_edges == 0;
     for (uint32_t i = 0; i < 7; i++) zeroed = zeroed && data->nodes[i].axis_or_count == 0;
     CHECK(ctx, zeroed);

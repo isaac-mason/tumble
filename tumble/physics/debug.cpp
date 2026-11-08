@@ -315,14 +315,13 @@ static void draw_convex_hull(DebugDraw &out, const Shape *shape, const Transform
 
 static void draw_triangle_mesh(DebugDraw &out, const Shape *shape, const Transform &transform, Color color) {
     const TriangleMeshShape::Data &mesh = *shapes::as<TriangleMeshShape>(shape).data;
-    const float *positions = mesh.positions;
+    const Float3 *positions = mesh.positions;
     for (uint32_t i = 0; i < mesh.triangle_count; i++) {
         const TriangleMeshShape::Triangle &triangle = mesh.triangles[i];
-        const uint32_t ia = triangle.index_a, ib = triangle.index_b, ic = triangle.index_c;
         Vec3f world_a, world_b, world_c;
-        transform_point(world_a, vec3f::make(positions[ia * 3], positions[ia * 3 + 1], positions[ia * 3 + 2]), transform);
-        transform_point(world_b, vec3f::make(positions[ib * 3], positions[ib * 3 + 1], positions[ib * 3 + 2]), transform);
-        transform_point(world_c, vec3f::make(positions[ic * 3], positions[ic * 3 + 1], positions[ic * 3 + 2]), transform);
+        transform_point(world_a, vec3f::load(positions[triangle.index_a]), transform);
+        transform_point(world_b, vec3f::load(positions[triangle.index_b]), transform);
+        transform_point(world_c, vec3f::load(positions[triangle.index_c]), transform);
         push_line(out, world_a, world_b, color);
         push_line(out, world_b, world_c, color);
         push_line(out, world_c, world_a, color);

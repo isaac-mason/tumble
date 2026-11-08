@@ -22,7 +22,7 @@ struct Layout {
 static Layout layout_of(uint32_t vertex_count, uint32_t triangle_count, uint32_t node_count) {
     Layout layout;
     layout.positions = util::align_up(sizeof(TriangleMeshShape::Data), ARRAY_ALIGN);
-    layout.triangles = util::align_up(layout.positions + vertex_count * 3 * sizeof(float), ARRAY_ALIGN);
+    layout.triangles = util::align_up(layout.positions + vertex_count * sizeof(Float3), ARRAY_ALIGN);
     layout.triangle_aabbs = util::align_up(layout.triangles + triangle_count * sizeof(TriangleMeshShape::Triangle), ARRAY_ALIGN);
     layout.nodes = util::align_up(layout.triangle_aabbs + triangle_count * 6 * sizeof(float), ARRAY_ALIGN);
     layout.bytes = layout.nodes + node_count * sizeof(BvhNode);
@@ -42,7 +42,7 @@ TriangleMeshShape::Data *create(uint32_t vertex_count, uint32_t triangle_count, 
     data->vertex_count = vertex_count;
     data->triangle_count = triangle_count;
     data->node_count = node_count;
-    data->positions = reinterpret_cast<float *>(block + layout.positions);
+    data->positions = reinterpret_cast<Float3 *>(block + layout.positions);
     data->triangles = reinterpret_cast<TriangleMeshShape::Triangle *>(block + layout.triangles);
     data->triangle_aabbs = reinterpret_cast<float *>(block + layout.triangle_aabbs);
     data->nodes = reinterpret_cast<BvhNode *>(block + layout.nodes);
@@ -63,9 +63,9 @@ void get_triangle_indices(uint32_t out[3], const TriangleMeshShape::Data &data, 
 
 void get_triangle_vertices(Vec3f &out_a, Vec3f &out_b, Vec3f &out_c, const TriangleMeshShape::Data &data, uint32_t tri_idx) {
     const TriangleMeshShape::Triangle &triangle = data.triangles[tri_idx];
-    out_a = vec3f::load(data.positions, triangle.index_a * 3);
-    out_b = vec3f::load(data.positions, triangle.index_b * 3);
-    out_c = vec3f::load(data.positions, triangle.index_c * 3);
+    out_a = vec3f::load(data.positions[triangle.index_a]);
+    out_b = vec3f::load(data.positions[triangle.index_b]);
+    out_c = vec3f::load(data.positions[triangle.index_c]);
 }
 
 void precompute_triangle_aabbs(TriangleMeshShape::Data &data) {
@@ -85,12 +85,12 @@ void precompute_triangle_aabbs(TriangleMeshShape::Data &data) {
 
 AABox calculate_triangle_aabb(const TriangleMeshShape::Data &data, uint32_t tri_idx) {
     const TriangleMeshShape::Triangle &triangle = data.triangles[tri_idx];
-    const float *positions = data.positions;
+    const Float3 *positions = data.positions;
 
     // get vertices
-    const float *a = positions + triangle.index_a * 3;
-    const float *b = positions + triangle.index_b * 3;
-    const float *c = positions + triangle.index_c * 3;
+    const float *a = &positions[triangle.index_a].x;
+    const float *b = &positions[triangle.index_b].x;
+    const float *c = &positions[triangle.index_c].x;
 
     // compute aabb
     float min_x = a[0], min_y = a[1], min_z = a[2];
@@ -115,9 +115,9 @@ AABox calculate_triangle_aabb(const TriangleMeshShape::Data &data, uint32_t tri_
 
 Vec3f calculate_triangle_centroid(const TriangleMeshShape::Data &data, uint32_t tri_idx) {
     const TriangleMeshShape::Triangle &triangle = data.triangles[tri_idx];
-    const Vec3f a = vec3f::load(data.positions, triangle.index_a * 3);
-    const Vec3f b = vec3f::load(data.positions, triangle.index_b * 3);
-    const Vec3f c = vec3f::load(data.positions, triangle.index_c * 3);
+    const Vec3f a = vec3f::load(data.positions[triangle.index_a]);
+    const Vec3f b = vec3f::load(data.positions[triangle.index_b]);
+    const Vec3f c = vec3f::load(data.positions[triangle.index_c]);
     return vec3f::divide(vec3f::add(vec3f::add(a, b), c), vec3f::splat(3.0f));
 }
 

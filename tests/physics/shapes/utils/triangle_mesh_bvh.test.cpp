@@ -26,10 +26,10 @@ static TriangleMeshShape::Data *make_grid() {
     TriangleMeshShape::Data *data = triangle_mesh_data::create(side * side, GRID_TRIANGLES, 0);
     for (uint32_t j = 0; j < side; j++) {
         for (uint32_t i = 0; i < side; i++) {
-            float *p = data->positions + (j * side + i) * 3;
-            p[0] = (float)i;
-            p[1] = 0.25f * scalar::sin(0.7f * (float)i) * scalar::cos(0.5f * (float)j);
-            p[2] = (float)j;
+            Float3 &p = data->positions[j * side + i];
+            p.x = (float)i;
+            p.y = 0.25f * scalar::sin(0.7f * (float)i) * scalar::cos(0.5f * (float)j);
+            p.z = (float)j;
         }
     }
     for (uint32_t j = 0; j < GRID; j++) {
@@ -304,8 +304,8 @@ void test_triangle_mesh_bvh_small(TestCtx &ctx) {
 
     // one triangle: a single leaf bounding it
     TriangleMeshShape::Data *single = triangle_mesh_data::create(3, 1, 0);
-    const float positions[9] = {0, 0, 0, 1, 0, 0, 0, 1, 2};
-    for (uint32_t i = 0; i < 9; i++) single->positions[i] = positions[i];
+    const Float3 positions[3] = {{0, 0, 0}, {1, 0, 0}, {0, 1, 2}};
+    for (uint32_t i = 0; i < 3; i++) single->positions[i] = positions[i];
     single->triangles[0] = {0, 1, 2, {0, 0, 1}, 0b111, -1};
     mesh_bvh::build(tree, *single, {TriangleMeshShape::BvhSplitStrategy::SAH, 2});
     CHECK(ctx, tree.length == 1);
@@ -319,7 +319,7 @@ void test_triangle_mesh_bvh_small(TestCtx &ctx) {
 
     // stacked copies of one triangle cannot be split: one leaf over all of them, whatever the leaf size
     TriangleMeshShape::Data *stacked = triangle_mesh_data::create(3, 5, 0);
-    for (uint32_t i = 0; i < 9; i++) stacked->positions[i] = positions[i];
+    for (uint32_t i = 0; i < 3; i++) stacked->positions[i] = positions[i];
     for (uint32_t t = 0; t < 5; t++) stacked->triangles[t] = {0, 1, 2, {0, 0, 1}, 0b111, (int32_t)t};
     const TriangleMeshShape::BvhSplitStrategy strategies[] = {TriangleMeshShape::BvhSplitStrategy::CENTER, TriangleMeshShape::BvhSplitStrategy::AVERAGE,
                                                      TriangleMeshShape::BvhSplitStrategy::SAH};
@@ -331,8 +331,8 @@ void test_triangle_mesh_bvh_small(TestCtx &ctx) {
 
     // two triangles far apart along z split on z, nearest first
     TriangleMeshShape::Data *pair = triangle_mesh_data::create(6, 2, 0);
-    const float pair_positions[18] = {0, 0, 10, 1, 0, 10, 0, 1, 10, 0, 0, 0, 1, 0, 0, 0, 1, 0};
-    for (uint32_t i = 0; i < 18; i++) pair->positions[i] = pair_positions[i];
+    const Float3 pair_positions[6] = {{0, 0, 10}, {1, 0, 10}, {0, 1, 10}, {0, 0, 0}, {1, 0, 0}, {0, 1, 0}};
+    for (uint32_t i = 0; i < 6; i++) pair->positions[i] = pair_positions[i];
     pair->triangles[0] = {0, 1, 2, {0, 0, 1}, 0b111, 0};
     pair->triangles[1] = {3, 4, 5, {0, 0, 1}, 0b111, 1};
     for (TriangleMeshShape::BvhSplitStrategy strategy : strategies) {
@@ -352,10 +352,10 @@ void test_triangle_mesh_bvh_small(TestCtx &ctx) {
 static TriangleMeshShape::Data *make_strip(const float *xs, uint32_t count) {
     TriangleMeshShape::Data *data = triangle_mesh_data::create(count * 3, count, 0);
     for (uint32_t i = 0; i < count; i++) {
-        float *p = data->positions + i * 9;
         const float x = xs[i];
-        const float vertices[9] = {x, 0, 0, x + 1, 0, 0, x, 1, 0};
-        for (uint32_t k = 0; k < 9; k++) p[k] = vertices[k];
+        data->positions[i * 3] = {x, 0, 0};
+        data->positions[i * 3 + 1] = {x + 1, 0, 0};
+        data->positions[i * 3 + 2] = {x, 1, 0};
         data->triangles[i] = {i * 3, i * 3 + 1, i * 3 + 2, {0, 0, 1}, 0b111, (int32_t)i};
     }
     return data;
@@ -415,10 +415,10 @@ void test_triangle_mesh_bvh_exact_bounds(TestCtx &ctx) {
     TriangleMeshShape::Data *original = triangle_mesh_data::create(side * side, triangle_count, 0);
     for (uint32_t j = 0; j < side; j++) {
         for (uint32_t i = 0; i < side; i++) {
-            float *p = original->positions + (j * side + i) * 3;
-            p[0] = (float)i * 0.1f * 3.0f + (float)j * 0.7e-3f * 7.0f;
-            p[1] = 0.1f * scalar::sin(0.7f * (float)i + 0.3f) * scalar::cos(1.1f * (float)j) + 1e-3f * 13.0f * (float)(i % 3);
-            p[2] = (float)j * 0.7f * 0.3f - (float)i * 1e-3f * 11.0f;
+            Float3 &p = original->positions[j * side + i];
+            p.x = (float)i * 0.1f * 3.0f + (float)j * 0.7e-3f * 7.0f;
+            p.y = 0.1f * scalar::sin(0.7f * (float)i + 0.3f) * scalar::cos(1.1f * (float)j) + 1e-3f * 13.0f * (float)(i % 3);
+            p.z = (float)j * 0.7f * 0.3f - (float)i * 1e-3f * 11.0f;
         }
     }
     for (uint32_t j = 0; j < side - 1; j++) {
@@ -436,7 +436,7 @@ void test_triangle_mesh_bvh_exact_bounds(TestCtx &ctx) {
     for (TriangleMeshShape::BvhSplitStrategy strategy : strategies) {
         for (uint32_t max_leaf_tris : leaf_sizes) {
             TriangleMeshShape::Data *data = triangle_mesh_data::create(side * side, triangle_count, 0);
-            for (uint32_t v = 0; v < side * side * 3; v++) data->positions[v] = original->positions[v];
+            for (uint32_t v = 0; v < side * side; v++) data->positions[v] = original->positions[v];
             for (uint32_t t = 0; t < triangle_count; t++) data->triangles[t] = original->triangles[t];
 
             collections::Array<BvhNode> tree = {};

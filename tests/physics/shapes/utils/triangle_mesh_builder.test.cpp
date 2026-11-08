@@ -466,9 +466,9 @@ void test_triangle_mesh_builder_flat_grid(TestCtx &ctx) {
     bool seen[TRIANGLES] = {};
     for (uint32_t t = 0; t < data->triangle_count; t++) {
         const TriangleMeshShape::Triangle &triangle = data->triangles[t];
-        const float *a = data->positions + triangle.index_a * 3;
-        const float *b = data->positions + triangle.index_b * 3;
-        const float *c = data->positions + triangle.index_c * 3;
+        const float *a = &data->positions[triangle.index_a].x;
+        const float *b = &data->positions[triangle.index_b].x;
+        const float *c = &data->positions[triangle.index_c].x;
         const uint32_t expected =
             (on_border(a, b, SIDE) ? 0b001u : 0u) | (on_border(b, c, SIDE) ? 0b010u : 0u) | (on_border(c, a, SIDE) ? 0b100u : 0u);
         edges_ok = edges_ok && triangle.active_edges == expected;

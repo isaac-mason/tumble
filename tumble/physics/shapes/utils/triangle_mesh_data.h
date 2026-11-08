@@ -10,7 +10,7 @@
 
 TUMBLE_NAMESPACE_BEGIN
 
-// one allocation: the header, then each array 16-aligned at the address the header holds. positions are 3 f32 per
+// one allocation: the header, then each array 16-aligned at the address the header holds. positions a Float3 per
 // vertex, deduplicated; triangles TRIANGLE_STRIDE words each, in bvh order; triangle_aabbs 6 f32 each [min_x, min_y,
 // min_z, max_x, max_y, max_z]; nodes bvh::NODE_STRIDE words each, pre-order, the root at 0
 
@@ -62,8 +62,8 @@ struct TriangleMeshShape::Data {
     uint32_t vertex_count;
     uint32_t triangle_count;
     uint32_t node_count;
-    /** deduplicated vertex positions, 3 floats per vertex */
-    float *positions;
+    /** deduplicated, vertex_count of them */
+    Float3 *positions;
     TriangleMeshShape::Triangle *triangles;
     /**
      * per-triangle mesh-local aabbs, 6 floats per triangle. derived at build time (after the bvh

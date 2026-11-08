@@ -144,10 +144,9 @@ static void convex_hull(Builder &builder, const ConvexHullShape::Data &hull) {
 }
 
 static void triangle_mesh(Builder &builder, const TriangleMeshShape::Data &mesh) {
-    const auto point = [&](uint32_t index) { return Float3{mesh.positions[index * 3], mesh.positions[index * 3 + 1], mesh.positions[index * 3 + 2]}; };
     for (uint32_t i = 0; i < mesh.triangle_count; i++) {
         const TriangleMeshShape::Triangle &t = mesh.triangles[i];
-        triangle(builder, point(t.index_a), point(t.index_b), point(t.index_c), t.normal);
+        triangle(builder, mesh.positions[t.index_a], mesh.positions[t.index_b], mesh.positions[t.index_c], t.normal);
     }
 }
 

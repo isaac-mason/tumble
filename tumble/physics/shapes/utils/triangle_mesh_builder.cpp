@@ -75,7 +75,7 @@ static inline float round_half_up(float x) {
     return rounded + 0.0f;
 }
 
-static void deduplicate_vertices(collections::Array<float> &out_positions, collections::Array<uint32_t> &out_index_map, const float *input_positions,
+static void deduplicate_vertices(collections::Array<Float3> &out_positions, collections::Array<uint32_t> &out_index_map, const float *input_positions,
                                  uint32_t vertex_count) {
     collections::Map<WeldKey, uint32_t> vertex_map = {};
     out_index_map.reserve(vertex_count);
@@ -91,10 +91,7 @@ static void deduplicate_vertices(collections::Array<float> &out_positions, colle
         if (found == nullptr) {
             idx = unique_count++;
             vertex_map.set(key, idx);
-            out_positions.reserve(unique_count * 3);
-            out_positions.push(p[0]);
-            out_positions.push(p[1]);
-            out_positions.push(p[2]);
+            out_positions.push({p[0], p[1], p[2]});
         } else {
             idx = *found;
         }
@@ -182,7 +179,7 @@ static void compute_active_edges(TriangleMeshShape::Data &data, float cos_thresh
             edge_mask0 == 0b001 ? triangle0.index_a : edge_mask0 == 0b010 ? triangle0.index_b : triangle0.index_c;
         const uint32_t edge_end_index =
             edge_mask0 == 0b001 ? triangle0.index_b : edge_mask0 == 0b010 ? triangle0.index_c : triangle0.index_a;
-        const Vec3f edge_direction = vec3f::subtract(vec3f::load(data.positions, edge_end_index * 3), vec3f::load(data.positions, edge_start_index * 3));
+        const Vec3f edge_direction = vec3f::subtract(vec3f::load(data.positions[edge_end_index]), vec3f::load(data.positions[edge_start_index]));
 
         // concave edges are never active, convex edges are active past the threshold angle
         if (!active_edges::is_edge_active(vec3f::load(triangle0.normal), vec3f::load(triangle1.normal), edge_direction, cos_threshold)) {
@@ -198,7 +195,7 @@ namespace {
 
 /** what build works in, freed with it */
 struct Scratch {
-    collections::Array<float> positions;
+    collections::Array<Float3> positions;
     collections::Array<uint32_t> index_map;
     collections::Array<TriangleMeshShape::Triangle> triangles;
     collections::Map<TriangleKey, uint32_t> seen;
@@ -213,7 +210,7 @@ TriangleMeshShape::Data *build(const TriangleMeshShapeSettings &settings) {
 
     /* deduplicate vertices */
     deduplicate_vertices(scratch.positions, scratch.index_map, settings.positions, settings.num_positions);
-    const float *positions = scratch.positions.data;
+    const Float3 *positions = scratch.positions.data;
 
     /* create initial triangles */
     const uint32_t raw_triangle_count = settings.num_indices / 3;
@@ -232,9 +229,9 @@ TriangleMeshShape::Data *build(const TriangleMeshShapeSettings &settings) {
         const uint32_t ic = scratch.index_map[ic_input];
 
         // get vertex positions
-        const Vec3f a = vec3f::load(positions, ia * 3);
-        const Vec3f b = vec3f::load(positions, ib * 3);
-        const Vec3f c = vec3f::load(positions, ic * 3);
+        const Vec3f a = vec3f::load(positions[ia]);
+        const Vec3f b = vec3f::load(positions[ib]);
+        const Vec3f c = vec3f::load(positions[ic]);
 
         // check for degeneracy
         const Vec3f edge1 = vec3f::subtract(b, a);
@@ -288,7 +285,7 @@ TriangleMeshShape::Data *build(const TriangleMeshShapeSettings &settings) {
 
     // the mesh over the scratch arrays, until the bvh fixes the triangle order and node count
     TriangleMeshShape::Data working = {};
-    working.vertex_count = scratch.positions.length / 3;
+    working.vertex_count = scratch.positions.length;
     working.triangle_count = triangles.length;
     working.positions = scratch.positions.data;
     working.triangles = triangles.data;
@@ -301,7 +298,7 @@ TriangleMeshShape::Data *build(const TriangleMeshShapeSettings &settings) {
     triangle_mesh_bvh::build(scratch.nodes, working, bvh_settings);
 
     TriangleMeshShape::Data *data = triangle_mesh_data::create(working.vertex_count, working.triangle_count, scratch.nodes.length);
-    if (working.vertex_count > 0) util::copy(data->positions, working.positions, working.vertex_count * 3 * sizeof(float));
+    if (working.vertex_count > 0) util::copy(data->positions, working.positions, working.vertex_count * sizeof(Float3));
     if (working.triangle_count > 0) util::copy(data->triangles, working.triangles, working.triangle_count * sizeof(TriangleMeshShape::Triangle));
     if (scratch.nodes.length > 0) util::copy(data->nodes, scratch.nodes.data, scratch.nodes.length * sizeof(BvhNode));
 
