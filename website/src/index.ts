@@ -17,6 +17,9 @@ worker.onmessage = (event: MessageEvent<WorkerMessage>) => {
     if (event.data.type === 'ready') document.getElementById('loading')?.remove();
 };
 
+// the pointer anywhere on the page steers the runner
+window.addEventListener('pointermove', (event) => send({ type: 'pointer', x: event.clientX, y: event.clientY }));
+
 window.addEventListener('resize', () =>
     send({ type: 'resize', width: window.innerWidth, height: window.innerHeight, pixelRatio: devicePixelRatio }),
 );

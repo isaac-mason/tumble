@@ -13,8 +13,6 @@ export type View = {
     output: g.Mesh;
 };
 
-const FOV = (50 * Math.PI) / 180;
-
 /** webgpu where the worker has it, else webgl2 on the canvas: both run the same node materials */
 async function createRenderer(target: g.CanvasTarget): Promise<g.Renderer<g.DeviceBackend>> {
     if (navigator.gpu !== undefined) {
@@ -27,7 +25,7 @@ async function createRenderer(target: g.CanvasTarget): Promise<g.Renderer<g.Devi
     return g.init(g.webgl({ target }));
 }
 
-/** a camera at eye looking at lookAt */
+/** a camera at eye looking at lookAt, with the given vertical field of view in radians */
 export async function createView(
     canvas: OffscreenCanvas,
     width: number,
@@ -35,11 +33,12 @@ export async function createView(
     pixelRatio: number,
     eye: Vec3,
     lookAt: Vec3,
+    fov: number,
 ): Promise<View> {
     const target = g.createCanvasTarget(canvas);
     const renderer = await createRenderer(target);
     const scene = new g.Scene();
-    const camera = new g.PerspectiveCamera(FOV, width / height, 0.1, 500);
+    const camera = new g.PerspectiveCamera(fov, width / height, 0.3, 500);
     camera.position[0] = eye[0];
     camera.position[1] = eye[1];
     camera.position[2] = eye[2];
