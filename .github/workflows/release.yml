@@ -48,8 +48,32 @@ jobs:
                       exit 1
                   }
 
+    native:
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-24.04-arm, macos-latest]
+        runs-on: ${{ matrix.os }}
+        timeout-minutes: 30
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version: 24
+                  package-manager-cache: false
+
+            - name: tools
+              run: |
+                  if [ "$RUNNER_OS" = Linux ]; then sudo apt-get install -y ninja-build clang g++; else brew install ninja; fi
+
+            - name: test
+              run: sh scripts/test-native.sh
+
     pages:
-        needs: test
+        needs: [test, native]
         runs-on: ubuntu-latest
         permissions:
             pages: write
@@ -92,7 +116,7 @@ jobs:
               uses: actions/deploy-pages@v4
 
     publish:
-        needs: test
+        needs: [test, native]
         runs-on: ubuntu-latest
         timeout-minutes: 30
         permissions:
