@@ -11,10 +11,6 @@ export type Renderer = {
     controls: g.OrbitControls;
 };
 
-/**
- * webgpu where the browser has it, else webgl2 on the canvas: both run the same node materials. `?renderer=webgpu` or
- * `?renderer=webgl` asks for one, used with no fallback
- */
 async function startGpu(target: g.CanvasTarget): Promise<g.Renderer<g.DeviceBackend>> {
     const asked = new URLSearchParams(location.search).get('renderer');
     if (asked === 'webgpu') return g.init(g.webgpu());
@@ -33,8 +29,6 @@ async function startGpu(target: g.CanvasTarget): Promise<g.Renderer<g.DeviceBack
 export async function createRenderer(eye: Vec3, target: Vec3): Promise<Renderer> {
     const canvas = document.createElement('canvas');
     document.body.appendChild(canvas);
-    // the scene is drawn straight onto the canvas, multisampled. the theme's colours are written as they are, so the
-    // canvas shows the hex values unchanged
     const canvasTarget = g.createCanvasTarget(canvas, { samples: 4, clearColor });
     canvasTarget.setPixelRatio(devicePixelRatio);
     canvasTarget.setSize(window.innerWidth, window.innerHeight);

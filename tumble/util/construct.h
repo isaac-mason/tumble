@@ -34,7 +34,6 @@ inline void destruct(T *object) {
     object->~T();
 }
 
-/** std::remove_reference: T without the & or && */
 template <typename T>
 struct RemoveReference {
     using Type = T;

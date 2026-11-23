@@ -37,7 +37,6 @@ jobs:
                   path: ~/.cache/tumble/wasm-toolchain
                   key: wasm-toolchain-${{ hashFiles('js/wasm/toolchain/scripts/toolchain-pins.sh') }}
 
-            # native, then wasm on both simd backends, then tumble.wasm rebuilt and the js package's tests
             - name: test
               run: sh scripts/test.sh
 
@@ -82,7 +81,6 @@ jobs:
             - name: tools
               run: sudo apt-get install -y ninja-build
 
-            # the page, the js examples and the c++ samples, over the committed tumble.wasm
             - name: site
               run: sh scripts/site.sh
 

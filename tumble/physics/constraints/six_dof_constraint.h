@@ -102,8 +102,6 @@ struct SixDOFConstraintSettings {
     float limit_min[SixDOFConstraint::Axis::NUM] = {-scalar::FLOAT_MAX, -scalar::FLOAT_MAX, -scalar::FLOAT_MAX, -scalar::PI, -scalar::PI, -scalar::PI};
     float limit_max[SixDOFConstraint::Axis::NUM] = {scalar::FLOAT_MAX, scalar::FLOAT_MAX, scalar::FLOAT_MAX, scalar::PI, scalar::PI, scalar::PI};
     float max_friction[SixDOFConstraint::Axis::NUM] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-    // each element spelled out: gcc cannot build the settings from a braced list when these are = {}, and without a
-    // default, clang warns when a designated initializer leaves them out
     SpringSettings limits_spring_settings[SixDOFConstraint::Axis::NUM_TRANSLATION] = {SpringSettings{}, SpringSettings{},
                                                                                       SpringSettings{}};
     /** per axis motor settings; 2 hz critically damped, no force or torque limits by default */

@@ -1,6 +1,4 @@
 #!/bin/sh
-# ./site, as github pages serves it: the page, the js examples under examples/, the c++ samples under samples/. built
-# over the committed js/dist/tumble.wasm, and needs emsdk for the samples. run: sh scripts/site.sh
 set -e
 cd "$(dirname "$0")/.."
 

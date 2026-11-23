@@ -18,7 +18,6 @@ type ShapeGroup = {
     mesh: g.Mesh;
     geometry: g.Geometry;
     instances: Float32Array;
-    /** what the material reads the instances from: a bigger buffer swapped in as the group grows */
     storage: g.StorageNode<typeof INSTANCES>;
     capacity: number;
     /** bodies of the shape */

@@ -11,13 +11,8 @@ export type View = {
     camera: g.PerspectiveCamera;
 };
 
-/** a backend the page asked for, else whichever there is */
 export type RendererChoice = 'webgpu' | 'webgl' | null;
 
-/**
- * webgpu where the worker has it, else webgl2 on the canvas: both run the same node materials. one asked for is used
- * with no fallback
- */
 async function createRenderer(target: g.CanvasTarget, choice: RendererChoice): Promise<g.Renderer<g.DeviceBackend>> {
     if (choice === 'webgpu') return g.init(g.webgpu());
     if (choice === 'webgl') return g.init(g.webgl({ target }));
@@ -42,7 +37,6 @@ export async function createView(
     fov: number,
     choice: RendererChoice,
 ): Promise<View> {
-    // the scene is drawn straight onto the canvas, multisampled
     const target = g.createCanvasTarget(canvas, { samples: 4, clearColor });
     const renderer = await createRenderer(target, choice);
     console.log(`renderer: ${renderer.api}`);

@@ -4,7 +4,6 @@ import type { RendererChoice } from './view';
 // rest. sizes and pointer positions are css pixels
 
 export type PageMessage =
-    /** renderer: the backend the page's `?renderer=webgpu` or `?renderer=webgl` asks for, else null for whichever there is */
     | { type: 'start'; canvas: OffscreenCanvas; width: number; height: number; pixelRatio: number; renderer: RendererChoice }
     | { type: 'resize'; width: number; height: number; pixelRatio: number }
     /** each of the page's animation frames, at its time in ms: the worker steps and draws on these */
