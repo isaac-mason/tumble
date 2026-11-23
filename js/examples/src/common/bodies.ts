@@ -18,7 +18,8 @@ type ShapeGroup = {
     mesh: g.Mesh;
     geometry: g.Geometry;
     instances: Float32Array;
-    buffer: g.GpuBuffer<typeof INSTANCES>;
+    /** what the material reads the instances from: a bigger buffer swapped in as the group grows */
+    storage: g.StorageNode<typeof INSTANCES>;
     capacity: number;
     /** bodies of the shape */
     members: number;
@@ -49,8 +50,7 @@ export function createBodies(renderer: Renderer, world: World): Bodies {
 }
 
 /** lit from above, the instance's colour, the shape's geometry turned and moved by the instance's pose */
-function createMaterial(buffer: g.GpuBuffer<typeof INSTANCES>): g.Material {
-    const instances = g.storage(buffer);
+function createMaterial(instances: g.StorageNode<typeof INSTANCES>): g.Material {
     const first = g.instanceIndex.mul(g.u32(3));
     const position = g.index(instances, first);
     const rotation = g.index(instances, first.add(g.u32(1)));
@@ -78,13 +78,13 @@ function createGroup(bodies: Bodies, shape: Shape): ShapeGroup {
     geometry.setIndex(g.createIndexBuffer(indices));
     const capacity = 16;
     const instances = new Float32Array(capacity * INSTANCE_FLOATS);
-    const buffer = g.createStorageBuffer(INSTANCES, instances);
-    const mesh = new g.Mesh(geometry, createMaterial(buffer));
+    const storage = g.storage(g.createStorageBuffer(INSTANCES, instances));
+    const mesh = new g.Mesh(geometry, createMaterial(storage));
     // the instances are anywhere, so the shape's own bounds cannot cull them
     mesh.frustumCulled = false;
     mesh.count = 0;
     bodies.renderer.scene.add(mesh);
-    return { shape, mesh, geometry, instances, buffer, capacity, members: 0 };
+    return { shape, mesh, geometry, instances, storage, capacity, members: 0 };
 }
 
 function join(bodies: Bodies, shape: Shape): ShapeGroup {
@@ -98,8 +98,8 @@ function join(bodies: Bodies, shape: Shape): ShapeGroup {
         // a bigger buffer, which the material reads in place of the last
         group.capacity *= 2;
         group.instances = new Float32Array(group.capacity * INSTANCE_FLOATS);
-        group.buffer = g.createStorageBuffer(INSTANCES, group.instances);
-        group.mesh.material = createMaterial(group.buffer);
+        group.storage.value!.dispose();
+        group.storage.value = g.createStorageBuffer(INSTANCES, group.instances);
     }
     return group;
 }
@@ -109,6 +109,7 @@ function leave(bodies: Bodies, group: ShapeGroup): void {
     if (--group.members > 0) return;
     bodies.renderer.scene.remove(group.mesh);
     group.geometry.dispose();
+    group.storage.value!.dispose();
     bodies.groups.delete(group.shape);
 }
 
@@ -215,6 +216,6 @@ export function drawBodies(bodies: Bodies, alpha: number): void {
     }
     for (const group of bodies.groups.values()) {
         group.mesh.visible = group.mesh.count > 0;
-        if (group.mesh.count > 0) group.buffer.needsUpdate = true;
+        if (group.mesh.count > 0) group.storage.value!.needsUpdate = true;
     }
 }
