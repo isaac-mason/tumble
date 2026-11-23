@@ -3,11 +3,11 @@
 #include <stdint.h>
 #include "tumble/config.h"
 
-#ifdef TUMBLE_USE_WASM_SIMD
+#ifdef TUMBLE_SIMD_WASM
 #include <wasm_simd128.h>
-#elif defined(TUMBLE_USE_SSE2)
+#elif defined(TUMBLE_SIMD_SSE2)
 #include <emmintrin.h>
-#elif defined(TUMBLE_USE_NEON)
+#elif defined(TUMBLE_SIMD_NEON)
 #include <arm_neon.h>
 #else
 #include "tumble/math/scalar.h"
@@ -20,11 +20,11 @@
 TUMBLE_NAMESPACE_BEGIN
 
 // four 32-bit lanes, read as floats (v4f), as integers (v4i) or as masks (a compare's lanes, all ones or all zeros)
-#ifdef TUMBLE_USE_WASM_SIMD
+#ifdef TUMBLE_SIMD_WASM
 using V128 = v128_t;
-#elif defined(TUMBLE_USE_SSE2)
+#elif defined(TUMBLE_SIMD_SSE2)
 using V128 = __m128;
-#elif defined(TUMBLE_USE_NEON)
+#elif defined(TUMBLE_SIMD_NEON)
 using V128 = float32x4_t;
 #else
 struct alignas(16) V128 {
@@ -36,7 +36,7 @@ struct alignas(16) V128 {
 
 namespace v4f {
 
-#ifdef TUMBLE_USE_WASM_SIMD
+#ifdef TUMBLE_SIMD_WASM
 
 /** lane 3 zero; never reads past the 12 bytes */
 inline V128 load3(const float *p) {
@@ -123,7 +123,7 @@ inline bool any_true(V128 mask) { return wasm_v128_any_true(mask); }
 /** a mask's lanes as the low four bits */
 inline uint32_t bitmask(V128 mask) { return wasm_i32x4_bitmask(mask); }
 
-#elif defined(TUMBLE_USE_SSE2)
+#elif defined(TUMBLE_SIMD_SSE2)
 
 inline V128 load3(const float *p) {
     const V128 xy = _mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<const __m64 *>(p));
@@ -224,7 +224,7 @@ inline bool any_true(V128 mask) {
 
 inline uint32_t bitmask(V128 mask) { return (uint32_t)_mm_movemask_ps(mask); }
 
-#elif defined(TUMBLE_USE_NEON)
+#elif defined(TUMBLE_SIMD_NEON)
 
 inline V128 load3(const float *p) {
     const V128 xy = vcombine_f32(vld1_f32(p), vdup_n_f32(0.0f));
@@ -443,7 +443,7 @@ inline float dot4(V128 a, V128 b) { return hsum4(mul(a, b)); }
 
 namespace v4i {
 
-#ifdef TUMBLE_USE_WASM_SIMD
+#ifdef TUMBLE_SIMD_WASM
 inline V128 make(int32_t x, int32_t y, int32_t z, int32_t w) { return wasm_i32x4_make(x, y, z, w); }
 inline V128 splat(int32_t s) { return wasm_i32x4_splat(s); }
 /** wraps */
@@ -452,7 +452,7 @@ template <int I>
 inline int32_t lane(V128 v) {
     return wasm_i32x4_extract_lane(v, I);
 }
-#elif defined(TUMBLE_USE_SSE2)
+#elif defined(TUMBLE_SIMD_SSE2)
 inline V128 make(int32_t x, int32_t y, int32_t z, int32_t w) { return _mm_castsi128_ps(_mm_setr_epi32(x, y, z, w)); }
 inline V128 splat(int32_t s) { return _mm_castsi128_ps(_mm_set1_epi32(s)); }
 inline V128 add(V128 a, V128 b) { return _mm_castsi128_ps(_mm_add_epi32(_mm_castps_si128(a), _mm_castps_si128(b))); }
@@ -460,7 +460,7 @@ template <int I>
 inline int32_t lane(V128 v) {
     return _mm_cvtsi128_si32(_mm_shuffle_epi32(_mm_castps_si128(v), _MM_SHUFFLE(I, I, I, I)));
 }
-#elif defined(TUMBLE_USE_NEON)
+#elif defined(TUMBLE_SIMD_NEON)
 inline V128 make(int32_t x, int32_t y, int32_t z, int32_t w) {
     const int32_t lanes[4] = {x, y, z, w};
     return vreinterpretq_f32_s32(vld1q_s32(lanes));
