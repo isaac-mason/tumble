@@ -270,8 +270,6 @@ static void get_adaptive_plane_supporting_face(SupportingFace &out_face, const S
     for (uint32_t i = 0; i < 4; i++) out_face.vertices[i] = vertices[i];
 }
 
-static Support collide_convex_vs_plane_support;
-
 void collide_convex_vs_plane(CollideShapeCollector &collector, const CollideShapeSettings &settings,
                              const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                              const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
@@ -294,7 +292,7 @@ void collide_convex_vs_plane(CollideShapeCollector &collector, const CollideShap
     const Vec3f normal = plane3f::normal(local_plane);
 
     // support function for the convex shape with its scale applied
-    Support &support = collide_convex_vs_plane_support;
+    Support support;
     shapes::set_shape_support(support, shape_a, SupportFunctionMode::DEFAULT, transform_a.scale);
 
     // support point in the direction opposite the plane normal
@@ -345,8 +343,6 @@ void collide_convex_vs_plane(CollideShapeCollector &collector, const CollideShap
 
 /* cast convex vs plane */
 
-static Support cast_convex_vs_plane_support;
-
 void cast_convex_vs_plane(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *shape_a,
                           const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a, Vec3f displacement_a,
                           const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
@@ -365,7 +361,7 @@ void cast_convex_vs_plane(CastShapeCollector &collector, const CastShapeSettings
     const Vec3f normal = plane3f::normal(plane);
 
     // support function
-    Support &support = cast_convex_vs_plane_support;
+    Support support;
     shapes::set_shape_support(support, shape_a, SupportFunctionMode::DEFAULT, transform_a.scale);
 
     // support point of the convex shape opposite the plane normal, in the plane's space

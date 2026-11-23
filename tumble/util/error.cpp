@@ -4,7 +4,7 @@ TUMBLE_NAMESPACE_BEGIN
 
 namespace util {
 
-constinit static Error the_error = Error::NONE;
+constinit static thread_local Error the_error = Error::NONE;
 
 void set_error(Error error) {
     if (the_error == Error::NONE) the_error = error;

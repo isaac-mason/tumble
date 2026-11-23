@@ -22,7 +22,7 @@ namespace update {
 
 
 /** the most manifolds the reduction keeps per body pair */
-static constexpr uint32_t MAX_REDUCTION_MANIFOLDS = 32;
+static constexpr uint32_t MAX_REDUCTION_MANIFOLDS = NarrowphaseScratch::MAX_REDUCTION_MANIFOLDS;
 
 /** the body's pose as the narrowphase takes it: the shape origin, unscaled */
 static Transform body_transform(const RigidBody &body) { return transform::make(body.position, body.quaternion); }
@@ -132,12 +132,6 @@ struct NarrowphaseContext {
     bool constraints_created;
 };
 
-// the reduction collector's manifolds, with the unit normal of the hit that started each one: hits merge against it and
-// pruning projects along it
-static ContactManifold narrowphase_manifolds[MAX_REDUCTION_MANIFOLDS];
-static Vec3f narrowphase_first_world_space_normals[MAX_REDUCTION_MANIFOLDS];
-static ContactManifold narrowphase_temp_manifold;
-
 static float max_contact_distance(const World &world) {
     return world.settings.narrowphase.speculative_contact_distance + world.settings.narrowphase.manifold_tolerance;
 }
@@ -155,7 +149,8 @@ static void start_manifold(ContactManifold &m, Vec3f base_offset, Vec3f world_sp
 /** with manifold reduction: the hit's points join the manifold whose first normal it is within the max delta rotation of */
 static void reduction_add_hit(CollideShapeCollector &collector, const CollideShapeHit &hit) {
     NarrowphaseContext &context = *static_cast<NarrowphaseContext *>(collector.context);
-    const World &world = *context.world;
+    World &world = *context.world;
+    NarrowphaseScratch &scratch = world.narrowphase_scratch;
     const Vec3f base_offset = context.body_a->position;
     const float normal_threshold = world.settings.narrowphase.normal_cos_max_delta_rotation;
 
@@ -164,7 +159,7 @@ static void reduction_add_hit(CollideShapeCollector &collector, const CollideSha
     // an existing manifold with a similar normal
     int32_t found_index = -1;
     for (uint32_t i = 0; i < context.num_manifolds; i++) {
-        if (vec3f::dot(world_space_normal, narrowphase_first_world_space_normals[i]) >= normal_threshold) {
+        if (vec3f::dot(world_space_normal, scratch.first_world_space_normals[i]) >= normal_threshold) {
             found_index = (int32_t)i;
             break;
         }
@@ -175,25 +170,25 @@ static void reduction_add_hit(CollideShapeCollector &collector, const CollideSha
             // full: replace the shallowest manifold if this hit is deeper
             uint32_t shallowest = 0;
             for (uint32_t i = 1; i < context.num_manifolds; i++) {
-                if (narrowphase_manifolds[i].penetration_depth < narrowphase_manifolds[shallowest].penetration_depth) shallowest = i;
+                if (scratch.manifolds[i].penetration_depth < scratch.manifolds[shallowest].penetration_depth) shallowest = i;
             }
-            if (hit.penetration < narrowphase_manifolds[shallowest].penetration_depth) return;
+            if (hit.penetration < scratch.manifolds[shallowest].penetration_depth) return;
             found_index = (int32_t)shallowest;
         } else {
             found_index = (int32_t)context.num_manifolds;
             context.num_manifolds++;
         }
-        start_manifold(narrowphase_manifolds[found_index], base_offset, world_space_normal, hit);
-        narrowphase_first_world_space_normals[found_index] = world_space_normal;
+        start_manifold(scratch.manifolds[found_index], base_offset, world_space_normal, hit);
+        scratch.first_world_space_normals[found_index] = world_space_normal;
     } else {
         // accumulate the normal, normalised before the constraints are made
-        ContactManifold &found = narrowphase_manifolds[found_index];
+        ContactManifold &found = scratch.manifolds[found_index];
         found.world_space_normal = vec3f::add(found.world_space_normal, world_space_normal);
     }
-    ContactManifold &found = narrowphase_manifolds[found_index];
+    ContactManifold &found = scratch.manifolds[found_index];
 
     // the hit's contact points, appended to the manifold
-    ContactManifold &temp = narrowphase_temp_manifold;
+    ContactManifold &temp = scratch.temp_manifold;
     manifold::reset(temp);
     temp.base_offset = base_offset;
     manifold::manifold_between_two_faces(temp, hit.point_a, hit.point_b, hit.penetration_axis, max_contact_distance(world), hit.face_a,
@@ -208,15 +203,16 @@ static void reduction_add_hit(CollideShapeCollector &collector, const CollideSha
     found.penetration_depth = scalar::max(found.penetration_depth, hit.penetration);
 
     // prune past 32 points so the next hit has room (the accumulated normal is not unit yet, so along the first)
-    if (found.num_contact_points > 32) manifold::prune_contact_points(found, narrowphase_first_world_space_normals[found_index]);
+    if (found.num_contact_points > 32) manifold::prune_contact_points(found, scratch.first_world_space_normals[found_index]);
 }
 
 /** the reduced manifolds made into contact constraints; whether any was created */
 static bool reduction_finalize_and_create_constraints(NarrowphaseContext &context) {
     World &world = *context.world;
+    NarrowphaseScratch &scratch = world.narrowphase_scratch;
     bool constraints_created = false;
     for (uint32_t i = 0; i < context.num_manifolds; i++) {
-        ContactManifold &m = narrowphase_manifolds[i];
+        ContactManifold &m = scratch.manifolds[i];
 
         // the sum of every merged hit's normal
         m.world_space_normal = vec3f::normalize(m.world_space_normal);
@@ -238,7 +234,7 @@ static void non_reduction_add_hit(CollideShapeCollector &collector, const Collid
     NarrowphaseContext &context = *static_cast<NarrowphaseContext *>(collector.context);
     World &world = *context.world;
 
-    ContactManifold &m = narrowphase_temp_manifold;
+    ContactManifold &m = world.narrowphase_scratch.temp_manifold;
     Vec3f world_space_normal = vec3f::normalize(hit.penetration_axis);
     start_manifold(m, context.body_a->position, world_space_normal, hit);
     manifold::manifold_between_two_faces(m, hit.point_a, hit.point_b, hit.penetration_axis, max_contact_distance(world), hit.face_a,
@@ -644,7 +640,7 @@ static void on_ccd_contact_added(World &world, RigidBody &body_a, RigidBody &bod
     RigidBody *ordered_a = &body_a;
     RigidBody *ordered_b = &body_b;
     const ContactManifold *ordered_manifold = &contact_manifold;
-    ContactManifold &swapped = narrowphase_temp_manifold;
+    ContactManifold &swapped = world.narrowphase_scratch.temp_manifold;
     if (body_a.id > body_b.id) {
         ordered_a = &body_b;
         ordered_b = &body_a;
@@ -736,7 +732,7 @@ static void find_ccd_contacts(World &world, float delta_time) {
 
             // points by clipping, keeping face points within the manifold tolerance of the hit; relative to a's centre
             // of mass at the start of the sweep
-            ContactManifold &contact_manifold = narrowphase_manifolds[0];
+            ContactManifold &contact_manifold = world.narrowphase_scratch.manifolds[0];
             manifold::reset(contact_manifold);
             contact_manifold.base_offset = body_a.center_of_mass_position;
             manifold::manifold_between_two_faces(contact_manifold, hit.point_a, hit.point_b, hit.penetration_axis,

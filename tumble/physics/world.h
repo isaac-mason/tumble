@@ -12,10 +12,18 @@
 #include "tumble/physics/contacts.h"
 #include "tumble/physics/events.h"
 #include "tumble/physics/islands.h"
+#include "tumble/physics/manifold/manifold.h"
 #include "tumble/physics/pairs.h"
 #include "tumble/physics/world_settings.h"
 
 TUMBLE_NAMESPACE_BEGIN
+
+struct NarrowphaseScratch {
+    static constexpr uint32_t MAX_REDUCTION_MANIFOLDS = 32;
+    ContactManifold manifolds[MAX_REDUCTION_MANIFOLDS];
+    Vec3f first_world_space_normals[MAX_REDUCTION_MANIFOLDS];
+    ContactManifold temp_manifold;
+};
 
 struct World {
     /** owned: the layers are released with the world */
@@ -34,6 +42,7 @@ struct World {
     ContactPairs contact_pairs;
     Islands islands;
     CCD ccd;
+    NarrowphaseScratch narrowphase_scratch;
     WorldEvents events;
     /** the step in flight, set by update::step_begin */
     float delta_time;

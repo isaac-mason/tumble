@@ -318,9 +318,6 @@ static void set_triangle_support(Support &out, Vec3f a, Vec3f b, Vec3f c) { supp
 
 /* cast shape */
 
-static Support cast_support_a;
-static Support cast_triangle_support;
-
 void cast_convex_vs_triangle_mesh(CastShapeCollector &collector, const CastShapeSettings &settings,
                                   const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                                   Vec3f displacement_a, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
@@ -356,7 +353,8 @@ void cast_convex_vs_triangle_mesh(CastShapeCollector &collector, const CastShape
     // determine if we want to use the actual shape or a shrunken shape with convex radius
     const SupportFunctionMode support_mode =
         settings.use_shrunken_shape_and_convex_radius ? SupportFunctionMode::EXCLUDE_CONVEX_RADIUS : SupportFunctionMode::DEFAULT;
-    Support &support_a = cast_support_a;
+    Support support_a;
+    Support cast_triangle_support;
     shapes::set_shape_support(support_a, shape_a, support_mode, scale_a);
 
     // determine if shape is inside out or not
@@ -527,13 +525,6 @@ void cast_convex_vs_triangle_mesh(CastShapeCollector &collector, const CastShape
 
 /* collide shape */
 
-static Support collide_support_a;
-// a separate support for the epa-inflated a, so `collide_support_a` stays EXCLUDE across the triangle loop
-static Support collide_support_a_with_radius;
-static Support collide_triangle_support;
-// zeroed is an empty depth; epa's hull initialisation resets the builder before use
-static PenetrationDepth collide_penetration_depth;
-
 void collide_convex_vs_triangle_mesh(CollideShapeCollector &collector, const CollideShapeSettings &settings,
                                      const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                                      const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
@@ -581,11 +572,12 @@ void collide_convex_vs_triangle_mesh(CollideShapeCollector &collector, const Col
     // both supports for shape a are filled once per pair, the first time a triangle needs one: the
     // shrunk core on the first triangle to reach gjk, the inflated one on the first to reach epa.
     // a pair whose bvh walk reaches no leaf fills neither.
-    Support &support_a = collide_support_a;
+    Support support_a;
+    Support collide_triangle_support;
     bool support_a_filled = false;
-    Support &support_a_with_radius = collide_support_a_with_radius;
+    Support support_a_with_radius;
     bool support_a_with_radius_filled = false;
-    PenetrationDepth &penetration_depth = collide_penetration_depth;
+    PenetrationDepth penetration_depth;
 
     // query shape centre in b's space for the centre-to-centre distance ordering
     const Vec3f query_center = aabox::center(bounds_of_1_in_space_of_2);

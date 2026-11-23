@@ -7,7 +7,7 @@
 import type { Instance } from '../module.js';
 
 /** fnv-1a of the description the manifest produced; the wasm carries the same and the loader refuses a mismatch. */
-export const SCHEMA_HASH = 0x2ba450f3;
+export const SCHEMA_HASH = 0xf3a18e18;
 /** bytes of scratch the loader allocates for value params: the most any one call needs. */
 export const SCRATCH_BYTES = 400;
 
@@ -6586,27 +6586,27 @@ export type World = Handle<'World'>;
 /** World's fields as a plain object, for World.writeTo / readFrom over another realm's buffer. */
 export type WorldValue = { events: WorldEventsValue };
 export const World = {
-    size: 1136,
+    size: 71344,
     align: 16,
     /** byte offset of each field, for hot paths that read the views directly. */
     offset: {
-        events: 1068,
+        events: 71280,
     },
     createValue(): WorldValue {
         return { events: WorldEvents.createValue() };
     },
     /** writes it at a byte offset of any buffer (little-endian), laid out as in the wasm's memory. */
     writeTo(view: DataView, offset: number, value: WorldValue): void {
-        view.setUint32(offset + 1116, value.events.woken, true);
+        view.setUint32(offset + 71328, value.events.woken, true);
     },
     /** reads it at a byte offset of any buffer (little-endian) into out, and returns out. */
     readFrom(out: WorldValue, view: DataView, offset: number): WorldValue {
-        out.events.woken = view.getUint32(offset + 1116, true);
+        out.events.woken = view.getUint32(offset + 71328, true);
         return out;
     },
 
     events(world: World): WorldEvents {
-        return (world + 1068) as WorldEvents;
+        return (world + 71280) as WorldEvents;
     },
 
     create(settings: WorldSettings): World {

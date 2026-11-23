@@ -41,8 +41,8 @@ constinit static size_t the_blocks = 0;
 
 void set_allocator(const Allocator &allocator) { the_allocator = allocator; }
 
-size_t allocated_bytes() { return the_bytes; }
-size_t allocated_blocks() { return the_blocks; }
+size_t allocated_bytes() { return __atomic_load_n(&the_bytes, __ATOMIC_RELAXED); }
+size_t allocated_blocks() { return __atomic_load_n(&the_blocks, __ATOMIC_RELAXED); }
 
 void *alloc_bytes(size_t bytes, size_t alignment) {
     if (bytes == 0) return nullptr;
@@ -52,16 +52,16 @@ void *alloc_bytes(size_t bytes, size_t alignment) {
         set_error(Error::OUT_OF_MEMORY);
         __builtin_trap();
     }
-    the_bytes += bytes;
-    the_blocks++;
+    __atomic_fetch_add(&the_bytes, bytes, __ATOMIC_RELAXED);
+    __atomic_fetch_add(&the_blocks, 1, __ATOMIC_RELAXED);
     return block;
 }
 
 void free_bytes(void *block, size_t bytes) {
     if (block == nullptr) return;
-    TUMBLE_ASSERT(bytes <= the_bytes && the_blocks > 0);
-    the_bytes -= bytes;
-    the_blocks--;
+    TUMBLE_ASSERT(bytes <= __atomic_load_n(&the_bytes, __ATOMIC_RELAXED) && __atomic_load_n(&the_blocks, __ATOMIC_RELAXED) > 0);
+    __atomic_fetch_sub(&the_bytes, bytes, __ATOMIC_RELAXED);
+    __atomic_fetch_sub(&the_blocks, 1, __ATOMIC_RELAXED);
     the_allocator.free(block, bytes, the_allocator.user);
 }
 

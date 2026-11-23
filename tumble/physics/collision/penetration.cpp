@@ -372,8 +372,6 @@ bool penetration_depth_step_epa(PenetrationDepth &out, Support &support_a_includ
     return true;
 }
 
-static PenetrationDepth cast_shape_penetration_depth;
-
 void cast_shape(GjkCastShapeResult &out, const Mat4f &transform_a_to_b, Support &shape_a_support,
                 Support &shape_b_support, Vec3f displacement, float collision_tolerance, float penetration_tolerance,
                 float convex_radius_a, float convex_radius_b, float max_lambda, bool return_deepest_point) {
@@ -398,7 +396,7 @@ void cast_shape(GjkCastShapeResult &out, const Mat4f &transform_a_to_b, Support 
         shape_a_support.add_radius = convex_radius_a;
         shape_b_support.add_radius = convex_radius_b;
 
-        PenetrationDepth &penetration_depth = cast_shape_penetration_depth;
+        PenetrationDepth penetration_depth;
         const bool collided =
             penetration_depth_step_epa(penetration_depth, shape_a_support, shape_b_support, penetration_tolerance, out.simplex);
         if (collided) {

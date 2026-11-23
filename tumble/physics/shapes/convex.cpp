@@ -24,10 +24,9 @@ int32_t get_convex_material(const Shape *shape, SubShapeId sub_shape_id) {
 
 /* cast ray */
 
-static Support cast_ray_support;
-
 void cast_ray_vs_convex(CastRayCollector &collector, const CastRaySettings &settings, const Rayf &ray,
                         const Shape *shape, const SubShapeIdBuilder &sub_shape_id, const Transform &transform) {
+    Support cast_ray_support;
     shapes::set_shape_support(cast_ray_support, shape, SupportFunctionMode::INCLUDE_CONVEX_RADIUS, transform.scale);
 
     // transform ray from world space to shape local space
@@ -90,12 +89,11 @@ void cast_ray_vs_convex(CastRayCollector &collector, const CastRaySettings &sett
 
 /* collide point */
 
-static Support collide_point_point_support;
-static Support collide_point_shape_support;
-
 void collide_point_vs_convex(CollidePointCollector &collector, const CollidePointSettings &settings,
                              Vec3f point, const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b,
                              const Transform &transform_b) {
+    Support collide_point_point_support;
+    Support collide_point_shape_support;
     // transform point to shape's local space: apply inverse rotation
     const Quatf inv_quat_b = quatf::conjugate(transform_b.quaternion);
     Vec3f local_point = vec3f::subtract(point, transform_b.position);
@@ -138,11 +136,6 @@ void collide_point_vs_convex(CollidePointCollector &collector, const CollidePoin
 
 /* collide convex vs convex */
 
-static Support collide_support_a;
-static Support collide_support_b;
-// zeroed is an empty depth; epa's hull initialisation resets the builder before use
-static PenetrationDepth collide_penetration_depth;
-
 void collide_convex_vs_convex(CollideShapeCollector &collector, const CollideShapeSettings &settings,
                               const Shape *shape_a, const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a,
                               const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
@@ -178,8 +171,8 @@ void collide_convex_vs_convex_local(CollideShapeCollector &collector, const Coll
     // TODO: OBB3 early out?
 
     // get supports (shrunk cores; convex radius reported and applied by gjk)
-    Support &support_a = collide_support_a;
-    Support &support_b = collide_support_b;
+    Support support_a;
+    Support support_b;
     shapes::set_shape_support(support_a, shape_a, SupportFunctionMode::EXCLUDE_CONVEX_RADIUS, scale_a);
     shapes::set_shape_support(support_b, shape_b, SupportFunctionMode::EXCLUDE_CONVEX_RADIUS, scale_b);
 
@@ -198,7 +191,7 @@ void collide_convex_vs_convex_local(CollideShapeCollector &collector, const Coll
         penetration_axis = vec3f::make(1.0f, 0.0f, 0.0f);
     }
 
-    PenetrationDepth &penetration_depth = collide_penetration_depth;
+    PenetrationDepth penetration_depth;
     Simplex simplex;
     simplex.size = 0;
 
@@ -298,9 +291,6 @@ void collide_convex_vs_convex_local(CollideShapeCollector &collector, const Coll
 
 /* cast convex vs convex */
 
-static Support cast_support_a;
-static Support cast_support_b;
-
 void cast_convex_vs_convex(CastShapeCollector &collector, const CastShapeSettings &settings, const Shape *shape_a,
                            const SubShapeIdBuilder &sub_shape_id_a, const Transform &transform_a, Vec3f displacement_a,
                            const Shape *shape_b, const SubShapeIdBuilder &sub_shape_id_b, const Transform &transform_b) {
@@ -332,8 +322,8 @@ void cast_convex_vs_convex_local(CastShapeCollector &collector, const CastShapeS
     // the actual shapes, or the shapes shrunk by their convex radius with the radius added back by the cast
     const SupportFunctionMode support_mode =
         settings.use_shrunken_shape_and_convex_radius ? SupportFunctionMode::EXCLUDE_CONVEX_RADIUS : SupportFunctionMode::DEFAULT;
-    Support &support_a = cast_support_a;
-    Support &support_b = cast_support_b;
+    Support support_a;
+    Support support_b;
     shapes::set_shape_support(support_a, shape_a, support_mode, scale_a);
     shapes::set_shape_support(support_b, shape_b, support_mode, scale_b);
 

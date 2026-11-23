@@ -64,9 +64,7 @@ struct QuadTree {
     /** the fat-leaf margin, world units */
     float expansion_margin;
 
-    // traversal and rebuild scratch, grown and reused
     collections::Array<NodeId> node_stack;
-    collections::Array<float> fraction_stack;
     collections::Array<NodeId> build_ids;
     collections::Array<Vec3f> build_centers;
     collections::Array<BuildEntry> build_stack;

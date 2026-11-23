@@ -35,7 +35,7 @@ trap 'rm -rf "$BUILD"' EXIT
 LIST_DIR="$ROOT/build/test-list"
 mkdir -p "$LIST_DIR"
 : > "$BUILD/test_list.inc"
-for f in $(find "$TESTS" -name '*.test.cpp' | sort); do
+for f in $(find "$TESTS" -name '*.test.cpp' -not -path "$TESTS/native/*" | sort); do
     for t in $(grep -o '^void test_[a-z0-9_]*(TestCtx' "$f" | sed 's/^void //; s/(TestCtx$//'); do
         echo "TEST($t)" >> "$BUILD/test_list.inc"
     done

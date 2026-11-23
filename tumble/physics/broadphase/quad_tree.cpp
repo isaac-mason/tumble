@@ -485,17 +485,34 @@ static void update_finalize(QuadTree &tree, QuadTree::NodeId root_id) {
 void rebuild(QuadTree &tree, const Bodies &bodies) { update_finalize(tree, update_prepare(tree, bodies, false)); }
 
 
-/** grows a walk's stack keeping what it holds: walks index past length */
 template <typename T>
-static void grow_keeping(collections::Array<T> &stack, uint32_t wanted) {
-    if (wanted <= stack.capacity) return;
-    stack.grow_preserving(wanted < 128 ? 128 : (wanted > stack.capacity * 2 ? wanted : stack.capacity * 2));
-}
+struct WalkStack {
+    static constexpr uint32_t INLINE_CAPACITY = 128;
+    T inline_items[INLINE_CAPACITY];
+    T *items = inline_items;
+    uint32_t capacity = INLINE_CAPACITY;
 
-/** room for four more entries above top on the walk's stack */
-static QuadTree::NodeId *reserve_stack(QuadTree &tree, uint32_t top) {
-    grow_keeping(tree.node_stack, top + 5);
-    return tree.node_stack.data;
+    WalkStack() = default;
+    WalkStack(const WalkStack &) = delete;
+    WalkStack &operator=(const WalkStack &) = delete;
+    ~WalkStack() {
+        if (items != inline_items) util::free_bytes(items, capacity * sizeof(T));
+    }
+
+    void grow_keeping(uint32_t wanted) {
+        if (wanted <= capacity) return;
+        const uint32_t grown = wanted > capacity * 2 ? wanted : capacity * 2;
+        T *bigger = static_cast<T *>(util::alloc_bytes(grown * sizeof(T), alignof(T)));
+        __builtin_memcpy(bigger, items, capacity * sizeof(T));
+        if (items != inline_items) util::free_bytes(items, capacity * sizeof(T));
+        items = bigger;
+        capacity = grown;
+    }
+};
+
+static QuadTree::NodeId *reserve_stack(WalkStack<QuadTree::NodeId> &stack, uint32_t top) {
+    stack.grow_keeping(top + 5);
+    return stack.items;
 }
 
 /** the closed overlap of the query box with the four children: a lane mask in the low four bits */
@@ -619,8 +636,9 @@ static inline uint32_t oriented_box4(const BoxAxes &b, V128 min_x, V128 min_y, V
  * pops from the top. leaf(body) returns false to stop the walk.
  */
 template <typename Test, typename Leaf>
-static void walk_tree(QuadTree &tree, const Bodies &bodies, Test test, Leaf leaf) {
-    QuadTree::NodeId *stack = reserve_stack(tree, 0);
+static void walk_tree(const QuadTree &tree, const Bodies &bodies, Test test, Leaf leaf) {
+    WalkStack<QuadTree::NodeId> walk_stack;
+    QuadTree::NodeId *stack = reserve_stack(walk_stack, 0);
     int32_t top = 0;
     stack[0] = from_node_index(tree.root_node);
     do {
@@ -628,7 +646,7 @@ static void walk_tree(QuadTree &tree, const Bodies &bodies, Test test, Leaf leaf
         if (is_body(id)) {
             if (!leaf(bodies.pool[id])) return;
         } else if (is_valid(id)) {
-            stack = reserve_stack(tree, (uint32_t)top);
+            stack = reserve_stack(walk_stack, (uint32_t)top);
             const QuadTree::Node &node = tree.nodes[node_index(id)];
             uint32_t mask = test(node) & 0xfu;
             while (mask != 0) {
@@ -833,11 +851,12 @@ static inline V128 slab_entry4(const SlabRay &ray, V128 expand, const QuadTree::
  * hit so far culled. children are grown by expand (a cast shape's half extents, zero for a ray); the body's own box is
  * tested at the leaf
  */
-static void cast_walk(const Bodies &bodies, QuadTree &tree, const SlabRay &ray, V128 expand, const Filter &query_filter,
+static void cast_walk(const Bodies &bodies, const QuadTree &tree, const SlabRay &ray, V128 expand, const Filter &query_filter,
                       BodyVisitor &visitor) {
-    QuadTree::NodeId *stack = reserve_stack(tree, 0);
-    grow_keeping(tree.fraction_stack, tree.node_stack.capacity);
-    float *fractions = tree.fraction_stack.data;
+    WalkStack<QuadTree::NodeId> walk_stack;
+    WalkStack<float> fraction_stack;
+    QuadTree::NodeId *stack = reserve_stack(walk_stack, 0);
+    float *fractions = fraction_stack.items;
 
     float best_fraction = visitor.early_out_fraction;
     int32_t top = 0;
@@ -858,9 +877,9 @@ static void cast_walk(const Bodies &bodies, QuadTree &tree, const SlabRay &ray, 
                 best_fraction = visitor.early_out_fraction;
             }
         } else if (is_valid(id)) {
-            stack = reserve_stack(tree, (uint32_t)top);
-            grow_keeping(tree.fraction_stack, tree.node_stack.capacity);
-            fractions = tree.fraction_stack.data;
+            stack = reserve_stack(walk_stack, (uint32_t)top);
+            fraction_stack.grow_keeping(walk_stack.capacity);
+            fractions = fraction_stack.items;
             const QuadTree::Node &node = tree.nodes[node_index(id)];
             const V128 entry = slab_entry4(ray, expand, node);
             float lane_fraction[4];

@@ -98,11 +98,8 @@ Vec3f transform_scale(Quatf rotation, Vec3f scale) {
                        vec3f::dot(vec3f::multiply(c2, c2), scale));
 }
 
-static SurfaceNormalResult surface_normal_result;
-static SupportingFaceResult supporting_face_result;
-
 Vec3f get_shape_surface_normal(const Shape *shape, Vec3f position, SubShapeId sub_shape_id) {
-    SurfaceNormalResult &io = surface_normal_result;
+    SurfaceNormalResult io = {};
     io.position = position;
     io.scale = vec3f::splat(1.0f);
     def_of(shape).get_surface_normal(io, shape, sub_shape_id);
@@ -116,7 +113,7 @@ MassProperties &compute_mass_properties(MassProperties &out, const Shape *shape)
 
 void get_shape_supporting_face(SupportingFace &out, const Shape *shape, SubShapeId sub_shape_id, Vec3f local_direction,
                                const Mat4f &transform, Vec3f scale) {
-    SupportingFaceResult &io = supporting_face_result;
+    SupportingFaceResult io = {};
     io.transform = transform;
     io.scale = scale;
     def_of(shape).get_supporting_face(io, local_direction, shape, sub_shape_id);
