@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "tumble/config.h"
 #include "digest.h"
 #include "harness.h"
 #include "util/out_of_memory.h"
@@ -17,6 +18,7 @@ int main(int argc, char **argv) {
         return 0;
     }
     if (argc == 2 && strcmp(argv[1], "--digest") == 0) {
+        printf("simd backend: %s\n", TUMBLE_SIMD_BACKEND_NAME);
         printf("digest: %08x\n", digest());
         return 0;
     }
@@ -26,6 +28,7 @@ int main(int argc, char **argv) {
     }
     for (uint32_t i = 0; i < test_count(); i++) {
         if (strcmp(test_name(i), argv[1]) != 0) continue;
+        printf("simd backend: %s\n", TUMBLE_SIMD_BACKEND_NAME);
         const TestCtx &ctx = test_run(i);
         const uint32_t recorded = ctx.failures < TEST_MAX_FAILURES ? ctx.failures : TEST_MAX_FAILURES;
         for (uint32_t f = 0; f < recorded; f++) {

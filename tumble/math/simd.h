@@ -5,8 +5,16 @@
 
 #ifdef TUMBLE_USE_WASM_SIMD
 #include <wasm_simd128.h>
+#elif defined(TUMBLE_USE_SSE2)
+#include <emmintrin.h>
+#elif defined(TUMBLE_USE_NEON)
+#include <arm_neon.h>
 #else
 #include "tumble/math/scalar.h"
+#endif
+
+#if defined(__clang__) || (defined(__GNUC__) && __GNUC__ >= 12)
+#define TUMBLE_HAS_SHUFFLEVECTOR
 #endif
 
 TUMBLE_NAMESPACE_BEGIN
@@ -14,6 +22,10 @@ TUMBLE_NAMESPACE_BEGIN
 // four 32-bit lanes, read as floats (v4f), as integers (v4i) or as masks (a compare's lanes, all ones or all zeros)
 #ifdef TUMBLE_USE_WASM_SIMD
 using V128 = v128_t;
+#elif defined(TUMBLE_USE_SSE2)
+using V128 = __m128;
+#elif defined(TUMBLE_USE_NEON)
+using V128 = float32x4_t;
 #else
 struct alignas(16) V128 {
     uint32_t lanes[4];
@@ -110,6 +122,196 @@ inline bool any_true(V128 mask) { return wasm_v128_any_true(mask); }
 
 /** a mask's lanes as the low four bits */
 inline uint32_t bitmask(V128 mask) { return wasm_i32x4_bitmask(mask); }
+
+#elif defined(TUMBLE_USE_SSE2)
+
+inline V128 load3(const float *p) {
+    const V128 xy = _mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<const __m64 *>(p));
+    return _mm_movelh_ps(xy, _mm_load_ss(p + 2));
+}
+
+inline V128 load3_xyzz(const float *p) {
+    const V128 xy = _mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<const __m64 *>(p));
+    return _mm_movelh_ps(xy, _mm_load1_ps(p + 2));
+}
+
+inline void store3(float *p, V128 v) {
+    _mm_storel_pi(reinterpret_cast<__m64 *>(p), v);
+    _mm_store_ss(p + 2, _mm_movehl_ps(v, v));
+}
+
+inline V128 load4(const float *p) { return _mm_loadu_ps(p); }
+inline void store4(float *p, V128 v) { _mm_storeu_ps(p, v); }
+
+inline V128 make(float x, float y, float z, float w) { return _mm_setr_ps(x, y, z, w); }
+inline V128 splat(float s) { return _mm_set1_ps(s); }
+inline V128 zero() { return _mm_setzero_ps(); }
+
+inline V128 add(V128 a, V128 b) { return _mm_add_ps(a, b); }
+inline V128 sub(V128 a, V128 b) { return _mm_sub_ps(a, b); }
+inline V128 mul(V128 a, V128 b) { return _mm_mul_ps(a, b); }
+inline V128 div(V128 a, V128 b) { return _mm_div_ps(a, b); }
+inline V128 min(V128 a, V128 b) { return _mm_min_ps(b, a); }
+inline V128 max(V128 a, V128 b) { return _mm_max_ps(b, a); }
+inline V128 fmin(V128 a, V128 b) {
+    const V128 either = _mm_or_ps(_mm_min_ps(a, b), _mm_min_ps(b, a));
+    const V128 unordered = _mm_cmpunord_ps(either, either);
+    const V128 quieted = _mm_or_ps(either, unordered);
+    const V128 payload_mask = _mm_castsi128_ps(_mm_srli_epi32(_mm_castps_si128(unordered), 10));
+    return _mm_andnot_ps(payload_mask, quieted);
+}
+inline V128 fmax(V128 a, V128 b) {
+    const V128 high = _mm_max_ps(a, b);
+    const V128 low = _mm_max_ps(b, a);
+    const V128 differ = _mm_xor_ps(high, low);
+    const V128 merged = _mm_sub_ps(_mm_or_ps(high, differ), differ);
+    const V128 unordered = _mm_cmpunord_ps(merged, merged);
+    const V128 payload_mask = _mm_castsi128_ps(_mm_srli_epi32(_mm_castps_si128(unordered), 10));
+    return _mm_andnot_ps(payload_mask, merged);
+}
+inline V128 neg(V128 a) { return _mm_xor_ps(a, _mm_set1_ps(-0.0f)); }
+inline V128 abs(V128 a) { return _mm_andnot_ps(_mm_set1_ps(-0.0f), a); }
+inline V128 sqrt(V128 a) { return _mm_sqrt_ps(a); }
+
+template <int I>
+inline float lane(V128 v) {
+    return _mm_cvtss_f32(_mm_shuffle_ps(v, v, _MM_SHUFFLE(I, I, I, I)));
+}
+
+template <int I>
+inline V128 set_lane(V128 v, float s) {
+    const V128 lane_mask = _mm_castsi128_ps(_mm_setr_epi32(I == 0 ? -1 : 0, I == 1 ? -1 : 0, I == 2 ? -1 : 0, I == 3 ? -1 : 0));
+    return _mm_or_ps(_mm_andnot_ps(lane_mask, v), _mm_and_ps(lane_mask, _mm_set1_ps(s)));
+}
+
+template <int X, int Y, int Z, int W>
+inline V128 shuffle(V128 a) {
+    return _mm_shuffle_ps(a, a, _MM_SHUFFLE(W, Z, Y, X));
+}
+
+template <int X, int Y, int Z, int W>
+inline V128 shuffle2(V128 a, V128 b) {
+#ifdef TUMBLE_HAS_SHUFFLEVECTOR
+    return __builtin_shufflevector(a, b, X, Y, Z, W);
+#else
+    const V128 from_a = shuffle<X & 3, Y & 3, Z & 3, W & 3>(a);
+    const V128 from_b = shuffle<X & 3, Y & 3, Z & 3, W & 3>(b);
+    const V128 take_a = _mm_castsi128_ps(_mm_setr_epi32(X < 4 ? -1 : 0, Y < 4 ? -1 : 0, Z < 4 ? -1 : 0, W < 4 ? -1 : 0));
+    return _mm_or_ps(_mm_and_ps(take_a, from_a), _mm_andnot_ps(take_a, from_b));
+#endif
+}
+
+inline V128 lt(V128 a, V128 b) { return _mm_cmplt_ps(a, b); }
+inline V128 le(V128 a, V128 b) { return _mm_cmple_ps(a, b); }
+inline V128 gt(V128 a, V128 b) { return _mm_cmpgt_ps(a, b); }
+inline V128 ge(V128 a, V128 b) { return _mm_cmpge_ps(a, b); }
+inline V128 eq(V128 a, V128 b) { return _mm_cmpeq_ps(a, b); }
+
+inline V128 bit_and(V128 a, V128 b) { return _mm_and_ps(a, b); }
+inline V128 bit_or(V128 a, V128 b) { return _mm_or_ps(a, b); }
+inline V128 bit_xor(V128 a, V128 b) { return _mm_xor_ps(a, b); }
+
+inline V128 select(V128 a, V128 b, V128 mask) { return _mm_or_ps(_mm_and_ps(mask, a), _mm_andnot_ps(mask, b)); }
+
+inline bool all_true(V128 mask) {
+    const __m128i lane_is_zero = _mm_cmpeq_epi32(_mm_castps_si128(mask), _mm_setzero_si128());
+    return _mm_movemask_ps(_mm_castsi128_ps(lane_is_zero)) == 0;
+}
+inline bool any_true(V128 mask) {
+    const __m128i byte_is_zero = _mm_cmpeq_epi8(_mm_castps_si128(mask), _mm_setzero_si128());
+    return _mm_movemask_epi8(byte_is_zero) != 0xFFFF;
+}
+
+inline uint32_t bitmask(V128 mask) { return (uint32_t)_mm_movemask_ps(mask); }
+
+#elif defined(TUMBLE_USE_NEON)
+
+inline V128 load3(const float *p) {
+    const V128 xy = vcombine_f32(vld1_f32(p), vdup_n_f32(0.0f));
+    return vsetq_lane_f32(p[2], xy, 2);
+}
+
+inline V128 load3_xyzz(const float *p) {
+    const V128 xy = vcombine_f32(vld1_f32(p), vdup_n_f32(0.0f));
+    return vsetq_lane_f32(p[2], vsetq_lane_f32(p[2], xy, 2), 3);
+}
+
+inline void store3(float *p, V128 v) {
+    vst1_f32(p, vget_low_f32(v));
+    vst1q_lane_f32(p + 2, v, 2);
+}
+
+inline V128 load4(const float *p) { return vld1q_f32(p); }
+inline void store4(float *p, V128 v) { vst1q_f32(p, v); }
+
+inline V128 make(float x, float y, float z, float w) {
+    const float lanes[4] = {x, y, z, w};
+    return vld1q_f32(lanes);
+}
+inline V128 splat(float s) { return vdupq_n_f32(s); }
+inline V128 zero() { return vdupq_n_f32(0.0f); }
+
+inline V128 add(V128 a, V128 b) { return vaddq_f32(a, b); }
+inline V128 sub(V128 a, V128 b) { return vsubq_f32(a, b); }
+inline V128 mul(V128 a, V128 b) { return vmulq_f32(a, b); }
+inline V128 div(V128 a, V128 b) { return vdivq_f32(a, b); }
+inline V128 min(V128 a, V128 b) { return vbslq_f32(vcltq_f32(b, a), b, a); }
+inline V128 max(V128 a, V128 b) { return vbslq_f32(vcltq_f32(a, b), b, a); }
+inline V128 fmin(V128 a, V128 b) { return vminq_f32(a, b); }
+inline V128 fmax(V128 a, V128 b) { return vmaxq_f32(a, b); }
+inline V128 neg(V128 a) { return vnegq_f32(a); }
+inline V128 abs(V128 a) { return vabsq_f32(a); }
+inline V128 sqrt(V128 a) { return vsqrtq_f32(a); }
+
+template <int I>
+inline float lane(V128 v) {
+    return vgetq_lane_f32(v, I);
+}
+
+template <int I>
+inline V128 set_lane(V128 v, float s) {
+    return vsetq_lane_f32(s, v, I);
+}
+
+template <int X, int Y, int Z, int W>
+inline V128 shuffle(V128 a) {
+#ifdef TUMBLE_HAS_SHUFFLEVECTOR
+    return __builtin_shufflevector(a, a, X, Y, Z, W);
+#else
+    return vsetq_lane_f32(lane<W>(a), vsetq_lane_f32(lane<Z>(a), vsetq_lane_f32(lane<Y>(a), vdupq_n_f32(lane<X>(a)), 1), 2), 3);
+#endif
+}
+
+template <int X, int Y, int Z, int W>
+inline V128 shuffle2(V128 a, V128 b) {
+#ifdef TUMBLE_HAS_SHUFFLEVECTOR
+    return __builtin_shufflevector(a, b, X, Y, Z, W);
+#else
+    const float both[8] = {lane<0>(a), lane<1>(a), lane<2>(a), lane<3>(a), lane<0>(b), lane<1>(b), lane<2>(b), lane<3>(b)};
+    return make(both[X], both[Y], both[Z], both[W]);
+#endif
+}
+
+inline V128 lt(V128 a, V128 b) { return vreinterpretq_f32_u32(vcltq_f32(a, b)); }
+inline V128 le(V128 a, V128 b) { return vreinterpretq_f32_u32(vcleq_f32(a, b)); }
+inline V128 gt(V128 a, V128 b) { return vreinterpretq_f32_u32(vcgtq_f32(a, b)); }
+inline V128 ge(V128 a, V128 b) { return vreinterpretq_f32_u32(vcgeq_f32(a, b)); }
+inline V128 eq(V128 a, V128 b) { return vreinterpretq_f32_u32(vceqq_f32(a, b)); }
+
+inline V128 bit_and(V128 a, V128 b) { return vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(a), vreinterpretq_u32_f32(b))); }
+inline V128 bit_or(V128 a, V128 b) { return vreinterpretq_f32_u32(vorrq_u32(vreinterpretq_u32_f32(a), vreinterpretq_u32_f32(b))); }
+inline V128 bit_xor(V128 a, V128 b) { return vreinterpretq_f32_u32(veorq_u32(vreinterpretq_u32_f32(a), vreinterpretq_u32_f32(b))); }
+
+inline V128 select(V128 a, V128 b, V128 mask) { return vbslq_f32(vreinterpretq_u32_f32(mask), a, b); }
+
+inline bool all_true(V128 mask) { return vminvq_u32(vreinterpretq_u32_f32(mask)) != 0; }
+inline bool any_true(V128 mask) { return vmaxvq_u32(vreinterpretq_u32_f32(mask)) != 0; }
+
+inline uint32_t bitmask(V128 mask) {
+    const uint32_t weights[4] = {1, 2, 4, 8};
+    const uint32x4_t sign_bits = vshrq_n_u32(vreinterpretq_u32_f32(mask), 31);
+    return vaddvq_u32(vmulq_u32(sign_bits, vld1q_u32(weights)));
+}
 
 #else
 
@@ -250,6 +452,25 @@ template <int I>
 inline int32_t lane(V128 v) {
     return wasm_i32x4_extract_lane(v, I);
 }
+#elif defined(TUMBLE_USE_SSE2)
+inline V128 make(int32_t x, int32_t y, int32_t z, int32_t w) { return _mm_castsi128_ps(_mm_setr_epi32(x, y, z, w)); }
+inline V128 splat(int32_t s) { return _mm_castsi128_ps(_mm_set1_epi32(s)); }
+inline V128 add(V128 a, V128 b) { return _mm_castsi128_ps(_mm_add_epi32(_mm_castps_si128(a), _mm_castps_si128(b))); }
+template <int I>
+inline int32_t lane(V128 v) {
+    return _mm_cvtsi128_si32(_mm_shuffle_epi32(_mm_castps_si128(v), _MM_SHUFFLE(I, I, I, I)));
+}
+#elif defined(TUMBLE_USE_NEON)
+inline V128 make(int32_t x, int32_t y, int32_t z, int32_t w) {
+    const int32_t lanes[4] = {x, y, z, w};
+    return vreinterpretq_f32_s32(vld1q_s32(lanes));
+}
+inline V128 splat(int32_t s) { return vreinterpretq_f32_s32(vdupq_n_s32(s)); }
+inline V128 add(V128 a, V128 b) { return vreinterpretq_f32_s32(vaddq_s32(vreinterpretq_s32_f32(a), vreinterpretq_s32_f32(b))); }
+template <int I>
+inline int32_t lane(V128 v) {
+    return vgetq_lane_s32(vreinterpretq_s32_f32(v), I);
+}
 #else
 inline V128 make(int32_t x, int32_t y, int32_t z, int32_t w) { return {{(uint32_t)x, (uint32_t)y, (uint32_t)z, (uint32_t)w}}; }
 inline V128 splat(int32_t s) { return make(s, s, s, s); }
@@ -263,3 +484,5 @@ inline int32_t lane(V128 v) {
 }  // namespace v4i
 
 TUMBLE_NAMESPACE_END
+
+#undef TUMBLE_HAS_SHUFFLEVECTOR
