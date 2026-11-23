@@ -19,9 +19,9 @@ tumble is a 3D physics engine in C++, built for games and simulations. It comes 
 - all memory through one allocator that you can replace
 - the whole API from one include, `tumble/tumble.h`
 
-**Single threaded**
+**Threads**
 
-tumble runs on one thread for now. It mainly targets WebAssembly, for deployment to game portals. WebAssembly threads need SharedArrayBuffer, which many portals do not support. Multithreading may come in the future.
+A world is stepped on one thread. tumble does not use threads inside a step yet. It mainly targets WebAssembly, for deployment to game portals, where threads need SharedArrayBuffer and many portals do not support it. See [Threads](#threads).
 
 **Samples**
 
@@ -47,15 +47,55 @@ add a checkout such as a git submodule with `add_subdirectory(path/to/tumble)`. 
 
 <Snippet source="./cmake/fetch_content/CMakeLists.txt" select="fetch-content" />
 
-The tests only build when tumble is the top-level project. It has two options:
+Or install it with `cmake --install`, and find it from your project:
+
+<Snippet source="./cmake/find_package/CMakeLists.txt" />
+
+The tests only build when tumble is the top-level project. It has these options:
 
 - `TUMBLE_DEBUG` enables the library's asserts.
-- `TUMBLE_NO_SIMD` uses the scalar backend where SIMD is available. Both backends give the same results.
+- `TUMBLE_INSTALL` adds the install rules.
+- `TUMBLE_SIMD` is `AUTO` (the default), which picks a backend from the target, or `NONE`, which uses the scalar backend.
+- `TUMBLE_DETERMINISM_FLAGS=OFF` stops tumble passing its floating point flags on to your targets.
 
 ### Without CMake
 
 Compile every `.cpp` under `tumble/` as C++20, with the repository root on the include path. Headers are included as
-`"tumble/physics/world.h"`. Use `-ffp-contract=off`, or `/fp:precise` on MSVC, and do not use fast math.
+`"tumble/physics/world.h"`. Add the determinism flags yourself (see [Determinism](#determinism)). To pick a SIMD
+backend, define one of `TUMBLE_SIMD_NONE`, `TUMBLE_SIMD_WASM`, `TUMBLE_SIMD_SSE2` or `TUMBLE_SIMD_NEON`. With none
+defined, the backend is chosen from the target.
+
+### SIMD
+
+The backends are WebAssembly simd128, SSE2 (x86-64), NEON (AArch64) and scalar. Every backend gives the same results,
+bit for bit.
+
+### Platforms
+
+Tested with clang and gcc on x86-64, clang on arm64, and on wasm32. MSVC is not supported yet.
+
+### Determinism
+
+The same steps give the same results on every host. With CMake, `tumble::tumble` passes `-ffp-contract=off` and
+`-fno-fast-math` (`/fp:precise` on MSVC) on to your targets. Without CMake, add them yourself. Do not enable
+flush-to-zero or denormals-are-zero in the thread that steps. Results then differ from other hosts.
+
+### Threads
+
+A world is stepped on one thread.
+
+Safe:
+
+- one world per thread
+- ray casts, shape casts and other queries on one world from several threads, between steps
+
+Not safe:
+
+- writing to a world from several threads
+- reading or writing a world while it steps
+- creating or destroying worlds from several threads at once, without a lock
+
+An allocator you set must be thread-safe.
 
 ## Quick start
 
