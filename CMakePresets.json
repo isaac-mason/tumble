@@ -14,6 +14,11 @@
             "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "TUMBLE_DEBUG": "OFF" }
         },
         {
+            "name": "gcc",
+            "inherits": "release",
+            "cacheVariables": { "CMAKE_CXX_COMPILER": "g++" }
+        },
+        {
             "name": "asan",
             "inherits": "debug",
             "cacheVariables": {
@@ -52,6 +57,7 @@
     "buildPresets": [
         { "name": "debug", "configurePreset": "debug" },
         { "name": "release", "configurePreset": "release" },
+        { "name": "gcc", "configurePreset": "gcc" },
         { "name": "asan", "configurePreset": "asan" },
         { "name": "ubsan", "configurePreset": "ubsan" },
         { "name": "samples", "configurePreset": "samples" },
@@ -60,6 +66,7 @@
     "testPresets": [
         { "name": "debug", "configurePreset": "debug", "output": { "outputOnFailure": true } },
         { "name": "release", "configurePreset": "release", "output": { "outputOnFailure": true } },
+        { "name": "gcc", "configurePreset": "gcc", "output": { "outputOnFailure": true } },
         { "name": "asan", "configurePreset": "asan", "output": { "outputOnFailure": true } },
         { "name": "ubsan", "configurePreset": "ubsan", "output": { "outputOnFailure": true } }
     ]
