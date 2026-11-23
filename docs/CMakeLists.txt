@@ -23,6 +23,13 @@ if(CMAKE_GENERATOR STREQUAL "Ninja")
                      -DBUILD=${CMAKE_CURRENT_BINARY_DIR}/fetch_content/build -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/build_consumer.cmake")
 endif()
 
+if(CMAKE_GENERATOR STREQUAL "Ninja" AND TUMBLE_IS_TOP_LEVEL AND TUMBLE_INSTALL)
+    add_test(NAME docs_find_package
+             COMMAND "${CMAKE_COMMAND}" -DTUMBLE_BUILD_DIR=${PROJECT_BINARY_DIR} -DCONSUMER=${CMAKE_CURRENT_SOURCE_DIR}/cmake/find_package
+                     -DPREFIX=${CMAKE_CURRENT_BINARY_DIR}/find_package/prefix -DBUILD=${CMAKE_CURRENT_BINARY_DIR}/find_package/build
+                     -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/install_and_consume.cmake")
+endif()
+
 find_program(NODE node)
 if(NODE)
     add_test(NAME docs_rendered COMMAND "${NODE}" "${CMAKE_CURRENT_SOURCE_DIR}/build.mjs" --check)
