@@ -25,6 +25,7 @@
     ],
     "scripts": {
         "build": "tsc -p tsconfig.build.json",
+        "build:wasm": "sh wasm/toolchain/scripts/fetch-toolchain.sh && sh wasm/toolchain/build.sh",
         "typecheck": "tsc --noEmit -p tsconfig.json",
         "test": "vitest run",
         "bench": "cd bench && labs",
