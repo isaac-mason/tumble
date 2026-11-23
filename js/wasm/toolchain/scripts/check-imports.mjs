@@ -1,9 +1,3 @@
-// fails the build unless the module imports exactly `env.memory` and nothing else: the wasm can
-// never call JS because there is no function import to call. also refuses `__wasm_call_ctors`
-// in the exports. a global constructor that stays internal is worse: with no entry point the
-// linker wraps every export to run the constructor list on each call, which -Wglobal-constructors
-// in toolchain.sh is what prevents.
-//
 // usage: node check-imports.mjs <file.wasm>
 import { readFileSync } from 'node:fs';
 

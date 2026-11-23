@@ -1,6 +1,4 @@
 #!/bin/sh
-# download the pinned llvm (clang + lld) and binaryen releases into the toolchain cache, checksum-verified, keeping only
-# what the build runs: clang, wasm-ld, clang's builtin headers, and wasm-opt. macOS arm64 and Linux x64.
 # run: sh js/wasm/toolchain/scripts/fetch-toolchain.sh   (TUMBLE_TOOLCHAIN_CACHE overrides where it goes)
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -10,8 +8,6 @@ LLVM_MAJOR="${LLVM_VERSION%%.*}"
 LLVM_URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-$LLVM_VERSION"
 BINARYEN_URL="https://github.com/WebAssembly/binaryen/releases/download/version_$BINARYEN_VERSION"
 
-# llvm's macOS archive comes as .tar.xz, which macOS tar reads with nothing installed; the Linux one as .tar.zst, which
-# is 40% smaller than its .tar.xz and needs zstd.
 case "$(uname -s)-$(uname -m)" in
 Darwin-arm64)
     LLVM_ARCHIVE="LLVM-$LLVM_VERSION-macOS-ARM64.tar.xz"
@@ -39,8 +35,6 @@ sha256_of() {
     fi
 }
 
-# fetch <url> <file> <sha256> : downloads to file, refusing it if the checksum differs. a file already there passed
-# the check on an earlier run that stopped before unpacking it.
 fetch() {
     [ -f "$2" ] && return 0
     echo "fetching $1"
@@ -53,8 +47,6 @@ fetch() {
     mv "$2.part" "$2"
 }
 
-# unpack <archive> <dest> <member...> : the named members of the archive, its top directory stripped, into dest. the
-# archive is removed once unpacked, and dest is moved into place whole, so a cut-short run leaves nothing half there.
 unpack() {
     archive="$1"
     dest="$2"
@@ -62,7 +54,6 @@ unpack() {
     staging="$dest.staging"
     mkdir -p "$staging"
     case "$archive" in
-    # llvm compresses with a 1 GiB window, past zstd's default 128 MiB decode limit
     *.tar.zst) zstd -dc --long=31 "$archive" | tar -x -C "$staging" --strip-components=1 "$@" ;;
     *) tar -xf "$archive" -C "$staging" --strip-components=1 "$@" ;;
     esac
@@ -81,7 +72,6 @@ else
     } ;; esac
     fetch "$LLVM_URL/$LLVM_ARCHIVE" "$TOOLCHAIN_CACHE/$LLVM_ARCHIVE" "$LLVM_SHA256"
     top="${LLVM_ARCHIVE%.tar.*}"
-    # clang and wasm-ld are links to clang-<major> and lld, which come along
     unpack "$TOOLCHAIN_CACHE/$LLVM_ARCHIVE" "$LLVM_DIR" \
         "$top/bin/clang" "$top/bin/clang-$LLVM_MAJOR" "$top/bin/wasm-ld" "$top/bin/lld" "$top/lib/clang/$LLVM_MAJOR/include"
     echo "llvm $LLVM_VERSION: $LLVM_DIR"

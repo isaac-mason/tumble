@@ -1,6 +1,4 @@
 #!/bin/sh
-# js/dist/tumble.wasm: the library, the runtime and the generated extern "C" layer, optimised. the output is
-# committed, so the package's users never need the toolchain. the schema is regenerated first, from the manifest.
 # run: sh js/wasm/toolchain/build.sh
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"

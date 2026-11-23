@@ -1,6 +1,4 @@
 #!/bin/sh
-# the pinned wasm toolchain: which llvm and binaryen releases, and where fetch-toolchain.sh puts them.
-# sourced by fetch-toolchain.sh and toolchain.sh; ci keys its toolchain cache on this file.
 LLVM_VERSION=23.1.3
 BINARYEN_VERSION=133
 

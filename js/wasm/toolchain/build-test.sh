@@ -2,7 +2,6 @@
 # run: sh js/wasm/toolchain/build-test.sh
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
-# every test runs on both simd backends, and their digests must match: the backends compute the same bits
 if [ -z "$SIMD" ]; then
     LOGS="$(cd "$HERE/../../.." && pwd)/build/test-logs-$$"
     mkdir -p "$LOGS"
@@ -30,8 +29,6 @@ RUNTIME="$ROOT/js/wasm/runtime"
 mkdir -p "$BUILD"
 trap 'rm -rf "$BUILD"' EXIT
 
-# the test list: one TEST(fn) per test function, in file order. it lives at a fixed path, rewritten
-# only when it changes, so the cached test objects stay current between runs.
 LIST_DIR="$ROOT/build/test-list"
 mkdir -p "$LIST_DIR"
 : > "$BUILD/test_list.inc"
@@ -44,7 +41,6 @@ cmp -s "$BUILD/test_list.inc" "$LIST_DIR/test_list.inc" || mv "$BUILD/test_list.
 
 compile_tree "$SRC" "-DTUMBLE_DEBUG"
 compile_tree "$RUNTIME" "-DTUMBLE_DEBUG"
-# tests/native is the native runner's
 compile_set "$CXXFLAGS -DTUMBLE_DEBUG -I$TESTS -I$LIST_DIR" $(find "$TESTS" -name '*.cpp' -not -path "$TESTS/native/*" | sort)
 link_wasm "$BUILD/tumble-test.wasm" names
 node "$HERE/scripts/check-imports.mjs" "$BUILD/tumble-test.wasm"
