@@ -9,8 +9,6 @@ export type View = {
     target: g.CanvasTarget;
     scene: g.Scene;
     camera: g.PerspectiveCamera;
-    /** the scene, multisampled, drawn over the canvas */
-    output: g.Mesh;
 };
 
 /** webgpu where the worker has it, else webgl2 on the canvas: both run the same node materials */
@@ -35,7 +33,8 @@ export async function createView(
     lookAt: Vec3,
     fov: number,
 ): Promise<View> {
-    const target = g.createCanvasTarget(canvas);
+    // the scene is drawn straight onto the canvas, multisampled
+    const target = g.createCanvasTarget(canvas, { samples: 4, clearColor });
     const renderer = await createRenderer(target);
     const scene = new g.Scene();
     const camera = new g.PerspectiveCamera(fov, width / height, 0.3, 500);
@@ -44,8 +43,7 @@ export async function createView(
     camera.position[2] = eye[2];
     camera.lookAt(lookAt);
     scene.add(camera);
-    const output = g.fullscreen(g.renderTexture(scene, camera, { clearColor, samples: 4 }).getTextureNode());
-    const view: View = { renderer, target, scene, camera, output };
+    const view: View = { renderer, target, scene, camera };
     resizeView(view, width, height, pixelRatio);
     return view;
 }
@@ -61,8 +59,8 @@ export function renderView(view: View): void {
     view.scene.updateWorldMatrix();
     view.camera.updateViewMatrix();
     const frame = g.frame(view.renderer);
-    const pass = frame.pass({ target: view.target });
-    pass.draw(view.output);
+    const pass = frame.pass({ target: view.target, camera: view.camera });
+    pass.scene(view.scene);
     pass.end();
     frame.submit();
 }

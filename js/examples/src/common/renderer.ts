@@ -9,8 +9,6 @@ export type Renderer = {
     scene: g.Scene;
     camera: g.PerspectiveCamera;
     controls: g.OrbitControls;
-    /** the scene, multisampled, drawn over the canvas */
-    output: g.Mesh;
 };
 
 /** webgpu where the browser has it, else webgl2 on the canvas: both run the same node materials */
@@ -29,7 +27,9 @@ async function startGpu(target: g.CanvasTarget): Promise<g.Renderer<g.DeviceBack
 export async function createRenderer(eye: Vec3, target: Vec3): Promise<Renderer> {
     const canvas = document.createElement('canvas');
     document.body.appendChild(canvas);
-    const canvasTarget = g.createCanvasTarget(canvas);
+    // the scene is drawn straight onto the canvas, multisampled. the theme's colours are written as they are, so the
+    // canvas shows the hex values unchanged
+    const canvasTarget = g.createCanvasTarget(canvas, { samples: 4, clearColor });
     canvasTarget.setPixelRatio(devicePixelRatio);
     canvasTarget.setSize(window.innerWidth, window.innerHeight);
     const gpu = await startGpu(canvasTarget);
@@ -52,9 +52,7 @@ export async function createRenderer(eye: Vec3, target: Vec3): Promise<Renderer>
         camera.updateProjectionMatrix();
     });
 
-    // the theme's colours are written as they are, so the canvas shows the hex values unchanged
-    const output = g.fullscreen(g.renderTexture(scene, camera, { clearColor, samples: 4 }).getTextureNode());
-    return { gpu, canvas, target: canvasTarget, scene, camera, controls, output };
+    return { gpu, canvas, target: canvasTarget, scene, camera, controls };
 }
 
 /** the camera follows its controls, and the scene is drawn to the canvas */
@@ -63,8 +61,8 @@ export function render(renderer: Renderer): void {
     renderer.scene.updateWorldMatrix();
     renderer.camera.updateViewMatrix();
     const frame = g.frame(renderer.gpu);
-    const pass = frame.pass({ target: renderer.target });
-    pass.draw(renderer.output);
+    const pass = frame.pass({ target: renderer.target, camera: renderer.camera });
+    pass.scene(renderer.scene);
     pass.end();
     frame.submit();
 }
