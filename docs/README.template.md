@@ -638,3 +638,12 @@ To keep results the same:
 - Build your own code that calls tumble's math headers with `-ffp-contract=off` too. The math is inline, so your flags
   compile it.
 - Create bodies and constraints and step in the same order, with the same values.
+
+## Acknowledgements
+
+tumble stands on the shoulders of giants, many ideas and implementations were drawn from existing open source work:
+
+- JoltPhysics: https://github.com/jrouwe/joltphysics (narrowphase, solver, broadphase structure)
+- Box2D: https://github.com/erincatto/box2d (contact management)
+- three-mesh-bvh: https://github.com/gkjohnson/three-mesh-bvh (referenced for triangle mesh bvh)
+- crashcat: https://github.com/isaac-mason/crashcat/ (tumble started as crashcat.cpp!)
