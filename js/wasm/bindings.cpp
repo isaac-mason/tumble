@@ -1,7 +1,3 @@
-// what the wasm exposes to js: the manifest the schema build turns into js/src/generated/tumble.ts and
-// js/wasm/generated/exports.cpp (see js/wasm/bind/bind.h). every field of a value that crosses is exposed: the bytes of one
-// that is not would be what the scratch held before.
-
 #include "tumble/physics/body/sleep.h"
 #include "tumble/physics/shapes/utils/triangle_mesh_data.h"
 #include "tumble/util/error.h"
