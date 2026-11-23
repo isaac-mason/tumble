@@ -4,8 +4,9 @@
 set -e
 cd "$(dirname "$0")/.."
 
-# clang, as the library is built and tested locally
-CC="${CC:-clang}" CXX="${CXX:-clang++}" cmake --preset release
+# clang, as the library is built and tested locally. exported, as the docs tests build a project of their own with it
+export CC="${CC:-clang}" CXX="${CXX:-clang++}"
+cmake --preset release
 cmake --build --preset release
 ctest --preset release -j 4
 
