@@ -9,9 +9,19 @@ const offscreen = canvas.transferControlToOffscreen();
 const worker = new Worker(new URL('./demo.worker.ts', import.meta.url), { type: 'module' });
 const send = (message: PageMessage, transfer: Transferable[] = []) => worker.postMessage(message, transfer);
 
-send({ type: 'start', canvas: offscreen, width: window.innerWidth, height: window.innerHeight, pixelRatio: devicePixelRatio }, [
-    offscreen,
-]);
+const asked = new URLSearchParams(location.search).get('renderer');
+const renderer = asked === 'webgpu' || asked === 'webgl' ? asked : null;
+send(
+    {
+        type: 'start',
+        canvas: offscreen,
+        width: window.innerWidth,
+        height: window.innerHeight,
+        pixelRatio: devicePixelRatio,
+        renderer,
+    },
+    [offscreen],
+);
 
 worker.onmessage = (event: MessageEvent<WorkerMessage>) => {
     if (event.data.type === 'ready') document.getElementById('loading')?.remove();

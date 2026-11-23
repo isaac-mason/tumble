@@ -11,8 +11,14 @@ export type Renderer = {
     controls: g.OrbitControls;
 };
 
-/** webgpu where the browser has it, else webgl2 on the canvas: both run the same node materials */
+/**
+ * webgpu where the browser has it, else webgl2 on the canvas: both run the same node materials. `?renderer=webgpu` or
+ * `?renderer=webgl` asks for one, used with no fallback
+ */
 async function startGpu(target: g.CanvasTarget): Promise<g.Renderer<g.DeviceBackend>> {
+    const asked = new URLSearchParams(location.search).get('renderer');
+    if (asked === 'webgpu') return g.init(g.webgpu());
+    if (asked === 'webgl') return g.init(g.webgl({ target }));
     if (navigator.gpu !== undefined) {
         try {
             if ((await navigator.gpu.requestAdapter()) !== null) return await g.init(g.webgpu());
@@ -33,6 +39,7 @@ export async function createRenderer(eye: Vec3, target: Vec3): Promise<Renderer>
     canvasTarget.setPixelRatio(devicePixelRatio);
     canvasTarget.setSize(window.innerWidth, window.innerHeight);
     const gpu = await startGpu(canvasTarget);
+    console.log(`renderer: ${gpu.api}`);
 
     const scene = new g.Scene();
     const camera = new g.PerspectiveCamera((75 * Math.PI) / 180, window.innerWidth / window.innerHeight, 0.1, 1000);

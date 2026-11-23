@@ -50,6 +50,7 @@ const view = await createView(
     vec3.add([0, 0, 0], target, EYE_OFFSET),
     vec3.add([0, 0, 0], target, LOOK_AHEAD),
     FOV,
+    start.renderer,
 );
 const size = { width: start.width, height: start.height };
 const sky = createSky(view.scene);
