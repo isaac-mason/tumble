@@ -335,7 +335,7 @@ void cast_convex_vs_triangle_mesh(CastShapeCollector &collector, const CastShape
     // scale goes to its support
     const Mat4f transform_a_mat = mat4f::from_rotation_translation(transform_a.quaternion, transform_a.position);
     const Mat4f target_transform = mat4f::from_rotation_translation(transform_b.quaternion, transform_b.position);
-    Mat4f inv_target_transform, cast_transform;
+    Mat4f inv_target_transform = mat4f::identity(), cast_transform;
     mat4f::invert(inv_target_transform, target_transform);
 
     // a's start transform in b's space
