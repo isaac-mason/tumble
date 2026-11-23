@@ -102,9 +102,9 @@ struct SixDOFConstraintSettings {
     float limit_min[SixDOFConstraint::Axis::NUM] = {-scalar::FLOAT_MAX, -scalar::FLOAT_MAX, -scalar::FLOAT_MAX, -scalar::PI, -scalar::PI, -scalar::PI};
     float limit_max[SixDOFConstraint::Axis::NUM] = {scalar::FLOAT_MAX, scalar::FLOAT_MAX, scalar::FLOAT_MAX, scalar::PI, scalar::PI, scalar::PI};
     float max_friction[SixDOFConstraint::Axis::NUM] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-    SpringSettings limits_spring_settings[SixDOFConstraint::Axis::NUM_TRANSLATION] = {};
+    SpringSettings limits_spring_settings[SixDOFConstraint::Axis::NUM_TRANSLATION];
     /** per axis motor settings; 2 hz critically damped, no force or torque limits by default */
-    MotorSettings motor_settings[SixDOFConstraint::Axis::NUM] = {};
+    MotorSettings motor_settings[SixDOFConstraint::Axis::NUM];
     /** higher numbers are more likely to be solved correctly (solved later) */
     uint32_t constraint_priority = 0;
     /** 0 takes the world's iteration counts */

@@ -34,10 +34,24 @@ inline void destruct(T *object) {
     object->~T();
 }
 
+/** std::remove_reference: T without the & or && */
+template <typename T>
+struct RemoveReference {
+    using Type = T;
+};
+template <typename T>
+struct RemoveReference<T &> {
+    using Type = T;
+};
+template <typename T>
+struct RemoveReference<T &&> {
+    using Type = T;
+};
+
 /** std::move: lets the value be moved from, leaving it empty but alive */
 template <typename T>
-constexpr __remove_reference_t(T) &&move(T &&value) noexcept {
-    return static_cast<__remove_reference_t(T) &&>(value);
+constexpr typename RemoveReference<T>::Type &&move(T &&value) noexcept {
+    return static_cast<typename RemoveReference<T>::Type &&>(value);
 }
 
 }  // namespace util
