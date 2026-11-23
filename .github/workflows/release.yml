@@ -32,43 +32,22 @@ jobs:
             - name: tools
               run: sudo apt-get install -y ninja-build zstd
 
-            # clang, as the library is built and tested locally
-            - name: native tests
-              env:
-                  CC: clang
-                  CXX: clang++
-              run: |
-                  cmake --preset release
-                  cmake --build --preset release
-                  ctest --preset release -j 4
-
             - uses: actions/cache@v4
               with:
                   path: ~/.cache/tumble/wasm-toolchain
                   key: wasm-toolchain-${{ hashFiles('js/wasm/toolchain/scripts/toolchain-pins.sh') }}
 
-            - name: wasm toolchain
-              run: sh js/wasm/toolchain/scripts/fetch-toolchain.sh
-
-            - name: wasm tests, both simd backends
-              run: sh js/wasm/toolchain/build-test.sh
+            # native, then wasm on both simd backends, then tumble.wasm rebuilt and the js package's tests
+            - name: test
+              run: sh scripts/test.sh
 
             # the build is deterministic, so the committed tumble.wasm and bindings must be what the sources give
             - name: wasm build matches what is committed
               run: |
-                  sh js/wasm/toolchain/build.sh
                   git diff --exit-code -- js/dist/tumble.wasm js/src/generated js/wasm/generated || {
                       echo "the committed tumble.wasm or bindings are not what the sources build: rebuild and commit them" >&2
                       exit 1
                   }
-
-            - name: js package
-              working-directory: js
-              run: |
-                  pnpm install --frozen-lockfile
-                  pnpm run typecheck
-                  pnpm run build
-                  pnpm test
 
     pages:
         needs: test
@@ -96,36 +75,16 @@ jobs:
                   node-version: 24
                   package-manager-cache: false
 
-            # the package the site imports, built over the committed dist/tumble.wasm
-            - name: js package
-              working-directory: js
-              run: |
-                  pnpm install --frozen-lockfile
-                  pnpm run build
-
-            # the site, with the js examples built from js/examples under examples/
-            - name: website
-              run: |
-                  (cd js/examples && npm ci --no-audit --no-fund && npm run typecheck)
-                  (cd website && npm ci --no-audit --no-fund)
-                  sh website/build.sh
-
             - uses: mymindstorm/setup-emsdk@v14
               with:
                   version: 6.0.9
 
-            - name: samples
-              run: |
-                  sudo apt-get install -y ninja-build
-                  cmake --preset samples-web
-                  cmake --build --preset samples-web
+            - name: tools
+              run: sudo apt-get install -y ninja-build
 
+            # the page, the js examples and the c++ samples, over the committed tumble.wasm
             - name: site
-              run: |
-                  mkdir -p site/samples
-                  cp -r website/dist/. site/
-                  cp build/samples/web/samples/tumble_samples.js build/samples/web/samples/tumble_samples.wasm build/samples/web/samples/tumble_samples.data site/samples/
-                  cp build/samples/web/samples/tumble_samples.html site/samples/index.html
+              run: sh scripts/site.sh
 
             - uses: actions/upload-pages-artifact@v3
               with:
