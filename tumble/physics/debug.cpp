@@ -517,7 +517,7 @@ static void draw_pie(DebugDraw &out, Vec3f center, float radius, Vec3f normal, V
     if (min_angle >= max_angle) return;
     const uint32_t segments = 32;
     const float step = (max_angle - min_angle) / (float)segments;
-    Vec3f previous;
+    Vec3f previous = center;
     for (uint32_t i = 0; i <= segments; i++) {
         Quatf rotation = quatf::set_axis_angle(normal, min_angle + (float)i * step);
         const Vec3f rotated_axis = vec3f::transform_quat(axis, rotation);
@@ -538,7 +538,7 @@ static void draw_swing_cone_limits(DebugDraw &out, Vec3f center, Vec3f twist_axi
     const float step = (2.0f * scalar::PI) / (float)segments;
     const float cos_max = scalar::cos(max_angle);
     const float sin_max = scalar::sin(max_angle);
-    Vec3f previous;
+    Vec3f previous = center;
     for (uint32_t i = 0; i <= segments; i++) {
         const float theta = (float)i * step;
         Vec3f direction = vec3f::scale(plane_axis, scalar::cos(theta) * sin_max);

@@ -284,7 +284,7 @@ void collide_convex_vs_plane(CollideShapeCollector &collector, const CollideShap
     // transform a, built once and reused
     const Mat4f convex_to_world = mat4f::from_rotation_translation(transform_a.quaternion, transform_a.position);
 
-    Mat4f inv_convex_to_world;
+    Mat4f inv_convex_to_world = mat4f::identity();
     mat4f::invert(inv_convex_to_world, convex_to_world);
 
     // transform the plane to the convex shape's local space (inverse a * transform b)
@@ -353,7 +353,7 @@ void cast_convex_vs_plane(CastShapeCollector &collector, const CastShapeSettings
     // move the cast into the plane's space: a's start transform and the displacement relative to b
     const Mat4f a_to_world = mat4f::from_rotation_translation(transform_a.quaternion, transform_a.position);
     const Mat4f b_to_world = mat4f::from_rotation_translation(transform_b.quaternion, transform_b.position);
-    Mat4f inv_b_to_world, a_to_b;
+    Mat4f inv_b_to_world = mat4f::identity(), a_to_b;
     mat4f::invert(inv_b_to_world, b_to_world);
     a_to_b = mat4f::multiply(inv_b_to_world, a_to_world);
 

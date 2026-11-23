@@ -408,8 +408,7 @@ void cast_ray(GjkCastRayResult &out, Vec3f ray_origin, Vec3f ray_direction, floa
               float max_lambda) {
     const float squared_tolerance = tolerance * tolerance;
 
-    Simplex simplex;
-    simplex.size = 0;
+    Simplex simplex = {};
 
     ClosestPointToSimplexResult closest_point_to_simplex;
 
@@ -533,8 +532,7 @@ void cast_shape(GjkCastShapeResult &out, const Mat4f &transform_a_to_b, Support 
     shape_a_support.transform = transform_a_to_b;
     shape_a_support.add_radius = 0.0f;
 
-    Simplex simplex;
-    simplex.size = 0;
+    Simplex simplex = {};
 
     ClosestPointToSimplexResult closest_point_to_simplex;
 
@@ -722,8 +720,7 @@ void closest_points(GjkClosestPoints &out, Support &support_a, Support &support_
                     Vec3f direction, float max_distance_squared) {
     const float squared_tolerance = tolerance * tolerance;
 
-    Simplex simplex;
-    simplex.size = 0;
+    Simplex simplex = {};
 
     // v and its length^2
     ClosestPointToSimplexResult closest_point_to_simplex;
